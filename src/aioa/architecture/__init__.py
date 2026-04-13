@@ -1,0 +1,1 @@
+"""AIOA architecture package."""

@@ -1,0 +1,1 @@
+"""AIOA catalog framework package."""
