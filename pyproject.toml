@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "blueprint-framework"
+version = "0.1.0"
+description = "Blueprint Framework (BPFW) - AI-oriented architecture governance framework"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "MIT"}
+authors = [
+  {name = "Blueprint Framework Contributors"}
+]
+dependencies = [
+  "PyYAML>=6.0",
+]
+
+[project.scripts]
+bpfw = "aioa.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
