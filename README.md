@@ -35,12 +35,12 @@ bpfw unlock
 When running BPFW against another project, point it to that project root:
 
 ```bash
-export AIOA_PROJECT_ROOT=/path/to/target-project
+export BPFW_PROJECT_ROOT=/path/to/target-project
 ```
 
 The target project must contain `src/catalog/responsibilities`.
 
 ## Notes
 
-- Internal Python package path remains `aioa` for compatibility.
+- Internal Python package path is `bpfw`.
 - Distribution/package name is `blueprint-framework` and CLI command is `bpfw`.
