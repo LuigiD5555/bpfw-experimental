@@ -8,4 +8,6 @@ build/
 .venv/
 .pytest_cache/
 .mypy_cache/
+.lh/
+.vscode/
 .cache/
