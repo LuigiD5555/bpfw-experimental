@@ -25,7 +25,7 @@ def _snapshot_exists_and_fresh() -> bool:
     Returns True only if the snapshot file exists and its catalog_hash
     matches the current catalog state.
     """
-    from aioa.catalog.runtime_snapshot import load_persisted_runtime_snapshot
+    from bpfw.catalog.runtime_snapshot import load_persisted_runtime_snapshot
     return load_persisted_runtime_snapshot() is not None
 
 
@@ -92,7 +92,7 @@ def run_validation(refresh_snapshot: bool = True) -> int:
             return 1
 
     # Step 4: Run the architecture checker
-    from aioa.architecture.checker import run_architecture_checks
+    from bpfw.architecture.checker import run_architecture_checks
 
     violations = run_architecture_checks()
 

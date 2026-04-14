@@ -1,17 +1,17 @@
-"""Catalog lock status reporting for AIOA."""
+"""Catalog lock status reporting for BPFW."""
 
 from pathlib import Path
 
-from aioa.catalog.catalog_paths import (
+from bpfw.catalog.catalog_paths import (
     CatalogDirectoryNotFoundError,
     CatalogFilesNotFoundError,
     list_catalog_yaml_files,
 )
-from aioa.catalog.file_permissions import (
+from bpfw.catalog.file_permissions import (
     detect_permission_enforcement_support,
     get_permissions_snapshot,
 )
-from aioa.catalog.state_file import (
+from bpfw.catalog.state_file import (
     CatalogGuardStateFileNotFoundError,
     read_state_file,
 )

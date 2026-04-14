@@ -15,14 +15,14 @@ def _find_repo_root(anchor: str = "CLAUDE.md") -> Path:
     Raises RuntimeError if the anchor is not found before reaching the filesystem root.
     This is robust to reorganisation of tools/ because it does not count parent levels.
     """
-    explicit_root = os.environ.get("AIOA_PROJECT_ROOT")
+    explicit_root = os.environ.get("BPFW_PROJECT_ROOT")
     if explicit_root:
         candidate_root = Path(explicit_root).expanduser().resolve()
         marker = candidate_root / "src" / "catalog" / "responsibilities"
         if marker.exists() and marker.is_dir():
             return candidate_root
         raise RuntimeError(
-            "AIOA_PROJECT_ROOT is set but does not contain "
+            "BPFW_PROJECT_ROOT is set but does not contain "
             "src/catalog/responsibilities."
         )
 
@@ -49,12 +49,12 @@ def _find_repo_root(anchor: str = "CLAUDE.md") -> Path:
 
 _REPO_ROOT = _find_repo_root()
 
-from aioa.catalog.loader import (  # noqa: E402
+from bpfw.catalog.loader import (  # noqa: E402
     load_catalog_snapshot,
     load_extended_catalog_snapshot,
 )
-from aioa.catalog.models import CatalogSchemaError  # noqa: E402
-from aioa.catalog.runtime_contract import (  # noqa: E402
+from bpfw.catalog.models import CatalogSchemaError  # noqa: E402
+from bpfw.catalog.runtime_contract import (  # noqa: E402
     AmbiguousLifecycleOwnershipError,
     DuplicateActiveImplementationError,
     InactiveLifecycleRuntimeAlignmentError,
@@ -64,12 +64,12 @@ from aioa.catalog.runtime_contract import (  # noqa: E402
     UndeclaredPublicEntrypointError,
     validate_runtime_contract,
 )
-from aioa.catalog.runtime_snapshot import load_persisted_runtime_snapshot  # noqa: E402
-from aioa.catalog.validator import (  # noqa: E402
+from bpfw.catalog.runtime_snapshot import load_persisted_runtime_snapshot  # noqa: E402
+from bpfw.catalog.validator import (  # noqa: E402
     validate_catalog_snapshot,
     validate_extended_catalog_snapshot,
 )
-from aioa.catalog.wiring_verifier import verify_catalog_runtime_alignment  # noqa: E402
+from bpfw.catalog.wiring_verifier import verify_catalog_runtime_alignment  # noqa: E402
 
 
 class Severity(str, Enum):

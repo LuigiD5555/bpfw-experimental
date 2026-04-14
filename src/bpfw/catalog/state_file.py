@@ -9,7 +9,7 @@ import json
 import tempfile
 from pathlib import Path
 
-from aioa.catalog.catalog_paths import get_repo_root
+from bpfw.catalog.catalog_paths import get_repo_root
 
 _VALID_STATUSES = {"locked", "unlocked", "relocking", "error"}
 _REQUIRED_FIELDS = {"status", "opened_at", "watcher_active", "last_event", "last_error"}

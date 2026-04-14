@@ -1,4 +1,4 @@
-from aioa.catalog.models import CatalogSchemaError
+from bpfw.catalog.models import CatalogSchemaError
 
 
 REQUIRED_RESPONSIBILITY_KEYS: set[str] = {

@@ -8,7 +8,7 @@ On filesystems without Unix permission enforcement (e.g. NTFS via FUSE),
 the guard state file is the only protection mechanism.
 """
 
-from aioa.catalog.state_file import (
+from bpfw.catalog.state_file import (
     CatalogGuardStateFileNotFoundError,
     read_state_file,
 )

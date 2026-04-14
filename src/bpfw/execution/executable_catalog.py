@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 
-from aioa.catalog.catalog_paths import get_repo_root
+from bpfw.catalog.catalog_paths import get_repo_root
 
 
 class ExecutableCatalogError(RuntimeError):

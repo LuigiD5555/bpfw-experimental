@@ -1,12 +1,12 @@
-"""Catalog validation helpers and CLI entrypoints for AIOA."""
+"""Catalog validation helpers and CLI entrypoints for BPFW."""
 
 import ast
 import importlib
 from pathlib import Path
 
-from aioa.architecture.checker import _check_declared_implementation_existence
-from aioa.catalog.loader import load_catalog_snapshot
-from aioa.catalog.catalog_paths import get_repo_root
+from bpfw.architecture.checker import _check_declared_implementation_existence
+from bpfw.catalog.loader import load_catalog_snapshot
+from bpfw.catalog.catalog_paths import get_repo_root
 
 
 def check_implementation_existence_main() -> int:

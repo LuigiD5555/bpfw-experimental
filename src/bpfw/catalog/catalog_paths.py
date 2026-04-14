@@ -37,14 +37,14 @@ def get_repo_root() -> Path:
     Raises:
         RuntimeError: If the repository root cannot be determined.
     """
-    explicit_root = os.environ.get("AIOA_PROJECT_ROOT")
+    explicit_root = os.environ.get("BPFW_PROJECT_ROOT")
     if explicit_root:
         candidate_root = Path(explicit_root).expanduser().resolve()
         catalog_marker = candidate_root / "src" / "catalog" / "responsibilities"
         if catalog_marker.exists() and catalog_marker.is_dir():
             return candidate_root
         raise RuntimeError(
-            "AIOA_PROJECT_ROOT is set but does not contain "
+            "BPFW_PROJECT_ROOT is set but does not contain "
             "src/catalog/responsibilities."
         )
 

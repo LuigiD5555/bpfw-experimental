@@ -1,6 +1,6 @@
 """Catalog validator: asserts internal consistency of classic and extended snapshots."""
 
-from aioa.catalog.models import (
+from bpfw.catalog.models import (
     CatalogSchemaError,
     CatalogSnapshot,
     DuplicateEntrypointError,

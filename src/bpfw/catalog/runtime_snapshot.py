@@ -12,7 +12,7 @@ from src.bootstrap.registry.core_registry import (
     Registry,
     build_registry_snapshot,
 )
-from aioa.catalog.loader import load_catalog_snapshot
+from bpfw.catalog.loader import load_catalog_snapshot
 
 
 _SNAPSHOT_PATH = (
@@ -124,7 +124,7 @@ def _catalog_hash() -> str:
     snapshot aligned with the current catalog structure.
     """
     try:
-        from aioa.catalog.catalog_paths import list_catalog_yaml_files
+        from bpfw.catalog.catalog_paths import list_catalog_yaml_files
         combined = hashlib.sha256()
         for yaml_path in sorted(list_catalog_yaml_files()):
             combined.update(yaml_path.read_bytes())

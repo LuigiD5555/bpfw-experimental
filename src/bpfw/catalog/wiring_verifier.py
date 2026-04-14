@@ -10,8 +10,8 @@ not via a flat active_implementation index. This prevents ambiguity when the sam
 implementation name appears in more than one responsibility's allowed_implementations.
 """
 
-from aioa.catalog.models import CatalogSnapshot
-from aioa.catalog.runtime_snapshot import RuntimeSnapshot
+from bpfw.catalog.models import CatalogSnapshot
+from bpfw.catalog.runtime_snapshot import RuntimeSnapshot
 
 
 class UndeclaredRuntimeComponentError(Exception):

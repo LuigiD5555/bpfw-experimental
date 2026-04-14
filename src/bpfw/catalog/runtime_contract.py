@@ -3,7 +3,7 @@
 from collections.abc import Collection
 from typing import cast
 
-from aioa.catalog.models import CatalogSnapshot
+from bpfw.catalog.models import CatalogSnapshot
 
 _RUNTIME_STATE_KEYS = (
     "active_components",

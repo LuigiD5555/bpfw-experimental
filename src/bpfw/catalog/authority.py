@@ -1,4 +1,4 @@
-"""Catalog authority operations extracted into AIOA."""
+"""Catalog authority operations extracted into BPFW."""
 
 import argparse
 import datetime
@@ -8,20 +8,20 @@ import sys
 import time
 from pathlib import Path
 
-from aioa.catalog.catalog_paths import (
+from bpfw.catalog.catalog_paths import (
     CatalogDirectoryNotFoundError,
     CatalogFilesNotFoundError,
     get_catalog_directory,
     get_repo_root,
     list_catalog_yaml_files,
 )
-from aioa.catalog.file_permissions import (
+from bpfw.catalog.file_permissions import (
     assert_catalog_state,
     detect_permission_enforcement_support,
     lock_catalog_files,
     unlock_catalog_files,
 )
-from aioa.catalog.state_file import read_state_file, write_state_file
+from bpfw.catalog.state_file import read_state_file, write_state_file
 
 _POLL_INTERVAL_SECONDS = 1.0
 _DEFAULT_TIMEOUT_SECONDS = 300
@@ -81,7 +81,7 @@ def _start_idle_autolock_daemon() -> None:
     daemon_command = [
         sys.executable,
         "-m",
-        "aioa.catalog.authority",
+        "bpfw.catalog.authority",
         "idle-autolock",
         "--idle-seconds",
         str(idle_seconds),
@@ -259,7 +259,7 @@ def run_guard() -> int:
 
 
 def authority_cli(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="AIOA authority commands.")
+    parser = argparse.ArgumentParser(description="BPFW authority commands.")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("lock")
     subparsers.add_parser("unlock")

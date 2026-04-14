@@ -2,7 +2,7 @@
 
 import yaml
 
-from aioa.catalog.catalog_paths import (
+from bpfw.catalog.catalog_paths import (
     list_binding_yaml_files,
     list_catalog_yaml_files,
     list_contract_yaml_files,
@@ -11,8 +11,8 @@ from aioa.catalog.catalog_paths import (
     list_policy_yaml_files,
     list_type_yaml_files,
 )
-from aioa.catalog.access_control import assert_catalog_unlocked
-from aioa.catalog.models import (
+from bpfw.catalog.access_control import assert_catalog_unlocked
+from bpfw.catalog.models import (
     ArgumentDefinition,
     BindingDefinition,
     BlueprintPolicyDefinition,
@@ -27,7 +27,7 @@ from aioa.catalog.models import (
     ResponsibilityDefinition,
     TypeDefinition,
 )
-from aioa.catalog.schema import (
+from bpfw.catalog.schema import (
     validate_raw_binding_documents,
     validate_raw_catalog_documents,
     validate_raw_contract_documents,
