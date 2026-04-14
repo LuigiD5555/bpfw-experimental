@@ -1,1 +1,1 @@
-"""BPFW architecture package."""
+"""AIOA architecture package."""

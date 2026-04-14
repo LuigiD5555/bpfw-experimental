@@ -259,7 +259,7 @@ def run_guard() -> int:
 
 
 def authority_cli(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="BPFW authority commands.")
+    parser = argparse.ArgumentParser(description="AIOA authority commands.")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("lock")
     subparsers.add_parser("unlock")

@@ -1,0 +1,22 @@
+"""Status catalog files - report the lock state of catalog YAML files.
+
+This module provides a CLI entry point to check and report the current
+permissions state of all catalog responsibility files.
+"""
+
+import sys
+from pathlib import Path
+
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+if str(REPOSITORY_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY_ROOT))
+
+from bpfw.cli import main as aioa_cli_main
+
+
+def main() -> int:
+    return aioa_cli_main(["status"])
+
+
+if __name__ == "__main__":
+    exit(main())

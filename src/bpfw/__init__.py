@@ -1,1 +1,1 @@
-"""BPFW framework package."""
+"""AIOA framework package."""

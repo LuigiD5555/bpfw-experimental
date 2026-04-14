@@ -1,1 +1,1 @@
-"""BPFW catalog framework package."""
+"""AIOA catalog framework package."""

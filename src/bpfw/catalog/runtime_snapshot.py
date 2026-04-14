@@ -7,26 +7,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from src.bootstrap.registry.core_registry import (
-    BackendCategory,
-    Registry,
-    build_registry_snapshot,
-)
-from bpfw.catalog.loader import load_catalog_snapshot
-
-
 _SNAPSHOT_PATH = (
     Path(__file__).resolve().parents[3] / ".cache" / "architecture" / "runtime_snapshot.json"
-)
-
-
-_ALL_BACKEND_CATEGORIES: tuple[BackendCategory, ...] = (
-    "llm",
-    "embeddings",
-    "vector_store",
-    "graph_store",
-    "cache",
-    "reranker",
 )
 
 
@@ -63,53 +45,23 @@ def build_runtime_snapshot_from_state(runtime_state: dict[str, object]) -> Runti
 
 
 def capture_runtime_snapshot(
-    effective_entrypoints: Collection[str] | None = None,
+    *,
+    active_components: Collection[str],
+    active_implementations: Collection[str],
+    public_entrypoints: Collection[str] | None = None,
+    active_providers: Collection[str] | None = None,
 ) -> RuntimeSnapshot:
-    """Build a RuntimeSnapshot from the live bootstrap registry and catalog.
+    """Build a RuntimeSnapshot from caller-provided runtime observations.
 
-    Sources:
-    - active_components / active_implementations: gatekeeper state in core_registry
-    - public_entrypoints: see below
-    - active_providers: backend categories that have at least one registered factory
-
-    public_entrypoints resolution:
-    - If ``effective_entrypoints`` is provided, it is used directly. The caller is
-      responsible for sourcing these from an independent runtime observation (e.g.
-      FastAPI ``app.routes``, CLI module introspection). This is the only path that
-      produces evidence independent of the catalog.
-    - If ``effective_entrypoints`` is None, entrypoints are derived from the catalog
-      filtered by live active_components (catalog projection). This reflects
-      catalog + gatekeeper consistency, NOT independent proof that a route or CLI
-      entrypoint is effectively wired. Any validation using this path is limited to
-      internal consistency and must not be presented as closed wiring verification.
+    This function is intentionally framework-generic: it does not import any
+    project modules. Callers must supply already-observed runtime state.
     """
-    registry_state = build_registry_snapshot()
-    active_pairs: dict[str, str] = registry_state["active"]  # type: ignore[assignment]
-    live_components: set[str] = set(active_pairs.keys())
-
-    if effective_entrypoints is not None:
-        resolved_entrypoints: Collection[str] = effective_entrypoints
-    else:
-        catalog = load_catalog_snapshot()
-        resolved_entrypoints = [
-            entrypoint
-            for responsibility in catalog.responsibilities
-            if responsibility.is_public and live_components.intersection(responsibility.allowed_components)
-            for entrypoint in responsibility.public_entrypoints
-        ]
-
-    active_providers: list[str] = [
-        category
-        for category in _ALL_BACKEND_CATEGORIES
-        if Registry.list_backends(category)
-    ]
-
     return build_runtime_snapshot_from_state(
         {
-            "active_components": list(active_pairs.keys()),
-            "active_implementations": list(active_pairs.values()),
-            "public_entrypoints": list(resolved_entrypoints),
-            "active_providers": active_providers,
+            "active_components": list(active_components),
+            "active_implementations": list(active_implementations),
+            "public_entrypoints": list(public_entrypoints or ()),
+            "active_providers": list(active_providers or ()),
         }
     )
 

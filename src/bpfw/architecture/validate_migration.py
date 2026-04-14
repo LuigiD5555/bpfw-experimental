@@ -13,6 +13,8 @@ Separation of responsibilities:
 """
 
 import logging
+import os
+import importlib
 import sys
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -29,36 +31,65 @@ def _snapshot_exists_and_fresh() -> bool:
     return load_persisted_runtime_snapshot() is not None
 
 
-def _refresh_snapshot_via_official_bootstrap() -> bool:
-    """Execute the official bootstrap path to regenerate the runtime snapshot.
+def _get_bootstrap_adapter_reference() -> str:
+    """Return dotted path to the project bootstrap adapter callable.
 
-    Uses BootstrapContainer.create() which:
-    1. Loads and validates the catalog
-    2. Registers components via gatekeeper
-    3. Validates runtime contract
-    4. Validates wiring alignment
-    5. Persists the runtime snapshot
+    The adapter must be a callable with no arguments returning bool:
+    - True: snapshot refresh succeeded
+    - False: snapshot refresh failed
+    """
+    return os.environ.get(
+        "BPFW_BOOTSTRAP_ADAPTER",
+        "src.bootstrap.wiring.bpfw_adapter.refresh_runtime_snapshot",
+    ).strip()
+
+
+def _refresh_snapshot_via_project_adapter() -> bool:
+    """Execute project-provided bootstrap adapter to regenerate runtime snapshot.
+
+    BPFW does not import project bootstrap modules directly.
+    Instead, the project exposes a small adapter callable and BPFW invokes it.
 
     Returns True if bootstrap succeeded and snapshot was persisted.
     Returns False if bootstrap failed (exception logged).
     """
+    adapter_reference = _get_bootstrap_adapter_reference()
+    if not adapter_reference:
+        log.error("Bootstrap refresh failed: empty BPFW_BOOTSTRAP_ADAPTER.")
+        return False
+
+    module_path, separator, callable_name = adapter_reference.rpartition(".")
+    if not separator or not module_path or not callable_name:
+        log.error(
+            "Bootstrap refresh failed: invalid adapter reference '%s'. "
+            "Expected 'package.module.callable'.",
+            adapter_reference,
+        )
+        return False
+
     try:
-        import src.bootstrap.wiring.settings as settings_module
-        from src.bootstrap.container.container import BootstrapContainer
+        adapter_module = importlib.import_module(module_path)
+        adapter_callable = getattr(adapter_module, callable_name)
+    except Exception as exc:
+        log.error("Bootstrap refresh failed: cannot load adapter '%s': %s", adapter_reference, exc)
+        return False
 
-        log.info("Refreshing runtime snapshot via official bootstrap...")
+    if not callable(adapter_callable):
+        log.error("Bootstrap refresh failed: adapter '%s' is not callable.", adapter_reference)
+        return False
 
-        # settings module itself acts as the config object (module-level variables)
-        container = BootstrapContainer(settings_module)
-        container.create()
-
+    try:
+        log.info("Refreshing runtime snapshot via project bootstrap adapter...")
+        refresh_result = bool(adapter_callable())
+        if not refresh_result:
+            log.error("Project bootstrap adapter returned failure.")
+            return False
         # Verify snapshot was actually persisted
         if _snapshot_exists_and_fresh():
             log.info("Runtime snapshot refreshed successfully.")
             return True
-        else:
-            log.error("Bootstrap completed but snapshot still missing or stale.")
-            return False
+        log.error("Project bootstrap completed but snapshot still missing or stale.")
+        return False
 
     except Exception as exc:
         log.error("Bootstrap refresh failed: %s", exc)
@@ -87,7 +118,7 @@ def run_validation(refresh_snapshot: bool = True) -> int:
                 "Run validate-migration without --no-refresh after dependencies are ready."
             )
             return 1
-        if not _refresh_snapshot_via_official_bootstrap():
+        if not _refresh_snapshot_via_project_adapter():
             log.error("FATAL: Could not regenerate runtime snapshot. Fix bootstrap issues and re-run.")
             return 1
 
