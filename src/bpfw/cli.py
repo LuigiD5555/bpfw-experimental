@@ -10,6 +10,7 @@ from bpfw.architecture.catalog_validation import (
 from bpfw.architecture.checker import main as check_architecture_main
 from bpfw.architecture.validate_migration import run_validation as validate_migration_run
 from bpfw.catalog.authority import (
+    install_hooks_command,
     lock_catalog_command,
     run_guard,
     run_idle_autolock,
@@ -33,6 +34,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     subparsers.add_parser("lock")
     subparsers.add_parser("unlock")
     subparsers.add_parser("status")
+    install_hooks_parser = subparsers.add_parser("install-hooks")
+    install_hooks_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing pre-commit hook.",
+    )
     subparsers.add_parser("run-guard")
     subparsers.add_parser("check-implementation-existence")
     subparsers.add_parser("check-entrypoint-implementation")
@@ -52,6 +59,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return unlock_catalog_command(require_sudo=True)
     if arguments.command == "status":
         return status_catalog_command()
+    if arguments.command == "install-hooks":
+        return install_hooks_command(force=arguments.force)
     if arguments.command == "run-guard":
         return run_guard()
     if arguments.command == "idle-autolock":

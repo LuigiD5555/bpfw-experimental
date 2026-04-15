@@ -3,6 +3,7 @@
 import argparse
 import datetime
 import os
+import stat
 import subprocess
 import sys
 import time
@@ -255,6 +256,74 @@ def run_guard() -> int:
     if final_state.get("status") != "locked":
         print(f"[run_guard] inconsistency: expected status='locked', got {final_state.get('status')!r}", file=sys.stderr)
         return 1
+    return 0
+
+
+def install_hooks_command(force: bool = False) -> int:
+    """Install pre-commit hook for catalog immutability enforcement.
+
+    The hook is sourced from src/bpfw/hooks/pre-commit (bundled with bpfw).
+    It enforces that no changes to src/catalog/**/*.yaml are permitted when
+    the catalog is locked (detected via .catalog/lockstate.json).
+
+    Args:
+        force: If True, overwrite existing hook. If False, fail if hook exists.
+
+    Returns:
+        0 on success, 1 on error.
+    """
+    try:
+        repo_root = get_repo_root()
+    except Exception as error:
+        print(f"ERROR: Could not determine repository root: {error}")
+        return 1
+
+    git_hooks_dir = repo_root / ".git" / "hooks"
+    target_hook = git_hooks_dir / "pre-commit"
+
+    # Load hook template from package
+    hook_template_path = Path(__file__).parent.parent / "hooks" / "pre-commit"
+    if not hook_template_path.exists():
+        print(f"ERROR: Hook template not found at {hook_template_path}")
+        return 1
+
+    try:
+        hook_content = hook_template_path.read_text(encoding="utf-8")
+    except Exception as error:
+        print(f"ERROR: Could not read hook template: {error}")
+        return 1
+
+    # Check if hook already exists
+    if target_hook.exists() and not force:
+        print(f"ERROR: Hook already exists at {target_hook}")
+        print("Use --force to overwrite.")
+        return 1
+
+    # Ensure .git/hooks directory exists
+    try:
+        git_hooks_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as error:
+        print(f"ERROR: Could not create .git/hooks directory: {error}")
+        return 1
+
+    # Write hook to target location
+    try:
+        target_hook.write_text(hook_content, encoding="utf-8")
+    except Exception as error:
+        print(f"ERROR: Could not write hook to {target_hook}: {error}")
+        return 1
+
+    # Make hook executable
+    try:
+        current_mode = target_hook.stat().st_mode
+        executable_mode = current_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+        target_hook.chmod(executable_mode)
+    except Exception as error:
+        print(f"ERROR: Could not make hook executable: {error}")
+        return 1
+
+    print(f"SUCCESS: Pre-commit hook installed at {target_hook}")
+    print("The hook will enforce catalog immutability when locked via 'bpfw lock'.")
     return 0
 
 
