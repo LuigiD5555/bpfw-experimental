@@ -10,4 +10,4 @@ build/
 .mypy_cache/
 .lh/
 .vscode/
-.cache/
+docs/.cache/
