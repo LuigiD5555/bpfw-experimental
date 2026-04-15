@@ -9,7 +9,7 @@ from bpfw.catalog.models import (
 )
 
 VALID_LIFECYCLE_STATES: frozenset[str] = frozenset(
-    {"active", "experimental", "deprecated", "legacy", "internal"}
+    {"active", "experimental", "deprecated", "legacy"}
 )
 
 

@@ -153,7 +153,7 @@ def verify_catalog_runtime_alignment(
        responsibility's active_implementation (UndeclaredWiringPathError).
 
     Lifecycle scope note: this verifier does not enforce lifecycle_state. Lifecycle gating
-    (blocking activation for experimental, deprecated, legacy, and internal states, including
+    (blocking activation for experimental, deprecated, and legacy states, including
     ambiguous multi-owner ownership) is handled by
     runtime_contract.validate_lifecycle_runtime_alignment.
 

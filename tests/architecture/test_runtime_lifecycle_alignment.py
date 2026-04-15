@@ -4,7 +4,7 @@ Verifies that runtime components and implementations belonging to non-active
 responsibilities are blocked by validate_lifecycle_runtime_alignment and
 validate_runtime_contract.
 
-Blocked lifecycle states: experimental, deprecated, legacy, internal.
+Blocked lifecycle states: experimental, deprecated, legacy.
 Allowed: active.
 """
 
@@ -23,7 +23,7 @@ from tests.architecture.conftest import make_responsibility, make_snapshot
 # validate_lifecycle_runtime_alignment — component checks
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("lifecycle_state", ["experimental", "deprecated", "legacy", "internal"])
+@pytest.mark.parametrize("lifecycle_state", ["experimental", "deprecated", "legacy"])
 def test_inactive_component_blocked_for_each_non_active_state(lifecycle_state: str) -> None:
     snapshot = make_snapshot(
         make_responsibility(
@@ -55,7 +55,7 @@ def test_active_component_allowed_when_lifecycle_is_active() -> None:
 # validate_lifecycle_runtime_alignment — implementation checks
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("lifecycle_state", ["experimental", "deprecated", "legacy", "internal"])
+@pytest.mark.parametrize("lifecycle_state", ["experimental", "deprecated", "legacy"])
 def test_inactive_implementation_blocked_for_each_non_active_state(lifecycle_state: str) -> None:
     snapshot = make_snapshot(
         make_responsibility(
@@ -87,7 +87,7 @@ def test_active_implementation_allowed_when_lifecycle_is_active() -> None:
 # Empty runtime state never triggers lifecycle errors
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("lifecycle_state", ["experimental", "deprecated", "legacy", "internal"])
+@pytest.mark.parametrize("lifecycle_state", ["experimental", "deprecated", "legacy"])
 def test_empty_runtime_state_never_triggers_lifecycle_error(lifecycle_state: str) -> None:
     snapshot = make_snapshot(
         make_responsibility(
@@ -241,8 +241,8 @@ def test_validate_lifecycle_runtime_alignment_does_not_depend_on_catalog_order_f
 # Ambiguous lifecycle ownership — implementations
 # ---------------------------------------------------------------------------
 
-def test_validate_lifecycle_runtime_alignment_fails_for_implementation_owned_by_active_and_internal_responsibilities() -> None:
-    """An implementation shared between active and internal responsibilities must fail."""
+def test_validate_lifecycle_runtime_alignment_fails_for_implementation_owned_by_active_and_deprecated_responsibilities() -> None:
+    """An implementation shared between active and deprecated responsibilities must fail."""
     snapshot = make_snapshot(
         make_responsibility(
             "r_active",
@@ -250,9 +250,9 @@ def test_validate_lifecycle_runtime_alignment_fails_for_implementation_owned_by_
             lifecycle_state="active",
         ),
         make_responsibility(
-            "r_internal",
+            "r_deprecated",
             allowed_implementations=("SharedImpl",),
-            lifecycle_state="internal",
+            lifecycle_state="deprecated",
         ),
     )
     with pytest.raises((AmbiguousLifecycleOwnershipError, InactiveLifecycleRuntimeAlignmentError)):
@@ -270,16 +270,16 @@ def test_validate_lifecycle_runtime_alignment_does_not_depend_on_catalog_order_f
             lifecycle_state="active",
         ),
         make_responsibility(
-            "r_internal",
+            "r_deprecated",
             allowed_implementations=("SharedImpl",),
-            lifecycle_state="internal",
+            lifecycle_state="deprecated",
         ),
     )
     snapshot_order_b = make_snapshot(
         make_responsibility(
-            "r_internal",
+            "r_deprecated",
             allowed_implementations=("SharedImpl",),
-            lifecycle_state="internal",
+            lifecycle_state="deprecated",
         ),
         make_responsibility(
             "r_active",

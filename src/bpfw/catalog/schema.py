@@ -92,7 +92,7 @@ def validate_raw_responsibility_payload(payload: dict[str, object]) -> None:
         raise CatalogSchemaError("active_implementation is required and cannot be empty.")
 
     lifecycle_state = payload.get("lifecycle_state")
-    allowed_lifecycle_states = {"active", "experimental", "deprecated", "legacy", "internal"}
+    allowed_lifecycle_states = {"active", "experimental", "deprecated", "legacy"}
     if lifecycle_state not in allowed_lifecycle_states:
         raise CatalogSchemaError(
             f"lifecycle_state '{lifecycle_state}' is not valid. "
@@ -174,7 +174,7 @@ def validate_raw_binding_payload(payload: dict[str, object]) -> None:
     _assert_required_keys(payload, REQUIRED_BINDING_KEYS, "Binding")
 
     status = payload.get("status")
-    allowed_statuses = {"active", "experimental", "deprecated", "legacy", "internal"}
+    allowed_statuses = {"active", "experimental", "deprecated", "legacy"}
     if status not in allowed_statuses:
         raise CatalogSchemaError(
             f"status '{status}' is not valid. Allowed values: {sorted(allowed_statuses)}"

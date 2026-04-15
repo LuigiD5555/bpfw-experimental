@@ -121,7 +121,7 @@ def validate_active_implementation_alignment(
 
 
 _INACTIVE_LIFECYCLE_STATES: frozenset[str] = frozenset(
-    {"experimental", "deprecated", "legacy", "internal"}
+    {"experimental", "deprecated", "legacy"}
 )
 
 
@@ -238,7 +238,7 @@ def validate_lifecycle_runtime_alignment(
       (via allowed_components / allowed_implementations). The full owner list is evaluated,
       never collapsed by catalog order.
 
-    Blocked states: experimental, deprecated, legacy, internal.
+    Blocked states: experimental, deprecated, legacy.
 
     Ambiguity policy:
     - If a component or implementation is owned by responsibilities with more than one
