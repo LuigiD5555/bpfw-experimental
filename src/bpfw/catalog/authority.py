@@ -347,3 +347,7 @@ def authority_cli(argv: list[str] | None = None) -> int:
         return run_guard()
     return 1
 
+
+if __name__ == "__main__":
+    raise SystemExit(authority_cli())
+
