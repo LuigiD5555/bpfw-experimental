@@ -1,109 +1,105 @@
-"""Permission helpers for catalog lock/unlock operations."""
+"""Strong filesystem lock helpers for catalog YAML files."""
 
 import os
-import tempfile
+import shutil
+import subprocess
 from pathlib import Path
+from typing import Literal
+
+CatalogLockBackend = Literal["linux_immutable"]
 
 
-def get_permissions_snapshot(path: Path) -> dict[str, bool]:
-    return {
-        "exists": path.exists(),
-        "is_file": path.is_file(),
-        "is_readable": os.access(path, os.R_OK),
-        "is_writable": os.access(path, os.W_OK),
-    }
+class CatalogLockEnforcementError(RuntimeError):
+    """Raised when a strong filesystem lock cannot be guaranteed."""
 
 
-def set_read_only(path: Path) -> None:
-    current_mode = path.stat().st_mode
-    read_only_mode = current_mode & ~0o222
+def _require_linux_immutable_support() -> None:
+    if os.name != "posix":
+        raise CatalogLockEnforcementError("linux_immutable backend requires a POSIX/Linux runtime.")
+    chattr_path = shutil.which("chattr")
+    if not chattr_path:
+        raise CatalogLockEnforcementError("chattr is not available; cannot enforce immutable lock.")
+    if os.geteuid() != 0:
+        raise CatalogLockEnforcementError(
+            "linux_immutable backend requires root privileges. Run 'bpfw lock' with sudo."
+        )
+
+
+def _run_chattr(flag: str, path: Path) -> None:
+    command = ["chattr", flag, str(path)]
+    result = subprocess.run(command, check=False, capture_output=True, text=True)
+    if result.returncode != 0:
+        stderr = result.stderr.strip()
+        raise CatalogLockEnforcementError(
+            f"chattr {flag} failed for '{path}': {stderr or 'unknown error'}"
+        )
+
+
+def _can_open_for_write(path: Path) -> bool:
     try:
-        path.chmod(read_only_mode)
-    except (OSError, NotImplementedError):
-        pass
+        with path.open("r+b"):
+            return True
+    except (PermissionError, OSError):
+        return False
 
 
-def set_writable(path: Path) -> None:
-    current_mode = path.stat().st_mode
-    writable_mode = current_mode | 0o200
-    try:
-        path.chmod(writable_mode)
-    except (OSError, NotImplementedError):
-        pass
-
-
-def lock_catalog_files(paths: list[Path]) -> None:
-    for path in paths:
-        set_read_only(path)
-
-
-def unlock_catalog_files(paths: list[Path]) -> None:
-    for path in paths:
-        set_writable(path)
-
-
-def detect_permission_enforcement_support(paths: list[Path]) -> bool:
+def verify_write_block(paths: list[Path]) -> bool:
+    """Return True when every catalog file rejects direct write opening."""
     if not paths:
         return False
-    first_path = paths[0]
-    if not first_path.exists():
-        return False
-
-    catalog_directory = first_path.parent
-    temp_path: Path | None = None
-    try:
-        temp_file = tempfile.NamedTemporaryFile(
-            dir=catalog_directory,
-            prefix=".permission_test_",
-            suffix=".tmp",
-            delete=False,
-        )
-        temp_path = Path(temp_file.name)
-        temp_file.close()
-
-        initial_mode = temp_path.stat().st_mode
-        initial_writable = os.access(temp_path, os.W_OK)
-
-        read_only_mode = initial_mode & ~0o222
-        temp_path.chmod(read_only_mode)
-        after_lock_writable = os.access(temp_path, os.W_OK)
-
-        if initial_writable and not after_lock_writable:
-            return True
-        if initial_writable and after_lock_writable:
-            return False
-
-        writable_mode = initial_mode | 0o200
-        temp_path.chmod(writable_mode)
-        after_unlock_writable = os.access(temp_path, os.W_OK)
-        return (not initial_writable) and after_unlock_writable
-    except (OSError, PermissionError):
-        return False
-    finally:
-        if temp_path is not None and temp_path.exists():
-            try:
-                temp_path.unlink()
-            except (OSError, PermissionError):
-                pass
-
-
-def assert_catalog_state(paths: list[Path], expected_writable: bool) -> dict[str, list[str]]:
-    if not detect_permission_enforcement_support(paths):
-        return {"matching": [str(path) for path in paths], "mismatching": []}
-
-    matching: list[str] = []
-    mismatching: list[str] = []
     for path in paths:
-        is_writable = get_permissions_snapshot(path)["is_writable"]
-        if is_writable == expected_writable:
-            matching.append(str(path))
-        else:
-            mismatching.append(str(path))
+        if not path.exists() or not path.is_file():
+            return False
+        if _can_open_for_write(path):
+            return False
+    return True
 
-    if mismatching:
-        expected_state = "writable" if expected_writable else "read-only"
-        raise AssertionError(
-            f"Expected state '{expected_state}' but found mismatches for: {', '.join(mismatching)}"
+
+def apply_strong_lock(paths: list[Path]) -> CatalogLockBackend:
+    """Apply strong lock and verify mutation is blocked at filesystem level."""
+    if not paths:
+        raise CatalogLockEnforcementError("No catalog files available to lock.")
+    _require_linux_immutable_support()
+
+    locked_paths: list[Path] = []
+    try:
+        for path in paths:
+            if not path.exists() or not path.is_file():
+                raise CatalogLockEnforcementError(f"Catalog file not found: {path}")
+            _run_chattr("+i", path)
+            locked_paths.append(path)
+    except Exception:
+        for locked_path in reversed(locked_paths):
+            try:
+                _run_chattr("-i", locked_path)
+            except CatalogLockEnforcementError:
+                pass
+        raise
+
+    if not verify_write_block(paths):
+        raise CatalogLockEnforcementError(
+            "Filesystem did not enforce write blocking after immutable lock."
         )
-    return {"matching": matching, "mismatching": mismatching}
+
+    return "linux_immutable"
+
+
+def release_strong_lock(paths: list[Path], lock_backend: CatalogLockBackend) -> None:
+    """Release a strong lock previously applied with *lock_backend*."""
+    if lock_backend != "linux_immutable":
+        raise CatalogLockEnforcementError(f"Unsupported lock backend: {lock_backend}")
+    if not paths:
+        raise CatalogLockEnforcementError("No catalog files available to unlock.")
+    _require_linux_immutable_support()
+
+    for path in paths:
+        if not path.exists() or not path.is_file():
+            raise CatalogLockEnforcementError(f"Catalog file not found: {path}")
+        _run_chattr("-i", path)
+
+    blocked_after_unlock = verify_write_block(paths)
+    if blocked_after_unlock:
+        raise CatalogLockEnforcementError(
+            "Filesystem still blocks writes after immutable unlock."
+        )
 
