@@ -7,7 +7,7 @@
 # are permitted. This hook:
 # 1. Detects changes (staged or unstaged) to catalog files
 # 2. Checks if the catalog is locked
-# 3. If locked: revert ALL changes and error out
+# 3. If locked: fail commit without modifying the working tree
 # 4. If unlocked: proceed with commit (after whitespace checks)
 
 set -euo pipefail
@@ -36,15 +36,6 @@ get_all_modified_catalog_files() {
     git diff --name-only --diff-filter=ACM 2>/dev/null | grep "^${CATALOG_DIR}/" || true
 }
 
-# Utility: revert changes to a file (both staged and working directory)
-revert_file() {
-    local filepath="$1"
-    # Remove from staging area
-    git reset HEAD "$filepath" 2>/dev/null || true
-    # Restore from index to working directory
-    git checkout "$filepath" 2>/dev/null || true
-}
-
 # Main: enforce immutability
 main() {
     echo "Running catalog immutability check..."
@@ -68,22 +59,16 @@ main() {
         return 0
     fi
 
-    # Catalog changes detected + locked state = REVERT ALL
+    # Catalog changes detected + locked state = REJECT
     if [[ "$lock_state" == "locked" ]]; then
         echo ""
-        echo "⚠️  UNRECOGNIZED MODIFICATION DETECTED (Catalog is locked)"
+        echo "Catalog modifications detected while catalog is locked."
         echo ""
         echo "Files with changes:"
         echo "$modified_files" | sed 's/^/   /'
         echo ""
-        echo "Reverting all changes..."
-        echo "$modified_files" | while read -r filepath; do
-            revert_file "$filepath"
-            echo "   ✓ Reverted: $filepath"
-        done
-        echo ""
         cat >&2 <<'EOF'
-ERROR: Catalog is locked and changes were automatically reverted.
+ERROR: Catalog is locked. Commit rejected.
 
 To modify the catalog, unlock it first:
   bpfw unlock

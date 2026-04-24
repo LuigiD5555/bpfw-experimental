@@ -2,9 +2,9 @@
 
 from bpfw.catalog.catalog_paths import list_catalog_yaml_files
 from bpfw.catalog.file_permissions import (
-    assert_catalog_state,
-    lock_catalog_files,
-    unlock_catalog_files,
+    CatalogLockEnforcementError,
+    apply_strong_lock,
+    release_strong_lock,
 )
 from bpfw.catalog.state_file import read_state_file, write_state_file
 
@@ -33,21 +33,22 @@ def open_catalog_session() -> None:
         raise CatalogSessionAlreadyOpenError()
 
     yaml_files = list_catalog_yaml_files()
-    try:
-        unlock_catalog_files(yaml_files)
-    except PermissionError as permission_error:
+    lock_backend = current_state.get("lock_backend")
+    if lock_backend != "linux_immutable":
         raise CatalogSessionUnlockFailedError(
-            f"insufficient OS permissions: {permission_error}"
-        ) from permission_error
-
+            f"invalid or missing lock_backend for unlock: {lock_backend!r}"
+        )
     try:
-        assert_catalog_state(yaml_files, expected_writable=True)
-    except AssertionError as assertion_error:
-        raise CatalogSessionUnlockFailedError(str(assertion_error)) from assertion_error
+        release_strong_lock(yaml_files, lock_backend=lock_backend)
+    except CatalogLockEnforcementError as permission_error:
+        raise CatalogSessionUnlockFailedError(
+            str(permission_error)
+        ) from permission_error
 
     write_state_file(
         {
             "status": "unlocked",
+            "lock_backend": None,
             "opened_at": None,
             "watcher_active": False,
             "last_event": None,
@@ -59,20 +60,16 @@ def open_catalog_session() -> None:
 def close_catalog_session() -> None:
     yaml_files = list_catalog_yaml_files()
     try:
-        lock_catalog_files(yaml_files)
-    except PermissionError as permission_error:
+        lock_backend = apply_strong_lock(yaml_files)
+    except CatalogLockEnforcementError as permission_error:
         raise CatalogSessionLockFailedError(
-            f"insufficient OS permissions: {permission_error}"
+            str(permission_error)
         ) from permission_error
-
-    try:
-        assert_catalog_state(yaml_files, expected_writable=False)
-    except AssertionError as assertion_error:
-        raise CatalogSessionLockFailedError(str(assertion_error)) from assertion_error
 
     write_state_file(
         {
             "status": "locked",
+            "lock_backend": lock_backend,
             "opened_at": None,
             "watcher_active": False,
             "last_event": None,

@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 from bpfw.catalog.catalog_paths import get_catalog_directory
-from bpfw.catalog.file_permissions import lock_catalog_files
+from bpfw.catalog.file_permissions import apply_strong_lock
 from bpfw.catalog.state_file import read_state_file, write_state_file
 
 _POLL_INTERVAL_SECONDS = 1
@@ -23,6 +23,7 @@ def _relock_with_transition(last_event: str, last_error: str | None = None) -> N
         write_state_file(
             {
                 "status": "relocking",
+                "lock_backend": None,
                 "opened_at": None,
                 "watcher_active": False,
                 "last_event": last_event,
@@ -35,13 +36,24 @@ def _relock_with_transition(last_event: str, last_error: str | None = None) -> N
     try:
         catalog_dir = get_catalog_directory()
         yaml_files = sorted(catalog_dir.glob("*.yaml"))
-        lock_catalog_files(yaml_files)
-    except Exception:
-        pass
+        lock_backend = apply_strong_lock(yaml_files)
+    except Exception as error:
+        write_state_file(
+            {
+                "status": "error",
+                "lock_backend": None,
+                "opened_at": None,
+                "watcher_active": False,
+                "last_event": last_event,
+                "last_error": str(error),
+            }
+        )
+        return
 
     write_state_file(
         {
             "status": "locked",
+            "lock_backend": lock_backend,
             "opened_at": None,
             "watcher_active": False,
             "last_event": last_event,

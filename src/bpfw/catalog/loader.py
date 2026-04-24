@@ -11,7 +11,6 @@ from bpfw.catalog.catalog_paths import (
     list_policy_yaml_files,
     list_type_yaml_files,
 )
-from bpfw.catalog.access_control import assert_catalog_unlocked
 from bpfw.catalog.models import (
     ArgumentDefinition,
     BindingDefinition,
@@ -50,49 +49,42 @@ def _load_yaml_documents(yaml_files: list[object]) -> list[dict[str, object]]:
 
 
 def load_catalog_documents() -> list[dict[str, object]]:
-    assert_catalog_unlocked()
     documents = _load_yaml_documents(list_catalog_yaml_files())
     validate_raw_catalog_documents(documents)
     return documents
 
 
 def load_policy_documents() -> list[dict[str, object]]:
-    assert_catalog_unlocked()
     documents = _load_yaml_documents(list_policy_yaml_files())
     validate_raw_policy_documents(documents)
     return documents
 
 
 def load_contract_documents() -> list[dict[str, object]]:
-    assert_catalog_unlocked()
     documents = _load_yaml_documents(list_contract_yaml_files())
     validate_raw_contract_documents(documents)
     return documents
 
 
 def load_type_documents() -> list[dict[str, object]]:
-    assert_catalog_unlocked()
     documents = _load_yaml_documents(list_type_yaml_files())
     validate_raw_type_documents(documents)
     return documents
 
 
 def load_operation_documents() -> list[dict[str, object]]:
-    assert_catalog_unlocked()
     documents = _load_yaml_documents(list_operation_yaml_files())
     validate_raw_operation_documents(documents)
     return documents
 
 
 def load_binding_documents() -> list[dict[str, object]]:
-    assert_catalog_unlocked()
     documents = _load_yaml_documents(list_binding_yaml_files())
     validate_raw_binding_documents(documents)
     return documents
 
 
 def load_interaction_documents() -> list[dict[str, object]]:
-    assert_catalog_unlocked()
     documents = _load_yaml_documents(list_interaction_yaml_files())
     validate_raw_interaction_documents(documents)
     return documents
