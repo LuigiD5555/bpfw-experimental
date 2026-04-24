@@ -6,13 +6,23 @@ Supported status values: locked | unlocked | relocking | error
 """
 
 import json
+import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 
 from bpfw.catalog.catalog_paths import get_repo_root
 
 _VALID_STATUSES = {"locked", "unlocked", "relocking", "error"}
-_REQUIRED_FIELDS = {"status", "opened_at", "watcher_active", "last_event", "last_error"}
+_VALID_LOCK_BACKENDS = {"linux_immutable"}
+_REQUIRED_FIELDS = {
+    "status",
+    "lock_backend",
+    "opened_at",
+    "watcher_active",
+    "last_event",
+    "last_error",
+}
 
 
 class CatalogGuardStateFileNotFoundError(FileNotFoundError):
@@ -41,6 +51,51 @@ def get_state_file_path() -> Path:
     return get_repo_root() / ".catalog" / "lockstate.json"
 
 
+def _set_writable(path: Path) -> None:
+    current_mode = path.stat().st_mode
+    path.chmod(current_mode | 0o200)
+
+
+def _set_read_only(path: Path) -> None:
+    current_mode = path.stat().st_mode
+    path.chmod(current_mode & ~0o222)
+
+
+def _try_chattr(flag: str, path: Path) -> None:
+    chattr_path = shutil.which("chattr")
+    if not chattr_path:
+        return
+    if not path.exists():
+        return
+    subprocess.run(
+        [chattr_path, flag, str(path)],
+        check=False,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+
+def _ensure_state_storage_writable(state_path: Path) -> None:
+    state_directory = state_path.parent
+    if state_directory.exists():
+        _try_chattr("-i", state_directory)
+        current_directory_mode = state_directory.stat().st_mode
+        state_directory.chmod(current_directory_mode | 0o700)
+    if state_path.exists():
+        _try_chattr("-i", state_path)
+        _set_writable(state_path)
+
+
+def _harden_state_storage(state_path: Path) -> None:
+    state_directory = state_path.parent
+    if state_path.exists():
+        _set_read_only(state_path)
+        _try_chattr("+i", state_path)
+    if state_directory.exists():
+        current_directory_mode = state_directory.stat().st_mode
+        state_directory.chmod(current_directory_mode & ~0o222)
+
+
 def validate_state_payload(state: dict[str, object]) -> None:
     """Validate that *state* contains all required fields and a valid status.
 
@@ -59,6 +114,18 @@ def validate_state_payload(state: dict[str, object]) -> None:
         raise CatalogGuardInvalidStatePayloadError(
             f"unknown status {status!r}; must be one of {_VALID_STATUSES}"
         )
+
+    lock_backend = state["lock_backend"]
+    if status == "locked":
+        if lock_backend not in _VALID_LOCK_BACKENDS:
+            raise CatalogGuardInvalidStatePayloadError(
+                f"locked status requires lock_backend in {_VALID_LOCK_BACKENDS}"
+            )
+    else:
+        if lock_backend is not None:
+            raise CatalogGuardInvalidStatePayloadError(
+                "lock_backend must be null when status is not 'locked'"
+            )
 
 
 _JSON_SAFE_TYPES = (str, bool, int, float, type(None))
@@ -92,6 +159,7 @@ def write_state_file(state: dict[str, object]) -> None:
     validate_state_payload(state)
     _assert_json_safe_values(state)
     state_path = get_state_file_path()
+    _ensure_state_storage_writable(state_path)
     state_path.parent.mkdir(parents=True, exist_ok=True)
 
     encoded = json.dumps(state, indent=2)
@@ -106,6 +174,8 @@ def write_state_file(state: dict[str, object]) -> None:
         with open(fd, "w", encoding="utf-8") as tmp_file:
             tmp_file.write(encoded)
         tmp_path.replace(state_path)
+        if state["status"] == "locked":
+            _harden_state_storage(state_path)
         tmp_path = None  # replace() succeeded; no cleanup needed
     finally:
         if tmp_path is not None and tmp_path.exists():
