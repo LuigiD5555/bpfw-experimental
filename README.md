@@ -40,6 +40,34 @@ export BPFW_PROJECT_ROOT=/path/to/target-project
 
 The target project must contain `src/catalog/responsibilities`.
 
+## External write safety
+
+By default, write-like catalog operations are blocked when `BPFW_PROJECT_ROOT`
+points to a different directory than the current working directory. This
+prevents accidental catalog mutations in external projects.
+
+To allow this intentionally, set:
+
+```bash
+export BPFW_ALLOW_EXTERNAL_CATALOG_WRITES=1
+```
+
+## Lock phases
+
+`bpfw lock` is designed to protect in three phases:
+
+- Phase 1 (edit access): catalog YAML files become read-only.
+- Phase 2 (save): write/save attempts fail because files are read-only.
+- Phase 3 (commit): pre-commit hook rejects catalog mutations while locked.
+
+Implementation details:
+
+- Lock backend is `linux_immutable` (`chattr +i`) and requires `sudo`.
+- Unlock requires `sudo`; bypassing with internal non-sudo calls is rejected.
+- `.catalog/lockstate.json` is hardened when locked and checked for tampering.
+
+If immutable locking cannot be enforced, `bpfw lock` fails with error.
+
 ## Notes
 
 - Internal Python package path is `bpfw`.
