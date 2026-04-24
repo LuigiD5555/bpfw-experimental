@@ -17,6 +17,14 @@ import os
 import importlib
 import sys
 
+from bpfw.catalog.access_control import (
+    CatalogLockedError,
+    CatalogStateCheckError,
+    ExternalCatalogWriteBlockedError,
+    assert_catalog_write_scope,
+    assert_catalog_writable,
+)
+
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger(__name__)
 
@@ -117,20 +125,33 @@ def run_validation(refresh_snapshot: bool = True) -> int:
                 "FATAL: Snapshot refresh is disabled (--no-refresh). "
                 "Run validate-migration without --no-refresh after dependencies are ready."
             )
+            log.error("What to verify:")
+            log.error("- The runtime dependencies required by the project bootstrap are reachable.")
+            log.error("- BPFW_BOOTSTRAP_ADAPTER points to the correct refresh callable.")
+            log.error("- The last runtime snapshot is not missing or stale because of recent catalog edits.")
+            return 1
+        try:
+            assert_catalog_write_scope()
+            assert_catalog_writable()
+        except (CatalogLockedError, CatalogStateCheckError, ExternalCatalogWriteBlockedError) as exc:
+            log.error("FATAL: %s", exc)
             return 1
         if not _refresh_snapshot_via_project_adapter():
             log.error("FATAL: Could not regenerate runtime snapshot. Fix bootstrap issues and re-run.")
+            log.error("What to verify:")
+            log.error("- BootstrapContainer.create() completes successfully with current dependencies.")
+            log.error("- The bootstrap adapter persists a fresh runtime snapshot.")
+            log.error("- The catalog, runtime contract, and wiring verifier all pass during bootstrap.")
             return 1
 
     # Step 4: Run the architecture checker
+    from bpfw.architecture.checker import format_violations_report
     from bpfw.architecture.checker import run_architecture_checks
 
     violations = run_architecture_checks()
 
     if violations:
-        print("Architecture violations found:")
-        for violation in violations:
-            print(f"  {violation}")
+        print(format_violations_report(violations))
         return 1
 
     print("No architecture violations found.")

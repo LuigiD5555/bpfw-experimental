@@ -93,6 +93,102 @@ class Violation:
         return f"{self.severity.value.upper()} {prefix}{self.category}: {self.message}"
 
 
+_RULE_VERIFICATION_GUIDANCE: dict[str, tuple[str, ...]] = {
+    "CAT001": (
+        "Verify every catalog YAML file exists and loads without parse errors.",
+        "Check recent edits under src/catalog/ for malformed YAML or missing files.",
+    ),
+    "CAT002": (
+        "Verify each responsibility defines allowed_components, allowed_implementations, and a valid active_implementation.",
+        "Check public responsibilities still declare public_entrypoints and lifecycle_state values allowed by the schema.",
+    ),
+    "UM001": (
+        "Verify the catalog can be loaded before scanning undeclared modules.",
+        "Fix the catalog load error first; undeclared-module enforcement depends on a valid catalog snapshot.",
+    ),
+    "UM002": (
+        "Declare the module in exactly one responsibility's allowed_components, or delete/move it if it should not be part of the active system.",
+        "Check src/catalog/responsibilities/*.yaml for the owning responsibility and avoid duplicate ownership.",
+    ),
+    "RC001": (
+        "Verify every runtime active component is declared in allowed_components.",
+        "Check the bootstrap path and registry snapshot for components activated outside the catalog.",
+    ),
+    "RC002": (
+        "Verify each responsibility activates only one implementation at runtime.",
+        "Check duplicate registrations in bootstrap/gatekeeper wiring.",
+    ),
+    "RC003": (
+        "Verify every runtime active implementation is declared in allowed_implementations and matches a declared active_implementation.",
+        "Check for lateral wiring or hard-coded implementation names outside the catalog.",
+    ),
+    "RC004": (
+        "Verify each public runtime entrypoint is declared in catalog public_entrypoints.",
+        "Check router registration and public CLI exposure against the owning responsibility.",
+    ),
+    "RC005": (
+        "Verify no runtime component or implementation belongs to a non-active lifecycle responsibility.",
+        "Check lifecycle_state for the owning responsibility before activating it in bootstrap.",
+    ),
+    "RC006": (
+        "Verify ownership is unambiguous across responsibilities.",
+        "Check for the same component or implementation declared by multiple responsibilities with conflicting lifecycle states.",
+    ),
+    "RC007": (
+        "Verify implementation module paths match the responsibility owner_layer namespace.",
+        "Check owner_layer in the catalog and the implementation import path prefix.",
+    ),
+    "RC008": (
+        "Verify runtime_state keys are lists, tuples, sets, or frozensets.",
+        "Check bootstrap code building runtime_state before contract validation.",
+    ),
+    "WV001": (
+        "Verify catalog declarations, runtime snapshot, and wiring are aligned bidirectionally.",
+        "Check missing declared entrypoints, undeclared runtime entrypoints, and lateral wiring paths in the bootstrap snapshot.",
+    ),
+    "INST001": (
+        "Verify prohibited infrastructure classes are only instantiated from bootstrap.",
+        "Move direct construction into the composition root and inject abstractions elsewhere.",
+    ),
+    "NAME001": (
+        "Verify suspicious names do not hide multiple responsibilities in one implementation.",
+        "Rename or split the implementation so the module/class/function name reflects one clear responsibility.",
+    ),
+    "UTIL001": (
+        "Verify helper and utils modules do not contain business logic.",
+        "Move orchestration or decision logic into application/domain modules and leave helpers deterministic.",
+    ),
+    "LAYER001": (
+        "Verify imports respect declared architectural layer boundaries.",
+        "Check the reported source module and replace the forbidden dependency with an abstraction wired from bootstrap.",
+    ),
+    "FW001": (
+        "Verify application code does not import infrastructure or bootstrap internals directly.",
+        "Move the dependency to the composition root or introduce an explicit port/abstraction.",
+    ),
+    "IMPL001": (
+        "Verify every declared implementation path exists and is importable.",
+        "Check renamed or removed modules still referenced from allowed_implementations or active_implementation.",
+    ),
+}
+
+
+def format_violations_report(violations: list[Violation]) -> str:
+    """Return a human-actionable report for architecture violations."""
+    if not violations:
+        return "No architecture violations found."
+
+    lines = ["Architecture violations found:"]
+    for violation in violations:
+        lines.append(f"  {violation}")
+        guidance = _RULE_VERIFICATION_GUIDANCE.get(violation.rule_id, ())
+        if guidance:
+            lines.append("    What to verify:")
+            for item in guidance:
+                lines.append(f"    - {item}")
+    return "\n".join(lines)
+
+
 # Classes that must not be instantiated directly outside of bootstrap
 _PROHIBITED_CLASSES = frozenset([
     "ProviderFactory",
@@ -1063,6 +1159,63 @@ def _check_declared_implementation_existence() -> list[Violation]:
     return _check_implementation_existence(catalog_snapshot)
 
 
+def _check_undeclared_modules() -> list[Violation]:
+    """Scan all .py modules in src/ and verify they're declared in allowed_components.
+
+    This prevents undeclared code from being added without updating the catalog.
+    Reports all modules that don't belong to any responsibility.
+    """
+    try:
+        catalog_snapshot = load_catalog_snapshot()
+    except Exception as exc:
+        return [Violation(
+            category="undeclared_modules_load",
+            message=f"Could not load catalog for module scan: {exc}",
+            rule_id="UM001",
+        )]
+
+    # Collect all declared components (module paths)
+    declared_components: set[str] = set()
+    for responsibility in catalog_snapshot.responsibilities:
+        declared_components.update(responsibility.allowed_components)
+
+    # Scan all .py files in src/
+    src_dir = _REPO_ROOT / "src"
+    undeclared_modules: list[str] = []
+
+    if src_dir.exists():
+        for py_file in src_dir.rglob("*.py"):
+            # Convert file path to module path
+            # e.g., src/public/cli/chat.py → src.public.cli.chat
+            if py_file.name == "__init__.py":
+                continue
+
+            rel_path = py_file.relative_to(_REPO_ROOT)
+            module_path = str(rel_path).replace("/", ".").replace("\\", ".").replace(".py", "")
+
+            # Check if this module or its parent package is declared
+            is_declared = False
+            for component in declared_components:
+                if module_path == component or module_path.startswith(component + "."):
+                    is_declared = True
+                    break
+
+            if not is_declared:
+                undeclared_modules.append(module_path)
+
+    # Report all undeclared modules
+    violations: list[Violation] = []
+    for module in sorted(undeclared_modules):
+        violations.append(Violation(
+            category="undeclared_module",
+            message=f"Module '{module}' is not declared in any responsibility's allowed_components.",
+            severity=Severity.ERROR,
+            rule_id="UM002",
+        ))
+
+    return violations
+
+
 def run_architecture_checks() -> list[Violation]:
     """Run all architecture checks and return a list of Violation instances.
 
@@ -1071,6 +1224,7 @@ def run_architecture_checks() -> list[Violation]:
     violations: list[Violation] = []
     violations.extend(_check_catalog_loads())
     violations.extend(_check_extended_blueprint_catalog())
+    violations.extend(_check_undeclared_modules())
     violations.extend(_check_runtime_contract())
     violations.extend(_check_wiring_verifier())
     violations.extend(_check_no_direct_instantiation())
@@ -1090,9 +1244,7 @@ def main() -> int:
     violations = run_architecture_checks()
 
     if violations:
-        print("Architecture violations found:")
-        for violation in violations:
-            print(f"  {violation}")
+        print(format_violations_report(violations))
         return 1
 
     print("No architecture violations found.")
