@@ -1,13 +1,14 @@
 """Permission helpers for catalog lock/unlock operations.
 
 Implements Strategy pattern for cross-platform catalog protection:
-- UnixChmodStrategy: chmod + sudo (Linux/macOS)
-- WindowsAclStrategy: icacls (Windows requires admin)
+- UnixImmutableStrategy: chattr +i (Linux - true immutable at filesystem level)
+- WindowsAclStrategy: icacls /deny (Windows - access control lists)
 
-Both strategies use SHA-256 hash verification for unlock intentionality.
+Both strategies achieve real filesystem-level blocking, not just permissions.
 """
 
 import os
+import shutil
 import subprocess
 import sys
 from abc import ABC, abstractmethod
@@ -39,28 +40,62 @@ class CatalogLockStrategy(ABC):
         pass
 
 
-class UnixChmodStrategy(CatalogLockStrategy):
+class UnixImmutableStrategy(CatalogLockStrategy):
     def lock(self) -> None:
+        chattr_path = shutil.which("chattr")
+        if not chattr_path:
+            raise RuntimeError("chattr not found: cannot lock catalog on this system")
+
         for path in self.paths:
             try:
-                os.chmod(path, 0o444)
-            except (OSError, PermissionError):
-                pass
+                subprocess.run(
+                    [chattr_path, "+i", str(path)],
+                    check=True,
+                    capture_output=True,
+                )
+            except (subprocess.CalledProcessError, OSError) as e:
+                raise RuntimeError(f"Failed to lock {path}: {e}")
 
     def unlock(self) -> None:
+        chattr_path = shutil.which("chattr")
+        if not chattr_path:
+            raise RuntimeError("chattr not found: cannot unlock catalog on this system")
+
         for path in self.paths:
             try:
-                os.chmod(path, 0o644)
-            except (OSError, PermissionError):
-                pass
+                subprocess.run(
+                    [chattr_path, "-i", str(path)],
+                    check=True,
+                    capture_output=True,
+                )
+            except (subprocess.CalledProcessError, OSError) as e:
+                raise RuntimeError(f"Failed to unlock {path}: {e}")
 
     def is_locked(self) -> bool:
         if not self.paths:
             return True
-        return not any(os.access(path, os.W_OK) for path in self.paths)
+
+        chattr_path = shutil.which("chattr")
+        if not chattr_path:
+            return True
+
+        for path in self.paths:
+            try:
+                result = subprocess.run(
+                    ["lsattr", str(path)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                if "i" not in result.stdout.split()[0]:
+                    return False
+            except (subprocess.CalledProcessError, OSError, IndexError):
+                return False
+
+        return True
 
     def get_strategy_name(self) -> str:
-        return "unix-chmod+sudo"
+        return "linux-immutable"
 
     def require_elevation(self) -> None:
         if os.geteuid() != 0:
@@ -135,5 +170,5 @@ class WindowsAclStrategy(CatalogLockStrategy):
 def select_strategy(paths: list[Path]) -> CatalogLockStrategy:
     if sys.platform == "win32":
         return WindowsAclStrategy(paths)
-    return UnixChmodStrategy(paths)
+    return UnixImmutableStrategy(paths)
 
