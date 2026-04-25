@@ -19,6 +19,7 @@ from bpfw.catalog.file_permissions import select_strategy
 from bpfw.catalog.catalog_hashes import compute_catalog_hashes, write_hashes_file
 from bpfw.catalog.state_file import read_state_file, write_state_file
 from bpfw.catalog.unlock_key import store_unlock_key, verify_unlock_key
+from bpfw.catalog.signature import sign_hashes_lock, sign_lockstate, verify_hashes_lock, verify_lockstate
 
 _POLL_INTERVAL_SECONDS = 1.0
 _DEFAULT_TIMEOUT_SECONDS = 300
@@ -55,6 +56,7 @@ def lock_catalog_command() -> int:
         print(f"ERROR: failed to lock catalog: {error}")
         return 1
 
+    user_password = None
     try:
         repo_root = get_repo_root()
         hashes = compute_catalog_hashes(yaml_files)
@@ -66,18 +68,26 @@ def lock_catalog_command() -> int:
             user_password = input("Password: ").strip()
             unlock_key_path = repo_root / "src" / ".catalog" / ".unlock_key"
             store_unlock_key(user_password, unlock_key_path)
+            sign_hashes_lock(hashes_path, user_password)
     except Exception as error:
         print(f"WARN: could not save catalog hashes: {error}")
 
-    write_state_file(
-        {
-            "status": "locked",
-            "opened_at": None,
-            "watcher_active": False,
-            "last_event": None,
-            "last_error": None,
-        }
-    )
+    lock_state = {
+        "status": "locked",
+        "opened_at": None,
+        "watcher_active": False,
+        "last_event": None,
+        "last_error": None,
+    }
+    write_state_file(lock_state)
+
+    if user_password and sys.platform != "win32":
+        try:
+            repo_root = get_repo_root()
+            lockstate_path = repo_root / ".catalog" / "lockstate.json"
+            sign_lockstate(lockstate_path, user_password)
+        except Exception as e:
+            print(f"WARN: could not sign lockstate: {e}")
     # Protect .catalog directory itself
     try:
         catalog_control_dir = repo_root / "src" / ".catalog"
