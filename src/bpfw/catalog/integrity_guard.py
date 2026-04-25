@@ -6,12 +6,11 @@ This module enforces catalog immutability at runtime by:
 3. Raising an error if catalog was modified while locked
 """
 
-import hashlib
 from pathlib import Path
 
-from bpfw.catalog.authority import is_locked_real
 from bpfw.catalog.catalog_hashes import read_hashes_file, compute_catalog_hashes
 from bpfw.catalog.catalog_paths import get_catalog_directory, get_repo_root
+from bpfw.catalog.state_file import read_state_file
 
 
 class CatalogTamperDetectedError(RuntimeError):
@@ -29,13 +28,19 @@ class CatalogTamperDetectedError(RuntimeError):
 def validate_catalog_integrity() -> None:
     """Validate catalog integrity at runtime.
 
-    If catalog is locked and hashes don't match, raise CatalogTamperDetectedError.
-    This prevents the application from running with a tampered catalog.
+    If catalog is locked (per lockstate.json) and hashes don't match,
+    raise CatalogTamperDetectedError. This prevents the application from
+    running with a tampered catalog.
 
     Raises:
         CatalogTamperDetectedError: If locked catalog has been modified
     """
-    if not is_locked_real():
+    try:
+        state = read_state_file()
+    except Exception:
+        return
+
+    if state.get("status") != "locked":
         return
 
     try:
