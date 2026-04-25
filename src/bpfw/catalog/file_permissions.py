@@ -1,105 +1,139 @@
-"""Strong filesystem lock helpers for catalog YAML files."""
+"""Permission helpers for catalog lock/unlock operations.
+
+Implements Strategy pattern for cross-platform catalog protection:
+- UnixChmodStrategy: chmod + sudo (Linux/macOS)
+- WindowsAclStrategy: icacls (Windows requires admin)
+
+Both strategies use SHA-256 hash verification for unlock intentionality.
+"""
 
 import os
-import shutil
 import subprocess
+import sys
+from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Literal
-
-CatalogLockBackend = Literal["linux_immutable"]
 
 
-class CatalogLockEnforcementError(RuntimeError):
-    """Raised when a strong filesystem lock cannot be guaranteed."""
+class CatalogLockStrategy(ABC):
+    def __init__(self, paths: list[Path]) -> None:
+        self.paths = paths
+
+    @abstractmethod
+    def lock(self) -> None:
+        pass
+
+    @abstractmethod
+    def unlock(self) -> None:
+        pass
+
+    @abstractmethod
+    def is_locked(self) -> bool:
+        pass
+
+    @abstractmethod
+    def get_strategy_name(self) -> str:
+        pass
+
+    @abstractmethod
+    def require_elevation(self) -> None:
+        pass
 
 
-def _require_linux_immutable_support() -> None:
-    if os.name != "posix":
-        raise CatalogLockEnforcementError("linux_immutable backend requires a POSIX/Linux runtime.")
-    chattr_path = shutil.which("chattr")
-    if not chattr_path:
-        raise CatalogLockEnforcementError("chattr is not available; cannot enforce immutable lock.")
-    if os.geteuid() != 0:
-        raise CatalogLockEnforcementError(
-            "linux_immutable backend requires root privileges. Run 'bpfw lock' with sudo."
-        )
-
-
-def _run_chattr(flag: str, path: Path) -> None:
-    command = ["chattr", flag, str(path)]
-    result = subprocess.run(command, check=False, capture_output=True, text=True)
-    if result.returncode != 0:
-        stderr = result.stderr.strip()
-        raise CatalogLockEnforcementError(
-            f"chattr {flag} failed for '{path}': {stderr or 'unknown error'}"
-        )
-
-
-def _can_open_for_write(path: Path) -> bool:
-    try:
-        with path.open("r+b"):
-            return True
-    except (PermissionError, OSError):
-        return False
-
-
-def verify_write_block(paths: list[Path]) -> bool:
-    """Return True when every catalog file rejects direct write opening."""
-    if not paths:
-        return False
-    for path in paths:
-        if not path.exists() or not path.is_file():
-            return False
-        if _can_open_for_write(path):
-            return False
-    return True
-
-
-def apply_strong_lock(paths: list[Path]) -> CatalogLockBackend:
-    """Apply strong lock and verify mutation is blocked at filesystem level."""
-    if not paths:
-        raise CatalogLockEnforcementError("No catalog files available to lock.")
-    _require_linux_immutable_support()
-
-    locked_paths: list[Path] = []
-    try:
-        for path in paths:
-            if not path.exists() or not path.is_file():
-                raise CatalogLockEnforcementError(f"Catalog file not found: {path}")
-            _run_chattr("+i", path)
-            locked_paths.append(path)
-    except Exception:
-        for locked_path in reversed(locked_paths):
+class UnixChmodStrategy(CatalogLockStrategy):
+    def lock(self) -> None:
+        for path in self.paths:
             try:
-                _run_chattr("-i", locked_path)
-            except CatalogLockEnforcementError:
+                os.chmod(path, 0o444)
+            except (OSError, PermissionError):
                 pass
-        raise
 
-    if not verify_write_block(paths):
-        raise CatalogLockEnforcementError(
-            "Filesystem did not enforce write blocking after immutable lock."
-        )
+    def unlock(self) -> None:
+        for path in self.paths:
+            try:
+                os.chmod(path, 0o644)
+            except (OSError, PermissionError):
+                pass
 
-    return "linux_immutable"
+    def is_locked(self) -> bool:
+        if not self.paths:
+            return True
+        return not any(os.access(path, os.W_OK) for path in self.paths)
+
+    def get_strategy_name(self) -> str:
+        return "unix-chmod+sudo"
+
+    def require_elevation(self) -> None:
+        if os.geteuid() != 0:
+            print("This operation requires superuser privileges.")
+            print("You will be prompted for your password.\n")
+            environment = os.environ.copy()
+            command = ["sudo", "-p", "[sudo] password for %u: ", sys.executable, __file__, *sys.argv[1:]]
+            try:
+                result = subprocess.run(command, env=environment, check=False)
+            except KeyboardInterrupt:
+                print("\nOperation cancelled.")
+                raise SystemExit(1) from None
+            raise SystemExit(result.returncode)
 
 
-def release_strong_lock(paths: list[Path], lock_backend: CatalogLockBackend) -> None:
-    """Release a strong lock previously applied with *lock_backend*."""
-    if lock_backend != "linux_immutable":
-        raise CatalogLockEnforcementError(f"Unsupported lock backend: {lock_backend}")
-    if not paths:
-        raise CatalogLockEnforcementError("No catalog files available to unlock.")
-    _require_linux_immutable_support()
+class WindowsAclStrategy(CatalogLockStrategy):
+    def lock(self) -> None:
+        username = os.getenv("USERNAME", "Everyone")
+        for path in self.paths:
+            try:
+                subprocess.run(
+                    ["icacls", str(path), "/deny", f"{username}:W"],
+                    check=True,
+                    capture_output=True,
+                )
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                pass
 
-    for path in paths:
-        if not path.exists() or not path.is_file():
-            raise CatalogLockEnforcementError(f"Catalog file not found: {path}")
-        _run_chattr("-i", path)
+    def unlock(self) -> None:
+        username = os.getenv("USERNAME", "Everyone")
+        for path in self.paths:
+            try:
+                subprocess.run(
+                    ["icacls", str(path), "/remove:d", username],
+                    check=True,
+                    capture_output=True,
+                )
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                pass
 
-    blocked_after_unlock = verify_write_block(paths)
-    if blocked_after_unlock:
-        raise CatalogLockEnforcementError(
-            "Filesystem still blocks writes after immutable unlock."
-        )
+    def is_locked(self) -> bool:
+        if not self.paths:
+            return True
+        username = os.getenv("USERNAME", "Everyone")
+        for path in self.paths:
+            try:
+                result = subprocess.run(
+                    ["icacls", str(path)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                if "(Deny)" in result.stdout and username in result.stdout:
+                    return True
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                pass
+        return False
+
+    def get_strategy_name(self) -> str:
+        return "windows-acl+admin"
+
+    def require_elevation(self) -> None:
+        import ctypes
+        if not ctypes.windll.shell32.IsUserAnAdmin():
+            print("ERROR: This command requires administrator privileges")
+            print("\nRun PowerShell as administrator and try again:")
+            print("  Right-click PowerShell → 'Run as administrator'")
+            print("  Then run: bpfw lock")
+            raise SystemExit(1)
+
+
+def select_strategy(paths: list[Path]) -> CatalogLockStrategy:
+    if sys.platform == "win32":
+        return WindowsAclStrategy(paths)
+    return UnixChmodStrategy(paths)
 

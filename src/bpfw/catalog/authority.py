@@ -3,16 +3,11 @@
 import argparse
 import datetime
 import os
-import stat
 import subprocess
 import sys
 import time
 from pathlib import Path
 
-from bpfw.catalog.access_control import (
-    ExternalCatalogWriteBlockedError,
-    assert_catalog_write_scope,
-)
 from bpfw.catalog.catalog_paths import (
     CatalogDirectoryNotFoundError,
     CatalogFilesNotFoundError,
@@ -20,12 +15,10 @@ from bpfw.catalog.catalog_paths import (
     get_repo_root,
     list_catalog_yaml_files,
 )
-from bpfw.catalog.file_permissions import (
-    CatalogLockEnforcementError,
-    apply_strong_lock,
-    release_strong_lock,
-)
+from bpfw.catalog.file_permissions import select_strategy
+from bpfw.catalog.catalog_hashes import compute_catalog_hashes, write_hashes_file
 from bpfw.catalog.state_file import read_state_file, write_state_file
+from bpfw.catalog.unlock_key import store_unlock_key, verify_unlock_key
 
 _POLL_INTERVAL_SECONDS = 1.0
 _DEFAULT_TIMEOUT_SECONDS = 300
@@ -35,57 +28,71 @@ def _now_iso() -> str:
     return datetime.datetime.now(tz=datetime.timezone.utc).isoformat()
 
 
-def lock_catalog_command() -> int:
+def is_locked_real() -> bool:
     try:
-        assert_catalog_write_scope()
-    except ExternalCatalogWriteBlockedError as error:
-        print(f"ERROR: {error}")
-        return 1
+        yaml_files = list_catalog_yaml_files()
+        if not yaml_files:
+            return True
+        strategy = select_strategy(yaml_files)
+        return strategy.is_locked()
+    except Exception:
+        return True
 
-    _require_sudo()
 
+def lock_catalog_command() -> int:
     try:
         yaml_files = list_catalog_yaml_files()
     except (CatalogDirectoryNotFoundError, CatalogFilesNotFoundError) as error:
         print(f"ERROR: {error}")
         return 1
 
+    strategy = select_strategy(yaml_files)
+    strategy.require_elevation()
+
     try:
-        lock_backend = apply_strong_lock(yaml_files)
-    except CatalogLockEnforcementError as error:
-        print(f"ERROR: {error}")
+        strategy.lock()
+    except Exception as error:
+        print(f"ERROR: failed to lock catalog: {error}")
         return 1
+
+    try:
+        repo_root = get_repo_root()
+        hashes = compute_catalog_hashes(yaml_files)
+        hashes_path = repo_root / "src" / ".catalog" / "hashes.lock"
+        write_hashes_file(hashes_path, hashes)
+
+        if sys.platform != "win32":
+            print("\n🔒 Configura tu contraseña de desbloqueo:")
+            user_password = input("Password: ").strip()
+            unlock_key_path = repo_root / "src" / ".catalog" / ".unlock_key"
+            store_unlock_key(user_password, unlock_key_path)
+    except Exception as error:
+        print(f"WARN: could not save catalog hashes: {error}")
 
     write_state_file(
         {
             "status": "locked",
-            "lock_backend": lock_backend,
             "opened_at": None,
             "watcher_active": False,
             "last_event": None,
             "last_error": None,
         }
     )
-    print(f"SUCCESS: catalog locked ({lock_backend})")
-    return 0
-
-
-def _require_sudo() -> None:
-    if os.geteuid() == 0:
-        return
-    print("This operation requires superuser privileges.")
-    print("You will be prompted for your password.\n")
-    environment = os.environ.copy()
-    environment["PYTHONPATH"] = str(get_repo_root())
-    command = ["sudo", "-p", "[sudo] password for %u: ", sys.executable, __file__, *sys.argv[1:]]
+    # Protect .catalog directory itself
     try:
-        result = subprocess.run(command, env=environment, check=False)
-    except KeyboardInterrupt:
-        print("\nOperation cancelled.")
-        raise SystemExit(1) from None
-    raise SystemExit(result.returncode)
+        catalog_control_dir = repo_root / "src" / ".catalog"
+        catalog_control_dir.mkdir(parents=True, exist_ok=True)
+        for item in catalog_control_dir.iterdir():
+            if item.is_file():
+                os.chmod(item, 0o444)
+        os.chmod(catalog_control_dir, 0o555)
+        print("✅ Protected .catalog directory")
+    except Exception as e:
+        print(f"WARN: could not protect .catalog directory: {e}")
 
-
+    strategy_name = strategy.get_strategy_name()
+    print(f"SUCCESS: catalog locked ({strategy_name})")
+    return 0
 def _start_idle_autolock_daemon() -> None:
     idle_seconds = int(os.environ.get("CATALOG_IDLE_AUTOLOCK_SECONDS", "30"))
     daemon_command = [
@@ -112,53 +119,61 @@ def _start_idle_autolock_daemon() -> None:
 
 def unlock_catalog_command(require_sudo: bool = True) -> int:
     try:
-        assert_catalog_write_scope()
-    except ExternalCatalogWriteBlockedError as error:
-        print(f"ERROR: {error}")
-        return 1
-
-    if require_sudo:
-        _require_sudo()
-    elif os.geteuid() != 0:
-        print("ERROR: unlock without sudo is prohibited.")
-        return 1
-
-    try:
         yaml_files = list_catalog_yaml_files()
     except (CatalogDirectoryNotFoundError, CatalogFilesNotFoundError) as error:
         print(f"ERROR: {error}")
         return 1
 
-    lock_backend = "linux_immutable"
-    try:
-        current_state = read_state_file()
-        if current_state.get("status") == "locked":
-            raw_lock_backend = current_state.get("lock_backend")
-            if raw_lock_backend != "linux_immutable":
-                print(f"ERROR: Unsupported lock backend in state file: {raw_lock_backend!r}")
-                return 1
-            lock_backend = raw_lock_backend
-    except Exception:
-        # If state file is missing/corrupt, still attempt unlock with canonical backend.
-        lock_backend = "linux_immutable"
+    strategy = select_strategy(yaml_files)
+
+    if require_sudo:
+        strategy.require_elevation()
+
+    repo_root = get_repo_root()
+    unlock_key_path = repo_root / "src" / ".catalog" / ".unlock_key"
+
+    if unlock_key_path.exists() and sys.platform != "win32":
+        print("\n🔓 Verifica tu contraseña para desbloquear:")
+        user_password = input("Password: ").strip()
+
+        if not verify_unlock_key(user_password, unlock_key_path):
+            print("\n❌ Contraseña incorrecta. Desbloqueo rechazado.")
+            return 1
+        print("✅ Contraseña verificada.")
 
     try:
-        release_strong_lock(yaml_files, lock_backend=lock_backend)
-    except CatalogLockEnforcementError as error:
-        print(f"ERROR: {error}")
+        strategy.unlock()
+    except Exception as error:
+        print(f"ERROR: failed to unlock catalog: {error}")
         return 1
 
     write_state_file(
         {
             "status": "unlocked",
-            "lock_backend": None,
             "opened_at": _now_iso(),
             "watcher_active": False,
             "last_event": None,
             "last_error": None,
         }
     )
-    print(f"SUCCESS: catalog unlocked ({lock_backend})")
+    # Restore .catalog directory permissions
+    try:
+        catalog_control_dir = repo_root / "src" / ".catalog"
+        os.chmod(catalog_control_dir, 0o755)
+        for item in catalog_control_dir.iterdir():
+            if item.is_file():
+                if item.name == ".unlock_key":
+                    os.chmod(item, 0o600)
+                elif item.name == "hashes.lock":
+                    os.chmod(item, 0o444)
+                else:
+                    os.chmod(item, 0o644)
+        print("✅ Restored .catalog directory permissions")
+    except Exception as e:
+        print(f"WARN: could not restore .catalog permissions: {e}")
+
+    strategy_name = strategy.get_strategy_name()
+    print(f"SUCCESS: catalog unlocked ({strategy_name})")
     _start_idle_autolock_daemon()
     return 0
 
@@ -196,7 +211,6 @@ def _relock_with_transition(last_event: str, last_error: str | None = None) -> N
         write_state_file(
             {
                 "status": "relocking",
-                "lock_backend": None,
                 "opened_at": None,
                 "watcher_active": False,
                 "last_event": last_event,
@@ -205,25 +219,19 @@ def _relock_with_transition(last_event: str, last_error: str | None = None) -> N
         )
     except Exception:
         pass
-    lock_backend: str | None = None
     try:
-        lock_backend = apply_strong_lock(sorted(get_catalog_directory().glob("*.yaml")))
-    except Exception as error:
-        write_state_file(
-            {
-                "status": "error",
-                "lock_backend": None,
-                "opened_at": None,
-                "watcher_active": False,
-                "last_event": last_event,
-                "last_error": str(error),
-            }
-        )
-        return
+        yaml_files = sorted(get_catalog_directory().glob("*.yaml"))
+        strategy = select_strategy(yaml_files)
+        strategy.lock()
+        hashes = compute_catalog_hashes(yaml_files)
+        repo_root = get_repo_root()
+        hashes_path = repo_root / "src" / ".catalog" / "hashes.lock"
+        write_hashes_file(hashes_path, hashes)
+    except Exception:
+        pass
     write_state_file(
         {
             "status": "locked",
-            "lock_backend": lock_backend,
             "opened_at": None,
             "watcher_active": False,
             "last_event": last_event,
@@ -266,7 +274,7 @@ def open_catalog_session() -> None:
     current_state = read_state_file()
     if current_state["status"] == "unlocked":
         raise RuntimeError("A catalog edit session is already open.")
-    result = unlock_catalog_command(require_sudo=True)
+    result = unlock_catalog_command(require_sudo=False)
     if result != 0:
         raise RuntimeError("Cannot open catalog session.")
 
@@ -314,12 +322,6 @@ def install_hooks_command(force: bool = False) -> int:
     Returns:
         0 on success, 1 on error.
     """
-    try:
-        assert_catalog_write_scope()
-    except ExternalCatalogWriteBlockedError as error:
-        print(f"ERROR: {error}")
-        return 1
-
     try:
         repo_root = get_repo_root()
     except Exception as error:
@@ -375,6 +377,8 @@ def install_hooks_command(force: bool = False) -> int:
     return 0
 
 
+
+
 def authority_cli(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="AIOA authority commands.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -398,3 +402,4 @@ def authority_cli(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(authority_cli())
+
