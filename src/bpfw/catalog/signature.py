@@ -66,6 +66,7 @@ def sign_hashes_lock(hashes_path: Path, password: str) -> None:
         password: User's password for key derivation
     """
     hashes = json.loads(hashes_path.read_text(encoding="utf-8"))
+    hashes.pop("__signature__", None)
 
     data = json.dumps(hashes, sort_keys=True, separators=(",", ":")).encode()
     key = _get_signing_key(password)
@@ -118,6 +119,7 @@ def sign_lockstate(lockstate_path: Path, password: str) -> None:
         password: User's password for key derivation
     """
     state = json.loads(lockstate_path.read_text(encoding="utf-8"))
+    state.pop("__signature__", None)
 
     data = json.dumps(state, sort_keys=True, separators=(",", ":")).encode()
     key = _get_signing_key(password)
