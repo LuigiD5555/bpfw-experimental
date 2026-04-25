@@ -3,6 +3,7 @@
 Implements Strategy pattern for cross-platform catalog protection:
 - UnixImmutableStrategy: chattr +i (Linux - true immutable at filesystem level)
 - WindowsAclStrategy: icacls /deny (Windows - access control lists)
+- GitIndexStrategy: git update-index --assume-unchanged (NTFS/FUSE fallback)
 
 Both strategies achieve real filesystem-level blocking, not just permissions.
 """
@@ -13,6 +14,7 @@ import subprocess
 import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
+import stat
 
 
 class CatalogLockStrategy(ABC):
@@ -167,8 +169,90 @@ class WindowsAclStrategy(CatalogLockStrategy):
             raise SystemExit(1)
 
 
+class GitIndexStrategy(CatalogLockStrategy):
+    """Fallback strategy using git index for NTFS/FUSE filesystems.
+
+    Uses 'git update-index --assume-unchanged' to prevent git from tracking changes.
+    This works on NTFS and other filesystems where chmod is ignored.
+    """
+
+    def lock(self) -> None:
+        for path in self.paths:
+            try:
+                subprocess.run(
+                    ["git", "update-index", "--assume-unchanged", str(path)],
+                    check=True,
+                    capture_output=True,
+                )
+            except (subprocess.CalledProcessError, FileNotFoundError) as e:
+                raise RuntimeError(f"Failed to lock {path} via git: {e}")
+
+    def unlock(self) -> None:
+        for path in self.paths:
+            try:
+                result = subprocess.run(
+                    ["git", "update-index", "--no-assume-unchanged", str(path)],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+                if result.returncode != 0 and "not in the index" not in result.stderr:
+                    raise RuntimeError(f"Failed to unlock {path} via git: {result.stderr}")
+            except FileNotFoundError as e:
+                raise RuntimeError(f"git not found: {e}")
+
+    def is_locked(self) -> bool:
+        if not self.paths:
+            return True
+
+        for path in self.paths:
+            try:
+                result = subprocess.run(
+                    ["git", "ls-files", "-v", str(path)],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+                if result.stdout and result.stdout[0] in ('h', 'S', 'M', 'K', 'T'):
+                    continue
+                return False
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                return False
+
+        return True
+
+    def get_strategy_name(self) -> str:
+        return "git-index"
+
+    def require_elevation(self) -> None:
+        pass
+
+
+def _detect_ntfs(paths: list[Path]) -> bool:
+    """Detect if any path is on an NTFS/FUSE filesystem."""
+    if not paths:
+        return False
+
+    try:
+        result = subprocess.run(
+            ["df", "-T", str(paths[0])],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        for line in result.stdout.split("\n"):
+            if "fuseblk" in line or "ntfs" in line.lower():
+                return True
+    except Exception:
+        pass
+
+    return False
+
+
 def select_strategy(paths: list[Path]) -> CatalogLockStrategy:
     if sys.platform == "win32":
         return WindowsAclStrategy(paths)
+    if _detect_ntfs(paths):
+        return GitIndexStrategy(paths)
     return UnixImmutableStrategy(paths)
 

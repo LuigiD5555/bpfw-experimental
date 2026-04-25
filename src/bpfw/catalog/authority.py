@@ -40,6 +40,19 @@ def is_locked_real() -> bool:
         return True
 
 
+def _lock_catalog_yaml_permissions(yaml_files: list[Path]) -> None:
+    """Ensure all catalog YAML files are read-only when locked.
+
+    This makes files immutable at the OS level via the appropriate strategy.
+    Uses chattr, icacls, or git depending on the filesystem.
+    """
+    strategy = select_strategy(yaml_files)
+    try:
+        strategy.lock()
+    except Exception as e:
+        print(f"WARN: could not sync lock permissions: {e}")
+
+
 def lock_catalog_command() -> int:
     try:
         yaml_files = list_catalog_yaml_files()
@@ -55,6 +68,8 @@ def lock_catalog_command() -> int:
     except Exception as error:
         print(f"ERROR: failed to lock catalog: {error}")
         return 1
+
+    _lock_catalog_yaml_permissions(yaml_files)
 
     user_password = None
     try:
@@ -127,6 +142,20 @@ def _start_idle_autolock_daemon() -> None:
         print(f"WARN: could not start idle autolock daemon: {error}")
 
 
+def _sync_catalog_yaml_permissions(yaml_files: list[Path]) -> None:
+    """Ensure all catalog YAML files have write permissions when unlocked.
+
+    This synchronizes filesystem permissions with the logical unlock state,
+    correcting any inconsistency (e.g., if lockstate.json was edited manually).
+    Uses the appropriate strategy (chmod, git, etc.) based on filesystem type.
+    """
+    strategy = select_strategy(yaml_files)
+    try:
+        strategy.unlock()
+    except Exception as e:
+        print(f"WARN: could not sync unlock permissions: {e}")
+
+
 def unlock_catalog_command(require_sudo: bool = True) -> int:
     try:
         yaml_files = list_catalog_yaml_files()
@@ -156,6 +185,8 @@ def unlock_catalog_command(require_sudo: bool = True) -> int:
     except Exception as error:
         print(f"ERROR: failed to unlock catalog: {error}")
         return 1
+
+    _sync_catalog_yaml_permissions(yaml_files)
 
     write_state_file(
         {
@@ -389,6 +420,87 @@ def install_hooks_command(force: bool = False) -> int:
 
 
 
+def sync_catalog_permissions_command() -> int:
+    """Synchronize catalog YAML file permissions with lockstate.json status.
+
+    This corrects any inconsistency where permissions don't match the logical state.
+    Used when lockstate.json is modified or permissions are out of sync.
+    """
+    try:
+        yaml_files = list_catalog_yaml_files()
+    except (CatalogDirectoryNotFoundError, CatalogFilesNotFoundError) as error:
+        print(f"ERROR: {error}")
+        return 1
+
+    try:
+        state = read_state_file()
+    except Exception as error:
+        print(f"ERROR: {error}")
+        return 1
+
+    if state.get("status") == "locked":
+        _lock_catalog_yaml_permissions(yaml_files)
+        print("✅ Synchronized permissions: catalog is locked (files read-only)")
+    elif state.get("status") == "unlocked":
+        _sync_catalog_yaml_permissions(yaml_files)
+        print("✅ Synchronized permissions: catalog is unlocked (files writable)")
+    else:
+        print(f"ERROR: Unknown catalog status: {state.get('status')}")
+        return 1
+
+    return 0
+
+
+def vendor_lock_command() -> int:
+    """Lock vendor directory and require password for modifications.
+
+    Creates password protection for vendor/blueprint-framework directory.
+    """
+    from bpfw.vendor.vendor_lock import lock_vendor_command
+
+    repo_root = get_repo_root()
+
+    if sys.platform != "win32":
+        print("\n🔒 Configura contraseña para vendor:")
+        vendor_password = input("Password: ").strip()
+    else:
+        print("ERROR: Vendor lock requires manual password configuration on Windows.")
+        return 1
+
+    try:
+        lock_vendor_command(vendor_password, repo_root)
+        print("✅ Vendor directory locked and protected")
+        return 0
+    except Exception as error:
+        print(f"ERROR: {error}")
+        return 1
+
+
+def vendor_unlock_command() -> int:
+    """Unlock vendor directory for updates.
+
+    Requires correct password to unlock.
+    """
+    from bpfw.vendor.vendor_lock import unlock_vendor_command
+
+    repo_root = get_repo_root()
+
+    if sys.platform != "win32":
+        print("\n🔓 Verifica contraseña para desbloquear vendor:")
+        vendor_password = input("Password: ").strip()
+    else:
+        print("ERROR: Vendor lock requires manual password configuration on Windows.")
+        return 1
+
+    try:
+        unlock_vendor_command(vendor_password, repo_root)
+        print("✅ Vendor directory unlocked")
+        return 0
+    except Exception as error:
+        print(f"ERROR: {error}")
+        return 1
+
+
 def authority_cli(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="AIOA authority commands.")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -397,6 +509,9 @@ def authority_cli(argv: list[str] | None = None) -> int:
     idle_parser = subparsers.add_parser("idle-autolock")
     idle_parser.add_argument("--idle-seconds", type=int, default=30)
     subparsers.add_parser("run-guard")
+    subparsers.add_parser("sync-permissions")
+    subparsers.add_parser("vendor-lock")
+    subparsers.add_parser("vendor-unlock")
     arguments = parser.parse_args(argv)
 
     if arguments.command == "lock":
@@ -407,6 +522,12 @@ def authority_cli(argv: list[str] | None = None) -> int:
         return run_idle_autolock(arguments.idle_seconds)
     if arguments.command == "run-guard":
         return run_guard()
+    if arguments.command == "sync-permissions":
+        return sync_catalog_permissions_command()
+    if arguments.command == "vendor-lock":
+        return vendor_lock_command()
+    if arguments.command == "vendor-unlock":
+        return vendor_unlock_command()
     return 1
 
 
