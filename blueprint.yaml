@@ -1,4 +1,27 @@
 version: 1
-project:
-  name: blueprint-framework
-components: []
+
+responsibilities:
+  - responsibility_id: query_execution
+    canonical_name: QueryExecution
+    owner_layer: application
+    lifecycle_state: active
+    allowed_files:
+      - src/application/query/query_service.py
+    allowed_symbols:
+      - QueryService.execute
+    allowed_implementations:
+      - implementation_id: default_query_execution
+        class_name: QueryService
+        file: src/application/query/query_service.py
+        lifecycle_state: active
+    active_implementation: default_query_execution
+    forbidden_duplicates:
+      - SmartQueryManager
+    mutability: editable
+    owner: project_owner
+
+locked_resources:
+  - resource_id: project_blueprint
+    path: blueprint.yaml
+    mutability: locked
+    owner: project_owner
