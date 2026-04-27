@@ -1,1 +1,0 @@
-"""Catalog protection tools."""
