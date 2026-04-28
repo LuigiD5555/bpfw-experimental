@@ -21,7 +21,9 @@ SUPPORTED_COMMANDS = (
     "approve",
     "approvals",
     "discover",
+    "scan",
     "proposals",
+    "proposal",
     "show-proposal",
     "accept-proposal",
     "reject-proposal",
@@ -138,6 +140,16 @@ def normalize_command(command: str, subcommand: str | None, target: str | None, 
         if subcommand is None:
             raise ValueError("reject-proposal command requires a proposal_id")
         return "reject_proposal"
+    if command == "proposal":
+        if subcommand not in {"show", "accept", "reject"}:
+            raise ValueError("proposal command requires subcommand `show`, `accept`, or `reject`")
+        if target is None:
+            raise ValueError(f"proposal {subcommand} requires a proposal_id")
+        return f"{subcommand}_proposal"
+    if command == "scan":
+        if subcommand is not None:
+            raise ValueError("scan command does not accept subcommands")
+        return "discover"
     if command == "access":
         if subcommand not in {"request", "grant", "list"}:
             raise ValueError("access command requires subcommand `request`, `grant`, or `list`")
@@ -391,8 +403,10 @@ def main() -> int:
         command_arguments["request_id"] = parsed_arguments.subcommand
     if normalized_command in {"start", "review", "apply", "reject"} and parsed_arguments.subcommand is not None:
         command_arguments["change_id"] = parsed_arguments.subcommand
-    if normalized_command in {"show_proposal", "accept_proposal", "reject_proposal"} and parsed_arguments.subcommand is not None:
-        command_arguments["proposal_id"] = parsed_arguments.subcommand
+    if normalized_command in {"show_proposal", "accept_proposal", "reject_proposal"}:
+        proposal_id = parsed_arguments.target if parsed_arguments.command == "proposal" else parsed_arguments.subcommand
+        if proposal_id is not None:
+            command_arguments["proposal_id"] = proposal_id
     if normalized_command == "start" and parsed_arguments.scope:
         command_arguments["scope"] = parsed_arguments.scope
     if normalized_command == "accept_proposal":
