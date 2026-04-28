@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import timezone
+import json
 
 from bpfw.apply.transaction import ApplyTransactionError, apply_change_transaction
 from bpfw.approval.broker import ApprovalBrokerError, approve_request
@@ -212,6 +213,126 @@ class VerifyAuthorityStep(PipelineStep):
             source=self.name,
             details={"authority_manifest_path": str(manifest_path(project_root=context.project_root))},
         )
+
+
+@dataclass(slots=True)
+class AuthoritySealPrecheckStep(PipelineStep):
+    """Prevent sealing unauthorized authority drift into the manifest."""
+
+    name: str = "authority.seal_precheck"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        from bpfw.access.grant_store import AccessGrantStore
+        from bpfw.authority.resources import AuthorityResourceRegistry
+        from bpfw.integrity.hash_provider import compute_sha256
+        from bpfw.integrity.manifest import IntegrityManifestError, load_manifest
+
+        manifest_file = context.project_root / ".bpfw/manifest.json"
+        if not manifest_file.exists():
+            if str(context.command_arguments.get("init_accept_scan", "")).strip().lower() == "true":
+                return StepResult(status=ResultStatus.OK, message="Initial baseline seal precheck passed", source=self.name)
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message="Cannot seal authority drift.\n\nProject is not sealed yet.\nUse `bpfw init` to create the first baseline.",
+                source=self.name,
+                suggested_actions=["Run `bpfw init` and accept the initial baseline before writing a manifest."],
+            )
+
+        try:
+            manifest_payload = load_manifest(project_root=context.project_root)
+        except IntegrityManifestError as error:
+            return StepResult(status=ResultStatus.BLOCK, message=str(error), source=self.name)
+
+        files = manifest_payload.get("files")
+        if not isinstance(files, list):
+            return StepResult(status=ResultStatus.BLOCK, message="Cannot seal authority drift.\n\nManifest format is invalid.", source=self.name)
+
+        registry = AuthorityResourceRegistry()
+        drifted_authority_paths: dict[str, str] = {}
+        for entry in files:
+            if not isinstance(entry, dict):
+                continue
+            relative_path = str(entry.get("path", "")).strip()
+            expected_hash = str(entry.get("sha256", "")).strip()
+            if not relative_path or not expected_hash:
+                continue
+            absolute_path = context.project_root / relative_path
+            if not absolute_path.exists() or not absolute_path.is_file():
+                continue
+            if compute_sha256(absolute_path) == expected_hash:
+                continue
+            if registry.is_authority_path(relative_path):
+                resource = registry.resolve_by_path(relative_path)
+                drifted_authority_paths[relative_path] = resource.resource_id if resource is not None else relative_path
+
+        if not drifted_authority_paths:
+            return StepResult(status=ResultStatus.OK, message="Authority seal precheck passed", source=self.name)
+
+        audit_path = context.project_root / ".bpfw/audit/authority-events.jsonl"
+        audit_events: list[dict[str, str]] = []
+        if audit_path.exists():
+            for raw_line in audit_path.read_text(encoding="utf-8").splitlines():
+                line = raw_line.strip()
+                if not line:
+                    continue
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(payload, dict):
+                    audit_events.append({str(key): str(value) for key, value in payload.items()})
+
+        active_grants = {grant.grant_id: grant for grant in AccessGrantStore().list_active(project_root=context.project_root)}
+
+        for relative_path, resource_id in sorted(drifted_authority_paths.items()):
+            matching_event = next(
+                (
+                    event
+                    for event in reversed(audit_events)
+                    if event.get("event_type") == "authority_change_applied" and event.get("resource_id") == resource_id
+                ),
+                None,
+            )
+            if matching_event is None:
+                return StepResult(
+                    status=ResultStatus.BLOCK,
+                    message=(
+                        "Cannot seal authority drift.\n\n"
+                        "The following authority resource changed outside controlled authority operation:\n"
+                        f"- {relative_path}\n\n"
+                        "Use proposal flow or scoped access."
+                    ),
+                    source=self.name,
+                    affected_resources=[str(context.project_root / relative_path)],
+                )
+            grant_id = matching_event.get("grant_id", "")
+            if not grant_id or grant_id not in active_grants:
+                return StepResult(
+                    status=ResultStatus.BLOCK,
+                    message=(
+                        "Cannot seal authority drift.\n\n"
+                        "The following authority resource changed with invalid authority grant:\n"
+                        f"- {relative_path}\n\n"
+                        "Use proposal flow or scoped access."
+                    ),
+                    source=self.name,
+                    affected_resources=[str(context.project_root / relative_path)],
+                )
+            matched_grant = active_grants[grant_id]
+            if matched_grant.resource_id != resource_id:
+                return StepResult(
+                    status=ResultStatus.BLOCK,
+                    message=(
+                        "Cannot seal authority drift.\n\n"
+                        "The following authority resource changed with invalid authority grant:\n"
+                        f"- {relative_path}\n\n"
+                        "Use proposal flow or scoped access."
+                    ),
+                    source=self.name,
+                    affected_resources=[str(context.project_root / relative_path)],
+                )
+
+        return StepResult(status=ResultStatus.OK, message="Authority seal precheck passed", source=self.name)
 @dataclass(slots=True)
 class VerifyBlueprintStep(PipelineStep):
     """Executable verify step for blueprint authority validation."""
@@ -1563,7 +1684,18 @@ def build_default_registry() -> dict[str, Pipeline]:
     )
     manifest_write_pipeline = Pipeline(
         name="manifest_write",
-        steps=[ManifestWriteStep()],
+        steps=[
+            AuthoritySealPrecheckStep(),
+            VerifyBlueprintStep(),
+            VerifyArchitectureStep(),
+            VerifyCompositionStep(),
+            VerifyRuntimeSnapshotStep(),
+            VerifyWiringStep(),
+            VerifyDuplicationStep(),
+            VerifyBlueprintModeStep(),
+            VerifyAuthorityStep(),
+            ManifestWriteStep(),
+        ],
     )
     approve_pipeline = Pipeline(
         name="approve",
