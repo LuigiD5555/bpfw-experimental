@@ -14,7 +14,14 @@ def _context(project_root: Path, **arguments: str) -> SimpleNamespace:
 
 
 def test_init_new_project_uses_short_ux_message(tmp_path: Path) -> None:
-    result = InitProjectStep().run(_context(tmp_path))
+    from bpfw.authority.lock_manager import AuthorityLockManager
+
+    original_lock_all = AuthorityLockManager.lock_all
+    AuthorityLockManager.lock_all = lambda self, project_root: 1  # type: ignore[method-assign]
+    try:
+        result = InitProjectStep().run(_context(tmp_path))
+    finally:
+        AuthorityLockManager.lock_all = original_lock_all  # type: ignore[method-assign]
     assert result.status == ResultStatus.OK
     assert result.message == (
         "New project detected.\n"
