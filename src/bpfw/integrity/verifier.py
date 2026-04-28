@@ -128,7 +128,9 @@ def _verify_manifest_signature(manifest_payload: dict[str, Any], manifest_file_p
 
     signable_payload = {key: value for key, value in manifest_payload.items() if key != "signature"}
     try:
-        is_valid_signature = verify_payload_signature(payload=signable_payload, signature=signature_value)
+        is_valid_signature = verify_payload_signature(
+            payload=signable_payload, signature=signature_value, project_root=manifest_file_path.parent.parent
+        )
     except IntegritySigningError as error:
         return [
             _issue(

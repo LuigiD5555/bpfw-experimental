@@ -6,8 +6,10 @@ import hashlib
 import hmac
 import json
 import os
+from pathlib import Path
 from typing import Any
 
+from bpfw.security.keyring import resolve_hmac_key
 
 APPROVAL_KEY_ENV_VAR = "BPFW_APPROVAL_HMAC_KEY"
 _MANIFEST_FALLBACK_KEY_ENV_VAR = "BPFW_MANIFEST_HMAC_KEY"
@@ -23,6 +25,12 @@ def load_approval_hmac_key() -> bytes:
     primary_key = os.getenv(APPROVAL_KEY_ENV_VAR, "").strip()
     fallback_key = os.getenv(_MANIFEST_FALLBACK_KEY_ENV_VAR, "").strip()
     active_key = primary_key or fallback_key
+    if not active_key:
+        active_key = resolve_hmac_key(
+            project_root=Path.cwd(),
+            purpose="approval",
+            env_var_names=[APPROVAL_KEY_ENV_VAR, _MANIFEST_FALLBACK_KEY_ENV_VAR],
+        )
     if not active_key:
         raise ApprovalSigningError(
             "Approval signing key is missing. Set BPFW_APPROVAL_HMAC_KEY or BPFW_MANIFEST_HMAC_KEY. "

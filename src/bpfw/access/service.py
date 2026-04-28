@@ -10,6 +10,7 @@ from bpfw.access.request_store import AccessRequestStore
 from bpfw.access.signer import AccessGrantSigner
 from bpfw.approval.os_auth import ApprovalRequestContext, DummyAuthBackend, SudoAuthBackend
 from bpfw.authority.resources import AuthorityResourceRegistry
+from bpfw.security.keyring import resolve_hmac_key
 
 
 class AccessService:
@@ -81,7 +82,7 @@ class AccessService:
             expires_at=expires_at,
             signature="",
         )
-        signature = self._signer.sign(provisional_grant, secret_key=self._load_signing_key())
+        signature = self._signer.sign(provisional_grant, secret_key=self._load_signing_key(project_root=project_root))
         grant = AccessGrant(
             grant_id=provisional_grant.grant_id,
             request_id=provisional_grant.request_id,
@@ -99,11 +100,12 @@ class AccessService:
         self._request_store.save(project_root=project_root, request=request)
         return grant
 
-    def _load_signing_key(self) -> str:
-        key_value = os.getenv("BPFW_ACCESS_HMAC_KEY", "").strip() or os.getenv("BPFW_APPROVAL_HMAC_KEY", "").strip()
-        if not key_value:
-            raise ValueError("Access signing key is missing. Set BPFW_ACCESS_HMAC_KEY or BPFW_APPROVAL_HMAC_KEY.")
-        return key_value
+    def _load_signing_key(self, project_root: Path) -> str:
+        return resolve_hmac_key(
+            project_root=project_root,
+            purpose="access",
+            env_var_names=["BPFW_ACCESS_HMAC_KEY", "BPFW_APPROVAL_HMAC_KEY", "BPFW_MANIFEST_HMAC_KEY"],
+        )
 
     def _next_id(self, project_root: Path, directory_name: str, prefix: str, created_at: datetime) -> str:
         directory_path = project_root / ".bpfw" / directory_name

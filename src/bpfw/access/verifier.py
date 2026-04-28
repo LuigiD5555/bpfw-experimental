@@ -5,8 +5,8 @@ from pathlib import Path
 from bpfw.access.grant_store import AccessGrantStore
 from bpfw.access.models import AccessVerificationResult
 from bpfw.access.signer import AccessGrantSigner
-import os
 
+from bpfw.security.keyring import resolve_hmac_key
 
 class AccessVerifier:
     """Verifies scoped authority access before protected operations run."""
@@ -26,9 +26,11 @@ class AccessVerifier:
         scope_grants = [item for item in operation_grants if item.scope == scope]
         if not scope_grants:
             return AccessVerificationResult(False, operation_grants[0].grant_id, "Grant scope does not match requested operation.", "Request a new scoped authority grant with matching scope.")
-        signing_key = os.getenv("BPFW_ACCESS_HMAC_KEY", "").strip() or os.getenv("BPFW_APPROVAL_HMAC_KEY", "").strip()
-        if not signing_key:
-            return AccessVerificationResult(False, scope_grants[0].grant_id, "Access signing key is missing.", "Set BPFW_ACCESS_HMAC_KEY and issue a new access grant.")
+        signing_key = resolve_hmac_key(
+            project_root=project_root,
+            purpose="access",
+            env_var_names=["BPFW_ACCESS_HMAC_KEY", "BPFW_APPROVAL_HMAC_KEY", "BPFW_MANIFEST_HMAC_KEY"],
+        )
         for grant in scope_grants:
             if self._signer.verify(grant=grant, secret_key=signing_key):
                 return AccessVerificationResult(True, grant.grant_id, "Access grant is valid.", "Proceed with scoped authority change.")

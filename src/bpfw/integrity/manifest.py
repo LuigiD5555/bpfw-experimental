@@ -207,7 +207,7 @@ def write_manifest(project_root: Path) -> ManifestWriteResult:
     }
     signed_manifest = {
         **payload_without_signature,
-        "signature": sign_payload(payload_without_signature),
+        "signature": sign_payload(payload_without_signature, project_root=project_root),
     }
 
     output_path = manifest_path(project_root=project_root)
