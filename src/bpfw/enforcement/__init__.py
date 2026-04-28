@@ -1,1 +1,1 @@
-"""enforcement domain package for BPFW Prompt 0 scaffold."""
+"""Enforcement package for commit, CI, and startup gates."""

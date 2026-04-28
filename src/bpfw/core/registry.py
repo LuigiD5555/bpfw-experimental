@@ -31,6 +31,7 @@ from bpfw.duplication.duplication_reporter import (
     summarize_counts,
 )
 from bpfw.duplication.similarity_detector import detect_duplication
+from bpfw.enforcement.pre_commit import HookInstallError, install_pre_commit_hook
 from bpfw.integrity.manifest import IntegrityManifestError, write_manifest
 from bpfw.integrity.signer import IntegritySigningError
 from bpfw.integrity.verifier import verify_integrity
@@ -447,6 +448,33 @@ class VerifyIntegrityStep(PipelineStep):
                 "manifest_path": verification_result.manifest_path,
                 "integrity_checked_files": str(verification_result.checked_files),
             },
+        )
+
+
+@dataclass(slots=True)
+class InstallHooksStep(PipelineStep):
+    """Install deterministic git hooks for local enforcement."""
+
+    name: str = "enforcement.install_hooks"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        try:
+            installed_hook = install_pre_commit_hook(project_root=context.project_root)
+        except HookInstallError as error:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=str(error),
+                source=self.name,
+                details={"error_code": "ENF_HOOK_INSTALL_BLOCK"},
+                suggested_actions=["Run inside a git repository with a writable .git/hooks directory"],
+            )
+
+        return StepResult(
+            status=ResultStatus.OK,
+            message="Pre-commit hook installed successfully",
+            source=self.name,
+            details={"installed_hook_path": str(installed_hook)},
+            affected_resources=[str(installed_hook)],
         )
 
 
@@ -1078,6 +1106,10 @@ def build_default_registry() -> dict[str, Pipeline]:
         name="reject_proposal",
         steps=[RejectProposalStep()],
     )
+    install_hooks_pipeline = Pipeline(
+        name="install_hooks",
+        steps=[InstallHooksStep()],
+    )
     bootstrap_pipeline = Pipeline(
         name="bootstrap",
         steps=[
@@ -1114,5 +1146,6 @@ def build_default_registry() -> dict[str, Pipeline]:
         "show_proposal": show_proposal_pipeline,
         "accept_proposal": accept_proposal_pipeline,
         "reject_proposal": reject_proposal_pipeline,
+        "install_hooks": install_hooks_pipeline,
         "status": bootstrap_pipeline,
     }

@@ -7,11 +7,13 @@ import json
 from pathlib import Path
 
 from bpfw.core.engine import BlueprintEngine, build_command
+from bpfw.enforcement.ci import ci_exit_code, render_ci_report
 
 
 SUPPORTED_COMMANDS = (
     "verify",
     "verify-integrity",
+    "install-hooks",
     "manifest",
     "start",
     "approve",
@@ -45,6 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--as-new-responsibility", dest="as_new_responsibility", default="")
     parser.add_argument("--state", default="")
     parser.add_argument("--reject-action", default="")
+    parser.add_argument("--ci", action="store_true", dest="ci_mode")
     parser.add_argument("--json", action="store_true", dest="as_json")
     return parser
 
@@ -73,6 +76,10 @@ def normalize_command(command: str, subcommand: str | None) -> str:
         if subcommand is not None:
             raise ValueError("verify-integrity command does not accept subcommands")
         return "verify_integrity"
+    if command == "install-hooks":
+        if subcommand is not None:
+            raise ValueError("install-hooks command does not accept subcommands")
+        return "install_hooks"
     if command == "review":
         if subcommand is None:
             raise ValueError("review command requires a change_id")
@@ -247,6 +254,8 @@ def _print_human(payload: dict) -> None:
         print(f"Action: {details['proposal_action']}")
     if "moved_file_count" in details:
         print(f"Moved Files: {details['moved_file_count']}")
+    if "installed_hook_path" in details:
+        print(f"Installed Hook: {details['installed_hook_path']}")
 
     affected_resources = primary_step.get("affected_resources", [])
     if affected_resources:
@@ -291,6 +300,8 @@ def main() -> int:
             command_arguments["state"] = parsed_arguments.state
     if normalized_command == "reject_proposal" and parsed_arguments.reject_action:
         command_arguments["reject_action"] = parsed_arguments.reject_action
+    if normalized_command == "verify" and parsed_arguments.ci_mode:
+        command_arguments["ci"] = "true"
     result = engine.run(
         build_command(
             command_name=normalized_command,
@@ -309,6 +320,11 @@ def main() -> int:
             print(json.dumps(payload, indent=2))
     else:
         _print_human(payload)
+        if normalized_command == "verify" and parsed_arguments.ci_mode:
+            print(render_ci_report(payload=payload))
+
+    if normalized_command == "verify" and parsed_arguments.ci_mode:
+        return ci_exit_code(payload=payload)
     return 0 if result.status in {"OK", "INFO", "WARNING"} else 1
 
 
