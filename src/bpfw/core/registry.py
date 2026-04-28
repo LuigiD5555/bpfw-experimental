@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import timezone
 import json
+import os
 
 from bpfw.apply.transaction import ApplyTransactionError, apply_change_transaction
 from bpfw.approval.broker import ApprovalBrokerError, approve_request
@@ -682,6 +683,24 @@ class VerifyIntegrityStep(PipelineStep):
         ci_mode_enabled = str(context.command_arguments.get("ci", "")).strip().lower() == "true"
         diagnostic_mode_enabled = str(context.command_arguments.get("diagnostic", "")).strip().lower() == "true"
         strict_mode_enabled = self.strict and not diagnostic_mode_enabled
+        if ci_mode_enabled and not os.getenv("BPFW_MANIFEST_HMAC_KEY", "").strip():
+            return StepResult(
+                status=ResultStatus.CRITICAL,
+                message=(
+                    "Protected integrity could not be verified, commit blocked.\n\n"
+                    "Integrity signing key is missing.\n\n"
+                    "BPFW is running in protected mode, but integrity cannot be verified.\n\n"
+                    "Checked files:\n0\n\n"
+                    "CI Gate:\nFAIL"
+                ),
+                source=self.name,
+                details={
+                    "error_code": "INT001",
+                    "manifest_path": str(context.project_root / ".bpfw/manifest.json"),
+                    "integrity_checked_files": "0",
+                },
+                suggested_actions=["Set BPFW_MANIFEST_HMAC_KEY and rerun `bpfw verify --ci`"],
+            )
         verification_result = verify_integrity(project_root=context.project_root)
         if verification_result.issues:
             first_issue = verification_result.issues[0]

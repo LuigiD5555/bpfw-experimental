@@ -6,6 +6,16 @@ from dataclasses import dataclass
 
 
 _FAIL_STATUSES = {"block", "critical"}
+_SECURITY_WARNING_CODES = {
+    "INT001",
+    "INT002",
+    "INT004",
+    "INT008",
+    "AUTH001",
+    "APP006",
+    "APP007",
+    "ACCESS001",
+}
 
 
 @dataclass(slots=True)
@@ -50,7 +60,24 @@ def should_fail_ci(payload: dict[str, object]) -> bool:
     """Return True when CI gate must fail."""
 
     summary = summarize_payload(payload=payload)
-    return summary.block_count > 0 or summary.critical_count > 0
+    if summary.block_count > 0 or summary.critical_count > 0:
+        return True
+
+    steps = payload.get("steps", [])
+    if isinstance(steps, list):
+        for step in steps:
+            if not isinstance(step, dict):
+                continue
+            status = str(step.get("status", "")).lower()
+            if status != "warning":
+                continue
+            details = step.get("details", {})
+            if not isinstance(details, dict):
+                continue
+            error_code = str(details.get("error_code", "")).strip().upper()
+            if error_code in _SECURITY_WARNING_CODES:
+                return True
+    return False
 
 
 def ci_exit_code(payload: dict[str, object]) -> int:

@@ -1,9 +1,10 @@
 #!/usr/bin/env sh
 set -eu
 
-if [ -z "${BPFW_MANIFEST_HMAC_KEY:-}" ] && [ -f ".bpfw/local_hmac_key" ]; then
-  BPFW_MANIFEST_HMAC_KEY="$(cat .bpfw/local_hmac_key)"
-  export BPFW_MANIFEST_HMAC_KEY
+if [ -z "${BPFW_MANIFEST_HMAC_KEY:-}" ]; then
+  echo "BPFW CRITICAL: BPFW_MANIFEST_HMAC_KEY is required for protected commits."
+  echo "Protected integrity could not be verified, commit blocked."
+  exit 1
 fi
 
 bpfw verify --ci
