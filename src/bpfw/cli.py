@@ -55,6 +55,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--accept-scan", action="store_true")
     parser.add_argument("--force-new", action="store_true")
     parser.add_argument("--ci", action="store_true", dest="ci_mode")
+    parser.add_argument("--diagnostic", action="store_true")
     parser.add_argument("--operation", default="")
     parser.add_argument("--reason", default="")
     parser.add_argument("--duration-minutes", dest="duration_minutes", default="30")
@@ -374,6 +375,8 @@ def main() -> int:
         command_arguments["reject_action"] = parsed_arguments.reject_action
     if normalized_command == "verify" and parsed_arguments.ci_mode:
         command_arguments["ci"] = "true"
+    if normalized_command == "verify" and parsed_arguments.diagnostic:
+        command_arguments["diagnostic"] = "true"
     if normalized_command == "access_request":
         command_arguments["resource_id"] = parsed_arguments.target
         command_arguments["operation"] = parsed_arguments.operation

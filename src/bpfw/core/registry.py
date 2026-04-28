@@ -80,20 +80,19 @@ class VerifyAuthorityStep(PipelineStep):
 
     name: str = "authority.verify"
     def run(self, context) -> StepResult:  # noqa: ANN001
-        import subprocess
+        import json
 
+        from bpfw.access.grant_store import AccessGrantStore
         from bpfw.authority.resources import AuthorityResourceRegistry
-        from bpfw.integrity.manifest import load_manifest, manifest_path
+        from bpfw.integrity.manifest import IntegrityManifestError, load_manifest, manifest_path
         from bpfw.integrity.hash_provider import compute_sha256
-        from bpfw.integrity.manifest import IntegrityManifestError
-        from bpfw.integrity.verifier import verify_integrity
 
         try:
             manifest_payload = load_manifest(project_root=context.project_root)
         except IntegrityManifestError:
             return StepResult(
-                status=ResultStatus.OK,
-                message="Authority verify skipped because manifest is unavailable",
+                status=ResultStatus.BLOCK,
+                message="Project is not sealed.\nRun bpfw init or accept the generated baseline.",
                 source=self.name,
             )
 
@@ -101,12 +100,8 @@ class VerifyAuthorityStep(PipelineStep):
         if not isinstance(files, list):
             return StepResult(status=ResultStatus.OK, message="Authority verify skipped because manifest format is invalid", source=self.name)
 
-        policy = AuthorityPolicy()
         registry = AuthorityResourceRegistry()
-        requested_operation = str(context.command_arguments.get("operation", "")).strip() or None
-        requested_scope = str(context.command_arguments.get("scope", "")).strip() or None
-
-        changed_paths: set[str] = set()
+        changed_resources: dict[str, str] = {}
 
         for entry in files:
             if not isinstance(entry, dict):
@@ -121,86 +116,95 @@ class VerifyAuthorityStep(PipelineStep):
                 continue
             if compute_sha256(absolute_path) == expected_hash:
                 continue
+            if registry.is_authority_path(relative_path):
+                resource = registry.resolve_by_path(relative_path)
+                changed_resources[relative_path] = resource.resource_id if resource is not None else relative_path
 
-            changed_paths.add(relative_path)
-
-        try:
-            git_status = subprocess.run(
-                ["git", "status", "--porcelain"],
-                cwd=context.project_root,
-                check=False,
-                capture_output=True,
-                text=True,
-            )
-        except OSError:
-            git_status = None
-
-        if git_status is not None and git_status.returncode == 0:
-            for line in git_status.stdout.splitlines():
-                if len(line) < 4:
-                    continue
-                candidate_path = line[3:].strip()
-                if not candidate_path:
-                    continue
-                if " -> " in candidate_path:
-                    candidate_path = candidate_path.split(" -> ", 1)[1].strip()
-                candidate_path = candidate_path.replace("\\", "/")
-                if registry.is_authority_path(candidate_path):
-                    changed_paths.add(candidate_path)
-
-        for relative_path in sorted(changed_paths):
-            integrity_result = verify_integrity(project_root=context.project_root)
-            if integrity_result.issues and not integrity_result.only_precondition_issues:
-                # Integrity verifier participates in authority pipeline wiring.
-                pass
-
-            resource = registry.resolve_by_path(relative_path)
-            operation = requested_operation
-            scope = requested_scope
-            if resource is not None and (operation is None or scope is None):
-                default_operation = resource.allowed_operations[0] if resource.allowed_operations else "direct_edit"
-                operation = operation or default_operation
-                scope = scope or "project"
-
-            decision = policy.evaluate_direct_change(
-                project_root=context.project_root,
-                relative_path=relative_path,
-                operation=operation,
-                scope=scope,
-            )
-            if decision.allowed:
-                continue
-
-            resource_label = "Authority resource"
-            if resource is not None:
-                if resource.resource_type == "blueprint":
-                    resource_label = "Blueprint"
-                elif resource.resource_type == "architecture":
-                    resource_label = "Architecture"
-                elif resource.resource_type == "manifest":
-                    resource_label = "Integrity manifest"
-
-            message = (
-                "BPFW BLOCKED ACTION\n\n"
-                "Resource:\n"
-                f"{relative_path}\n\n"
-                "Reason:\n"
-                f"{resource_label} is an authority resource.\n\n"
-                "Policy:\n"
-                "Direct authority edits are not allowed.\n\n"
-                f"{decision.message}\n\n"
-                "Do not retry this edit.\n\n"
-                "Allowed next action:\n"
-                f"{decision.recommendation}"
-            )
+        if not changed_resources:
             return StepResult(
-                status=ResultStatus.BLOCK,
-                message=message,
+                status=ResultStatus.OK,
+                message="Authority resources validated successfully",
                 source=self.name,
-                details={"error_code": "AUTH001", "resource_id": decision.resource_id},
-                affected_resources=[str(context.project_root / relative_path)],
-                suggested_actions=[decision.recommendation],
+                details={"authority_manifest_path": str(manifest_path(project_root=context.project_root))},
             )
+
+        audit_path = context.project_root / ".bpfw/audit/authority-events.jsonl"
+        audit_events: list[dict[str, str]] = []
+        if audit_path.exists():
+            for raw_line in audit_path.read_text(encoding="utf-8").splitlines():
+                line = raw_line.strip()
+                if not line:
+                    continue
+                try:
+                    payload = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(payload, dict):
+                    audit_events.append({str(key): str(value) for key, value in payload.items()})
+
+        active_grants = {grant.grant_id: grant for grant in AccessGrantStore().list_active(project_root=context.project_root)}
+
+        for relative_path, resource_id in sorted(changed_resources.items()):
+            matching_event = next(
+                (
+                    event
+                    for event in reversed(audit_events)
+                    if event.get("event_type") == "authority_change_applied" and event.get("resource_id") == resource_id
+                ),
+                None,
+            )
+            if matching_event is None:
+                return StepResult(
+                    status=ResultStatus.CRITICAL,
+                    message=(
+                        "Authority drift detected.\n\n"
+                        "Resource:\n"
+                        f"{relative_path}\n\n"
+                        "This resource changed outside a controlled authority operation.\n\n"
+                        "Do not retry this edit.\n"
+                        "Use proposal flow or request scoped authority access."
+                    ),
+                    source=self.name,
+                    details={"error_code": "AUTH001", "resource_id": resource_id},
+                    affected_resources=[str(context.project_root / relative_path)],
+                    suggested_actions=["Use proposal flow or request scoped authority access."],
+                )
+
+            grant_id = matching_event.get("grant_id", "")
+            if not grant_id or grant_id not in active_grants:
+                return StepResult(
+                    status=ResultStatus.CRITICAL,
+                    message=(
+                        "Authority drift detected.\n\n"
+                        "Resource:\n"
+                        f"{relative_path}\n\n"
+                        "This resource changed outside a controlled authority operation.\n\n"
+                        "Do not retry this edit.\n"
+                        "Use proposal flow or request scoped authority access."
+                    ),
+                    source=self.name,
+                    details={"error_code": "AUTH001", "resource_id": resource_id},
+                    affected_resources=[str(context.project_root / relative_path)],
+                    suggested_actions=["Use proposal flow or request scoped authority access."],
+                )
+
+            matched_grant = active_grants[grant_id]
+            if matched_grant.resource_id != resource_id:
+                return StepResult(
+                    status=ResultStatus.CRITICAL,
+                    message=(
+                        "Authority drift detected.\n\n"
+                        "Resource:\n"
+                        f"{relative_path}\n\n"
+                        "This resource changed outside a controlled authority operation.\n\n"
+                        "Do not retry this edit.\n"
+                        "Use proposal flow or request scoped authority access."
+                    ),
+                    source=self.name,
+                    details={"error_code": "AUTH001", "resource_id": resource_id},
+                    affected_resources=[str(context.project_root / relative_path)],
+                    suggested_actions=["Use proposal flow or request scoped authority access."],
+                )
 
         return StepResult(
             status=ResultStatus.OK,
@@ -555,6 +559,8 @@ class VerifyIntegrityStep(PipelineStep):
 
     def run(self, context) -> StepResult:  # noqa: ANN001
         ci_mode_enabled = str(context.command_arguments.get("ci", "")).strip().lower() == "true"
+        diagnostic_mode_enabled = str(context.command_arguments.get("diagnostic", "")).strip().lower() == "true"
+        strict_mode_enabled = self.strict and not diagnostic_mode_enabled
         verification_result = verify_integrity(project_root=context.project_root)
         if verification_result.issues:
             first_issue = verification_result.issues[0]
@@ -570,7 +576,7 @@ class VerifyIntegrityStep(PipelineStep):
             elif any(issue.severity == "block" for issue in verification_result.issues):
                 status = ResultStatus.BLOCK
 
-            if not self.strict and verification_result.only_precondition_issues and not ci_mode_enabled:
+            if not strict_mode_enabled and verification_result.only_precondition_issues and not ci_mode_enabled:
                 status = ResultStatus.WARNING
 
             protected_precondition_issue_codes = {"INT001", "INT002", "AUTH001", "APP006", "APP007", "INT004"}
@@ -1540,7 +1546,6 @@ def build_default_registry() -> dict[str, Pipeline]:
     verify_pipeline = Pipeline(
         name="verify",
         steps=[
-            VerifyAuthorityStep(),
             VerifyBlueprintStep(),
             VerifyArchitectureStep(),
             VerifyCompositionStep(),
@@ -1548,7 +1553,8 @@ def build_default_registry() -> dict[str, Pipeline]:
             VerifyWiringStep(),
             VerifyDuplicationStep(),
             VerifyBlueprintModeStep(),
-            VerifyIntegrityStep(strict=False),
+            VerifyAuthorityStep(),
+            VerifyIntegrityStep(strict=True),
         ],
     )
     verify_integrity_pipeline = Pipeline(
