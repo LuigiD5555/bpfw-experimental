@@ -1028,76 +1028,138 @@ class AccessListStep(PipelineStep):
 
 @dataclass(slots=True)
 class BlueprintAddFileStep(PipelineStep):
-    """Add one file to allowed_files in a blueprint responsibility."""
+    """Add one allowed file to a blueprint responsibility."""
 
     name: str = "blueprint.add_file"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
-        scope = context.command_arguments.get("scope", "").strip()
-        file_path = context.command_arguments.get("file_path", "").strip()
-        if not scope or not file_path:
-            return StepResult(status=ResultStatus.BLOCK, message="Usage: bpfw blueprint add-file <scope> <file_path>", source=self.name)
+        from bpfw.authority.change_engine import AuthorityChangeEngine
+        from bpfw.authority.operation import AuthorityOperation
 
-        authority_decision = AuthorityPolicy().evaluate_direct_change(
-            project_root=context.project_root,
-            relative_path="blueprint.yaml",
-            operation="add_allowed_file",
-            scope=scope,
-        )
-        if not authority_decision.allowed:
+        responsibility_id = context.command_arguments.get("responsibility_id", "").strip()
+        file_path = context.command_arguments.get("file_path", "").strip()
+        if not responsibility_id or not file_path:
             return StepResult(
                 status=ResultStatus.BLOCK,
-                message=(
-                    "BLOCK\nRequired access:\n"
-                    "resource: blueprint.yaml\n"
-                    f"scope: {scope}\n"
-                    "operation: add_allowed_file"
-                ),
+                message="Usage: bpfw blueprint add-file <responsibility_id> <path>",
                 source=self.name,
-                suggested_actions=[authority_decision.recommendation],
             )
 
-        blueprint_path, payload = load_blueprint_data(project_root=context.project_root)
-        responsibilities = payload.get("responsibilities", [])
-        if not isinstance(responsibilities, list):
-            return StepResult(status=ResultStatus.BLOCK, message="blueprint.yaml field `responsibilities` must be a list", source=self.name)
-        for item in responsibilities:
-            if not isinstance(item, dict):
-                continue
-            if str(item.get("responsibility_id", "")).strip() != scope:
-                continue
-            allowed_files = item.get("allowed_files", [])
-            if not isinstance(allowed_files, list):
-                allowed_files = []
-            if file_path not in allowed_files:
-                allowed_files.append(file_path)
-            item["allowed_files"] = allowed_files
-            blueprint_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
-            manifest_result = write_manifest(project_root=context.project_root)
-            return StepResult(
-                status=ResultStatus.OK,
-                message="OK\nBlueprint updated mechanically.\nManifest updated.",
-                source=self.name,
-                details={"manifest_path": str(manifest_result.manifest_path)},
-            )
-        return StepResult(status=ResultStatus.BLOCK, message=f"Responsibility `{scope}` not found in blueprint.yaml", source=self.name)
-        grants_human = "\n".join(
-            [
-                f"- {item.grant_id} | request={item.request_id} | resource={item.resource_path} | scope={item.scope} | operation={item.operation} | expires_at={item.expires_at.astimezone(timezone.utc).isoformat()}"
-                for item in active_grants
-            ]
+        operation = AuthorityOperation(
+            operation_id=f"blueprint-add-file-{responsibility_id}",
+            resource_id="project_blueprint",
+            resource_path="blueprint.yaml",
+            operation_type="add_allowed_file",
+            scope=responsibility_id,
+            payload={"responsibility_id": responsibility_id, "file_path": file_path},
         )
+        try:
+            AuthorityChangeEngine().apply(project_root=context.project_root, operation=operation)
+        except RuntimeError as error:
+            error_message = str(error)
+            if "Access denied" in error_message or "No active access grant" in error_message:
+                return StepResult(
+                    status=ResultStatus.BLOCK,
+                    message=(
+                        "BLOCK\n\n"
+                        "This command modifies blueprint.yaml.\n\n"
+                        "Required access:\n"
+                        "- resource: blueprint.yaml\n"
+                        f"- scope: {responsibility_id}\n"
+                        "- operation: add_allowed_file\n\n"
+                        "Run:\n"
+                        "bpfw access request blueprint "
+                        f"--scope {responsibility_id} --operation add_allowed_file --reason \"Add retry policy file\""
+                    ),
+                    source=self.name,
+                )
+            return StepResult(status=ResultStatus.BLOCK, message=error_message, source=self.name)
+
         return StepResult(
             status=ResultStatus.OK,
-            message="Authority access requests and grants listed.",
+            message=(
+                "OK\n\n"
+                "Added allowed file:\n"
+                f"{file_path}\n\n"
+                "Responsibility:\n"
+                f"{responsibility_id}\n\n"
+                "Verification:\n"
+                "OK\n\n"
+                "Manifest:\n"
+                "Updated"
+            ),
             source=self.name,
-            details={
-                "pending_request_count": str(len(pending_requests)),
-                "active_grant_count": str(len(active_grants)),
-                "pending_requests_human": requests_human,
-                "active_grants_human": grants_human,
+        )
+
+
+@dataclass(slots=True)
+class BlueprintAddSymbolStep(PipelineStep):
+    """Add one allowed symbol to a blueprint responsibility."""
+
+    name: str = "blueprint.add_symbol"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        from bpfw.authority.change_engine import AuthorityChangeEngine
+        from bpfw.authority.operation import AuthorityOperation
+
+        responsibility_id = context.command_arguments.get("responsibility_id", "").strip()
+        symbol_name = context.command_arguments.get("symbol_name", "").strip()
+        if not responsibility_id or not symbol_name:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message="Usage: bpfw blueprint add-symbol <responsibility_id> <symbol>",
+                source=self.name,
+            )
+        operation = AuthorityOperation(
+            operation_id=f"blueprint-add-symbol-{responsibility_id}",
+            resource_id="project_blueprint",
+            resource_path="blueprint.yaml",
+            operation_type="add_allowed_symbol",
+            scope=responsibility_id,
+            payload={"responsibility_id": responsibility_id, "symbol_name": symbol_name},
+        )
+        try:
+            AuthorityChangeEngine().apply(project_root=context.project_root, operation=operation)
+        except RuntimeError as error:
+            return StepResult(status=ResultStatus.BLOCK, message=str(error), source=self.name)
+        return StepResult(status=ResultStatus.OK, message="Blueprint symbol added mechanically.", source=self.name)
+
+
+@dataclass(slots=True)
+class BlueprintCreateResponsibilityStep(PipelineStep):
+    """Create one blueprint responsibility in a target layer."""
+
+    name: str = "blueprint.create_responsibility"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        from bpfw.authority.change_engine import AuthorityChangeEngine
+        from bpfw.authority.operation import AuthorityOperation
+
+        responsibility_id = context.command_arguments.get("responsibility_id", "").strip()
+        owner_layer = context.command_arguments.get("owner_layer", "").strip()
+        if not responsibility_id or not owner_layer:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message="Usage: bpfw blueprint create-responsibility <responsibility_id> --layer <layer>",
+                source=self.name,
+            )
+        operation = AuthorityOperation(
+            operation_id=f"blueprint-create-responsibility-{responsibility_id}",
+            resource_id="project_blueprint",
+            resource_path="blueprint.yaml",
+            operation_type="create_responsibility",
+            scope=responsibility_id,
+            payload={
+                "responsibility_id": responsibility_id,
+                "canonical_name": responsibility_id.replace("_", " ").title(),
+                "owner_layer": owner_layer,
             },
         )
+        try:
+            AuthorityChangeEngine().apply(project_root=context.project_root, operation=operation)
+        except RuntimeError as error:
+            return StepResult(status=ResultStatus.BLOCK, message=str(error), source=self.name)
+        return StepResult(status=ResultStatus.OK, message="Blueprint responsibility created mechanically.", source=self.name)
 
 
 @dataclass(slots=True)
@@ -1796,6 +1858,14 @@ def build_default_registry() -> dict[str, Pipeline]:
         name="blueprint_add_file",
         steps=[BlueprintAddFileStep()],
     )
+    blueprint_add_symbol_pipeline = Pipeline(
+        name="blueprint_add_symbol",
+        steps=[BlueprintAddSymbolStep()],
+    )
+    blueprint_create_responsibility_pipeline = Pipeline(
+        name="blueprint_create_responsibility",
+        steps=[BlueprintCreateResponsibilityStep()],
+    )
     init_pipeline = Pipeline(
         name="init",
         steps=[InitProjectStep()],
@@ -1841,6 +1911,8 @@ def build_default_registry() -> dict[str, Pipeline]:
         "access_grant": access_grant_pipeline,
         "access_list": access_list_pipeline,
         "blueprint_add_file": blueprint_add_file_pipeline,
+        "blueprint_add_symbol": blueprint_add_symbol_pipeline,
+        "blueprint_create_responsibility": blueprint_create_responsibility_pipeline,
         "init": init_pipeline,
         "status": bootstrap_pipeline,
     }

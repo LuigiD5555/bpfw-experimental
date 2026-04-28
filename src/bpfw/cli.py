@@ -61,6 +61,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--duration-minutes", dest="duration_minutes", default="30")
     parser.add_argument("--request-id", dest="request_id", default="")
     parser.add_argument("--json", action="store_true", dest="as_json")
+    parser.add_argument("--layer", default="")
     return parser
 
 
@@ -145,11 +146,19 @@ def normalize_command(command: str, subcommand: str | None, target: str | None, 
             raise ValueError(f"access {subcommand} requires target")
         return f"access_{subcommand}"
     if command == "blueprint":
-        if subcommand != "add-file":
-            raise ValueError("blueprint command requires subcommand `add-file`")
-        if target is None or operand is None:
-            raise ValueError("blueprint add-file requires <scope> and <file_path>")
-        return "blueprint_add_file"
+        if subcommand == "add-file":
+            if target is None or operand is None:
+                raise ValueError("blueprint add-file requires <responsibility_id> and <path>")
+            return "blueprint_add_file"
+        if subcommand == "add-symbol":
+            if target is None or operand is None:
+                raise ValueError("blueprint add-symbol requires <responsibility_id> and <symbol>")
+            return "blueprint_add_symbol"
+        if subcommand == "create-responsibility":
+            if target is None:
+                raise ValueError("blueprint create-responsibility requires <responsibility_id>")
+            return "blueprint_create_responsibility"
+        raise ValueError("blueprint command requires subcommand `add-file`, `add-symbol`, or `create-responsibility`")
 
     if subcommand is not None:
         raise ValueError(f"Command `{command}` does not accept subcommands")
@@ -386,8 +395,14 @@ def main() -> int:
         command_arguments["request_id"] = parsed_arguments.target
         command_arguments["duration_minutes"] = parsed_arguments.duration_minutes
     if normalized_command == "blueprint_add_file":
-        command_arguments["scope"] = parsed_arguments.target or ""
+        command_arguments["responsibility_id"] = parsed_arguments.target or ""
         command_arguments["file_path"] = parsed_arguments.operand or ""
+    if normalized_command == "blueprint_add_symbol":
+        command_arguments["responsibility_id"] = parsed_arguments.target or ""
+        command_arguments["symbol_name"] = parsed_arguments.operand or ""
+    if normalized_command == "blueprint_create_responsibility":
+        command_arguments["responsibility_id"] = parsed_arguments.target or ""
+        command_arguments["owner_layer"] = parsed_arguments.layer or ""
     if normalized_command == "init":
         if parsed_arguments.accept_scan:
             command_arguments["accept_scan"] = "true"

@@ -118,6 +118,12 @@ class AuthorityResourceRegistry:
     def list_resources(self) -> list[AuthorityResource]:
         return list(DEFAULT_AUTHORITY_RESOURCES)
 
+    def get(self, resource_id: str) -> AuthorityResource | None:
+        for resource in DEFAULT_AUTHORITY_RESOURCES:
+            if resource.resource_id == resource_id:
+                return resource
+        return None
+
     def is_authority_path(self, relative_path: str) -> bool:
         return self.resolve_by_path(relative_path) is not None
 

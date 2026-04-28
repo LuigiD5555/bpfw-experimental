@@ -51,7 +51,11 @@ class AuthorityChangeEngine:
 
         verify_result = BlueprintEngine().run(build_command("verify", project_root=project_root, arguments={}))
         if verify_result.status in {ResultStatus.BLOCK, ResultStatus.CRITICAL}:
-            raise RuntimeError(verify_result.steps[0].message)
+            blocking_step = next(
+                (step for step in verify_result.steps if step.status in {ResultStatus.BLOCK, ResultStatus.CRITICAL}),
+                verify_result.steps[0],
+            )
+            raise RuntimeError(blocking_step.message)
 
         write_manifest(project_root=project_root)
         self._audit.record(project_root=project_root, operation=operation, grant_id=verification.grant_id)
