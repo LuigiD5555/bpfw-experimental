@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timezone
 
 from bpfw.apply.transaction import ApplyTransactionError, apply_change_transaction
 from bpfw.approval.broker import ApprovalBrokerError, approve_request
 from bpfw.approval.request import ApprovalRequestError
 from bpfw.approval.verifier import ApprovalVerificationError, verify_all_approvals
 from bpfw.architecture.architecture_validator import validate_architecture
+from bpfw.access.service import AccessService
 from bpfw.authority.policy import AuthorityPolicy
 from bpfw.blueprint.snapshot import build_snapshot
+from bpfw.blueprint.loader import load_blueprint_data
 from bpfw.blueprint.validator import validate_blueprint
 from bpfw.blueprint_mode.contract_validator import validate_blueprint_mode_contracts
 from bpfw.change.scope import ScopeResolutionError, resolve_scope
@@ -34,6 +37,7 @@ from bpfw.duplication.duplication_reporter import (
 from bpfw.duplication.similarity_detector import detect_duplication
 from bpfw.enforcement.pre_commit import HookInstallError, install_pre_commit_hook
 from bpfw.integrity.manifest import IntegrityManifestError, write_manifest
+import yaml
 from bpfw.init.acceptor import InitialBaselineAcceptor
 from bpfw.init.detector import ProjectDetector
 from bpfw.init.generator import InitialBlueprintGenerator
@@ -75,6 +79,7 @@ class VerifyAuthorityStep(PipelineStep):
     """Executable authority step for direct-change access control."""
 
     name: str = "authority.verify"
+    _grant_gated_paths: tuple[str, ...] = ("blueprint.yaml", "architecture.yaml")
 
     def run(self, context) -> StepResult:  # noqa: ANN001
         import subprocess
@@ -146,6 +151,8 @@ class VerifyAuthorityStep(PipelineStep):
                     changed_paths.add(candidate_path)
 
         for relative_path in sorted(changed_paths):
+            if relative_path not in self._grant_gated_paths:
+                continue
             integrity_result = verify_integrity(project_root=context.project_root)
             if integrity_result.issues and not integrity_result.only_precondition_issues:
                 # Integrity verifier participates in authority pipeline wiring.
@@ -715,6 +722,203 @@ class ListApprovalsStep(PipelineStep):
             details={
                 "approval_count": str(len(verification_result.approvals)),
                 "approval_issue_count": "0",
+            },
+        )
+
+
+@dataclass(slots=True)
+class AccessRequestStep(PipelineStep):
+    """Create a scoped authority access request."""
+
+    name: str = "access.request"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        operation = context.command_arguments.get("operation", "").strip()
+        scope = context.command_arguments.get("scope", "").strip()
+        reason = context.command_arguments.get("reason", "").strip()
+        resource_id = context.command_arguments.get("resource_id", "").strip() or "blueprint"
+        if not operation or not scope or not reason:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message="Missing required arguments. Usage: bpfw access request --scope <scope> --operation <operation> --reason <reason>",
+                source=self.name,
+                details={"error_code": "ACCESS_REQUEST_USAGE"},
+            )
+        request = AccessService().create_request(
+            project_root=context.project_root,
+            resource_id=resource_id,
+            operation=operation,
+            scope=scope,
+            reason=reason,
+        )
+        return StepResult(
+            status=ResultStatus.OK,
+            message="Authority access request created.",
+            source=self.name,
+            details={
+                "request_id": request.request_id,
+                "resource_id": request.resource_id,
+                "resource_path": request.resource_path,
+                "scope": request.scope,
+                "operation": request.operation,
+            },
+        )
+
+
+@dataclass(slots=True)
+class AccessGrantStep(PipelineStep):
+    """Grant a pending scoped authority access request."""
+
+    name: str = "access.grant"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        request_id = context.command_arguments.get("request_id", "").strip()
+        raw_duration = context.command_arguments.get("duration_minutes", "30").strip() or "30"
+        try:
+            duration_minutes = int(raw_duration)
+        except ValueError:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message="Invalid --duration-minutes. It must be a positive integer.",
+                source=self.name,
+                details={"error_code": "ACCESS_GRANT_DURATION"},
+            )
+        if not request_id:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message="Missing request id. Usage: bpfw access grant <request_id>",
+                source=self.name,
+                details={"error_code": "ACCESS_GRANT_USAGE"},
+            )
+        grant = AccessService().grant_request(
+            project_root=context.project_root,
+            request_id=request_id,
+            granted_by="",
+            duration_minutes=duration_minutes,
+        )
+        return StepResult(
+            status=ResultStatus.OK,
+            message="Authority access granted.",
+            source=self.name,
+            details={
+                "grant_id": grant.grant_id,
+                "request_id": grant.request_id,
+                "resource_id": grant.resource_id,
+                "resource_path": grant.resource_path,
+                "scope": grant.scope,
+                "operation": grant.operation,
+                "expires_at": grant.expires_at.astimezone(timezone.utc).isoformat(),
+            },
+        )
+
+
+@dataclass(slots=True)
+class AccessListStep(PipelineStep):
+    """List pending requests and active grants."""
+
+    name: str = "access.list"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        from bpfw.access.grant_store import AccessGrantStore
+        from bpfw.access.request_store import AccessRequestStore
+
+        pending_requests = AccessRequestStore().list_pending(project_root=context.project_root)
+        active_grants = AccessGrantStore().list_active(project_root=context.project_root)
+        requests_human = "\n".join(
+            [
+                f"- {item.request_id} | resource={item.resource_path} | scope={item.scope} | operation={item.operation}"
+                for item in pending_requests
+            ]
+        )
+        grants_human = "\n".join(
+            [
+                f"- {item.grant_id} | request={item.request_id} | resource={item.resource_path} | scope={item.scope} | operation={item.operation} | expires_at={item.expires_at.astimezone(timezone.utc).isoformat()}"
+                for item in active_grants
+            ]
+        )
+        return StepResult(
+            status=ResultStatus.OK,
+            message="Authority access requests and grants listed.",
+            source=self.name,
+            details={
+                "pending_request_count": str(len(pending_requests)),
+                "active_grant_count": str(len(active_grants)),
+                "pending_requests_human": requests_human,
+                "active_grants_human": grants_human,
+            },
+        )
+
+
+@dataclass(slots=True)
+class BlueprintAddFileStep(PipelineStep):
+    """Add one file to allowed_files in a blueprint responsibility."""
+
+    name: str = "blueprint.add_file"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        scope = context.command_arguments.get("scope", "").strip()
+        file_path = context.command_arguments.get("file_path", "").strip()
+        if not scope or not file_path:
+            return StepResult(status=ResultStatus.BLOCK, message="Usage: bpfw blueprint add-file <scope> <file_path>", source=self.name)
+
+        authority_decision = AuthorityPolicy().evaluate_direct_change(
+            project_root=context.project_root,
+            relative_path="blueprint.yaml",
+            operation="add_allowed_file",
+            scope=scope,
+        )
+        if not authority_decision.allowed:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=(
+                    "BLOCK\nRequired access:\n"
+                    "resource: blueprint.yaml\n"
+                    f"scope: {scope}\n"
+                    "operation: add_allowed_file"
+                ),
+                source=self.name,
+                suggested_actions=[authority_decision.recommendation],
+            )
+
+        blueprint_path, payload = load_blueprint_data(project_root=context.project_root)
+        responsibilities = payload.get("responsibilities", [])
+        if not isinstance(responsibilities, list):
+            return StepResult(status=ResultStatus.BLOCK, message="blueprint.yaml field `responsibilities` must be a list", source=self.name)
+        for item in responsibilities:
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("responsibility_id", "")).strip() != scope:
+                continue
+            allowed_files = item.get("allowed_files", [])
+            if not isinstance(allowed_files, list):
+                allowed_files = []
+            if file_path not in allowed_files:
+                allowed_files.append(file_path)
+            item["allowed_files"] = allowed_files
+            blueprint_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+            manifest_result = write_manifest(project_root=context.project_root)
+            return StepResult(
+                status=ResultStatus.OK,
+                message="OK\nBlueprint updated mechanically.\nManifest updated.",
+                source=self.name,
+                details={"manifest_path": str(manifest_result.manifest_path)},
+            )
+        return StepResult(status=ResultStatus.BLOCK, message=f"Responsibility `{scope}` not found in blueprint.yaml", source=self.name)
+        grants_human = "\n".join(
+            [
+                f"- {item.grant_id} | request={item.request_id} | resource={item.resource_path} | scope={item.scope} | operation={item.operation} | expires_at={item.expires_at.astimezone(timezone.utc).isoformat()}"
+                for item in active_grants
+            ]
+        )
+        return StepResult(
+            status=ResultStatus.OK,
+            message="Authority access requests and grants listed.",
+            source=self.name,
+            details={
+                "pending_request_count": str(len(pending_requests)),
+                "active_grant_count": str(len(active_grants)),
+                "pending_requests_human": requests_human,
+                "active_grants_human": grants_human,
             },
         )
 
@@ -1377,6 +1581,22 @@ def build_default_registry() -> dict[str, Pipeline]:
         name="install_hooks",
         steps=[InstallHooksStep()],
     )
+    access_request_pipeline = Pipeline(
+        name="access_request",
+        steps=[AccessRequestStep()],
+    )
+    access_grant_pipeline = Pipeline(
+        name="access_grant",
+        steps=[AccessGrantStep()],
+    )
+    access_list_pipeline = Pipeline(
+        name="access_list",
+        steps=[AccessListStep()],
+    )
+    blueprint_add_file_pipeline = Pipeline(
+        name="blueprint_add_file",
+        steps=[BlueprintAddFileStep()],
+    )
     init_pipeline = Pipeline(
         name="init",
         steps=[InitProjectStep()],
@@ -1418,6 +1638,10 @@ def build_default_registry() -> dict[str, Pipeline]:
         "accept_proposal": accept_proposal_pipeline,
         "reject_proposal": reject_proposal_pipeline,
         "install_hooks": install_hooks_pipeline,
+        "access_request": access_request_pipeline,
+        "access_grant": access_grant_pipeline,
+        "access_list": access_list_pipeline,
+        "blueprint_add_file": blueprint_add_file_pipeline,
         "init": init_pipeline,
         "status": bootstrap_pipeline,
     }

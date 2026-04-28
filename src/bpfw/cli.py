@@ -32,6 +32,8 @@ SUPPORTED_COMMANDS = (
     "composition",
     "runtime",
     "wiring",
+    "access",
+    "blueprint",
 )
 
 
@@ -42,6 +44,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="bpfw")
     parser.add_argument("command", choices=SUPPORTED_COMMANDS)
     parser.add_argument("subcommand", nargs="?")
+    parser.add_argument("target", nargs="?")
+    parser.add_argument("operand", nargs="?")
     parser.add_argument("--project-root", default=".")
     parser.add_argument("--scope", default="")
     parser.add_argument("--responsibility", default="")
@@ -51,12 +55,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--accept-scan", action="store_true")
     parser.add_argument("--force-new", action="store_true")
     parser.add_argument("--ci", action="store_true", dest="ci_mode")
+    parser.add_argument("--operation", default="")
+    parser.add_argument("--reason", default="")
+    parser.add_argument("--duration-minutes", dest="duration_minutes", default="30")
+    parser.add_argument("--request-id", dest="request_id", default="")
     parser.add_argument("--json", action="store_true", dest="as_json")
     return parser
 
 
 
-def normalize_command(command: str, subcommand: str | None) -> str:
+def normalize_command(command: str, subcommand: str | None, target: str | None, operand: str | None) -> str:
     """Map CLI tokens into engine command names."""
 
     if command == "manifest":
@@ -127,6 +135,20 @@ def normalize_command(command: str, subcommand: str | None) -> str:
         if subcommand is None:
             raise ValueError("reject-proposal command requires a proposal_id")
         return "reject_proposal"
+    if command == "access":
+        if subcommand not in {"request", "grant", "list"}:
+            raise ValueError("access command requires subcommand `request`, `grant`, or `list`")
+        if subcommand == "list" and target is not None:
+            raise ValueError("access list does not accept target")
+        if subcommand in {"request", "grant"} and target is None:
+            raise ValueError(f"access {subcommand} requires target")
+        return f"access_{subcommand}"
+    if command == "blueprint":
+        if subcommand != "add-file":
+            raise ValueError("blueprint command requires subcommand `add-file`")
+        if target is None or operand is None:
+            raise ValueError("blueprint add-file requires <scope> and <file_path>")
+        return "blueprint_add_file"
 
     if subcommand is not None:
         raise ValueError(f"Command `{command}` does not accept subcommands")
@@ -165,6 +187,42 @@ def _build_payload(result) -> dict:  # noqa: ANN001
 
 
 def _print_human(payload: dict) -> None:
+    if payload["command_name"] == "access_request" and payload.get("status") == "ok":
+        details = (payload.get("primary_step") or {}).get("details", {})
+        print("Authority access request created.\n")
+        print("Request ID:")
+        print(details.get("request_id", ""))
+        print("\nResource:")
+        print(details.get("resource_path", ""))
+        print("\nScope:")
+        print(details.get("scope", ""))
+        print("\nOperation:")
+        print(details.get("operation", ""))
+        print("\nThis does not unlock the full Blueprint.")
+        print("It only requests permission for this operation.")
+        return
+    if payload["command_name"] == "access_grant" and payload.get("status") == "ok":
+        details = (payload.get("primary_step") or {}).get("details", {})
+        print("Authority access granted.\n")
+        print("Grant ID:")
+        print(details.get("grant_id", ""))
+        print("\nResource:")
+        print(details.get("resource_path", ""))
+        print("\nScope:")
+        print(details.get("scope", ""))
+        print("\nAllowed operation:")
+        print(details.get("operation", ""))
+        print("\nExpires at:")
+        print(details.get("expires_at", ""))
+        return
+    if payload["command_name"] == "access_list" and payload.get("status") == "ok":
+        details = (payload.get("primary_step") or {}).get("details", {})
+        print("Authority access list.\n")
+        print("Pending requests:")
+        print(details.get("pending_requests_human", "") or "(none)")
+        print("\nActive grants:")
+        print(details.get("active_grants_human", "") or "(none)")
+        return
     if payload["command_name"] == "init":
         if payload["message"]:
             print(payload["message"])
@@ -289,6 +347,8 @@ def main() -> int:
         normalized_command = normalize_command(
             command=parsed_arguments.command,
             subcommand=parsed_arguments.subcommand,
+            target=parsed_arguments.target,
+            operand=parsed_arguments.operand,
         )
     except ValueError as error:
         parser.error(str(error))
@@ -314,6 +374,17 @@ def main() -> int:
         command_arguments["reject_action"] = parsed_arguments.reject_action
     if normalized_command == "verify" and parsed_arguments.ci_mode:
         command_arguments["ci"] = "true"
+    if normalized_command == "access_request":
+        command_arguments["resource_id"] = parsed_arguments.target
+        command_arguments["operation"] = parsed_arguments.operation
+        command_arguments["scope"] = parsed_arguments.scope
+        command_arguments["reason"] = parsed_arguments.reason
+    if normalized_command == "access_grant":
+        command_arguments["request_id"] = parsed_arguments.target
+        command_arguments["duration_minutes"] = parsed_arguments.duration_minutes
+    if normalized_command == "blueprint_add_file":
+        command_arguments["scope"] = parsed_arguments.target or ""
+        command_arguments["file_path"] = parsed_arguments.operand or ""
     if normalized_command == "init":
         if parsed_arguments.accept_scan:
             command_arguments["accept_scan"] = "true"

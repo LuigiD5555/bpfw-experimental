@@ -38,7 +38,6 @@ class AuthorityPolicy:
         access_result = self._access_verifier.verify(
             project_root=project_root,
             resource_id=resource.resource_id,
-            resource_path=resource.path,
             operation=operation,
             scope=scope,
         )
