@@ -30,6 +30,55 @@ DEFAULT_AUTHORITY_RESOURCES = [
         ],
     ),
     AuthorityResource(
+        resource_id="bpfw_core",
+        path="src/bpfw/",
+        resource_type="framework_core",
+        default_policy="deny_direct_edit",
+        allowed_operations=["modify_framework_core"],
+    ),
+    AuthorityResource(
+        resource_id="project_config",
+        path="pyproject.toml",
+        resource_type="project_config",
+        default_policy="deny_direct_edit",
+        allowed_operations=["modify_project_config"],
+    ),
+    AuthorityResource(
+        resource_id="bootstrap_wiring",
+        path="src/bootstrap/wiring.py",
+        resource_type="bootstrap_wiring",
+        default_policy="deny_direct_edit",
+        allowed_operations=["modify_bootstrap_wiring"],
+    ),
+    AuthorityResource(
+        resource_id="bootstrap_container",
+        path="src/bootstrap/container.py",
+        resource_type="bootstrap_container",
+        default_policy="deny_direct_edit",
+        allowed_operations=["modify_bootstrap_container"],
+    ),
+    AuthorityResource(
+        resource_id="python_lock_uv",
+        path="uv.lock",
+        resource_type="lockfile",
+        default_policy="deny_direct_edit",
+        allowed_operations=["modify_lock_file"],
+    ),
+    AuthorityResource(
+        resource_id="python_lock_poetry",
+        path="poetry.lock",
+        resource_type="lockfile",
+        default_policy="deny_direct_edit",
+        allowed_operations=["modify_lock_file"],
+    ),
+    AuthorityResource(
+        resource_id="python_requirements",
+        path="requirements.txt",
+        resource_type="lockfile",
+        default_policy="deny_direct_edit",
+        allowed_operations=["modify_lock_file"],
+    ),
+    AuthorityResource(
         resource_id="architecture_profile",
         path="architecture.yaml",
         resource_type="architecture",
@@ -78,6 +127,8 @@ class AuthorityResourceRegistry:
             return None
 
         for resource in DEFAULT_AUTHORITY_RESOURCES:
+            if resource.path.endswith("/") and normalized_path.startswith(resource.path):
+                return resource
             if resource.path == normalized_path:
                 return resource
 

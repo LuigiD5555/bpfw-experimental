@@ -79,8 +79,6 @@ class VerifyAuthorityStep(PipelineStep):
     """Executable authority step for direct-change access control."""
 
     name: str = "authority.verify"
-    _grant_gated_paths: tuple[str, ...] = ("blueprint.yaml", "architecture.yaml")
-
     def run(self, context) -> StepResult:  # noqa: ANN001
         import subprocess
 
@@ -151,8 +149,6 @@ class VerifyAuthorityStep(PipelineStep):
                     changed_paths.add(candidate_path)
 
         for relative_path in sorted(changed_paths):
-            if relative_path not in self._grant_gated_paths:
-                continue
             integrity_result = verify_integrity(project_root=context.project_root)
             if integrity_result.issues and not integrity_result.only_precondition_issues:
                 # Integrity verifier participates in authority pipeline wiring.
@@ -558,6 +554,7 @@ class VerifyIntegrityStep(PipelineStep):
     name: str = "integrity.verify"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
+        ci_mode_enabled = str(context.command_arguments.get("ci", "")).strip().lower() == "true"
         verification_result = verify_integrity(project_root=context.project_root)
         if verification_result.issues:
             first_issue = verification_result.issues[0]
@@ -573,8 +570,32 @@ class VerifyIntegrityStep(PipelineStep):
             elif any(issue.severity == "block" for issue in verification_result.issues):
                 status = ResultStatus.BLOCK
 
-            if not self.strict and verification_result.only_precondition_issues:
+            if not self.strict and verification_result.only_precondition_issues and not ci_mode_enabled:
                 status = ResultStatus.WARNING
+
+            protected_precondition_issue_codes = {"INT001", "INT002", "AUTH001", "APP006", "APP007", "INT004"}
+            protected_precondition_issue_found = any(
+                issue.code in protected_precondition_issue_codes for issue in verification_result.issues
+            )
+            if ci_mode_enabled and (
+                verification_result.checked_files == 0 or protected_precondition_issue_found
+            ):
+                status = ResultStatus.CRITICAL
+                return StepResult(
+                    status=status,
+                    message=(
+                        "Protected integrity could not be verified, commit blocked.\n\n"
+                        f"{first_issue.message}"
+                    ),
+                    source=self.name,
+                    details={
+                        "error_code": first_issue.code,
+                        "manifest_path": verification_result.manifest_path,
+                        "integrity_checked_files": str(verification_result.checked_files),
+                    },
+                    affected_resources=[first_issue.file_path] if first_issue.file_path else [],
+                    suggested_actions=[first_issue.recommendation],
+                )
 
             return StepResult(
                 status=status,
@@ -590,6 +611,16 @@ class VerifyIntegrityStep(PipelineStep):
             )
 
         return StepResult(
+            status=ResultStatus.CRITICAL,
+            message="Protected integrity could not be verified, commit blocked.\n\nChecked files: 0",
+            source=self.name,
+            details={
+                "error_code": "INT008",
+                "manifest_path": verification_result.manifest_path,
+                "integrity_checked_files": str(verification_result.checked_files),
+            },
+            suggested_actions=["Regenerate manifest from trusted state and ensure protected targets are included"],
+        ) if ci_mode_enabled and verification_result.checked_files == 0 else StepResult(
             status=ResultStatus.OK,
             message="Integrity verification passed",
             source=self.name,
