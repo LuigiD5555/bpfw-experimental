@@ -14,6 +14,9 @@ class BlueprintImplementation:
     class_name: str
     file: str
     lifecycle_state: str
+    replacement_id: str | None = None
+    disabled_reason: str | None = None
+    removal_plan: str | None = None
 
 
 @dataclass(slots=True)

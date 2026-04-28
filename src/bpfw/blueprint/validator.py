@@ -20,6 +20,8 @@ from bpfw.blueprint.schema import (
     REQUIRED_RESPONSIBILITY_FIELDS,
     REQUIRED_ROOT_FIELDS,
 )
+from bpfw.lifecycle.lifecycle_reporter import summarize_lifecycle_errors
+from bpfw.lifecycle.validator import validate_lifecycle
 
 
 
@@ -252,6 +254,21 @@ def validate_blueprint(project_root: Path) -> BlueprintValidationResult:
                     class_name=str(implementation_value.get("class_name", "")).strip(),
                     file=implementation_file,
                     lifecycle_state=lifecycle_state_value,
+                    replacement_id=(
+                        str(implementation_value.get("replacement_id")).strip()
+                        if implementation_value.get("replacement_id") is not None
+                        else None
+                    ),
+                    disabled_reason=(
+                        str(implementation_value.get("disabled_reason")).strip()
+                        if implementation_value.get("disabled_reason") is not None
+                        else None
+                    ),
+                    removal_plan=(
+                        str(implementation_value.get("removal_plan")).strip()
+                        if implementation_value.get("removal_plan") is not None
+                        else None
+                    ),
                 )
             )
 
@@ -363,4 +380,22 @@ def validate_blueprint(project_root: Path) -> BlueprintValidationResult:
         locked_resources=locked_resources,
         source_path=blueprint_path,
     )
+    lifecycle_errors = validate_lifecycle(blueprint=blueprint_model, explicit_experimental_approval=False)
+    if lifecycle_errors:
+        lifecycle_summary = summarize_lifecycle_errors(lifecycle_errors)
+        first_error = lifecycle_errors[0]
+        return BlueprintValidationResult(
+            is_valid=False,
+            errors=[
+                BlueprintValidationError(
+                    code=first_error.code,
+                    message=first_error.message,
+                    file_path=first_error.file_path,
+                    recommendation=(
+                        f"{first_error.recommendation} "
+                        f"(lifecycle_error_count={lifecycle_summary['lifecycle_error_count']})"
+                    ),
+                )
+            ],
+        )
     return BlueprintValidationResult(is_valid=True, blueprint=blueprint_model)

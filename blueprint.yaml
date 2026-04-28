@@ -14,6 +14,16 @@ responsibilities:
         class_name: QueryService
         file: src/application/query/query_service.py
         lifecycle_state: active
+        replacement_id: null
+        disabled_reason: null
+        removal_plan: null
+      - implementation_id: optimized_query_execution
+        class_name: OptimizedQueryService
+        file: src/application/query/optimized_query_service.py
+        lifecycle_state: experimental
+        replacement_id: default_query_execution
+        disabled_reason: null
+        removal_plan: null
     active_implementation: default_query_execution
     forbidden_duplicates:
       - SmartQueryManager
