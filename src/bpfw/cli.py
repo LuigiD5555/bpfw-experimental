@@ -128,6 +128,12 @@ def _print_human(payload: dict) -> None:
     if "duplication_findings_human" in details:
         print("Duplication Summary:")
         print(details["duplication_findings_human"])
+    if "blueprint_mode_enabled" in details:
+        print(f"Blueprint Mode Enabled: {details['blueprint_mode_enabled']}")
+    if "blueprint_mode_operation_count" in details:
+        print(f"Blueprint Mode Operations: {details['blueprint_mode_operation_count']}")
+    if "blueprint_mode_issue_count" in details:
+        print(f"Blueprint Mode Issues: {details['blueprint_mode_issue_count']}")
 
     affected_resources = primary_step.get("affected_resources", [])
     if affected_resources:

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from bpfw.architecture.architecture_validator import validate_architecture
 from bpfw.blueprint.snapshot import build_snapshot
 from bpfw.blueprint.validator import validate_blueprint
+from bpfw.blueprint_mode.contract_validator import validate_blueprint_mode_contracts
 from bpfw.composition.checker import validate_composition
 from bpfw.core.pipeline import Pipeline, PipelineStep
 from bpfw.core.result import ResultStatus, StepResult
@@ -289,6 +290,60 @@ class VerifyDuplicationStep(PipelineStep):
         )
 
 
+@dataclass(slots=True)
+class VerifyBlueprintModeStep(PipelineStep):
+    """Executable blueprint_mode step for opt-in operation contract checks."""
+
+    name: str = "blueprint_mode.verify"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        validation_result = validate_blueprint_mode_contracts(project_root=context.project_root)
+        if validation_result.issues:
+            first_issue = validation_result.issues[0]
+            status = ResultStatus.BLOCK
+            if first_issue.severity == "critical":
+                status = ResultStatus.CRITICAL
+            elif first_issue.severity == "warning":
+                status = ResultStatus.WARNING
+
+            return StepResult(
+                status=status,
+                message=first_issue.message,
+                source=self.name,
+                details={
+                    "error_code": first_issue.code,
+                    "blueprint_mode_enabled": str(validation_result.config.enabled).lower(),
+                    "blueprint_mode_operation_count": str(len(validation_result.config.operations)),
+                    "blueprint_mode_issue_count": str(len(validation_result.issues)),
+                },
+                affected_resources=[first_issue.file_path],
+                suggested_actions=[first_issue.recommendation],
+            )
+
+        if validation_result.config.enabled:
+            return StepResult(
+                status=ResultStatus.OK,
+                message="Blueprint mode contracts validated successfully",
+                source=self.name,
+                details={
+                    "blueprint_mode_enabled": "true",
+                    "blueprint_mode_operation_count": str(len(validation_result.config.operations)),
+                    "blueprint_mode_issue_count": "0",
+                },
+            )
+
+        return StepResult(
+            status=ResultStatus.OK,
+            message="Blueprint mode disabled; contract checks skipped",
+            source=self.name,
+            details={
+                "blueprint_mode_enabled": "false",
+                "blueprint_mode_operation_count": "0",
+                "blueprint_mode_issue_count": "0",
+            },
+        )
+
+
 
 def build_default_registry() -> dict[str, Pipeline]:
     """Create base command to pipeline mapping."""
@@ -302,6 +357,7 @@ def build_default_registry() -> dict[str, Pipeline]:
             VerifyRuntimeSnapshotStep(),
             VerifyWiringStep(),
             VerifyDuplicationStep(),
+            VerifyBlueprintModeStep(),
         ],
     )
     architecture_check_pipeline = Pipeline(
