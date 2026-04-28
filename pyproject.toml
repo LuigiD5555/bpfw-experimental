@@ -26,4 +26,4 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-bpfw = ["hooks/pre-commit"]
+bpfw = ["hooks/pre-commit", "hooks/pre-push"]

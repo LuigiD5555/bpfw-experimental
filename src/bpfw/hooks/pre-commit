@@ -1,100 +1,10 @@
-#!/usr/bin/env bash
-# Pre-commit hook: enforce catalog immutability via blueprint-framework.
-#
-# Installed by: bpfw install-hooks
-#
-# When the catalog is locked via `bpfw lock`, no changes to src/catalog/**/*.yaml
-# are permitted. This hook:
-# 1. Detects changes (staged or unstaged) to catalog files
-# 2. Checks if the catalog is locked
-# 3. If locked: fail commit without modifying the working tree
-# 4. If unlocked: proceed with commit (after whitespace checks)
+#!/usr/bin/env sh
+set -eu
 
-set -euo pipefail
+if [ -z "${BPFW_MANIFEST_HMAC_KEY:-}" ]; then
+  echo "BPFW CRITICAL: BPFW_MANIFEST_HMAC_KEY is required for protected commits."
+  echo "Protected integrity could not be verified, commit blocked."
+  exit 1
+fi
 
-# Config
-readonly CATALOG_DIR="src/catalog"
-readonly STATE_FILE=".catalog/lockstate.json"
-readonly HOOK_TIMEOUT_SECONDS=10
-
-# Utility: read lock state from .catalog/lockstate.json
-get_catalog_lock_state() {
-    if [[ ! -f "$STATE_FILE" ]]; then
-        echo "unlocked"  # No state file → unlocked by default (backward compat)
-        return 0
-    fi
-
-    # Extract status field from JSON; fail gracefully if malformed
-    jq -r '.status // "unknown"' "$STATE_FILE" 2>/dev/null || echo "unknown"
-}
-
-# Utility: list catalog files with ANY changes (staged OR unstaged)
-get_all_modified_catalog_files() {
-    # Staged changes
-    git diff --cached --name-only --diff-filter=ACM 2>/dev/null | grep "^${CATALOG_DIR}/" || true
-    # Unstaged changes
-    git diff --name-only --diff-filter=ACM 2>/dev/null | grep "^${CATALOG_DIR}/" || true
-}
-
-# Main: enforce immutability
-main() {
-    echo "Running catalog immutability check..."
-
-    # Lock state check
-    lock_state=$(get_catalog_lock_state)
-
-    # Get ALL modified catalog files (staged + unstaged)
-    modified_files=$(get_all_modified_catalog_files)
-
-    if [[ -z "$modified_files" ]]; then
-        # No catalog changes detected
-        if [[ "$lock_state" != "locked" ]]; then
-            # Whitespace check only (lightweight, max 30s)
-            if ! timeout "${HOOK_TIMEOUT_SECONDS}s" git diff --cached --check >/dev/null 2>&1; then
-                echo "ERR: whitespace or conflict marker check failed (or timed out >30s)."
-                return 1
-            fi
-            echo "Catalog immutability check passed."
-        fi
-        return 0
-    fi
-
-    # Catalog changes detected + locked state = REJECT
-    if [[ "$lock_state" == "locked" ]]; then
-        echo ""
-        echo "Catalog modifications detected while catalog is locked."
-        echo ""
-        echo "Files with changes:"
-        echo "$modified_files" | sed 's/^/   /'
-        echo ""
-        cat >&2 <<'EOF'
-ERROR: Catalog is locked. Commit rejected.
-
-To modify the catalog, unlock it first:
-  bpfw unlock
-
-Then make your changes:
-  # Edit files...
-  git add src/catalog/
-  git commit -m "..."
-
-Finally, lock the catalog again:
-  bpfw lock
-EOF
-        return 1
-    fi
-
-    # Catalog changes detected + unlocked state = ALLOW
-    echo "Catalog is unlocked. Changes permitted."
-
-    # Whitespace check (lightweight, max 30s)
-    if ! timeout "${HOOK_TIMEOUT_SECONDS}s" git diff --cached --check >/dev/null 2>&1; then
-        echo "ERR: whitespace or conflict marker check failed (or timed out >30s)."
-        return 1
-    fi
-
-    echo "Catalog immutability check passed."
-    return 0
-}
-
-main "$@"
+bpfw verify --ci

@@ -1,0 +1,34 @@
+architecture_profile:
+  id: clean_architecture
+
+  layers:
+    - name: domain
+      path: src/domain
+      may_import: []
+
+    - name: application
+      path: src/application
+      may_import:
+        - domain
+
+    - name: infrastructure
+      path: src/infrastructure
+      may_import:
+        - domain
+        - application
+
+    - name: public
+      path: src/public
+      may_import:
+        - application
+
+    - name: bootstrap
+      path: src/bootstrap
+      may_import:
+        - domain
+        - application
+        - infrastructure
+
+  composition_roots:
+    - src/bootstrap/wiring.py
+    - src/bootstrap/container.py
