@@ -119,6 +119,15 @@ def _print_human(payload: dict) -> None:
         print(f"Runtime Warnings: {details['warning_count']}")
     if "wiring_issue_count" in details:
         print(f"Wiring Issues: {details['wiring_issue_count']}")
+    if "duplication_total_count" in details:
+        print(f"Duplication Findings: {details['duplication_total_count']}")
+    if "duplication_block_count" in details:
+        print(f"Duplication Blocks: {details['duplication_block_count']}")
+    if "duplication_warning_count" in details:
+        print(f"Duplication Warnings: {details['duplication_warning_count']}")
+    if "duplication_findings_human" in details:
+        print("Duplication Summary:")
+        print(details["duplication_findings_human"])
 
     affected_resources = primary_step.get("affected_resources", [])
     if affected_resources:

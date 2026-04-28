@@ -10,6 +10,12 @@ from bpfw.blueprint.validator import validate_blueprint
 from bpfw.composition.checker import validate_composition
 from bpfw.core.pipeline import Pipeline, PipelineStep
 from bpfw.core.result import ResultStatus, StepResult
+from bpfw.duplication.duplication_reporter import (
+    findings_to_human_lines,
+    primary_finding,
+    summarize_counts,
+)
+from bpfw.duplication.similarity_detector import detect_duplication
 from bpfw.runtime.collector import collect_runtime_snapshot
 from bpfw.runtime.snapshot import snapshot_to_dict, snapshot_to_human_lines, snapshot_to_json
 from bpfw.wiring.verifier import verify_wiring
@@ -234,6 +240,55 @@ class VerifyWiringStep(PipelineStep):
         )
 
 
+@dataclass(slots=True)
+class VerifyDuplicationStep(PipelineStep):
+    """Executable duplication step for intent-duplication detection."""
+
+    name: str = "duplication.check"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        detection_result = detect_duplication(project_root=context.project_root)
+        primary = primary_finding(detection_result)
+        summary_counts = summarize_counts(detection_result)
+
+        if primary is None:
+            return StepResult(
+                status=ResultStatus.OK,
+                message="No duplication findings detected",
+                source=self.name,
+                details={
+                    **summary_counts,
+                    "duplication_findings_human": findings_to_human_lines(detection_result),
+                },
+            )
+
+        status = ResultStatus.WARNING
+        if primary.severity == "critical":
+            status = ResultStatus.CRITICAL
+        elif primary.severity == "block":
+            status = ResultStatus.BLOCK
+
+        if summary_counts["duplication_critical_count"] != "0":
+            status = ResultStatus.CRITICAL
+        elif summary_counts["duplication_block_count"] != "0":
+            status = ResultStatus.BLOCK
+
+        return StepResult(
+            status=status,
+            message=primary.message,
+            source=self.name,
+            details={
+                "error_code": primary.code,
+                "duplication_symbol": primary.symbol_name,
+                "duplication_responsibility_id": primary.responsibility_id,
+                "duplication_findings_human": findings_to_human_lines(detection_result),
+                **summary_counts,
+            },
+            affected_resources=[primary.file_path],
+            suggested_actions=[primary.recommendation],
+        )
+
+
 
 def build_default_registry() -> dict[str, Pipeline]:
     """Create base command to pipeline mapping."""
@@ -246,6 +301,7 @@ def build_default_registry() -> dict[str, Pipeline]:
             VerifyCompositionStep(),
             VerifyRuntimeSnapshotStep(),
             VerifyWiringStep(),
+            VerifyDuplicationStep(),
         ],
     )
     architecture_check_pipeline = Pipeline(
@@ -263,6 +319,10 @@ def build_default_registry() -> dict[str, Pipeline]:
     wiring_check_pipeline = Pipeline(
         name="wiring_check",
         steps=[VerifyWiringStep()],
+    )
+    discover_pipeline = Pipeline(
+        name="discover",
+        steps=[VerifyDuplicationStep()],
     )
     bootstrap_pipeline = Pipeline(
         name="bootstrap",
@@ -287,7 +347,7 @@ def build_default_registry() -> dict[str, Pipeline]:
         "composition_check": composition_check_pipeline,
         "runtime_snapshot": runtime_snapshot_pipeline,
         "wiring_check": wiring_check_pipeline,
-        "discover": bootstrap_pipeline,
+        "discover": discover_pipeline,
         "review": bootstrap_pipeline,
         "apply": bootstrap_pipeline,
         "status": bootstrap_pipeline,

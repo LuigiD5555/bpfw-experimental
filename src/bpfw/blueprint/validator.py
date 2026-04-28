@@ -291,10 +291,10 @@ def validate_blueprint(project_root: Path) -> BlueprintValidationResult:
             owner_layer=str(responsibility_value.get("owner_layer", "")).strip(),
             lifecycle_state=str(responsibility_value.get("lifecycle_state", "")).strip(),
             allowed_files=safe_allowed_files,
-            allowed_symbols=[str(item) for item in responsibility_value.get("allowed_symbols", [])],
+            allowed_symbols=[str(item) for item in (responsibility_value.get("allowed_symbols") or [])],
             allowed_implementations=parsed_implementations,
             active_implementation=str(responsibility_value.get("active_implementation", "")).strip(),
-            forbidden_duplicates=[str(item) for item in responsibility_value.get("forbidden_duplicates", [])],
+            forbidden_duplicates=[str(item) for item in (responsibility_value.get("forbidden_duplicates") or [])],
             mutability=str(responsibility_value.get("mutability", "editable")).strip(),
             owner=str(responsibility_value.get("owner", "")).strip(),
         )
