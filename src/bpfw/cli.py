@@ -6,6 +6,7 @@ import argparse
 import json
 from pathlib import Path
 
+from bpfw.authority.ai_safe_block_message import AiSafeBlockMessage
 from bpfw.core.engine import BlueprintEngine, build_command
 from bpfw.enforcement.ci import ci_exit_code, render_ci_report
 
@@ -249,13 +250,14 @@ def _print_human(payload: dict) -> None:
             marker = "authority resource:"
             if marker in message:
                 affected_resource = message.split(marker, maxsplit=1)[1].split(".", maxsplit=1)[0].strip()
-        print("BLOCK\n")
-        print("Workspace attempted to modify authority resource:")
-        print(affected_resource or "(unknown)")
-        print("\nDirect authority edits are not allowed.\n")
-        print("Do not retry this edit.\n")
-        print("Allowed next action:")
-        print("Create a proposal or use a scoped authority command.")
+        print(
+            AiSafeBlockMessage(
+                resource=affected_resource or "(unknown)",
+                reason="Blueprint is an authority resource.",
+                policy="AI or normal code changes cannot edit authority resources directly.",
+                allowed_next_action="Create or accept a proposal, then request scoped authority access.",
+            ).render()
+        )
         return
 
     print(f"Command: {payload['command_name']}")

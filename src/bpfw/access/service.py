@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 import os
 from pathlib import Path
 
+from bpfw.access.authorization_policy import AccessAuthorizationPolicy
 from bpfw.access.grant_store import AccessGrantStore
 from bpfw.access.models import AccessGrant, AccessRequest
 from bpfw.access.request_store import AccessRequestStore
@@ -53,7 +54,9 @@ class AccessService:
             raise ValueError(f"Access request is not pending: {request_id}")
         if duration_minutes <= 0:
             raise ValueError("duration_minutes must be greater than zero")
-        auth_backend = SudoAuthBackend() if os.getenv("BPFW_APPROVAL_AUTH_BACKEND", "dummy").strip().lower() == "sudo" else DummyAuthBackend()
+        backend_name = os.getenv("BPFW_AUTH_BACKEND", "dummy").strip().lower() or "dummy"
+        AccessAuthorizationPolicy().validate_backend(backend_name=backend_name)
+        auth_backend = SudoAuthBackend() if backend_name == "sudo" else DummyAuthBackend()
         auth_decision = auth_backend.authorize(
             ApprovalRequestContext(
                 request_id=request.request_id,

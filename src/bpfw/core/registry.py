@@ -13,6 +13,7 @@ from bpfw.approval.request import ApprovalRequestError
 from bpfw.approval.verifier import ApprovalVerificationError, verify_all_approvals
 from bpfw.architecture.architecture_validator import validate_architecture
 from bpfw.access.service import AccessService
+from bpfw.authority.ai_safe_block_message import AiSafeBlockMessage
 from bpfw.authority.policy import AuthorityPolicy
 from bpfw.blueprint.snapshot import build_snapshot
 from bpfw.blueprint.loader import load_blueprint_data
@@ -81,6 +82,15 @@ class VerifyAuthorityStep(PipelineStep):
     """Executable authority step for direct-change access control."""
 
     name: str = "authority.verify"
+
+    def _blocked_message(self, relative_path: str) -> str:
+        return AiSafeBlockMessage(
+            resource=relative_path,
+            reason="Resource changed outside a controlled authority operation.",
+            policy="AI or normal code changes cannot edit authority resources directly.",
+            allowed_next_action="Create or accept a proposal, then request scoped authority access.",
+        ).render()
+
     def run(self, context) -> StepResult:  # noqa: ANN001
         import json
 
@@ -158,54 +168,33 @@ class VerifyAuthorityStep(PipelineStep):
             if matching_event is None:
                 return StepResult(
                     status=ResultStatus.CRITICAL,
-                    message=(
-                        "Authority drift detected.\n\n"
-                        "Resource:\n"
-                        f"{relative_path}\n\n"
-                        "This resource changed outside a controlled authority operation.\n\n"
-                        "Do not retry this edit.\n"
-                        "Use proposal flow or request scoped authority access."
-                    ),
+                    message=self._blocked_message(relative_path=relative_path),
                     source=self.name,
                     details={"error_code": "AUTH001", "resource_id": resource_id},
                     affected_resources=[str(context.project_root / relative_path)],
-                    suggested_actions=["Use proposal flow or request scoped authority access."],
+                    suggested_actions=["Create or accept a proposal, then request scoped authority access."],
                 )
 
             grant_id = matching_event.get("grant_id", "")
             if not grant_id or grant_id not in active_grants:
                 return StepResult(
                     status=ResultStatus.CRITICAL,
-                    message=(
-                        "Authority drift detected.\n\n"
-                        "Resource:\n"
-                        f"{relative_path}\n\n"
-                        "This resource changed outside a controlled authority operation.\n\n"
-                        "Do not retry this edit.\n"
-                        "Use proposal flow or request scoped authority access."
-                    ),
+                    message=self._blocked_message(relative_path=relative_path),
                     source=self.name,
                     details={"error_code": "AUTH001", "resource_id": resource_id},
                     affected_resources=[str(context.project_root / relative_path)],
-                    suggested_actions=["Use proposal flow or request scoped authority access."],
+                    suggested_actions=["Create or accept a proposal, then request scoped authority access."],
                 )
 
             matched_grant = active_grants[grant_id]
             if matched_grant.resource_id != resource_id:
                 return StepResult(
                     status=ResultStatus.CRITICAL,
-                    message=(
-                        "Authority drift detected.\n\n"
-                        "Resource:\n"
-                        f"{relative_path}\n\n"
-                        "This resource changed outside a controlled authority operation.\n\n"
-                        "Do not retry this edit.\n"
-                        "Use proposal flow or request scoped authority access."
-                    ),
+                    message=self._blocked_message(relative_path=relative_path),
                     source=self.name,
                     details={"error_code": "AUTH001", "resource_id": resource_id},
                     affected_resources=[str(context.project_root / relative_path)],
-                    suggested_actions=["Use proposal flow or request scoped authority access."],
+                    suggested_actions=["Create or accept a proposal, then request scoped authority access."],
                 )
 
         return StepResult(
@@ -811,6 +800,8 @@ class ApproveRequestStep(PipelineStep):
     name: str = "approval.approve"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
+        from bpfw.access.authorization_policy import AccessAuthorizationError
+
         request_id = context.command_arguments.get("request_id", "").strip()
         if not request_id:
             return StepResult(
@@ -967,12 +958,20 @@ class AccessGrantStep(PipelineStep):
                 source=self.name,
                 details={"error_code": "ACCESS_GRANT_USAGE"},
             )
-        grant = AccessService().grant_request(
-            project_root=context.project_root,
-            request_id=request_id,
-            granted_by="",
-            duration_minutes=duration_minutes,
-        )
+        try:
+            grant = AccessService().grant_request(
+                project_root=context.project_root,
+                request_id=request_id,
+                granted_by="",
+                duration_minutes=duration_minutes,
+            )
+        except AccessAuthorizationError as error:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=str(error),
+                source=self.name,
+                details={"error_code": "ACCESS_GRANT_BACKEND_BLOCK"},
+            )
         return StepResult(
             status=ResultStatus.OK,
             message="Authority access granted.",
