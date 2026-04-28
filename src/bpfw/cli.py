@@ -37,6 +37,8 @@ SUPPORTED_COMMANDS = (
     "wiring",
     "access",
     "blueprint",
+    "authority",
+    "watch",
 )
 
 
@@ -65,6 +67,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--request-id", dest="request_id", default="")
     parser.add_argument("--json", action="store_true", dest="as_json")
     parser.add_argument("--layer", default="")
+    parser.add_argument("--ttl", default="10m")
+    parser.add_argument("--watch", action="store_true", dest="watch_mode")
+    parser.add_argument("--no-os-lock", action="store_true", dest="no_os_lock")
     return parser
 
 
@@ -172,6 +177,18 @@ def normalize_command(command: str, subcommand: str | None, target: str | None, 
                 raise ValueError("blueprint create-responsibility requires <responsibility_id>")
             return "blueprint_create_responsibility"
         raise ValueError("blueprint command requires subcommand `add-file`, `add-symbol`, or `create-responsibility`")
+    if command == "authority":
+        if subcommand not in {"status", "unlock", "relock", "lock"}:
+            raise ValueError("authority command requires subcommand `status`, `unlock`, `relock`, or `lock`")
+        if subcommand == "unlock" and target is None:
+            raise ValueError("authority unlock requires a resource target")
+        if subcommand in {"status", "relock", "lock"} and target is not None:
+            raise ValueError(f"authority {subcommand} does not accept target")
+        return f"authority_{subcommand}"
+    if command == "watch":
+        if subcommand is not None:
+            raise ValueError("watch command does not accept subcommands")
+        return "watch"
 
     if subcommand is not None:
         raise ValueError(f"Command `{command}` does not accept subcommands")
@@ -256,6 +273,10 @@ def _print_human(payload: dict) -> None:
         print(details.get("active_grants_human", "") or "(none)")
         return
     if payload["command_name"] == "init":
+        if payload["message"]:
+            print(payload["message"])
+        return
+    if payload["command_name"] in {"authority_status", "authority_unlock", "authority_relock", "authority_lock", "watch"}:
         if payload["message"]:
             print(payload["message"])
         return
@@ -457,6 +478,16 @@ def main() -> int:
             command_arguments["accept_scan"] = "true"
         if parsed_arguments.force_new:
             command_arguments["force_new"] = "true"
+        if parsed_arguments.watch_mode:
+            command_arguments["watch"] = "true"
+        if parsed_arguments.no_os_lock:
+            command_arguments["no_os_lock"] = "true"
+    if normalized_command == "authority_unlock":
+        command_arguments["resource_id"] = parsed_arguments.target or ""
+        command_arguments["scope"] = parsed_arguments.scope
+        command_arguments["operation"] = parsed_arguments.operation
+        command_arguments["reason"] = parsed_arguments.reason
+        command_arguments["ttl"] = parsed_arguments.ttl
     result = engine.run(
         build_command(
             command_name=normalized_command,

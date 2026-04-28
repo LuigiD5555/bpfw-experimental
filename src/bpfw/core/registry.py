@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 import json
 import os
 
@@ -13,8 +13,20 @@ from bpfw.approval.request import ApprovalRequestError
 from bpfw.approval.verifier import ApprovalVerificationError, verify_all_approvals
 from bpfw.architecture.architecture_validator import validate_architecture
 from bpfw.access.authorization_policy import AccessAuthorizationError
+from bpfw.access.grant_store import AccessGrantStore
 from bpfw.access.service import AccessService
+from bpfw.authority.lock_manager import AuthorityLockManager
+from bpfw.authority.lock_policy import OsLockPolicyError
 from bpfw.authority.policy import AuthorityPolicy
+from bpfw.authority.resources import AuthorityResourceRegistry
+from bpfw.authority.state import (
+    AuthorityState,
+    UnlockWindow,
+    clear_unlock_window,
+    load_authority_state,
+    save_authority_state,
+    set_unlock_window,
+)
 from bpfw.blueprint.snapshot import build_snapshot
 from bpfw.blueprint.loader import load_blueprint_data
 from bpfw.blueprint.validator import validate_blueprint
@@ -50,6 +62,7 @@ from bpfw.integrity.verifier import verify_integrity
 from bpfw.review.decision import ReviewDecisionError, primary_finding as review_primary_finding, review_session
 from bpfw.runtime.collector import collect_runtime_snapshot
 from bpfw.runtime.snapshot import snapshot_to_dict, snapshot_to_human_lines, snapshot_to_json
+from bpfw.guard.watcher import AuthorityWatcher
 from bpfw.proposal.renderer import render_proposal_detail, render_proposal_list
 from bpfw.proposal.resolver import ProposalResolutionError, accept_proposal, reject_proposal
 from bpfw.proposal.store import ProposalStoreError, list_proposals, load_proposal
@@ -75,6 +88,37 @@ class StaticStep(PipelineStep):
         )
 
 
+
+
+def _parse_ttl_to_minutes(raw_ttl: str) -> int:
+    normalized = raw_ttl.strip().lower()
+    if not normalized:
+        raise ValueError("Missing --ttl value")
+    if normalized.endswith("m"):
+        return int(normalized[:-1] or "0")
+    if normalized.endswith("h"):
+        return int(normalized[:-1] or "0") * 60
+    return int(normalized)
+
+
+def _normalize_resource_id(resource_id: str) -> str:
+    normalized = resource_id.strip()
+    if normalized == "blueprint":
+        return "project_blueprint"
+    if normalized == "architecture":
+        return "architecture_profile"
+    return normalized
+
+
+def _build_unsealed_block_message() -> str:
+    return "Project is not sealed.\nRun bpfw init or accept the generated baseline."
+
+
+def _ensure_manifest_for_protected_mode(project_root):  # noqa: ANN001
+    state = load_authority_state(project_root=project_root)
+    manifest_file = project_root / ".bpfw/manifest.json"
+    if state.protection_enabled and not manifest_file.exists():
+        raise RuntimeError(_build_unsealed_block_message())
 
 
 @dataclass(slots=True)
@@ -972,6 +1016,250 @@ class AccessListStep(PipelineStep):
 
 
 @dataclass(slots=True)
+class AuthorityStatusStep(PipelineStep):
+    """Report authority protection status."""
+
+    name: str = "authority.status"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        state = load_authority_state(project_root=context.project_root)
+        manifest_file = context.project_root / ".bpfw/manifest.json"
+        hooks_dir = context.project_root / ".git/hooks"
+        pre_commit_installed = (hooks_dir / "pre-commit").exists()
+        pre_push_installed = (hooks_dir / "pre-push").exists()
+
+        try:
+            lock_rows = AuthorityLockManager().status(project_root=context.project_root)
+            lock_lines = "\n".join([f"- {path} [{status}]" for _, path, status in lock_rows])
+        except Exception as error:  # noqa: BLE001
+            lock_lines = f"(unavailable: {error})"
+
+        unlock_window = state.active_unlock_window
+        unlock_human = "(none)"
+        if unlock_window is not None:
+            unlock_human = (
+                f"resource={unlock_window.resource_path} "
+                f"scope={unlock_window.scope} "
+                f"operation={unlock_window.operation} "
+                f"expires_at={unlock_window.expires_at}"
+            )
+
+        return StepResult(
+            status=ResultStatus.OK,
+            message=(
+                "Authority protection status:\n\n"
+                "OS lock:\n"
+                f"{'ENABLED' if state.os_lock_enabled else 'DISABLED'}\n\n"
+                "Manifest:\n"
+                f"{'SEALED' if manifest_file.exists() else 'MISSING'}\n\n"
+                "Watcher:\n"
+                "NOT RUNNING\n\n"
+                "Git hooks:\n"
+                f"pre-commit {'installed' if pre_commit_installed else 'missing'}\n"
+                f"pre-push {'installed' if pre_push_installed else 'missing'}\n\n"
+                "Active unlock window:\n"
+                f"{unlock_human}\n\n"
+                "Resource locks:\n"
+                f"{lock_lines}"
+            ),
+            source=self.name,
+            details={
+                "os_lock_enabled": str(state.os_lock_enabled).lower(),
+                "manifest_present": str(manifest_file.exists()).lower(),
+                "active_unlock_window": unlock_human,
+            },
+        )
+
+
+@dataclass(slots=True)
+class AuthorityLockStep(PipelineStep):
+    """Apply OS lock to all authority resources."""
+
+    name: str = "authority.lock"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        try:
+            _ensure_manifest_for_protected_mode(project_root=context.project_root)
+            locked_count = AuthorityLockManager().lock_all(project_root=context.project_root)
+            clear_unlock_window(project_root=context.project_root, mark_locked=True)
+        except (RuntimeError, OsLockPolicyError) as error:
+            return StepResult(status=ResultStatus.BLOCK, message=str(error), source=self.name, details={"error_code": "AUTH_LOCK_BLOCK"})
+
+        return StepResult(
+            status=ResultStatus.OK,
+            message=f"Authority resources locked at OS level.\nLocked targets: {locked_count}",
+            source=self.name,
+        )
+
+
+@dataclass(slots=True)
+class AuthorityRelockStep(PipelineStep):
+    """Relock all authority resources and close active unlock window."""
+
+    name: str = "authority.relock"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        try:
+            _ensure_manifest_for_protected_mode(project_root=context.project_root)
+            locked_count = AuthorityLockManager().relock_all(project_root=context.project_root)
+            clear_unlock_window(project_root=context.project_root, mark_locked=True)
+        except (RuntimeError, OsLockPolicyError) as error:
+            return StepResult(status=ResultStatus.BLOCK, message=str(error), source=self.name, details={"error_code": "AUTH_RELOCK_BLOCK"})
+
+        return StepResult(
+            status=ResultStatus.OK,
+            message=f"Authority relocked.\nLocked targets: {locked_count}",
+            source=self.name,
+        )
+
+
+@dataclass(slots=True)
+class AuthorityUnlockStep(PipelineStep):
+    """Open a scoped unlock window for one authority resource."""
+
+    name: str = "authority.unlock"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        resource_input = context.command_arguments.get("resource_id", "").strip()
+        scope = context.command_arguments.get("scope", "").strip()
+        operation = context.command_arguments.get("operation", "").strip()
+        reason = context.command_arguments.get("reason", "").strip()
+        raw_ttl = context.command_arguments.get("ttl", "10m").strip() or "10m"
+        if not resource_input or not scope or not operation or not reason:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=(
+                    "Usage: bpfw authority unlock <resource> "
+                    "--scope <scope> --operation <operation> --ttl <duration> --reason <reason>"
+                ),
+                source=self.name,
+                details={"error_code": "AUTH_UNLOCK_USAGE"},
+            )
+
+        try:
+            _ensure_manifest_for_protected_mode(project_root=context.project_root)
+            ttl_minutes = _parse_ttl_to_minutes(raw_ttl)
+            if ttl_minutes <= 0:
+                raise ValueError("TTL must be greater than zero")
+        except (RuntimeError, ValueError) as error:
+            return StepResult(status=ResultStatus.BLOCK, message=str(error), source=self.name, details={"error_code": "AUTH_UNLOCK_TTL"})
+
+        resource_id = _normalize_resource_id(resource_input)
+        registry = AuthorityResourceRegistry()
+        resource = registry.get(resource_id)
+        if resource is None:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=f"Unknown authority resource: {resource_input}",
+                source=self.name,
+                details={"error_code": "AUTH_UNLOCK_RESOURCE"},
+            )
+
+        matching_grant = AccessGrantStore().find_matching(
+            project_root=context.project_root,
+            resource_id=resource_id,
+            operation=operation,
+            scope=scope,
+        )
+        if matching_grant is None:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=(
+                    "BLOCK\n\n"
+                    f"No active scoped grant found for {resource.path}.\n\n"
+                    "Required access:\n"
+                    f"- resource: {resource.path}\n"
+                    f"- scope: {scope}\n"
+                    f"- operation: {operation}"
+                ),
+                source=self.name,
+                details={"error_code": "AUTH_UNLOCK_GRANT_MISSING"},
+            )
+
+        now_utc = datetime.now(tz=timezone.utc)
+        requested_expiry = now_utc + timedelta(minutes=ttl_minutes)
+        expires_at = min(requested_expiry, matching_grant.expires_at.astimezone(timezone.utc))
+        if expires_at <= now_utc:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message="Cannot open unlock window because matching grant is expired.",
+                source=self.name,
+                details={"error_code": "AUTH_UNLOCK_GRANT_EXPIRED"},
+            )
+
+        try:
+            unlocked_count = AuthorityLockManager().unlock_resource(project_root=context.project_root, resource_id=resource_id)
+        except (RuntimeError, OsLockPolicyError) as error:
+            return StepResult(status=ResultStatus.BLOCK, message=str(error), source=self.name, details={"error_code": "AUTH_UNLOCK_BLOCK"})
+
+        window = UnlockWindow(
+            resource_id=resource_id,
+            resource_path=resource.path,
+            scope=scope,
+            operation=operation,
+            expires_at=expires_at.isoformat(),
+            granted_by=matching_grant.granted_by,
+            request_id=matching_grant.request_id,
+            grant_id=matching_grant.grant_id,
+        )
+        set_unlock_window(project_root=context.project_root, window=window)
+
+        return StepResult(
+            status=ResultStatus.OK,
+            message=(
+                "Authority unlock granted.\n\n"
+                "Resource:\n"
+                f"{resource.path}\n\n"
+                "Scope:\n"
+                f"{scope}\n\n"
+                "Allowed operation:\n"
+                f"{operation}\n\n"
+                "Expires:\n"
+                f"{ttl_minutes} minutes\n\n"
+                "Only BPFW mechanical commands are allowed to use this unlock."
+            ),
+            source=self.name,
+            details={
+                "resource_path": resource.path,
+                "scope": scope,
+                "operation": operation,
+                "expires_at": expires_at.isoformat(),
+                "unlocked_target_count": str(unlocked_count),
+            },
+        )
+
+
+@dataclass(slots=True)
+class WatchStep(PipelineStep):
+    """Run one deterministic watcher scan in foreground mode."""
+
+    name: str = "guard.watch"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        try:
+            _ensure_manifest_for_protected_mode(project_root=context.project_root)
+        except RuntimeError as error:
+            return StepResult(status=ResultStatus.BLOCK, message=str(error), source=self.name, details={"error_code": "WATCH_BLOCK"})
+
+        try:
+            watch_report = AuthorityWatcher().scan_once(project_root=context.project_root)
+        except Exception as error:  # noqa: BLE001
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=f"Watcher execution failed: {error}",
+                source=self.name,
+                details={"error_code": "WATCH_RUNTIME_BLOCK"},
+            )
+        status = ResultStatus.OK if watch_report.status == "OK" else ResultStatus.BLOCK
+        return StepResult(
+            status=status,
+            message=watch_report.message,
+            source=self.name,
+            details={"watch_status": watch_report.status},
+        )
+
+
+@dataclass(slots=True)
 class BlueprintAddFileStep(PipelineStep):
     """Add one allowed file to a blueprint responsibility."""
 
@@ -1586,6 +1874,15 @@ class InitProjectStep(PipelineStep):
     def run(self, context) -> StepResult:  # noqa: ANN001
         accept_scan = context.command_arguments.get("accept_scan", "").strip() == "true"
         force_new = context.command_arguments.get("force_new", "").strip() == "true"
+        no_os_lock = context.command_arguments.get("no_os_lock", "").strip() == "true"
+        watch_mode = context.command_arguments.get("watch", "").strip() == "true"
+        if no_os_lock:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message="--no-os-lock is not allowed in protected mode.",
+                source=self.name,
+                details={"error_code": "INIT_OS_LOCK_REQUIRED"},
+            )
         detector = ProjectDetector()
         detection_result = detector.detect(project_root=context.project_root)
 
@@ -1600,12 +1897,24 @@ class InitProjectStep(PipelineStep):
         if accept_scan:
             try:
                 acceptance_result = InitialBaselineAcceptor().accept(project_root=context.project_root)
+                locked_count = AuthorityLockManager().lock_all(project_root=context.project_root)
+                hooks_installed = False
+                if (context.project_root / ".git/hooks").exists():
+                    install_pre_commit_hook(project_root=context.project_root)
+                    hooks_installed = True
             except (RuntimeError, IntegrityManifestError, IntegritySigningError) as error:
                 return StepResult(
                     status=ResultStatus.BLOCK,
                     message=str(error),
                     source=self.name,
                     details={"error_code": "INIT_ACCEPT_BLOCK"},
+                )
+            except (HookInstallError, OsLockPolicyError) as error:
+                return StepResult(
+                    status=ResultStatus.BLOCK,
+                    message=str(error),
+                    source=self.name,
+                    details={"error_code": "INIT_LOCK_BLOCK"},
                 )
             return StepResult(
                 status=ResultStatus.OK,
@@ -1618,6 +1927,10 @@ class InitProjectStep(PipelineStep):
                 details={
                     "blueprint_path": str(acceptance_result.blueprint_path),
                     "manifest_path": str(acceptance_result.manifest_path),
+                    "os_lock_enabled": "true",
+                    "locked_target_count": str(locked_count),
+                    "hooks_installed": str(hooks_installed).lower(),
+                    "watch_recommended": str(watch_mode).lower(),
                 },
             )
 
@@ -1625,17 +1938,37 @@ class InitProjectStep(PipelineStep):
         if force_new or not detection_result.is_existing_project:
             baseline = generator.generate_empty_baseline(project_root=context.project_root)
             bpfw_root = context.project_root / ".bpfw"
-            for relative_directory in ["access_requests", "access_grants", "proposals"]:
+            for relative_directory in ["access_requests", "access_grants", "approvals", "proposals", "audit"]:
                 (bpfw_root / relative_directory).mkdir(parents=True, exist_ok=True)
-            (bpfw_root / "state.json").write_text("{\n  \"protection_enabled\": true\n}\n", encoding="utf-8")
+            save_authority_state(
+                project_root=context.project_root,
+                state=AuthorityState(
+                    protection_enabled=True,
+                    os_lock_enabled=False,
+                    active_unlock_window=None,
+                    last_relock_at="",
+                ),
+            )
             try:
                 manifest_result = write_manifest(project_root=context.project_root)
+                locked_count = AuthorityLockManager().lock_all(project_root=context.project_root)
+                hooks_installed = False
+                if (context.project_root / ".git/hooks").exists():
+                    install_pre_commit_hook(project_root=context.project_root)
+                    hooks_installed = True
             except (IntegrityManifestError, IntegritySigningError) as error:
                 return StepResult(
                     status=ResultStatus.BLOCK,
                     message=str(error),
                     source=self.name,
                     details={"error_code": "INIT_MANIFEST_BLOCK"},
+                )
+            except (HookInstallError, OsLockPolicyError, RuntimeError) as error:
+                return StepResult(
+                    status=ResultStatus.BLOCK,
+                    message=str(error),
+                    source=self.name,
+                    details={"error_code": "INIT_LOCK_BLOCK"},
                 )
             return StepResult(
                 status=ResultStatus.OK,
@@ -1648,6 +1981,10 @@ class InitProjectStep(PipelineStep):
                 details={
                     "blueprint_path": str(baseline.blueprint_path),
                     "manifest_path": str(manifest_result.manifest_path),
+                    "os_lock_enabled": "true",
+                    "locked_target_count": str(locked_count),
+                    "hooks_installed": str(hooks_installed).lower(),
+                    "watch_recommended": str(watch_mode).lower(),
                 },
             )
 
@@ -1792,6 +2129,26 @@ def build_default_registry() -> dict[str, Pipeline]:
         name="access_list",
         steps=[AccessListStep()],
     )
+    authority_status_pipeline = Pipeline(
+        name="authority_status",
+        steps=[AuthorityStatusStep()],
+    )
+    authority_unlock_pipeline = Pipeline(
+        name="authority_unlock",
+        steps=[AuthorityUnlockStep()],
+    )
+    authority_relock_pipeline = Pipeline(
+        name="authority_relock",
+        steps=[AuthorityRelockStep()],
+    )
+    authority_lock_pipeline = Pipeline(
+        name="authority_lock",
+        steps=[AuthorityLockStep()],
+    )
+    watch_pipeline = Pipeline(
+        name="watch",
+        steps=[WatchStep()],
+    )
     blueprint_add_file_pipeline = Pipeline(
         name="blueprint_add_file",
         steps=[BlueprintAddFileStep()],
@@ -1848,9 +2205,14 @@ def build_default_registry() -> dict[str, Pipeline]:
         "access_request": access_request_pipeline,
         "access_grant": access_grant_pipeline,
         "access_list": access_list_pipeline,
+        "authority_status": authority_status_pipeline,
+        "authority_unlock": authority_unlock_pipeline,
+        "authority_relock": authority_relock_pipeline,
+        "authority_lock": authority_lock_pipeline,
         "blueprint_add_file": blueprint_add_file_pipeline,
         "blueprint_add_symbol": blueprint_add_symbol_pipeline,
         "blueprint_create_responsibility": blueprint_create_responsibility_pipeline,
         "init": init_pipeline,
+        "watch": watch_pipeline,
         "status": bootstrap_pipeline,
     }

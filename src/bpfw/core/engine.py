@@ -30,7 +30,7 @@ class BlueprintEngine:
                         message=f"Unknown command: {command.command_name}",
                         source="core.registry",
                         suggested_actions=[
-                            "Use one of: verify, verify_integrity, install_hooks, manifest_write, approve, approvals, start, review, apply, reject, runtime snapshot, wiring check, architecture check, composition check, discover, proposals, show_proposal, accept_proposal, reject_proposal, status"
+                            "Use one of: verify, verify_integrity, install_hooks, manifest_write, approve, approvals, start, review, apply, reject, runtime snapshot, wiring check, architecture check, composition check, discover, proposals, show_proposal, accept_proposal, reject_proposal, authority status, authority unlock, authority relock, authority lock, watch, status"
                         ],
                     )
                 ],

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import json
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
+from bpfw.authority.state import AuthorityState, save_authority_state
 from bpfw.integrity.manifest import write_manifest
 
 
@@ -41,9 +41,15 @@ class InitialBaselineAcceptor:
             (bpfw_root / relative_directory).mkdir(parents=True, exist_ok=True)
 
         manifest_result = write_manifest(project_root=project_root)
-        state_path = bpfw_root / "state.json"
-        state_payload = {"protection_enabled": True}
-        state_path.write_text(f"{json.dumps(state_payload, indent=2, ensure_ascii=True)}\n", encoding="utf-8")
+        save_authority_state(
+            project_root=project_root,
+            state=AuthorityState(
+                protection_enabled=True,
+                os_lock_enabled=False,
+                active_unlock_window=None,
+                last_relock_at="",
+            ),
+        )
 
         return BaselineAcceptanceResult(
             blueprint_path=blueprint_path,
