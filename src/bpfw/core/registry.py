@@ -17,6 +17,9 @@ from bpfw.duplication.duplication_reporter import (
     summarize_counts,
 )
 from bpfw.duplication.similarity_detector import detect_duplication
+from bpfw.integrity.manifest import IntegrityManifestError, write_manifest
+from bpfw.integrity.signer import IntegritySigningError
+from bpfw.integrity.verifier import verify_integrity
 from bpfw.runtime.collector import collect_runtime_snapshot
 from bpfw.runtime.snapshot import snapshot_to_dict, snapshot_to_human_lines, snapshot_to_json
 from bpfw.wiring.verifier import verify_wiring
@@ -344,6 +347,90 @@ class VerifyBlueprintModeStep(PipelineStep):
         )
 
 
+@dataclass(slots=True)
+class ManifestWriteStep(PipelineStep):
+    """Generate integrity manifest from current approved state."""
+
+    name: str = "integrity.manifest.write"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        try:
+            write_result = write_manifest(project_root=context.project_root)
+        except (IntegrityManifestError, IntegritySigningError) as error:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=str(error),
+                source=self.name,
+                details={
+                    "error_code": "INT_WRITE_BLOCK",
+                    "manifest_path": str(context.project_root / ".bpfw/manifest.json"),
+                },
+                affected_resources=[str(context.project_root / ".bpfw/manifest.json")],
+                suggested_actions=["Configure BPFW_MANIFEST_HMAC_KEY and run `bpfw manifest write` again"],
+            )
+
+        return StepResult(
+            status=ResultStatus.OK,
+            message="Integrity manifest generated and signed successfully",
+            source=self.name,
+            details={
+                "manifest_path": str(write_result.manifest_path),
+                "manifest_updated_at": write_result.updated_at,
+                "integrity_checked_files": str(write_result.file_count),
+            },
+        )
+
+
+@dataclass(slots=True)
+class VerifyIntegrityStep(PipelineStep):
+    """Verify integrity manifest signature and protected file hashes."""
+
+    strict: bool = True
+    name: str = "integrity.verify"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        verification_result = verify_integrity(project_root=context.project_root)
+        if verification_result.issues:
+            first_issue = verification_result.issues[0]
+
+            status = ResultStatus.WARNING
+            if first_issue.severity == "critical":
+                status = ResultStatus.CRITICAL
+            elif first_issue.severity == "block":
+                status = ResultStatus.BLOCK
+
+            if any(issue.severity == "critical" for issue in verification_result.issues):
+                status = ResultStatus.CRITICAL
+            elif any(issue.severity == "block" for issue in verification_result.issues):
+                status = ResultStatus.BLOCK
+
+            if not self.strict and verification_result.only_precondition_issues:
+                status = ResultStatus.WARNING
+
+            return StepResult(
+                status=status,
+                message=first_issue.message,
+                source=self.name,
+                details={
+                    "error_code": first_issue.code,
+                    "manifest_path": verification_result.manifest_path,
+                    "integrity_checked_files": str(verification_result.checked_files),
+                },
+                affected_resources=[first_issue.file_path] if first_issue.file_path else [],
+                suggested_actions=[first_issue.recommendation],
+            )
+
+        return StepResult(
+            status=ResultStatus.OK,
+            message="Integrity verification passed",
+            source=self.name,
+            details={
+                "manifest_path": verification_result.manifest_path,
+                "integrity_checked_files": str(verification_result.checked_files),
+            },
+        )
+
+
 
 def build_default_registry() -> dict[str, Pipeline]:
     """Create base command to pipeline mapping."""
@@ -358,7 +445,16 @@ def build_default_registry() -> dict[str, Pipeline]:
             VerifyWiringStep(),
             VerifyDuplicationStep(),
             VerifyBlueprintModeStep(),
+            VerifyIntegrityStep(strict=False),
         ],
+    )
+    verify_integrity_pipeline = Pipeline(
+        name="verify_integrity",
+        steps=[VerifyIntegrityStep(strict=True)],
+    )
+    manifest_write_pipeline = Pipeline(
+        name="manifest_write",
+        steps=[ManifestWriteStep()],
     )
     architecture_check_pipeline = Pipeline(
         name="architecture_check",
@@ -399,6 +495,8 @@ def build_default_registry() -> dict[str, Pipeline]:
     )
     return {
         "verify": verify_pipeline,
+        "verify_integrity": verify_integrity_pipeline,
+        "manifest_write": manifest_write_pipeline,
         "architecture_check": architecture_check_pipeline,
         "composition_check": composition_check_pipeline,
         "runtime_snapshot": runtime_snapshot_pipeline,

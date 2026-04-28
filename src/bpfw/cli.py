@@ -11,6 +11,8 @@ from bpfw.core.engine import BlueprintEngine, build_command
 
 SUPPORTED_COMMANDS = (
     "verify",
+    "verify-integrity",
+    "manifest",
     "discover",
     "review",
     "apply",
@@ -38,6 +40,14 @@ def build_parser() -> argparse.ArgumentParser:
 def normalize_command(command: str, subcommand: str | None) -> str:
     """Map CLI tokens into engine command names."""
 
+    if command == "manifest":
+        if subcommand != "write":
+            raise ValueError("manifest command requires subcommand `write`")
+        return "manifest_write"
+    if command == "verify-integrity":
+        if subcommand is not None:
+            raise ValueError("verify-integrity command does not accept subcommands")
+        return "verify_integrity"
     if command == "architecture":
         if subcommand != "check":
             raise ValueError("architecture command requires subcommand `check`")
@@ -134,6 +144,12 @@ def _print_human(payload: dict) -> None:
         print(f"Blueprint Mode Operations: {details['blueprint_mode_operation_count']}")
     if "blueprint_mode_issue_count" in details:
         print(f"Blueprint Mode Issues: {details['blueprint_mode_issue_count']}")
+    if "manifest_path" in details:
+        print(f"Manifest: {details['manifest_path']}")
+    if "integrity_checked_files" in details:
+        print(f"Checked Files: {details['integrity_checked_files']}")
+    if "manifest_updated_at" in details:
+        print(f"Updated At: {details['manifest_updated_at']}")
 
     affected_resources = primary_step.get("affected_resources", [])
     if affected_resources:
