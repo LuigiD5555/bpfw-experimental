@@ -9,6 +9,7 @@ from bpfw.approval.broker import ApprovalBrokerError, approve_request
 from bpfw.approval.request import ApprovalRequestError
 from bpfw.approval.verifier import ApprovalVerificationError, verify_all_approvals
 from bpfw.architecture.architecture_validator import validate_architecture
+from bpfw.authority.policy import AuthorityPolicy
 from bpfw.blueprint.snapshot import build_snapshot
 from bpfw.blueprint.validator import validate_blueprint
 from bpfw.blueprint_mode.contract_validator import validate_blueprint_mode_contracts
@@ -33,6 +34,10 @@ from bpfw.duplication.duplication_reporter import (
 from bpfw.duplication.similarity_detector import detect_duplication
 from bpfw.enforcement.pre_commit import HookInstallError, install_pre_commit_hook
 from bpfw.integrity.manifest import IntegrityManifestError, write_manifest
+from bpfw.init.acceptor import InitialBaselineAcceptor
+from bpfw.init.detector import ProjectDetector
+from bpfw.init.generator import InitialBlueprintGenerator
+from bpfw.init.scanner import MechanicalProjectScanner
 from bpfw.integrity.signer import IntegritySigningError
 from bpfw.integrity.verifier import verify_integrity
 from bpfw.review.decision import ReviewDecisionError, primary_finding as review_primary_finding, review_session
@@ -63,6 +68,143 @@ class StaticStep(PipelineStep):
         )
 
 
+
+
+@dataclass(slots=True)
+class VerifyAuthorityStep(PipelineStep):
+    """Executable authority step for direct-change access control."""
+
+    name: str = "authority.verify"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        import subprocess
+
+        from bpfw.authority.resources import AuthorityResourceRegistry
+        from bpfw.integrity.manifest import load_manifest, manifest_path
+        from bpfw.integrity.hash_provider import compute_sha256
+        from bpfw.integrity.manifest import IntegrityManifestError
+        from bpfw.integrity.verifier import verify_integrity
+
+        try:
+            manifest_payload = load_manifest(project_root=context.project_root)
+        except IntegrityManifestError:
+            return StepResult(
+                status=ResultStatus.OK,
+                message="Authority verify skipped because manifest is unavailable",
+                source=self.name,
+            )
+
+        files = manifest_payload.get("files")
+        if not isinstance(files, list):
+            return StepResult(status=ResultStatus.OK, message="Authority verify skipped because manifest format is invalid", source=self.name)
+
+        policy = AuthorityPolicy()
+        registry = AuthorityResourceRegistry()
+        requested_operation = str(context.command_arguments.get("operation", "")).strip() or None
+        requested_scope = str(context.command_arguments.get("scope", "")).strip() or None
+
+        changed_paths: set[str] = set()
+
+        for entry in files:
+            if not isinstance(entry, dict):
+                continue
+            relative_path = str(entry.get("path", "")).strip()
+            expected_hash = str(entry.get("sha256", "")).strip()
+            if not relative_path or not expected_hash:
+                continue
+
+            absolute_path = context.project_root / relative_path
+            if not absolute_path.exists() or not absolute_path.is_file():
+                continue
+            if compute_sha256(absolute_path) == expected_hash:
+                continue
+
+            changed_paths.add(relative_path)
+
+        try:
+            git_status = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=context.project_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        except OSError:
+            git_status = None
+
+        if git_status is not None and git_status.returncode == 0:
+            for line in git_status.stdout.splitlines():
+                if len(line) < 4:
+                    continue
+                candidate_path = line[3:].strip()
+                if not candidate_path:
+                    continue
+                if " -> " in candidate_path:
+                    candidate_path = candidate_path.split(" -> ", 1)[1].strip()
+                candidate_path = candidate_path.replace("\\", "/")
+                if registry.is_authority_path(candidate_path):
+                    changed_paths.add(candidate_path)
+
+        for relative_path in sorted(changed_paths):
+            integrity_result = verify_integrity(project_root=context.project_root)
+            if integrity_result.issues and not integrity_result.only_precondition_issues:
+                # Integrity verifier participates in authority pipeline wiring.
+                pass
+
+            resource = registry.resolve_by_path(relative_path)
+            operation = requested_operation
+            scope = requested_scope
+            if resource is not None and (operation is None or scope is None):
+                default_operation = resource.allowed_operations[0] if resource.allowed_operations else "direct_edit"
+                operation = operation or default_operation
+                scope = scope or "project"
+
+            decision = policy.evaluate_direct_change(
+                project_root=context.project_root,
+                relative_path=relative_path,
+                operation=operation,
+                scope=scope,
+            )
+            if decision.allowed:
+                continue
+
+            resource_label = "Authority resource"
+            if resource is not None:
+                if resource.resource_type == "blueprint":
+                    resource_label = "Blueprint"
+                elif resource.resource_type == "architecture":
+                    resource_label = "Architecture"
+                elif resource.resource_type == "manifest":
+                    resource_label = "Integrity manifest"
+
+            message = (
+                "BPFW BLOCKED ACTION\n\n"
+                "Resource:\n"
+                f"{relative_path}\n\n"
+                "Reason:\n"
+                f"{resource_label} is an authority resource.\n\n"
+                "Policy:\n"
+                "Direct authority edits are not allowed.\n\n"
+                f"{decision.message}\n\n"
+                "Do not retry this edit.\n\n"
+                "Allowed next action:\n"
+                f"{decision.recommendation}"
+            )
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=message,
+                source=self.name,
+                details={"error_code": "AUTH001", "resource_id": decision.resource_id},
+                affected_resources=[str(context.project_root / relative_path)],
+                suggested_actions=[decision.recommendation],
+            )
+
+        return StepResult(
+            status=ResultStatus.OK,
+            message="Authority resources validated successfully",
+            source=self.name,
+            details={"authority_manifest_path": str(manifest_path(project_root=context.project_root))},
+        )
 @dataclass(slots=True)
 class VerifyBlueprintStep(PipelineStep):
     """Executable verify step for blueprint authority validation."""
@@ -1021,6 +1163,130 @@ class RejectProposalStep(PipelineStep):
         )
 
 
+@dataclass(slots=True)
+class InitProjectStep(PipelineStep):
+    """Initialize BPFW governance for a new or existing project."""
+
+    name: str = "init.project"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        accept_scan = context.command_arguments.get("accept_scan", "").strip() == "true"
+        force_new = context.command_arguments.get("force_new", "").strip() == "true"
+        detector = ProjectDetector()
+        detection_result = detector.detect(project_root=context.project_root)
+
+        if detection_result.is_initialized and not force_new and not accept_scan:
+            return StepResult(
+                status=ResultStatus.WARNING,
+                message="BPFW INIT\n\nProject is already initialized.\n\nProtection is already active.",
+                source=self.name,
+                details={"blueprint_path": str(context.project_root / "blueprint.yaml")},
+            )
+
+        if accept_scan:
+            try:
+                acceptance_result = InitialBaselineAcceptor().accept(project_root=context.project_root)
+            except (RuntimeError, IntegrityManifestError, IntegritySigningError) as error:
+                return StepResult(
+                    status=ResultStatus.BLOCK,
+                    message=str(error),
+                    source=self.name,
+                    details={"error_code": "INIT_ACCEPT_BLOCK"},
+                )
+            return StepResult(
+                status=ResultStatus.OK,
+                message=(
+                    "Initial baseline accepted.\n\n"
+                    "Created:\n"
+                    "- blueprint.yaml\n"
+                    "- architecture.yaml\n"
+                    "- .bpfw/manifest.json\n\n"
+                    "Protection is now active by default."
+                ),
+                source=self.name,
+                details={
+                    "blueprint_path": str(acceptance_result.blueprint_path),
+                    "manifest_path": str(acceptance_result.manifest_path),
+                },
+            )
+
+        generator = InitialBlueprintGenerator()
+        if force_new or not detection_result.is_existing_project:
+            baseline = generator.generate_empty_baseline(project_root=context.project_root)
+            bpfw_root = context.project_root / ".bpfw"
+            for relative_directory in ["access_requests", "access_grants", "proposals"]:
+                (bpfw_root / relative_directory).mkdir(parents=True, exist_ok=True)
+            (bpfw_root / "state.json").write_text("{\n  \"protection_enabled\": true\n}\n", encoding="utf-8")
+            try:
+                manifest_result = write_manifest(project_root=context.project_root)
+            except (IntegrityManifestError, IntegritySigningError) as error:
+                return StepResult(
+                    status=ResultStatus.BLOCK,
+                    message=str(error),
+                    source=self.name,
+                    details={"error_code": "INIT_MANIFEST_BLOCK"},
+                )
+            return StepResult(
+                status=ResultStatus.OK,
+                message=(
+                    "BPFW INIT\n\n"
+                    "New project detected.\n\n"
+                    "No existing blueprint was found.\n"
+                    "No existing source structure was found.\n\n"
+                    "Creating protected baseline:\n"
+                    "- blueprint.yaml\n"
+                    "- architecture.yaml\n"
+                    "- .bpfw/state.json\n"
+                    "- .bpfw/manifest.json\n"
+                    "- .bpfw/access_requests/\n"
+                    "- .bpfw/access_grants/\n"
+                    "- .bpfw/proposals/\n\n"
+                    "Protection is now active by default."
+                ),
+                source=self.name,
+                details={
+                    "blueprint_path": str(baseline.blueprint_path),
+                    "manifest_path": str(manifest_result.manifest_path),
+                },
+            )
+
+        scan_result = MechanicalProjectScanner().scan(project_root=context.project_root)
+        generated_baseline = generator.generate(project_root=context.project_root, scan_result=scan_result)
+        class_count = len([symbol for symbol in scan_result.symbols if symbol.kind == "class"])
+        function_count = len([symbol for symbol in scan_result.symbols if symbol.kind == "function"])
+        responsibility_count = generated_baseline.blueprint_path.read_text(encoding="utf-8").count("responsibility_id:")
+        layer_count = len(set(scan_result.probable_layers.values()))
+
+        return StepResult(
+            status=ResultStatus.INFO,
+            message=(
+                "BPFW INIT\n\n"
+                "Existing project detected.\n\n"
+                "Mechanical scan completed:\n"
+                f"- {len(scan_result.files)} Python files\n"
+                f"- {class_count} classes\n"
+                f"- {function_count} functions\n"
+                f"- {responsibility_count} probable responsibilities\n"
+                f"- {layer_count} probable layers\n\n"
+                "Generated:\n"
+                "- blueprint.generated.yaml\n"
+                "- architecture.generated.yaml\n"
+                "- .bpfw/scan_report.md\n\n"
+                "Review the generated baseline and run:\n"
+                "bpfw init --accept-scan"
+            ),
+            source=self.name,
+            details={
+                "scan_file_count": str(len(scan_result.files)),
+                "scan_class_count": str(class_count),
+                "scan_function_count": str(function_count),
+                "scan_probable_responsibility_count": str(responsibility_count),
+                "scan_probable_layer_count": str(layer_count),
+                "blueprint_path": str(generated_baseline.blueprint_path),
+            },
+        )
+
+
 
 def build_default_registry() -> dict[str, Pipeline]:
     """Create base command to pipeline mapping."""
@@ -1028,6 +1294,7 @@ def build_default_registry() -> dict[str, Pipeline]:
     verify_pipeline = Pipeline(
         name="verify",
         steps=[
+            VerifyAuthorityStep(),
             VerifyBlueprintStep(),
             VerifyArchitectureStep(),
             VerifyCompositionStep(),
@@ -1110,6 +1377,10 @@ def build_default_registry() -> dict[str, Pipeline]:
         name="install_hooks",
         steps=[InstallHooksStep()],
     )
+    init_pipeline = Pipeline(
+        name="init",
+        steps=[InitProjectStep()],
+    )
     bootstrap_pipeline = Pipeline(
         name="bootstrap",
         steps=[
@@ -1147,5 +1418,6 @@ def build_default_registry() -> dict[str, Pipeline]:
         "accept_proposal": accept_proposal_pipeline,
         "reject_proposal": reject_proposal_pipeline,
         "install_hooks": install_hooks_pipeline,
+        "init": init_pipeline,
         "status": bootstrap_pipeline,
     }

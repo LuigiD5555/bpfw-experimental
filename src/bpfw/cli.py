@@ -11,6 +11,7 @@ from bpfw.enforcement.ci import ci_exit_code, render_ci_report
 
 
 SUPPORTED_COMMANDS = (
+    "init",
     "verify",
     "verify-integrity",
     "install-hooks",
@@ -47,6 +48,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--as-new-responsibility", dest="as_new_responsibility", default="")
     parser.add_argument("--state", default="")
     parser.add_argument("--reject-action", default="")
+    parser.add_argument("--accept-scan", action="store_true")
+    parser.add_argument("--force-new", action="store_true")
     parser.add_argument("--ci", action="store_true", dest="ci_mode")
     parser.add_argument("--json", action="store_true", dest="as_json")
     return parser
@@ -60,6 +63,10 @@ def normalize_command(command: str, subcommand: str | None) -> str:
         if subcommand != "write":
             raise ValueError("manifest command requires subcommand `write`")
         return "manifest_write"
+    if command == "init":
+        if subcommand is not None:
+            raise ValueError("init command does not accept subcommands")
+        return "init"
     if command == "start":
         if subcommand is None:
             raise ValueError("start command requires a change_id")
@@ -158,6 +165,11 @@ def _build_payload(result) -> dict:  # noqa: ANN001
 
 
 def _print_human(payload: dict) -> None:
+    if payload["command_name"] == "init":
+        if payload["message"]:
+            print(payload["message"])
+        return
+
     print(f"Command: {payload['command_name']}")
     print(f"Status: {payload['status'].upper()}")
     if payload["message"]:
@@ -302,6 +314,11 @@ def main() -> int:
         command_arguments["reject_action"] = parsed_arguments.reject_action
     if normalized_command == "verify" and parsed_arguments.ci_mode:
         command_arguments["ci"] = "true"
+    if normalized_command == "init":
+        if parsed_arguments.accept_scan:
+            command_arguments["accept_scan"] = "true"
+        if parsed_arguments.force_new:
+            command_arguments["force_new"] = "true"
     result = engine.run(
         build_command(
             command_name=normalized_command,
