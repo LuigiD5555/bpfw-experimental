@@ -30,13 +30,16 @@ class BlueprintEngine:
                         message=f"Unknown command: {command.command_name}",
                         source="core.registry",
                         suggested_actions=[
-                            "Use one of: verify, verify_integrity, manifest_write, runtime snapshot, wiring check, architecture check, composition check, discover, review, apply, status"
+                            "Use one of: verify, verify_integrity, manifest_write, approve, approvals, runtime snapshot, wiring check, architecture check, composition check, discover, review, apply, status"
                         ],
                     )
                 ],
             )
 
-        context = build_project_context(command.project_root)
+        context = build_project_context(
+            project_root=command.project_root,
+            command_arguments=command.arguments,
+        )
         step_results = execute_pipeline(pipeline=pipeline, context=context)
         return EngineResult(
             command_name=command.command_name,

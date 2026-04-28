@@ -13,6 +13,8 @@ SUPPORTED_COMMANDS = (
     "verify",
     "verify-integrity",
     "manifest",
+    "approve",
+    "approvals",
     "discover",
     "review",
     "apply",
@@ -44,6 +46,14 @@ def normalize_command(command: str, subcommand: str | None) -> str:
         if subcommand != "write":
             raise ValueError("manifest command requires subcommand `write`")
         return "manifest_write"
+    if command == "approve":
+        if subcommand is None:
+            raise ValueError("approve command requires a request_id")
+        return "approve"
+    if command == "approvals":
+        if subcommand is not None:
+            raise ValueError("approvals command does not accept subcommands")
+        return "approvals"
     if command == "verify-integrity":
         if subcommand is not None:
             raise ValueError("verify-integrity command does not accept subcommands")
@@ -150,6 +160,18 @@ def _print_human(payload: dict) -> None:
         print(f"Checked Files: {details['integrity_checked_files']}")
     if "manifest_updated_at" in details:
         print(f"Updated At: {details['manifest_updated_at']}")
+    if "approval_id" in details:
+        print(f"Approval ID: {details['approval_id']}")
+    if "request_id" in details:
+        print(f"Request ID: {details['request_id']}")
+    if "approval_backend" in details:
+        print(f"Approval Backend: {details['approval_backend']}")
+    if "approval_approved_by" in details:
+        print(f"Approved By: {details['approval_approved_by']}")
+    if "approval_count" in details:
+        print(f"Approvals: {details['approval_count']}")
+    if "approval_issue_count" in details:
+        print(f"Approval Issues: {details['approval_issue_count']}")
 
     affected_resources = primary_step.get("affected_resources", [])
     if affected_resources:
@@ -176,11 +198,14 @@ def main() -> int:
         parser.error(str(error))
 
     engine = BlueprintEngine()
+    command_arguments: dict[str, str] = {}
+    if normalized_command == "approve" and parsed_arguments.subcommand is not None:
+        command_arguments["request_id"] = parsed_arguments.subcommand
     result = engine.run(
         build_command(
             command_name=normalized_command,
             project_root=Path(parsed_arguments.project_root).resolve(),
-            arguments={},
+            arguments=command_arguments,
         )
     )
     payload = _build_payload(result)

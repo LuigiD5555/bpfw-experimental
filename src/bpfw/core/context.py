@@ -23,10 +23,11 @@ class ProjectContext:
     blueprint_file: Path
     architecture_file: Path
     lifecycle_file: Path
+    command_arguments: dict[str, str] = field(default_factory=dict)
 
 
 
-def build_project_context(project_root: Path) -> ProjectContext:
+def build_project_context(project_root: Path, command_arguments: dict[str, str] | None = None) -> ProjectContext:
     """Build a minimal project context used by Prompt 0 skeleton pipelines."""
 
     return ProjectContext(
@@ -34,4 +35,5 @@ def build_project_context(project_root: Path) -> ProjectContext:
         blueprint_file=project_root / "blueprint.yaml",
         architecture_file=project_root / "architecture.yaml",
         lifecycle_file=project_root / "lifecycle.yaml",
+        command_arguments=command_arguments or {},
     )

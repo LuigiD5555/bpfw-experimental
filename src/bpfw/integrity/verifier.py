@@ -6,6 +6,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from bpfw.approval.request import (
+    ApprovalRequestError,
+    compute_diff_fingerprint,
+    create_or_reuse_approval_request,
+)
+from bpfw.approval.verifier import ApprovalVerificationError, ApprovalsVerificationResult, verify_all_approvals
+from bpfw.blueprint.loader import BlueprintLoadError, load_blueprint_data
 from bpfw.integrity.hash_provider import compute_sha256, read_file_size
 from bpfw.integrity.manifest import (
     IntegrityManifestError,
@@ -183,7 +190,67 @@ def _validate_manifest_coverage(project_root: Path, manifest_payload: dict[str, 
     ]
 
 
-def _verify_file_entries(project_root: Path, manifest_payload: dict[str, Any]) -> tuple[int, list[IntegrityIssue]]:
+def _locked_resource_ids(project_root: Path) -> set[str]:
+    locked_resource_ids = {"project_blueprint", "architecture_profile"}
+    try:
+        _, blueprint_payload = load_blueprint_data(project_root=project_root)
+    except BlueprintLoadError:
+        return locked_resource_ids
+
+    locked_resources = blueprint_payload.get("locked_resources")
+    if not isinstance(locked_resources, list):
+        return locked_resource_ids
+
+    for resource in locked_resources:
+        if not isinstance(resource, dict):
+            continue
+        if str(resource.get("mutability", "")).strip() != "locked":
+            continue
+        resource_id = str(resource.get("resource_id", "")).strip()
+        if resource_id:
+            locked_resource_ids.add(resource_id)
+
+    return locked_resource_ids
+
+
+def _approval_issues_as_integrity(approvals_result: ApprovalsVerificationResult) -> list[IntegrityIssue]:
+    return [
+        _issue(
+            code=approval_issue.code,
+            message=approval_issue.message,
+            severity=approval_issue.severity,
+            recommendation=approval_issue.recommendation,
+            file_path=approval_issue.file_path,
+        )
+        for approval_issue in approvals_result.issues
+    ]
+
+
+def _matching_approval_exists(
+    *,
+    approvals_result: ApprovalsVerificationResult,
+    resource_id: str,
+    action: str,
+    diff_fingerprint: str,
+) -> bool:
+    for approval_record in approvals_result.approvals:
+        if approval_record.resource_id != resource_id:
+            continue
+        if approval_record.action != action:
+            continue
+        if approval_record.diff_fingerprint != diff_fingerprint:
+            continue
+        return True
+    return False
+
+
+def _verify_file_entries(
+    *,
+    project_root: Path,
+    manifest_payload: dict[str, Any],
+    locked_resource_ids: set[str],
+    approvals_result: ApprovalsVerificationResult,
+) -> tuple[int, list[IntegrityIssue]]:
     files_value = manifest_payload.get("files")
     if not isinstance(files_value, list):
         return 0, []
@@ -249,29 +316,71 @@ def _verify_file_entries(project_root: Path, manifest_payload: dict[str, Any]) -
             continue
 
         current_size = read_file_size(absolute_path)
-        if current_size != size_value:
+        current_hash = compute_sha256(absolute_path)
+        if current_size == size_value and current_hash == expected_hash:
+            continue
+
+        if resource_id_value in locked_resource_ids:
+            diff_fingerprint = compute_diff_fingerprint(
+                path=file_path_value,
+                expected_sha256=expected_hash,
+                observed_sha256=current_hash,
+                expected_size=size_value,
+                observed_size=current_size,
+                action="modify",
+            )
+            if _matching_approval_exists(
+                approvals_result=approvals_result,
+                resource_id=resource_id_value,
+                action="modify",
+                diff_fingerprint=diff_fingerprint,
+            ):
+                continue
+
+            change_id = Path(file_path_value).stem.replace("_", "-") or "locked-change"
+            try:
+                approval_request = create_or_reuse_approval_request(
+                    project_root=project_root,
+                    change_id=change_id,
+                    resource_id=resource_id_value,
+                    action="modify",
+                    diff_fingerprint=diff_fingerprint,
+                )
+            except ApprovalRequestError as error:
+                issues.append(
+                    _issue(
+                        code="APP005",
+                        message=f"Approval request generation failed: {error}",
+                        severity="block",
+                        recommendation="Fix approval request configuration and rerun verify-integrity",
+                        file_path=str(absolute_path),
+                    )
+                )
+                continue
+
             issues.append(
                 _issue(
-                    code="INT007",
-                    message=f"Protected file changed: {file_path_value}",
+                    code="APP006",
+                    message=(
+                        f"Approval required for locked resource `{file_path_value}`. "
+                        f"Request created: {approval_request.request_id}"
+                    ),
                     severity="block",
-                    recommendation="Revert external change or run authorized flow and regenerate manifest",
+                    recommendation=f"Run `bpfw approve {approval_request.request_id}` and verify again",
                     file_path=str(absolute_path),
                 )
             )
             continue
 
-        current_hash = compute_sha256(absolute_path)
-        if current_hash != expected_hash:
-            issues.append(
-                _issue(
-                    code="INT007",
-                    message=f"Protected file changed: {file_path_value}",
-                    severity="block",
-                    recommendation="Revert external change or run authorized flow and regenerate manifest",
-                    file_path=str(absolute_path),
-                )
+        issues.append(
+            _issue(
+                code="INT007",
+                message=f"Protected file changed: {file_path_value}",
+                severity="block",
+                recommendation="Revert external change or run authorized flow and regenerate manifest",
+                file_path=str(absolute_path),
             )
+        )
 
     return checked_files, issues
 
@@ -316,9 +425,36 @@ def verify_integrity(project_root: Path) -> IntegrityVerificationResult:
             issues=signature_issues,
         )
 
+    try:
+        approvals_result = verify_all_approvals(project_root=project_root)
+    except ApprovalVerificationError as error:
+        return IntegrityVerificationResult(
+            is_valid=False,
+            manifest_path=str(current_manifest_path),
+            checked_files=0,
+            issues=[
+                _issue(
+                    code="APP007",
+                    message=str(error),
+                    severity="critical",
+                    recommendation="Repair approval storage under .bpfw/approvals",
+                    file_path=str(project_root / ".bpfw/approvals"),
+                )
+            ],
+        )
+
     coverage_issues = _validate_manifest_coverage(project_root=project_root, manifest_payload=manifest_payload)
-    checked_files, file_issues = _verify_file_entries(project_root=project_root, manifest_payload=manifest_payload)
-    issues = [*coverage_issues, *file_issues]
+    checked_files, file_issues = _verify_file_entries(
+        project_root=project_root,
+        manifest_payload=manifest_payload,
+        locked_resource_ids=_locked_resource_ids(project_root=project_root),
+        approvals_result=approvals_result,
+    )
+    issues = [
+        *_approval_issues_as_integrity(approvals_result),
+        *coverage_issues,
+        *file_issues,
+    ]
 
     return IntegrityVerificationResult(
         is_valid=not issues,
