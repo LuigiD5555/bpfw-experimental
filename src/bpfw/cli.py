@@ -18,6 +18,7 @@ SUPPORTED_COMMANDS = (
     "architecture",
     "composition",
     "runtime",
+    "wiring",
 )
 
 
@@ -49,6 +50,10 @@ def normalize_command(command: str, subcommand: str | None) -> str:
         if subcommand != "snapshot":
             raise ValueError("runtime command requires subcommand `snapshot`")
         return "runtime_snapshot"
+    if command == "wiring":
+        if subcommand != "check":
+            raise ValueError("wiring command requires subcommand `check`")
+        return "wiring_check"
 
     if subcommand is not None:
         raise ValueError(f"Command `{command}` does not accept subcommands")
@@ -112,6 +117,8 @@ def _print_human(payload: dict) -> None:
         print(f"Active Bindings: {details['active_bindings_count']}")
     if "warning_count" in details:
         print(f"Runtime Warnings: {details['warning_count']}")
+    if "wiring_issue_count" in details:
+        print(f"Wiring Issues: {details['wiring_issue_count']}")
 
     affected_resources = primary_step.get("affected_resources", [])
     if affected_resources:

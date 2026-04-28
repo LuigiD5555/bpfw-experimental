@@ -24,6 +24,20 @@ responsibilities:
         replacement_id: default_query_execution
         disabled_reason: null
         removal_plan: null
+      - implementation_id: disabled_query_execution
+        class_name: DisabledQueryService
+        file: src/application/query/disabled_query_service.py
+        lifecycle_state: disabled
+        replacement_id: default_query_execution
+        disabled_reason: Safety fallback implementation must not run in runtime
+        removal_plan: Replace runtime binding with default_query_execution before release
+      - implementation_id: deprecated_query_execution
+        class_name: DeprecatedQueryService
+        file: src/application/query/deprecated_query_service.py
+        lifecycle_state: deprecated
+        replacement_id: default_query_execution
+        disabled_reason: null
+        removal_plan: Migrate all callers to default_query_execution
     active_implementation: default_query_execution
     forbidden_duplicates:
       - SmartQueryManager

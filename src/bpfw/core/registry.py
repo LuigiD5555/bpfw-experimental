@@ -12,6 +12,7 @@ from bpfw.core.pipeline import Pipeline, PipelineStep
 from bpfw.core.result import ResultStatus, StepResult
 from bpfw.runtime.collector import collect_runtime_snapshot
 from bpfw.runtime.snapshot import snapshot_to_dict, snapshot_to_human_lines, snapshot_to_json
+from bpfw.wiring.verifier import verify_wiring
 
 
 @dataclass(slots=True)
@@ -190,6 +191,49 @@ class VerifyRuntimeSnapshotStep(PipelineStep):
         )
 
 
+@dataclass(slots=True)
+class VerifyWiringStep(PipelineStep):
+    """Executable wiring step for blueprint/runtime active implementation alignment."""
+
+    name: str = "wiring.check"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        verification_result = verify_wiring(project_root=context.project_root)
+        if verification_result.issues:
+            first_issue = verification_result.issues[0]
+            status = ResultStatus.WARNING
+            if first_issue.severity == "block":
+                status = ResultStatus.BLOCK
+            elif first_issue.severity == "critical":
+                status = ResultStatus.CRITICAL
+
+            if any(issue.severity == "critical" for issue in verification_result.issues):
+                status = ResultStatus.CRITICAL
+            elif any(issue.severity == "block" for issue in verification_result.issues):
+                status = ResultStatus.BLOCK
+
+            return StepResult(
+                status=status,
+                message=first_issue.message,
+                source=self.name,
+                details={
+                    "error_code": first_issue.code,
+                    "wiring_issue_count": str(len(verification_result.issues)),
+                },
+                affected_resources=[first_issue.file_path],
+                suggested_actions=[first_issue.recommendation],
+            )
+
+        return StepResult(
+            status=ResultStatus.OK,
+            message="Wiring verification passed",
+            source=self.name,
+            details={
+                "active_bindings_count": str(len(verification_result.active_bindings)),
+            },
+        )
+
+
 
 def build_default_registry() -> dict[str, Pipeline]:
     """Create base command to pipeline mapping."""
@@ -201,6 +245,7 @@ def build_default_registry() -> dict[str, Pipeline]:
             VerifyArchitectureStep(),
             VerifyCompositionStep(),
             VerifyRuntimeSnapshotStep(),
+            VerifyWiringStep(),
         ],
     )
     architecture_check_pipeline = Pipeline(
@@ -214,6 +259,10 @@ def build_default_registry() -> dict[str, Pipeline]:
     runtime_snapshot_pipeline = Pipeline(
         name="runtime_snapshot",
         steps=[VerifyRuntimeSnapshotStep()],
+    )
+    wiring_check_pipeline = Pipeline(
+        name="wiring_check",
+        steps=[VerifyWiringStep()],
     )
     bootstrap_pipeline = Pipeline(
         name="bootstrap",
@@ -237,6 +286,7 @@ def build_default_registry() -> dict[str, Pipeline]:
         "architecture_check": architecture_check_pipeline,
         "composition_check": composition_check_pipeline,
         "runtime_snapshot": runtime_snapshot_pipeline,
+        "wiring_check": wiring_check_pipeline,
         "discover": bootstrap_pipeline,
         "review": bootstrap_pipeline,
         "apply": bootstrap_pipeline,
