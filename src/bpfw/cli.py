@@ -210,6 +210,15 @@ def _build_payload(result) -> dict:  # noqa: ANN001
 
 
 def _print_human(payload: dict) -> None:
+    if payload["command_name"] == "verify":
+        if payload.get("status") in {"ok", "info", "warning"}:
+            print("OK")
+            return
+        if payload.get("message"):
+            print(payload["message"])
+            return
+        print(payload.get("status", "").upper())
+        return
     if payload["command_name"] == "access_request" and payload.get("status") == "ok":
         details = (payload.get("primary_step") or {}).get("details", {})
         print("Authority access request created.\n")
@@ -247,6 +256,10 @@ def _print_human(payload: dict) -> None:
         print(details.get("active_grants_human", "") or "(none)")
         return
     if payload["command_name"] == "init":
+        if payload["message"]:
+            print(payload["message"])
+        return
+    if payload["command_name"] in {"discover", "accept_proposal", "blueprint_create_responsibility"}:
         if payload["message"]:
             print(payload["message"])
         return

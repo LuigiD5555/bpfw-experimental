@@ -305,12 +305,11 @@ def accept_proposal(
             first_operation = operation_list[0]
             raise ProposalResolutionError(
                 "BLOCK\n\n"
-                "Proposal cannot be accepted because it modifies authority.\n\n"
+                f"This proposal modifies {first_operation.resource_path}.\n\n"
                 "Required access:\n"
                 f"- resource: {first_operation.resource_path}\n"
-                f"- operation: {first_operation.operation_type}\n"
-                f"- scope: {first_operation.scope}\n\n"
-                "Do not edit blueprint.yaml manually."
+                f"- scope: {first_operation.scope}\n"
+                f"- operation: {first_operation.operation_type}"
             ) from error
         raise ProposalResolutionError(str(error)) from error
 

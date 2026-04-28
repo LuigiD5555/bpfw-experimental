@@ -12,8 +12,8 @@ from bpfw.approval.broker import ApprovalBrokerError, approve_request
 from bpfw.approval.request import ApprovalRequestError
 from bpfw.approval.verifier import ApprovalVerificationError, verify_all_approvals
 from bpfw.architecture.architecture_validator import validate_architecture
+from bpfw.access.authorization_policy import AccessAuthorizationError
 from bpfw.access.service import AccessService
-from bpfw.authority.ai_safe_block_message import AiSafeBlockMessage
 from bpfw.authority.policy import AuthorityPolicy
 from bpfw.blueprint.snapshot import build_snapshot
 from bpfw.blueprint.loader import load_blueprint_data
@@ -84,17 +84,18 @@ class VerifyAuthorityStep(PipelineStep):
     name: str = "authority.verify"
 
     def _blocked_message(self, relative_path: str) -> str:
-        return AiSafeBlockMessage(
-            resource=relative_path,
-            reason="Resource changed outside a controlled authority operation.",
-            policy="AI or normal code changes cannot edit authority resources directly.",
-            allowed_next_action="Create or accept a proposal, then request scoped authority access.",
-        ).render()
+        return (
+            "CRITICAL\n\n"
+            "Authority drift detected.\n\n"
+            "Resource:\n"
+            f"{relative_path}\n\n"
+            "Direct authority edits are not allowed.\n\n"
+            "Do not retry this edit.\n\n"
+            "Allowed next action:\n"
+            "Revert the manual edit and use proposal/access flow."
+        )
 
     def run(self, context) -> StepResult:  # noqa: ANN001
-        import json
-
-        from bpfw.access.grant_store import AccessGrantStore
         from bpfw.authority.resources import AuthorityResourceRegistry
         from bpfw.integrity.manifest import IntegrityManifestError, load_manifest, manifest_path
         from bpfw.integrity.hash_provider import compute_sha256
@@ -139,69 +140,14 @@ class VerifyAuthorityStep(PipelineStep):
                 source=self.name,
                 details={"authority_manifest_path": str(manifest_path(project_root=context.project_root))},
             )
-
-        audit_path = context.project_root / ".bpfw/audit/authority-events.jsonl"
-        audit_events: list[dict[str, str]] = []
-        if audit_path.exists():
-            for raw_line in audit_path.read_text(encoding="utf-8").splitlines():
-                line = raw_line.strip()
-                if not line:
-                    continue
-                try:
-                    payload = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if isinstance(payload, dict):
-                    audit_events.append({str(key): str(value) for key, value in payload.items()})
-
-        active_grants = {grant.grant_id: grant for grant in AccessGrantStore().list_active(project_root=context.project_root)}
-
-        for relative_path, resource_id in sorted(changed_resources.items()):
-            matching_event = next(
-                (
-                    event
-                    for event in reversed(audit_events)
-                    if event.get("event_type") == "authority_change_applied" and event.get("resource_id") == resource_id
-                ),
-                None,
-            )
-            if matching_event is None:
-                return StepResult(
-                    status=ResultStatus.CRITICAL,
-                    message=self._blocked_message(relative_path=relative_path),
-                    source=self.name,
-                    details={"error_code": "AUTH001", "resource_id": resource_id},
-                    affected_resources=[str(context.project_root / relative_path)],
-                    suggested_actions=["Create or accept a proposal, then request scoped authority access."],
-                )
-
-            grant_id = matching_event.get("grant_id", "")
-            if not grant_id or grant_id not in active_grants:
-                return StepResult(
-                    status=ResultStatus.CRITICAL,
-                    message=self._blocked_message(relative_path=relative_path),
-                    source=self.name,
-                    details={"error_code": "AUTH001", "resource_id": resource_id},
-                    affected_resources=[str(context.project_root / relative_path)],
-                    suggested_actions=["Create or accept a proposal, then request scoped authority access."],
-                )
-
-            matched_grant = active_grants[grant_id]
-            if matched_grant.resource_id != resource_id:
-                return StepResult(
-                    status=ResultStatus.CRITICAL,
-                    message=self._blocked_message(relative_path=relative_path),
-                    source=self.name,
-                    details={"error_code": "AUTH001", "resource_id": resource_id},
-                    affected_resources=[str(context.project_root / relative_path)],
-                    suggested_actions=["Create or accept a proposal, then request scoped authority access."],
-                )
-
+        relative_path, resource_id = sorted(changed_resources.items())[0]
         return StepResult(
-            status=ResultStatus.OK,
-            message="Authority resources validated successfully",
+            status=ResultStatus.CRITICAL,
+            message=self._blocked_message(relative_path=relative_path),
             source=self.name,
-            details={"authority_manifest_path": str(manifest_path(project_root=context.project_root))},
+            details={"error_code": "AUTH001", "resource_id": resource_id},
+            affected_resources=[str(context.project_root / relative_path)],
+            suggested_actions=["Revert manual authority edits and use proposal/access flow."],
         )
 
 
@@ -1158,7 +1104,15 @@ class BlueprintCreateResponsibilityStep(PipelineStep):
             AuthorityChangeEngine().apply(project_root=context.project_root, operation=operation)
         except RuntimeError as error:
             return StepResult(status=ResultStatus.BLOCK, message=str(error), source=self.name)
-        return StepResult(status=ResultStatus.OK, message="Blueprint responsibility created mechanically.", source=self.name)
+        return StepResult(
+            status=ResultStatus.OK,
+            message=(
+                "Responsibility created.\n"
+                "Verify passed.\n"
+                "Manifest updated."
+            ),
+            source=self.name,
+        )
 
 
 @dataclass(slots=True)
@@ -1448,9 +1402,22 @@ class DiscoverStep(PipelineStep):
         if created_proposal_ids:
             details["proposals_human"] = "\n".join(f"- {proposal_id}" for proposal_id in created_proposal_ids)
 
+        discover_message = f"Discover generated {len(proposal_result.created)} proposal(s)"
+        if proposal_result.created:
+            first_proposal = proposal_result.created[0]
+            first_file = first_proposal.detected_files[0] if first_proposal.detected_files else ""
+            discover_message = (
+                "Discovered undeclared file:\n"
+                f"{first_file}\n\n"
+                "Suggested responsibility:\n"
+                f"{first_proposal.suggested_responsibility}\n\n"
+                "Proposal created:\n"
+                f"{first_proposal.proposal_id}"
+            )
+
         return StepResult(
             status=status,
-            message=f"Discover generated {len(proposal_result.created)} proposal(s)",
+            message=discover_message,
             source=self.name,
             details=details,
         )
@@ -1546,19 +1513,13 @@ class AcceptProposalStep(PipelineStep):
                 details={"error_code": "PR_ACCEPT_BLOCK", "proposal_id": proposal_id},
             )
 
-        responsibility_value = context.command_arguments.get("responsibility", "").strip() or result.proposal.suggested_responsibility
-        files_human = "\n".join([f"  {item}" for item in result.proposal.detected_files])
         return StepResult(
             status=ResultStatus.OK,
             message=(
-                "Proposal accepted.\n\n"
-                "Mechanical authority changes:\n"
-                f"- Added allowed file to {responsibility_value}:\n"
-                f"{files_human if files_human else '  (none)'}\n\n"
-                "Verification:\n"
-                "OK\n\n"
-                "Manifest:\n"
-                "Updated"
+                "Proposal accepted.\n"
+                "Blueprint updated mechanically.\n"
+                "Verify passed.\n"
+                "Manifest updated."
             ),
             source=self.name,
             details={
@@ -1649,12 +1610,9 @@ class InitProjectStep(PipelineStep):
             return StepResult(
                 status=ResultStatus.OK,
                 message=(
-                    "Initial baseline accepted.\n\n"
-                    "Created:\n"
-                    "- blueprint.yaml\n"
-                    "- architecture.yaml\n"
-                    "- .bpfw/manifest.json\n\n"
-                    "Protection is now active by default."
+                    "Initial baseline accepted.\n"
+                    "Protection active by default.\n"
+                    "Manifest written."
                 ),
                 source=self.name,
                 details={
@@ -1682,19 +1640,9 @@ class InitProjectStep(PipelineStep):
             return StepResult(
                 status=ResultStatus.OK,
                 message=(
-                    "BPFW INIT\n\n"
-                    "New project detected.\n\n"
-                    "No existing blueprint was found.\n"
-                    "No existing source structure was found.\n\n"
-                    "Creating protected baseline:\n"
-                    "- blueprint.yaml\n"
-                    "- architecture.yaml\n"
-                    "- .bpfw/state.json\n"
-                    "- .bpfw/manifest.json\n"
-                    "- .bpfw/access_requests/\n"
-                    "- .bpfw/access_grants/\n"
-                    "- .bpfw/proposals/\n\n"
-                    "Protection is now active by default."
+                    "New project detected.\n"
+                    "Created protected baseline.\n"
+                    "Protection active by default."
                 ),
                 source=self.name,
                 details={
@@ -1713,20 +1661,11 @@ class InitProjectStep(PipelineStep):
         return StepResult(
             status=ResultStatus.INFO,
             message=(
-                "BPFW INIT\n\n"
-                "Existing project detected.\n\n"
-                "Mechanical scan completed:\n"
-                f"- {len(scan_result.files)} Python files\n"
-                f"- {class_count} classes\n"
-                f"- {function_count} functions\n"
-                f"- {responsibility_count} probable responsibilities\n"
-                f"- {layer_count} probable layers\n\n"
-                "Generated:\n"
-                "- blueprint.generated.yaml\n"
-                "- architecture.generated.yaml\n"
-                "- .bpfw/scan_report.md\n\n"
-                "Review the generated baseline and run:\n"
-                "bpfw init --accept-scan"
+                "Existing project detected.\n"
+                "Mechanical scan completed.\n"
+                "Generated blueprint.generated.yaml.\n"
+                "Generated architecture.generated.yaml.\n"
+                "Generated scan_report.md."
             ),
             source=self.name,
             details={

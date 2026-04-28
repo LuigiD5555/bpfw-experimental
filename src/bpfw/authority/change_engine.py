@@ -47,6 +47,9 @@ class AuthorityChangeEngine:
         if not post_validation_result.is_valid:
             raise RuntimeError(post_validation_result.errors[0].message)
 
+        write_manifest(project_root=project_root)
+        self._audit.record(project_root=project_root, operation=operation, grant_id=verification.grant_id)
+
         from bpfw.core.engine import BlueprintEngine, build_command
 
         verify_result = BlueprintEngine().run(build_command("verify", project_root=project_root, arguments={}))
@@ -56,9 +59,6 @@ class AuthorityChangeEngine:
                 verify_result.steps[0],
             )
             raise RuntimeError(blocking_step.message)
-
-        write_manifest(project_root=project_root)
-        self._audit.record(project_root=project_root, operation=operation, grant_id=verification.grant_id)
 
     def apply_many(self, project_root: Path, operations: list[AuthorityOperation]) -> None:
         blueprint_path = project_root / "blueprint.yaml"

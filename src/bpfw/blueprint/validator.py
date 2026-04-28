@@ -300,7 +300,7 @@ def validate_blueprint(project_root: Path) -> BlueprintValidationResult:
         )
 
         implementation_index = build_implementation_index(responsibility_model)
-        if responsibility_model.active_implementation not in implementation_index:
+        if responsibility_model.active_implementation and responsibility_model.active_implementation not in implementation_index:
             errors.append(
                 _error(
                     code="BP015",

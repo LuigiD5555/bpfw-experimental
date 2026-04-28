@@ -133,6 +133,8 @@ def verify_wiring(project_root: Path) -> WiringVerificationResult:
     }
 
     for responsibility in validation_result.blueprint.responsibilities:
+        if responsibility.lifecycle_state != "active":
+            continue
         binding = bindings_by_responsibility.get(responsibility.responsibility_id)
         if binding is None:
             issues.append(
