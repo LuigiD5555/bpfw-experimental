@@ -10,6 +10,8 @@ from bpfw.blueprint.validator import validate_blueprint
 from bpfw.composition.checker import validate_composition
 from bpfw.core.pipeline import Pipeline, PipelineStep
 from bpfw.core.result import ResultStatus, StepResult
+from bpfw.runtime.collector import collect_runtime_snapshot
+from bpfw.runtime.snapshot import snapshot_to_dict, snapshot_to_human_lines, snapshot_to_json
 
 
 @dataclass(slots=True)
@@ -128,13 +130,78 @@ class VerifyCompositionStep(PipelineStep):
         )
 
 
+@dataclass(slots=True)
+class VerifyRuntimeSnapshotStep(PipelineStep):
+    """Executable runtime snapshot step for active binding visibility."""
+
+    name: str = "runtime.snapshot"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        collection_result = collect_runtime_snapshot(project_root=context.project_root)
+        if collection_result.errors:
+            first_error = collection_result.errors[0]
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=first_error.message,
+                source=self.name,
+                details={
+                    "error_code": first_error.code,
+                },
+                affected_resources=[first_error.file_path],
+                suggested_actions=[first_error.recommendation],
+            )
+
+        if collection_result.snapshot is None:
+            return StepResult(
+                status=ResultStatus.WARNING,
+                message="Runtime snapshot could not be collected",
+                source=self.name,
+                details={"runtime_snapshot": "{}"},
+                suggested_actions=["Declare runtime bindings metadata in wiring or .bpfw/runtime_bindings.yaml"],
+            )
+
+        snapshot = collection_result.snapshot
+        warning_count = len(collection_result.warnings)
+        if warning_count > 0:
+            first_warning = collection_result.warnings[0]
+            return StepResult(
+                status=ResultStatus.WARNING,
+                message=first_warning.message,
+                source=self.name,
+                details={
+                    "warning_code": first_warning.code,
+                    "runtime_snapshot_json": snapshot_to_json(snapshot),
+                    "runtime_snapshot_human": snapshot_to_human_lines(snapshot),
+                    "warning_count": str(warning_count),
+                },
+                affected_resources=[first_warning.file_path],
+                suggested_actions=[first_warning.recommendation],
+            )
+
+        return StepResult(
+            status=ResultStatus.OK,
+            message="Runtime snapshot collected successfully",
+            source=self.name,
+            details={
+                "runtime_snapshot_json": snapshot_to_json(snapshot),
+                "runtime_snapshot_human": snapshot_to_human_lines(snapshot),
+                "active_bindings_count": str(len(snapshot_to_dict(snapshot)["active_bindings"])),
+            },
+        )
+
+
 
 def build_default_registry() -> dict[str, Pipeline]:
     """Create base command to pipeline mapping."""
 
     verify_pipeline = Pipeline(
         name="verify",
-        steps=[VerifyBlueprintStep(), VerifyArchitectureStep(), VerifyCompositionStep()],
+        steps=[
+            VerifyBlueprintStep(),
+            VerifyArchitectureStep(),
+            VerifyCompositionStep(),
+            VerifyRuntimeSnapshotStep(),
+        ],
     )
     architecture_check_pipeline = Pipeline(
         name="architecture_check",
@@ -143,6 +210,10 @@ def build_default_registry() -> dict[str, Pipeline]:
     composition_check_pipeline = Pipeline(
         name="composition_check",
         steps=[VerifyCompositionStep()],
+    )
+    runtime_snapshot_pipeline = Pipeline(
+        name="runtime_snapshot",
+        steps=[VerifyRuntimeSnapshotStep()],
     )
     bootstrap_pipeline = Pipeline(
         name="bootstrap",
@@ -165,6 +236,7 @@ def build_default_registry() -> dict[str, Pipeline]:
         "verify": verify_pipeline,
         "architecture_check": architecture_check_pipeline,
         "composition_check": composition_check_pipeline,
+        "runtime_snapshot": runtime_snapshot_pipeline,
         "discover": bootstrap_pipeline,
         "review": bootstrap_pipeline,
         "apply": bootstrap_pipeline,

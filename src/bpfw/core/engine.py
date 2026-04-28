@@ -29,7 +29,9 @@ class BlueprintEngine:
                         status=ResultStatus.BLOCK,
                         message=f"Unknown command: {command.command_name}",
                         source="core.registry",
-                        suggested_actions=["Use one of: verify, discover, review, apply, status"],
+                        suggested_actions=[
+                            "Use one of: verify, runtime, architecture check, composition check, discover, review, apply, status"
+                        ],
                     )
                 ],
             )

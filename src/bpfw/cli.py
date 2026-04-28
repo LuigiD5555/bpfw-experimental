@@ -9,7 +9,16 @@ from pathlib import Path
 from bpfw.core.engine import BlueprintEngine, build_command
 
 
-SUPPORTED_COMMANDS = ("verify", "discover", "review", "apply", "status", "architecture", "composition")
+SUPPORTED_COMMANDS = (
+    "verify",
+    "discover",
+    "review",
+    "apply",
+    "status",
+    "architecture",
+    "composition",
+    "runtime",
+)
 
 
 
@@ -36,6 +45,10 @@ def normalize_command(command: str, subcommand: str | None) -> str:
         if subcommand != "check":
             raise ValueError("composition command requires subcommand `check`")
         return "composition_check"
+    if command == "runtime":
+        if subcommand != "snapshot":
+            raise ValueError("runtime command requires subcommand `snapshot`")
+        return "runtime_snapshot"
 
     if subcommand is not None:
         raise ValueError(f"Command `{command}` does not accept subcommands")
@@ -92,6 +105,13 @@ def _print_human(payload: dict) -> None:
         print(f"Responsibilities: {details['responsibility_count']}")
     if "architecture_profile_id" in details and details["architecture_profile_id"]:
         print(f"Architecture Profile: {details['architecture_profile_id']}")
+    if "runtime_snapshot_human" in details:
+        print("Runtime Snapshot:")
+        print(details["runtime_snapshot_human"])
+    if "active_bindings_count" in details:
+        print(f"Active Bindings: {details['active_bindings_count']}")
+    if "warning_count" in details:
+        print(f"Runtime Warnings: {details['warning_count']}")
 
     affected_resources = primary_step.get("affected_resources", [])
     if affected_resources:
@@ -127,7 +147,13 @@ def main() -> int:
     )
     payload = _build_payload(result)
     if parsed_arguments.as_json:
-        print(json.dumps(payload, indent=2))
+        primary_step = payload.get("primary_step") or {}
+        details = primary_step.get("details", {})
+        runtime_snapshot_json = details.get("runtime_snapshot_json")
+        if normalized_command == "runtime_snapshot" and isinstance(runtime_snapshot_json, str):
+            print(runtime_snapshot_json)
+        else:
+            print(json.dumps(payload, indent=2))
     else:
         _print_human(payload)
     return 0 if result.status in {"OK", "INFO", "WARNING"} else 1
