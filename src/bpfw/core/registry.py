@@ -1308,9 +1308,20 @@ class AcceptProposalStep(PipelineStep):
                 details={"error_code": "PR_ACCEPT_BLOCK", "proposal_id": proposal_id},
             )
 
+        responsibility_value = context.command_arguments.get("responsibility", "").strip() or result.proposal.suggested_responsibility
+        files_human = "\n".join([f"  {item}" for item in result.proposal.detected_files])
         return StepResult(
             status=ResultStatus.OK,
-            message=f"Proposal `{result.proposal.proposal_id}` accepted",
+            message=(
+                "Proposal accepted.\n\n"
+                "Mechanical authority changes:\n"
+                f"- Added allowed file to {responsibility_value}:\n"
+                f"{files_human if files_human else '  (none)'}\n\n"
+                "Verification:\n"
+                "OK\n\n"
+                "Manifest:\n"
+                "Updated"
+            ),
             source=self.name,
             details={
                 "proposal_id": result.proposal.proposal_id,
