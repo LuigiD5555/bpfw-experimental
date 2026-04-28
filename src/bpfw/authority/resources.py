@@ -92,6 +92,34 @@ DEFAULT_AUTHORITY_RESOURCES = [
         default_policy="deny_direct_edit",
         allowed_operations=["seal_baseline"],
     ),
+    AuthorityResource(
+        resource_id="authority_access_requests",
+        path=".bpfw/access_requests/",
+        resource_type="authority_directory",
+        default_policy="deny_direct_edit",
+        allowed_operations=["create_access_request"],
+    ),
+    AuthorityResource(
+        resource_id="authority_access_grants",
+        path=".bpfw/access_grants/",
+        resource_type="authority_directory",
+        default_policy="deny_direct_edit",
+        allowed_operations=["grant_access_request"],
+    ),
+    AuthorityResource(
+        resource_id="authority_approvals",
+        path=".bpfw/approvals/",
+        resource_type="authority_directory",
+        default_policy="deny_direct_edit",
+        allowed_operations=["record_approval"],
+    ),
+    AuthorityResource(
+        resource_id="authority_state",
+        path=".bpfw/state.json",
+        resource_type="authority_state",
+        default_policy="deny_direct_edit",
+        allowed_operations=["update_authority_state"],
+    ),
 ]
 
 _AUTHORITY_FILE_PATHS = {
