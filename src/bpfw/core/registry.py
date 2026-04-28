@@ -63,6 +63,7 @@ from bpfw.review.decision import ReviewDecisionError, primary_finding as review_
 from bpfw.runtime.collector import collect_runtime_snapshot
 from bpfw.runtime.snapshot import snapshot_to_dict, snapshot_to_human_lines, snapshot_to_json
 from bpfw.guard.watcher import AuthorityWatcher
+from bpfw.security.keyring import ensure_local_hmac_key
 from bpfw.proposal.renderer import render_proposal_detail, render_proposal_list
 from bpfw.proposal.resolver import ProposalResolutionError, accept_proposal, reject_proposal
 from bpfw.proposal.store import ProposalStoreError, list_proposals, load_proposal
@@ -662,24 +663,6 @@ class VerifyIntegrityStep(PipelineStep):
         ci_mode_enabled = str(context.command_arguments.get("ci", "")).strip().lower() == "true"
         diagnostic_mode_enabled = str(context.command_arguments.get("diagnostic", "")).strip().lower() == "true"
         strict_mode_enabled = self.strict and not diagnostic_mode_enabled
-        if ci_mode_enabled and not os.getenv("BPFW_MANIFEST_HMAC_KEY", "").strip():
-            return StepResult(
-                status=ResultStatus.CRITICAL,
-                message=(
-                    "Protected integrity could not be verified, commit blocked.\n\n"
-                    "Integrity signing key is missing.\n\n"
-                    "BPFW is running in protected mode, but integrity cannot be verified.\n\n"
-                    "Checked files:\n0\n\n"
-                    "CI Gate:\nFAIL"
-                ),
-                source=self.name,
-                details={
-                    "error_code": "INT001",
-                    "manifest_path": str(context.project_root / ".bpfw/manifest.json"),
-                    "integrity_checked_files": "0",
-                },
-                suggested_actions=["Set BPFW_MANIFEST_HMAC_KEY and rerun `bpfw verify --ci`"],
-            )
         verification_result = verify_integrity(project_root=context.project_root)
         if verification_result.issues:
             first_issue = verification_result.issues[0]
@@ -1885,6 +1868,7 @@ class InitProjectStep(PipelineStep):
             )
         detector = ProjectDetector()
         detection_result = detector.detect(project_root=context.project_root)
+        ensure_local_hmac_key(project_root=context.project_root)
 
         if detection_result.is_initialized and not force_new and not accept_scan:
             return StepResult(

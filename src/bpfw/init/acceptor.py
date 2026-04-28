@@ -6,6 +6,7 @@ from pathlib import Path
 
 from bpfw.authority.state import AuthorityState, save_authority_state
 from bpfw.integrity.manifest import write_manifest
+from bpfw.security.keyring import ensure_local_hmac_key
 
 
 @dataclass(slots=True)
@@ -23,6 +24,7 @@ class InitialBaselineAcceptor:
 
     def accept(self, project_root: Path) -> BaselineAcceptanceResult:
         """Promote generated baseline files into protected project authority files."""
+        ensure_local_hmac_key(project_root=project_root)
         generated_blueprint_path = project_root / "blueprint.generated.yaml"
         generated_architecture_path = project_root / "architecture.generated.yaml"
 
