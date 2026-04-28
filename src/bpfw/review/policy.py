@@ -5,7 +5,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from bpfw.architecture.architecture_validator import validate_architecture
 from bpfw.change.scope import build_locked_resource_index
+from bpfw.duplication.similarity_detector import detect_duplication
+from bpfw.review.authority_diff import AuthorityDiffChecker
 from bpfw.review.diff import FileChange, ReviewDiffResult
 from bpfw.review.structural_diff import detect_suspicious_new_files
 
@@ -53,6 +56,24 @@ def evaluate_review_policy(
     locked_index = build_locked_resource_index(project_root=project_root)
     allowed_paths = set(allowed_files)
     findings: list[PolicyFinding] = []
+    authority_checker = AuthorityDiffChecker()
+
+    authority_findings = authority_checker.check(diff_result.file_changes)
+    for authority_finding in authority_findings:
+        findings.append(
+            _finding(
+                code="RV012",
+                severity="block",
+                message=(
+                    f"Workspace attempted to modify authority resource: {authority_finding.file_path}. "
+                    "Direct authority edits are not allowed."
+                ),
+                file_path=authority_finding.file_path,
+                recommendation="Create a proposal or use a scoped authority command.",
+            )
+        )
+    if authority_findings:
+        return PolicyEvaluationResult(status="BLOCK", findings=findings)
 
     for file_change in diff_result.file_changes:
         if file_change.path in locked_index.by_path and locked_index.by_path[file_change.path] != scope_resource_id:
@@ -92,6 +113,32 @@ def evaluate_review_policy(
                 message=structural_finding.message,
                 file_path=structural_finding.file_path,
                 recommendation=structural_finding.recommendation,
+            )
+        )
+
+    architecture_result = validate_architecture(project_root=project_root)
+    for architecture_error in architecture_result.errors:
+        findings.append(
+            _finding(
+                code=architecture_error.code,
+                severity="block",
+                message=architecture_error.message,
+                file_path=architecture_error.file_path,
+                recommendation=architecture_error.recommendation,
+            )
+        )
+
+    duplication_result = detect_duplication(project_root=project_root)
+    for duplication_finding in duplication_result.findings:
+        if duplication_finding.severity not in {"block", "critical"}:
+            continue
+        findings.append(
+            _finding(
+                code=duplication_finding.code,
+                severity="block",
+                message=duplication_finding.message,
+                file_path=duplication_finding.file_path,
+                recommendation=duplication_finding.recommendation,
             )
         )
 

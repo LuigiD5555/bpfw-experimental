@@ -237,6 +237,26 @@ def _print_human(payload: dict) -> None:
         if payload["message"]:
             print(payload["message"])
         return
+    primary_step = payload.get("primary_step") or {}
+    details = primary_step.get("details", {})
+    if details.get("error_code") == "RV012":
+        affected_resource = ""
+        affected_resources = primary_step.get("affected_resources", [])
+        if affected_resources:
+            affected_resource = Path(affected_resources[0]).name
+        if not affected_resource:
+            message = payload.get("message", "")
+            marker = "authority resource:"
+            if marker in message:
+                affected_resource = message.split(marker, maxsplit=1)[1].split(".", maxsplit=1)[0].strip()
+        print("BLOCK\n")
+        print("Workspace attempted to modify authority resource:")
+        print(affected_resource or "(unknown)")
+        print("\nDirect authority edits are not allowed.\n")
+        print("Do not retry this edit.\n")
+        print("Allowed next action:")
+        print("Create a proposal or use a scoped authority command.")
+        return
 
     print(f"Command: {payload['command_name']}")
     print(f"Status: {payload['status'].upper()}")
