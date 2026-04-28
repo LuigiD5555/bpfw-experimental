@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from bpfw.architecture.architecture_validator import validate_architecture
 from bpfw.blueprint.snapshot import build_snapshot
 from bpfw.blueprint.validator import validate_blueprint
+from bpfw.composition.checker import validate_composition
 from bpfw.core.pipeline import Pipeline, PipelineStep
 from bpfw.core.result import ResultStatus, StepResult
 
@@ -101,17 +102,47 @@ class VerifyArchitectureStep(PipelineStep):
         )
 
 
+@dataclass(slots=True)
+class VerifyCompositionStep(PipelineStep):
+    """Executable composition step for concrete wiring checks."""
+
+    name: str = "composition.check"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        validation_result = validate_composition(project_root=context.project_root)
+        if validation_result.errors:
+            first_error = validation_result.errors[0]
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=first_error.message,
+                source=self.name,
+                details={"error_code": first_error.code},
+                affected_resources=[first_error.file_path],
+                suggested_actions=[first_error.recommendation],
+            )
+
+        return StepResult(
+            status=ResultStatus.OK,
+            message="Composition roots validated successfully",
+            source=self.name,
+        )
+
+
 
 def build_default_registry() -> dict[str, Pipeline]:
     """Create base command to pipeline mapping."""
 
     verify_pipeline = Pipeline(
         name="verify",
-        steps=[VerifyBlueprintStep(), VerifyArchitectureStep()],
+        steps=[VerifyBlueprintStep(), VerifyArchitectureStep(), VerifyCompositionStep()],
     )
     architecture_check_pipeline = Pipeline(
         name="architecture_check",
         steps=[VerifyArchitectureStep()],
+    )
+    composition_check_pipeline = Pipeline(
+        name="composition_check",
+        steps=[VerifyCompositionStep()],
     )
     bootstrap_pipeline = Pipeline(
         name="bootstrap",
@@ -133,6 +164,7 @@ def build_default_registry() -> dict[str, Pipeline]:
     return {
         "verify": verify_pipeline,
         "architecture_check": architecture_check_pipeline,
+        "composition_check": composition_check_pipeline,
         "discover": bootstrap_pipeline,
         "review": bootstrap_pipeline,
         "apply": bootstrap_pipeline,

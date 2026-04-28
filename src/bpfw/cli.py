@@ -9,7 +9,7 @@ from pathlib import Path
 from bpfw.core.engine import BlueprintEngine, build_command
 
 
-SUPPORTED_COMMANDS = ("verify", "discover", "review", "apply", "status", "architecture")
+SUPPORTED_COMMANDS = ("verify", "discover", "review", "apply", "status", "architecture", "composition")
 
 
 
@@ -32,6 +32,10 @@ def normalize_command(command: str, subcommand: str | None) -> str:
         if subcommand != "check":
             raise ValueError("architecture command requires subcommand `check`")
         return "architecture_check"
+    if command == "composition":
+        if subcommand != "check":
+            raise ValueError("composition command requires subcommand `check`")
+        return "composition_check"
 
     if subcommand is not None:
         raise ValueError(f"Command `{command}` does not accept subcommands")
