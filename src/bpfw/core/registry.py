@@ -22,18 +22,24 @@ from bpfw.change.session import (
 from bpfw.composition.checker import validate_composition
 from bpfw.core.pipeline import Pipeline, PipelineStep
 from bpfw.core.result import ResultStatus, StepResult
+from bpfw.discover.classifier import classify_findings
+from bpfw.discover.proposal_builder import build_proposals
+from bpfw.discover.scanner import scan_repository
 from bpfw.duplication.duplication_reporter import (
     findings_to_human_lines,
-    primary_finding,
+    primary_finding as duplication_primary_finding,
     summarize_counts,
 )
 from bpfw.duplication.similarity_detector import detect_duplication
 from bpfw.integrity.manifest import IntegrityManifestError, write_manifest
 from bpfw.integrity.signer import IntegritySigningError
 from bpfw.integrity.verifier import verify_integrity
-from bpfw.review.decision import ReviewDecisionError, primary_finding, review_session
+from bpfw.review.decision import ReviewDecisionError, primary_finding as review_primary_finding, review_session
 from bpfw.runtime.collector import collect_runtime_snapshot
 from bpfw.runtime.snapshot import snapshot_to_dict, snapshot_to_human_lines, snapshot_to_json
+from bpfw.proposal.renderer import render_proposal_detail, render_proposal_list
+from bpfw.proposal.resolver import ProposalResolutionError, accept_proposal, reject_proposal
+from bpfw.proposal.store import ProposalStoreError, list_proposals, load_proposal
 from bpfw.wiring.verifier import verify_wiring
 from bpfw.workspace.builder import WorkspaceBuildError, build_workspace
 
@@ -265,7 +271,7 @@ class VerifyDuplicationStep(PipelineStep):
 
     def run(self, context) -> StepResult:  # noqa: ANN001
         detection_result = detect_duplication(project_root=context.project_root)
-        primary = primary_finding(detection_result)
+        primary = duplication_primary_finding(detection_result)
         summary_counts = summarize_counts(detection_result)
 
         if primary is None:
@@ -656,7 +662,7 @@ class ReviewChangeStep(PipelineStep):
             )
 
         update_change_status(project_root=context.project_root, session=session, status="review_block")
-        finding = primary_finding(decision.findings)
+        finding = review_primary_finding(decision.findings)
         if finding is None:
             return StepResult(
                 status=ResultStatus.BLOCK,
@@ -708,7 +714,7 @@ class ApplyChangeStep(PipelineStep):
             )
 
         if decision.status != "ALLOW":
-            finding = primary_finding(decision.findings)
+            finding = review_primary_finding(decision.findings)
             if finding is None:
                 return StepResult(
                     status=ResultStatus.BLOCK,
@@ -793,6 +799,200 @@ class RejectChangeStep(PipelineStep):
         )
 
 
+@dataclass(slots=True)
+class DiscoverStep(PipelineStep):
+    """Run discover scanner/classifier and persist proposals."""
+
+    name: str = "discover.scan"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        scan_result = scan_repository(project_root=context.project_root)
+        classified_findings = classify_findings(findings=scan_result.findings)
+        proposal_result = build_proposals(project_root=context.project_root, classified_findings=classified_findings)
+        pending_proposals = [proposal for proposal in list_proposals(context.project_root) if proposal.status == "pending"]
+
+        if not classified_findings:
+            return StepResult(
+                status=ResultStatus.OK,
+                message="No discover findings detected",
+                source=self.name,
+                details={
+                    "discover_proposal_count": "0",
+                    "discover_pending_count": str(len(pending_proposals)),
+                },
+            )
+
+        status = ResultStatus.INFO
+        if any(item.severity == "critical" for item in classified_findings):
+            status = ResultStatus.CRITICAL
+        elif any(item.severity == "high" for item in classified_findings):
+            status = ResultStatus.WARNING
+
+        created_proposal_ids = [proposal.proposal_id for proposal in proposal_result.created]
+        details: dict[str, str] = {
+            "discover_proposal_count": str(len(proposal_result.created)),
+            "discover_pending_count": str(len(pending_proposals)),
+        }
+        if created_proposal_ids:
+            details["proposals_human"] = "\n".join(f"- {proposal_id}" for proposal_id in created_proposal_ids)
+
+        return StepResult(
+            status=status,
+            message=f"Discover generated {len(proposal_result.created)} proposal(s)",
+            source=self.name,
+            details=details,
+        )
+
+
+@dataclass(slots=True)
+class ListProposalsStep(PipelineStep):
+    """List stored discover proposals."""
+
+    name: str = "proposal.list"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        proposals = list_proposals(project_root=context.project_root)
+        return StepResult(
+            status=ResultStatus.INFO,
+            message=f"Loaded {len(proposals)} proposal(s)",
+            source=self.name,
+            details={
+                "proposal_count": str(len(proposals)),
+                "proposals_human": render_proposal_list(proposals),
+            },
+        )
+
+
+@dataclass(slots=True)
+class ShowProposalStep(PipelineStep):
+    """Show one proposal by id."""
+
+    name: str = "proposal.show"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        proposal_id = context.command_arguments.get("proposal_id", "").strip()
+        if not proposal_id:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message="Missing proposal_id. Usage: bpfw show-proposal <proposal_id>",
+                source=self.name,
+                details={"error_code": "PR_SHOW_USAGE"},
+            )
+
+        try:
+            proposal = load_proposal(project_root=context.project_root, proposal_id=proposal_id)
+        except ProposalStoreError as error:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=str(error),
+                source=self.name,
+                details={"error_code": "PR_SHOW_BLOCK", "proposal_id": proposal_id},
+            )
+
+        return StepResult(
+            status=ResultStatus.INFO,
+            message=f"Loaded proposal `{proposal.proposal_id}`",
+            source=self.name,
+            details={
+                "proposal_id": proposal.proposal_id,
+                "proposal_status": proposal.status,
+                "proposal_risk": proposal.risk,
+                "proposal_human": render_proposal_detail(proposal),
+            },
+        )
+
+
+@dataclass(slots=True)
+class AcceptProposalStep(PipelineStep):
+    """Accept one pending proposal and update blueprint."""
+
+    name: str = "proposal.accept"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        proposal_id = context.command_arguments.get("proposal_id", "").strip()
+        if not proposal_id:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message="Missing proposal_id. Usage: bpfw accept-proposal <proposal_id>",
+                source=self.name,
+                details={"error_code": "PR_ACCEPT_USAGE"},
+            )
+
+        try:
+            result = accept_proposal(
+                project_root=context.project_root,
+                proposal_id=proposal_id,
+                responsibility_id=context.command_arguments.get("responsibility", "").strip(),
+                new_responsibility_id=context.command_arguments.get("as_new_responsibility", "").strip(),
+                state=context.command_arguments.get("state", "").strip(),
+            )
+        except ProposalResolutionError as error:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=str(error),
+                source=self.name,
+                details={"error_code": "PR_ACCEPT_BLOCK", "proposal_id": proposal_id},
+            )
+
+        return StepResult(
+            status=ResultStatus.OK,
+            message=f"Proposal `{result.proposal.proposal_id}` accepted",
+            source=self.name,
+            details={
+                "proposal_id": result.proposal.proposal_id,
+                "proposal_status": result.proposal.status,
+                "proposal_action": result.proposal.resolution.get("action", ""),
+                "blueprint_modified": str(result.modified_blueprint).lower(),
+            },
+            affected_resources=[str(context.project_root / "blueprint.yaml")] if result.modified_blueprint else [],
+        )
+
+
+@dataclass(slots=True)
+class RejectProposalStep(PipelineStep):
+    """Reject one pending proposal and apply selected disposition action."""
+
+    name: str = "proposal.reject"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        proposal_id = context.command_arguments.get("proposal_id", "").strip()
+        if not proposal_id:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message="Missing proposal_id. Usage: bpfw reject-proposal <proposal_id>",
+                source=self.name,
+                details={"error_code": "PR_REJECT_USAGE"},
+            )
+
+        reject_action = context.command_arguments.get("reject_action", "").strip() or "move_to_rejected"
+        try:
+            result = reject_proposal(
+                project_root=context.project_root,
+                proposal_id=proposal_id,
+                action=reject_action,
+            )
+        except ProposalResolutionError as error:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=str(error),
+                source=self.name,
+                details={"error_code": "PR_REJECT_BLOCK", "proposal_id": proposal_id},
+            )
+
+        return StepResult(
+            status=ResultStatus.INFO,
+            message=f"Proposal `{result.proposal.proposal_id}` rejected",
+            source=self.name,
+            details={
+                "proposal_id": result.proposal.proposal_id,
+                "proposal_status": result.proposal.status,
+                "proposal_action": result.proposal.resolution.get("reject_action", reject_action),
+                "moved_file_count": str(len(result.moved_files)),
+            },
+            affected_resources=result.moved_files[:1],
+        )
+
+
 
 def build_default_registry() -> dict[str, Pipeline]:
     """Create base command to pipeline mapping."""
@@ -860,7 +1060,23 @@ def build_default_registry() -> dict[str, Pipeline]:
     )
     discover_pipeline = Pipeline(
         name="discover",
-        steps=[VerifyDuplicationStep()],
+        steps=[DiscoverStep()],
+    )
+    proposals_pipeline = Pipeline(
+        name="proposals",
+        steps=[ListProposalsStep()],
+    )
+    show_proposal_pipeline = Pipeline(
+        name="show_proposal",
+        steps=[ShowProposalStep()],
+    )
+    accept_proposal_pipeline = Pipeline(
+        name="accept_proposal",
+        steps=[AcceptProposalStep()],
+    )
+    reject_proposal_pipeline = Pipeline(
+        name="reject_proposal",
+        steps=[RejectProposalStep()],
     )
     bootstrap_pipeline = Pipeline(
         name="bootstrap",
@@ -894,5 +1110,9 @@ def build_default_registry() -> dict[str, Pipeline]:
         "runtime_snapshot": runtime_snapshot_pipeline,
         "wiring_check": wiring_check_pipeline,
         "discover": discover_pipeline,
+        "proposals": proposals_pipeline,
+        "show_proposal": show_proposal_pipeline,
+        "accept_proposal": accept_proposal_pipeline,
+        "reject_proposal": reject_proposal_pipeline,
         "status": bootstrap_pipeline,
     }

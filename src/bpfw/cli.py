@@ -17,6 +17,10 @@ SUPPORTED_COMMANDS = (
     "approve",
     "approvals",
     "discover",
+    "proposals",
+    "show-proposal",
+    "accept-proposal",
+    "reject-proposal",
     "review",
     "apply",
     "reject",
@@ -37,6 +41,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("subcommand", nargs="?")
     parser.add_argument("--project-root", default=".")
     parser.add_argument("--scope", default="")
+    parser.add_argument("--responsibility", default="")
+    parser.add_argument("--as-new-responsibility", dest="as_new_responsibility", default="")
+    parser.add_argument("--state", default="")
+    parser.add_argument("--reject-action", default="")
     parser.add_argument("--json", action="store_true", dest="as_json")
     return parser
 
@@ -93,6 +101,18 @@ def normalize_command(command: str, subcommand: str | None) -> str:
         if subcommand != "check":
             raise ValueError("wiring command requires subcommand `check`")
         return "wiring_check"
+    if command == "show-proposal":
+        if subcommand is None:
+            raise ValueError("show-proposal command requires a proposal_id")
+        return "show_proposal"
+    if command == "accept-proposal":
+        if subcommand is None:
+            raise ValueError("accept-proposal command requires a proposal_id")
+        return "accept_proposal"
+    if command == "reject-proposal":
+        if subcommand is None:
+            raise ValueError("reject-proposal command requires a proposal_id")
+        return "reject_proposal"
 
     if subcommand is not None:
         raise ValueError(f"Command `{command}` does not accept subcommands")
@@ -207,6 +227,26 @@ def _print_human(payload: dict) -> None:
         print(f"Applied Files: {details['applied_file_count']}")
     if "transaction_path" in details:
         print(f"Transaction: {details['transaction_path']}")
+    if "discover_proposal_count" in details:
+        print(f"Created Proposals: {details['discover_proposal_count']}")
+    if "discover_pending_count" in details:
+        print(f"Pending Proposals: {details['discover_pending_count']}")
+    if "proposal_id" in details:
+        print(f"Proposal ID: {details['proposal_id']}")
+    if "proposal_status" in details:
+        print(f"Proposal Status: {details['proposal_status']}")
+    if "proposal_risk" in details:
+        print(f"Proposal Risk: {details['proposal_risk']}")
+    if "proposals_human" in details:
+        print("Proposals:")
+        print(details["proposals_human"])
+    if "proposal_human" in details:
+        print("Proposal Detail:")
+        print(details["proposal_human"])
+    if "proposal_action" in details:
+        print(f"Action: {details['proposal_action']}")
+    if "moved_file_count" in details:
+        print(f"Moved Files: {details['moved_file_count']}")
 
     affected_resources = primary_step.get("affected_resources", [])
     if affected_resources:
@@ -238,8 +278,19 @@ def main() -> int:
         command_arguments["request_id"] = parsed_arguments.subcommand
     if normalized_command in {"start", "review", "apply", "reject"} and parsed_arguments.subcommand is not None:
         command_arguments["change_id"] = parsed_arguments.subcommand
+    if normalized_command in {"show_proposal", "accept_proposal", "reject_proposal"} and parsed_arguments.subcommand is not None:
+        command_arguments["proposal_id"] = parsed_arguments.subcommand
     if normalized_command == "start" and parsed_arguments.scope:
         command_arguments["scope"] = parsed_arguments.scope
+    if normalized_command == "accept_proposal":
+        if parsed_arguments.responsibility:
+            command_arguments["responsibility"] = parsed_arguments.responsibility
+        if parsed_arguments.as_new_responsibility:
+            command_arguments["as_new_responsibility"] = parsed_arguments.as_new_responsibility
+        if parsed_arguments.state:
+            command_arguments["state"] = parsed_arguments.state
+    if normalized_command == "reject_proposal" and parsed_arguments.reject_action:
+        command_arguments["reject_action"] = parsed_arguments.reject_action
     result = engine.run(
         build_command(
             command_name=normalized_command,
