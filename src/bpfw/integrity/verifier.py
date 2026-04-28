@@ -6,11 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from bpfw.approval.request import (
-    ApprovalRequestError,
-    compute_diff_fingerprint,
-    create_or_reuse_approval_request,
-)
+from bpfw.approval.request import compute_diff_fingerprint
 from bpfw.approval.verifier import ApprovalVerificationError, ApprovalsVerificationResult, verify_all_approvals
 from bpfw.blueprint.loader import BlueprintLoadError, load_blueprint_data
 from bpfw.integrity.hash_provider import compute_sha256, read_file_size
@@ -337,36 +333,15 @@ def _verify_file_entries(
             ):
                 continue
 
-            change_id = Path(file_path_value).stem.replace("_", "-") or "locked-change"
-            try:
-                approval_request = create_or_reuse_approval_request(
-                    project_root=project_root,
-                    change_id=change_id,
-                    resource_id=resource_id_value,
-                    action="modify",
-                    diff_fingerprint=diff_fingerprint,
-                )
-            except ApprovalRequestError as error:
-                issues.append(
-                    _issue(
-                        code="APP005",
-                        message=f"Approval request generation failed: {error}",
-                        severity="block",
-                        recommendation="Fix approval request configuration and rerun verify-integrity",
-                        file_path=str(absolute_path),
-                    )
-                )
-                continue
-
             issues.append(
                 _issue(
                     code="APP006",
                     message=(
                         f"Approval required for locked resource `{file_path_value}`. "
-                        f"Request created: {approval_request.request_id}"
+                        "No automatic request was generated."
                     ),
                     severity="block",
-                    recommendation=f"Run `bpfw approve {approval_request.request_id}` and verify again",
+                    recommendation="Use proposal flow or request scoped authority access and verify again",
                     file_path=str(absolute_path),
                 )
             )
