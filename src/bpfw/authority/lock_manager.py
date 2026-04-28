@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from bpfw.authority.lock_policy import OsLockPolicy
-from bpfw.authority.os_lock import OsLockProvider
+from bpfw.authority.os_lock import OsLockContext
 from bpfw.authority.resources import AuthorityResourceRegistry
 from bpfw.authority.state import load_authority_state, save_authority_state
 
@@ -13,11 +13,11 @@ class AuthorityLockManager:
 
     def __init__(self) -> None:
         self._registry = AuthorityResourceRegistry()
-        self._provider: OsLockProvider | None = None
+        self._context: OsLockContext | None = None
 
     @property
-    def provider(self) -> OsLockProvider:
-        return self._get_provider()
+    def context(self) -> OsLockContext:
+        return self._get_context()
 
     def lock_all(self, project_root: Path) -> int:
         locked_count = 0
@@ -59,14 +59,14 @@ class AuthorityLockManager:
         for resource in self._registry.list_resources():
             resource_path = project_root / resource.path
             if resource_path.is_file():
-                output.append((resource.resource_id, resource.path, self._get_provider().status(resource_path)))
+                output.append((resource.resource_id, resource.path, self._get_context().status(resource_path)))
                 continue
             if resource_path.is_dir():
                 states: set[str] = set()
                 has_files = False
                 for nested_file in self._iter_resource_files(resource_path):
                     has_files = True
-                    states.add(self._get_provider().status(nested_file))
+                    states.add(self._get_context().status(nested_file))
                 if not has_files:
                     output.append((resource.resource_id, resource.path, "unknown"))
                 elif states == {"locked"}:
@@ -81,13 +81,13 @@ class AuthorityLockManager:
 
     def _lock_path(self, resource_path: Path) -> int:
         if resource_path.is_file():
-            self._get_provider().lock(resource_path)
+            self._get_context().lock(resource_path)
             return 1
 
         if resource_path.is_dir():
             count = 0
             for nested_file in self._iter_resource_files(resource_path):
-                self._get_provider().lock(nested_file)
+                self._get_context().lock(nested_file)
                 count += 1
             return count
 
@@ -95,22 +95,22 @@ class AuthorityLockManager:
 
     def _unlock_path(self, resource_path: Path) -> int:
         if resource_path.is_file():
-            self._get_provider().unlock(resource_path)
+            self._get_context().unlock(resource_path)
             return 1
 
         if resource_path.is_dir():
             count = 0
             for nested_file in self._iter_resource_files(resource_path):
-                self._get_provider().unlock(nested_file)
+                self._get_context().unlock(nested_file)
                 count += 1
             return count
 
         return 0
 
-    def _get_provider(self) -> OsLockProvider:
-        if self._provider is None:
-            self._provider = OsLockPolicy().resolve_provider()
-        return self._provider
+    def _get_context(self) -> OsLockContext:
+        if self._context is None:
+            self._context = OsLockPolicy().resolve_context()
+        return self._context
 
     def _iter_resource_files(self, directory_path: Path):  # noqa: ANN202
         for nested_file in sorted(directory_path.rglob("*")):

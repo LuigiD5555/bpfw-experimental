@@ -12,8 +12,8 @@ class OsLockError(RuntimeError):
     """Raised when filesystem locking operations fail."""
 
 
-class OsLockProvider:
-    """Contract for strong filesystem lock operations."""
+class OsLockStrategy:
+    """Strategy contract for strong filesystem lock operations."""
 
     name: str = "unknown"
 
@@ -30,7 +30,7 @@ class OsLockProvider:
         raise NotImplementedError
 
 
-class LinuxOsLockProvider(OsLockProvider):
+class LinuxOsLockStrategy(OsLockStrategy):
     name = "linux-chattr"
 
     def supports_strong_lock(self) -> bool:
@@ -62,7 +62,7 @@ class LinuxOsLockProvider(OsLockProvider):
             raise OsLockError(f"OS lock command failed ({' '.join(command)}): {error_text}")
 
 
-class MacOsLockProvider(OsLockProvider):
+class MacOsLockStrategy(OsLockStrategy):
     name = "macos-chflags"
 
     def supports_strong_lock(self) -> bool:
@@ -90,7 +90,7 @@ class MacOsLockProvider(OsLockProvider):
             raise OsLockError(f"OS lock command failed ({' '.join(command)}): {error_text}")
 
 
-class WindowsOsLockProvider(OsLockProvider):
+class WindowsOsLockStrategy(OsLockStrategy):
     name = "windows-icacls"
 
     def supports_strong_lock(self) -> bool:
@@ -121,16 +121,43 @@ class WindowsOsLockProvider(OsLockProvider):
 
 @dataclass(slots=True, frozen=True)
 class OsLockSelection:
-    provider: OsLockProvider
+    strategy: OsLockStrategy
     platform_name: str
 
 
-def select_os_lock_provider() -> OsLockSelection:
+class OsLockContext:
+    """Context that delegates lock operations to the selected strategy."""
+
+    def __init__(self, strategy: OsLockStrategy) -> None:
+        self._strategy = strategy
+
+    @property
+    def strategy(self) -> OsLockStrategy:
+        return self._strategy
+
+    def supports_strong_lock(self) -> bool:
+        return self._strategy.supports_strong_lock()
+
+    def lock(self, path: Path) -> None:
+        self._strategy.lock(path)
+
+    def unlock(self, path: Path) -> None:
+        self._strategy.unlock(path)
+
+    def status(self, path: Path) -> str:
+        return self._strategy.status(path)
+
+
+def select_os_lock_strategy() -> OsLockSelection:
     system_name = platform.system().lower()
     if system_name.startswith("linux"):
-        return OsLockSelection(provider=LinuxOsLockProvider(), platform_name="linux")
+        return OsLockSelection(strategy=LinuxOsLockStrategy(), platform_name="linux")
     if system_name.startswith("darwin"):
-        return OsLockSelection(provider=MacOsLockProvider(), platform_name="macos")
+        return OsLockSelection(strategy=MacOsLockStrategy(), platform_name="macos")
     if system_name.startswith("windows"):
-        return OsLockSelection(provider=WindowsOsLockProvider(), platform_name="windows")
+        return OsLockSelection(strategy=WindowsOsLockStrategy(), platform_name="windows")
     raise OsLockError(f"Unsupported OS for hard lock policy: {system_name}")
+
+
+# Backward compatibility alias
+OsLockProvider = OsLockStrategy
