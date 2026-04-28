@@ -1,1 +1,1 @@
-"""apply domain package for BPFW Prompt 0 scaffold."""
+"""Apply package for transactional patching from workspace."""

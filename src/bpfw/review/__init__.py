@@ -1,1 +1,1 @@
-"""review domain package for BPFW Prompt 0 scaffold."""
+"""Review package for workspace policy decisions."""

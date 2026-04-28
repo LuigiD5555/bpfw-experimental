@@ -13,11 +13,13 @@ SUPPORTED_COMMANDS = (
     "verify",
     "verify-integrity",
     "manifest",
+    "start",
     "approve",
     "approvals",
     "discover",
     "review",
     "apply",
+    "reject",
     "status",
     "architecture",
     "composition",
@@ -34,6 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("command", choices=SUPPORTED_COMMANDS)
     parser.add_argument("subcommand", nargs="?")
     parser.add_argument("--project-root", default=".")
+    parser.add_argument("--scope", default="")
     parser.add_argument("--json", action="store_true", dest="as_json")
     return parser
 
@@ -46,6 +49,10 @@ def normalize_command(command: str, subcommand: str | None) -> str:
         if subcommand != "write":
             raise ValueError("manifest command requires subcommand `write`")
         return "manifest_write"
+    if command == "start":
+        if subcommand is None:
+            raise ValueError("start command requires a change_id")
+        return "start"
     if command == "approve":
         if subcommand is None:
             raise ValueError("approve command requires a request_id")
@@ -58,6 +65,18 @@ def normalize_command(command: str, subcommand: str | None) -> str:
         if subcommand is not None:
             raise ValueError("verify-integrity command does not accept subcommands")
         return "verify_integrity"
+    if command == "review":
+        if subcommand is None:
+            raise ValueError("review command requires a change_id")
+        return "review"
+    if command == "apply":
+        if subcommand is None:
+            raise ValueError("apply command requires a change_id")
+        return "apply"
+    if command == "reject":
+        if subcommand is None:
+            raise ValueError("reject command requires a change_id")
+        return "reject"
     if command == "architecture":
         if subcommand != "check":
             raise ValueError("architecture command requires subcommand `check`")
@@ -172,6 +191,22 @@ def _print_human(payload: dict) -> None:
         print(f"Approvals: {details['approval_count']}")
     if "approval_issue_count" in details:
         print(f"Approval Issues: {details['approval_issue_count']}")
+    if "workspace_path" in details:
+        print(f"Workspace: {details['workspace_path']}")
+    if "scope_resource_id" in details:
+        print(f"Scope: {details['scope_resource_id']}")
+    if "allowed_file_count" in details:
+        print(f"Allowed Files: {details['allowed_file_count']}")
+    if "change_id" in details:
+        print(f"Change ID: {details['change_id']}")
+    if "review_status" in details:
+        print(f"Review: {details['review_status']}")
+    if "changed_file_count" in details:
+        print(f"Changed Files: {details['changed_file_count']}")
+    if "applied_file_count" in details:
+        print(f"Applied Files: {details['applied_file_count']}")
+    if "transaction_path" in details:
+        print(f"Transaction: {details['transaction_path']}")
 
     affected_resources = primary_step.get("affected_resources", [])
     if affected_resources:
@@ -201,6 +236,10 @@ def main() -> int:
     command_arguments: dict[str, str] = {}
     if normalized_command == "approve" and parsed_arguments.subcommand is not None:
         command_arguments["request_id"] = parsed_arguments.subcommand
+    if normalized_command in {"start", "review", "apply", "reject"} and parsed_arguments.subcommand is not None:
+        command_arguments["change_id"] = parsed_arguments.subcommand
+    if normalized_command == "start" and parsed_arguments.scope:
+        command_arguments["scope"] = parsed_arguments.scope
     result = engine.run(
         build_command(
             command_name=normalized_command,

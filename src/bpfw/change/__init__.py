@@ -1,1 +1,1 @@
-"""change domain package for BPFW Prompt 0 scaffold."""
+"""Change package for workspace session lifecycle."""

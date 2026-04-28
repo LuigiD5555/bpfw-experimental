@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from bpfw.apply.transaction import ApplyTransactionError, apply_change_transaction
 from bpfw.approval.broker import ApprovalBrokerError, approve_request
 from bpfw.approval.request import ApprovalRequestError
 from bpfw.approval.verifier import ApprovalVerificationError, verify_all_approvals
@@ -11,6 +12,13 @@ from bpfw.architecture.architecture_validator import validate_architecture
 from bpfw.blueprint.snapshot import build_snapshot
 from bpfw.blueprint.validator import validate_blueprint
 from bpfw.blueprint_mode.contract_validator import validate_blueprint_mode_contracts
+from bpfw.change.scope import ScopeResolutionError, resolve_scope
+from bpfw.change.session import (
+    ChangeSessionError,
+    create_change_session,
+    load_change_session,
+    update_change_status,
+)
 from bpfw.composition.checker import validate_composition
 from bpfw.core.pipeline import Pipeline, PipelineStep
 from bpfw.core.result import ResultStatus, StepResult
@@ -23,9 +31,11 @@ from bpfw.duplication.similarity_detector import detect_duplication
 from bpfw.integrity.manifest import IntegrityManifestError, write_manifest
 from bpfw.integrity.signer import IntegritySigningError
 from bpfw.integrity.verifier import verify_integrity
+from bpfw.review.decision import ReviewDecisionError, primary_finding, review_session
 from bpfw.runtime.collector import collect_runtime_snapshot
 from bpfw.runtime.snapshot import snapshot_to_dict, snapshot_to_human_lines, snapshot_to_json
 from bpfw.wiring.verifier import verify_wiring
+from bpfw.workspace.builder import WorkspaceBuildError, build_workspace
 
 
 @dataclass(slots=True)
@@ -533,6 +543,256 @@ class ListApprovalsStep(PipelineStep):
         )
 
 
+@dataclass(slots=True)
+class StartChangeStep(PipelineStep):
+    """Start a scoped change session and create its workspace."""
+
+    name: str = "change.start"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        change_id = context.command_arguments.get("change_id", "").strip()
+        scope_resource_id = context.command_arguments.get("scope", "").strip()
+
+        if not change_id:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message="Missing change_id. Usage: bpfw start <change_id> --scope <resource_id>",
+                source=self.name,
+                details={"error_code": "CH_START_USAGE"},
+            )
+        if not scope_resource_id:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message="Missing --scope <resource_id>. Usage: bpfw start <change_id> --scope <resource_id>",
+                source=self.name,
+                details={"error_code": "CH_SCOPE_USAGE"},
+            )
+
+        try:
+            scope = resolve_scope(project_root=context.project_root, scope_resource_id=scope_resource_id)
+        except ScopeResolutionError as error:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=str(error),
+                source=self.name,
+                details={"error_code": "CH_SCOPE_INVALID"},
+                suggested_actions=["Use a responsibility_id or locked resource_id defined in blueprint.yaml"],
+            )
+
+        if scope.locked:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=f"Scope `{scope.resource_id}` is locked and requires approval workflow",
+                source=self.name,
+                details={"error_code": "CH_SCOPE_LOCKED", "scope_resource_id": scope.resource_id},
+                suggested_actions=["Use approval flow for locked resources"],
+            )
+
+        try:
+            session = create_change_session(project_root=context.project_root, change_id=change_id, scope=scope)
+            workspace_path = build_workspace(project_root=context.project_root, session=session)
+        except (ChangeSessionError, WorkspaceBuildError) as error:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=str(error),
+                source=self.name,
+                details={"error_code": "CH_START_BLOCK", "scope_resource_id": scope_resource_id},
+            )
+
+        return StepResult(
+            status=ResultStatus.OK,
+            message=f"Workspace created for change `{change_id}`",
+            source=self.name,
+            details={
+                "change_id": change_id,
+                "scope_resource_id": scope.resource_id,
+                "workspace_path": str(workspace_path),
+                "allowed_file_count": str(len(session.allowed_files)),
+            },
+            affected_resources=[str(workspace_path)],
+        )
+
+
+@dataclass(slots=True)
+class ReviewChangeStep(PipelineStep):
+    """Review one workspace change against scope policy."""
+
+    name: str = "change.review"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        change_id = context.command_arguments.get("change_id", "").strip()
+        if not change_id:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message="Missing change_id. Usage: bpfw review <change_id>",
+                source=self.name,
+                details={"error_code": "CH_REVIEW_USAGE"},
+            )
+
+        try:
+            session = load_change_session(project_root=context.project_root, change_id=change_id)
+            decision = review_session(project_root=context.project_root, session=session)
+        except (ChangeSessionError, ReviewDecisionError) as error:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=str(error),
+                source=self.name,
+                details={"error_code": "CH_REVIEW_BLOCK", "change_id": change_id},
+            )
+
+        changed_count = len(decision.diff.file_changes)
+        if decision.status == "ALLOW":
+            update_change_status(project_root=context.project_root, session=session, status="review_allow")
+            return StepResult(
+                status=ResultStatus.OK,
+                message=f"Review ALLOW for change `{change_id}`",
+                source=self.name,
+                details={
+                    "change_id": change_id,
+                    "review_status": decision.status,
+                    "changed_file_count": str(changed_count),
+                    "workspace_path": decision.diff.workspace_path,
+                },
+            )
+
+        update_change_status(project_root=context.project_root, session=session, status="review_block")
+        finding = primary_finding(decision.findings)
+        if finding is None:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=f"Review blocked for change `{change_id}`",
+                source=self.name,
+                details={"change_id": change_id, "review_status": decision.status},
+            )
+
+        return StepResult(
+            status=ResultStatus.BLOCK,
+            message=finding.message,
+            source=self.name,
+            details={
+                "error_code": finding.code,
+                "change_id": change_id,
+                "review_status": decision.status,
+                "changed_file_count": str(changed_count),
+            },
+            affected_resources=[str(context.project_root / finding.file_path)] if finding.file_path else [],
+            suggested_actions=[finding.recommendation],
+        )
+
+
+@dataclass(slots=True)
+class ApplyChangeStep(PipelineStep):
+    """Apply reviewed workspace changes transactionally into repository."""
+
+    name: str = "change.apply"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        change_id = context.command_arguments.get("change_id", "").strip()
+        if not change_id:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message="Missing change_id. Usage: bpfw apply <change_id>",
+                source=self.name,
+                details={"error_code": "CH_APPLY_USAGE"},
+            )
+
+        try:
+            session = load_change_session(project_root=context.project_root, change_id=change_id)
+            decision = review_session(project_root=context.project_root, session=session)
+        except (ChangeSessionError, ReviewDecisionError) as error:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=str(error),
+                source=self.name,
+                details={"error_code": "CH_APPLY_REVIEW_BLOCK", "change_id": change_id},
+            )
+
+        if decision.status != "ALLOW":
+            finding = primary_finding(decision.findings)
+            if finding is None:
+                return StepResult(
+                    status=ResultStatus.BLOCK,
+                    message=f"Apply blocked because review did not pass for `{change_id}`",
+                    source=self.name,
+                    details={"change_id": change_id, "review_status": decision.status},
+                )
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=finding.message,
+                source=self.name,
+                details={
+                    "error_code": finding.code,
+                    "change_id": change_id,
+                    "review_status": decision.status,
+                },
+                affected_resources=[str(context.project_root / finding.file_path)] if finding.file_path else [],
+                suggested_actions=[finding.recommendation],
+            )
+
+        try:
+            transaction_result = apply_change_transaction(
+                project_root=context.project_root,
+                workspace_root=context.project_root / session.workspace_relative_path,
+                change_id=change_id,
+                file_changes=decision.diff.file_changes,
+            )
+            update_change_status(project_root=context.project_root, session=session, status="applied")
+        except (ApplyTransactionError, ChangeSessionError) as error:
+            return StepResult(
+                status=ResultStatus.CRITICAL,
+                message=str(error),
+                source=self.name,
+                details={"error_code": "CH_APPLY_CRITICAL", "change_id": change_id},
+            )
+
+        return StepResult(
+            status=ResultStatus.OK,
+            message=f"Applied change `{change_id}` successfully",
+            source=self.name,
+            details={
+                "change_id": change_id,
+                "applied_file_count": str(len(transaction_result.applied_paths)),
+                "transaction_path": str(transaction_result.transaction_path),
+            },
+            affected_resources=[str(context.project_root / file_path) for file_path in transaction_result.applied_paths[:1]],
+        )
+
+
+@dataclass(slots=True)
+class RejectChangeStep(PipelineStep):
+    """Reject one change session without applying workspace changes."""
+
+    name: str = "change.reject"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        change_id = context.command_arguments.get("change_id", "").strip()
+        if not change_id:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message="Missing change_id. Usage: bpfw reject <change_id>",
+                source=self.name,
+                details={"error_code": "CH_REJECT_USAGE"},
+            )
+
+        try:
+            session = load_change_session(project_root=context.project_root, change_id=change_id)
+            update_change_status(project_root=context.project_root, session=session, status="rejected")
+        except ChangeSessionError as error:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=str(error),
+                source=self.name,
+                details={"error_code": "CH_REJECT_BLOCK", "change_id": change_id},
+            )
+
+        return StepResult(
+            status=ResultStatus.INFO,
+            message=f"Change `{change_id}` marked as rejected",
+            source=self.name,
+            details={"change_id": change_id, "session_status": "rejected"},
+        )
+
+
 
 def build_default_registry() -> dict[str, Pipeline]:
     """Create base command to pipeline mapping."""
@@ -565,6 +825,22 @@ def build_default_registry() -> dict[str, Pipeline]:
     approvals_pipeline = Pipeline(
         name="approvals",
         steps=[ListApprovalsStep()],
+    )
+    start_pipeline = Pipeline(
+        name="start",
+        steps=[StartChangeStep()],
+    )
+    review_pipeline = Pipeline(
+        name="review",
+        steps=[ReviewChangeStep()],
+    )
+    apply_pipeline = Pipeline(
+        name="apply",
+        steps=[ApplyChangeStep()],
+    )
+    reject_pipeline = Pipeline(
+        name="reject",
+        steps=[RejectChangeStep()],
     )
     architecture_check_pipeline = Pipeline(
         name="architecture_check",
@@ -609,12 +885,14 @@ def build_default_registry() -> dict[str, Pipeline]:
         "manifest_write": manifest_write_pipeline,
         "approve": approve_pipeline,
         "approvals": approvals_pipeline,
+        "start": start_pipeline,
+        "review": review_pipeline,
+        "apply": apply_pipeline,
+        "reject": reject_pipeline,
         "architecture_check": architecture_check_pipeline,
         "composition_check": composition_check_pipeline,
         "runtime_snapshot": runtime_snapshot_pipeline,
         "wiring_check": wiring_check_pipeline,
         "discover": discover_pipeline,
-        "review": bootstrap_pipeline,
-        "apply": bootstrap_pipeline,
         "status": bootstrap_pipeline,
     }

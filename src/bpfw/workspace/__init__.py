@@ -1,1 +1,1 @@
-"""workspace domain package for BPFW Prompt 0 scaffold."""
+"""Workspace package for scoped blueprint-first execution."""
