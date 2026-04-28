@@ -9,7 +9,7 @@ from pathlib import Path
 import yaml
 
 from bpfw.authority.change_engine import AuthorityChangeEngine
-from bpfw.authority.operation_planner import AuthorityOperationPlanner
+from bpfw.authority.operation_planner import ProposalAuthorityPlanner
 from bpfw.blueprint.loader import load_blueprint_data
 from bpfw.blueprint.validator import validate_blueprint
 from bpfw.proposal.models import (
@@ -269,39 +269,35 @@ def accept_proposal(
     operation_list = []
 
     try:
-        planner = AuthorityOperationPlanner()
-        if selected_action != SUGGESTED_ACTION_CREATE_NEW:
-            target_responsibility = responsibility_id.strip() or proposal.suggested_responsibility.strip()
+        target_responsibility = responsibility_id.strip() or proposal.suggested_responsibility.strip()
+        if selected_action == SUGGESTED_ACTION_CREATE_NEW:
+            target_responsibility = new_responsibility_id.strip() or proposal.suggested_responsibility.strip()
             if not target_responsibility:
-                raise ProposalResolutionError(
-                    "Missing target responsibility. Use --responsibility or --as-new-responsibility"
-                )
-            operation_list = planner.plan_from_proposal(
-                proposal=proposal,
-                responsibility_id=target_responsibility,
-            )
-            modified_blueprint = True
-            AuthorityChangeEngine().apply_many(project_root=project_root, operations=operation_list)
-        else:
-            target_new_responsibility = new_responsibility_id.strip() or proposal.suggested_responsibility.strip()
-            if not target_new_responsibility:
                 first_file_name = Path(proposal.detected_files[0]).stem if proposal.detected_files else proposal.proposal_id
-                target_new_responsibility = first_file_name.replace("-", "_")
-            canonical_name = _to_canonical_name(target_new_responsibility)
-            owner_layer = "application"
-            if proposal.detected_files:
-                file_parts = Path(proposal.detected_files[0]).parts
-                if len(file_parts) >= 2 and file_parts[0] == "src":
-                    owner_layer = file_parts[1]
-            operation_list = planner.plan_create_responsibility(
-                proposal=proposal,
-                responsibility_id=target_new_responsibility,
-                canonical_name=canonical_name,
-                owner_layer=owner_layer,
+                target_responsibility = first_file_name.replace("-", "_")
+
+        if not target_responsibility:
+            raise ProposalResolutionError(
+                "Missing target responsibility. Use --responsibility or --as-new-responsibility"
             )
-            operation_list.extend(planner.plan_from_proposal(proposal=proposal, responsibility_id=target_new_responsibility))
-            modified_blueprint = True
-            AuthorityChangeEngine().apply_many(project_root=project_root, operations=operation_list)
+
+        canonical_name = _to_canonical_name(target_responsibility)
+        owner_layer = "application"
+        if proposal.detected_files:
+            file_parts = Path(proposal.detected_files[0]).parts
+            if len(file_parts) >= 2 and file_parts[0] == "src":
+                owner_layer = file_parts[1]
+
+        planner = ProposalAuthorityPlanner()
+        operation_list = planner.plan_acceptance(
+            proposal=proposal,
+            responsibility_id=target_responsibility,
+            suggested_action=selected_action,
+            canonical_name=canonical_name,
+            owner_layer=owner_layer,
+        )
+        modified_blueprint = bool(operation_list)
+        AuthorityChangeEngine().apply_many(project_root=project_root, operations=operation_list)
     except Exception as error:  # noqa: BLE001
         if isinstance(error, ProposalResolutionError):
             raise
@@ -309,16 +305,12 @@ def accept_proposal(
             first_operation = operation_list[0]
             raise ProposalResolutionError(
                 "BLOCK\n\n"
-                "This proposal requires authority access.\n\n"
-                "Required:\n"
+                "Proposal cannot be accepted because it modifies authority.\n\n"
+                "Required access:\n"
                 f"- resource: {first_operation.resource_path}\n"
-                f"- scope: {first_operation.scope}\n"
-                f"- operation: {first_operation.operation_type}\n\n"
-                "Run:\n"
-                "bpfw access request blueprint "
-                f"--scope {first_operation.scope} "
-                f"--operation {first_operation.operation_type} "
-                f"--reason \"Accept {proposal.proposal_id}\""
+                f"- operation: {first_operation.operation_type}\n"
+                f"- scope: {first_operation.scope}\n\n"
+                "Do not edit blueprint.yaml manually."
             ) from error
         raise ProposalResolutionError(str(error)) from error
 

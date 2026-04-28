@@ -27,6 +27,12 @@ class BlueprintMutator:
                 responsibility_id=operation.payload.get("responsibility_id", operation.scope),
                 symbol_name=operation.payload.get("symbol_name", ""),
             )
+        if operation.operation_type == "add_experimental_implementation":
+            return self.add_experimental_implementation(
+                blueprint=blueprint,
+                responsibility_id=operation.payload.get("responsibility_id", operation.scope),
+                file_path=operation.payload.get("file_path", ""),
+            )
         if operation.operation_type == "create_responsibility":
             return self.create_responsibility(
                 blueprint=blueprint,
@@ -64,6 +70,20 @@ class BlueprintMutator:
             if responsibility.responsibility_id == responsibility_id and symbol_name not in responsibility.allowed_symbols:
                 responsibility.allowed_symbols.append(symbol_name)
                 return blueprint
+        raise BlueprintMutationError(f"Responsibility `{responsibility_id}` was not found in blueprint")
+
+    def add_experimental_implementation(self, blueprint: BlueprintModel, responsibility_id: str, file_path: str) -> BlueprintModel:
+        if not responsibility_id:
+            raise BlueprintMutationError("Missing responsibility_id for add_experimental_implementation")
+        if not file_path or file_path.startswith("/") or ".." in file_path.split("/"):
+            raise BlueprintMutationError("file_path must be repo-relative and cannot escape project root")
+        for responsibility in blueprint.responsibilities:
+            if responsibility.responsibility_id != responsibility_id:
+                continue
+            if file_path not in responsibility.allowed_files:
+                responsibility.allowed_files.append(file_path)
+            responsibility.lifecycle_state = "experimental"
+            return blueprint
         raise BlueprintMutationError(f"Responsibility `{responsibility_id}` was not found in blueprint")
 
     def create_responsibility(self, blueprint: BlueprintModel, responsibility_id: str, canonical_name: str, owner_layer: str) -> BlueprintModel:
