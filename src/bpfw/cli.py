@@ -18,6 +18,7 @@ MVP_COMMANDS = (
     "lock",
     "unlock",
     "status",
+    "protect",
 )
 
 
@@ -48,6 +49,10 @@ def normalize_command(command: str, subcommand: str | None) -> str:
         if subcommand is not None and subcommand != "blueprint":
             raise ValueError("unlock only supports blueprint resource in MVP. Usage: bpfw unlock [blueprint]")
         return "unlock"
+    if command == "protect":
+        if subcommand != "setup":
+            raise ValueError("protect only supports setup in MVP. Usage: bpfw protect setup")
+        return "protect.setup"
     if command == "wizard":
         if subcommand is not None:
             raise ValueError("wizard does not accept subcommands")

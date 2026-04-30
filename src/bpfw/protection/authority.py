@@ -6,6 +6,12 @@ from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
 from bpfw.protection.os_lock import get_file_lock_state, lock_file, unlock_file
 
 
+def setup_blueprint_protection(project_root: Path) -> str:
+    """Prepare strong protection for the canonical MVP blueprint resource."""
+
+    return lock_file(project_root=project_root, relative_path=CANONICAL_BLUEPRINT_FILE)
+
+
 def lock_blueprint(project_root: Path) -> str:
     """Lock the canonical MVP blueprint resource."""
 

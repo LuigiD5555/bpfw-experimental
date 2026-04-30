@@ -8,7 +8,12 @@ from bpfw.catalog.wizard import complete_human_fields
 from bpfw.catalog.writer import run_init
 from bpfw.core.pipeline import Pipeline, PipelineStep
 from bpfw.core.result import ResultStatus, StepResult
-from bpfw.protection.authority import get_blueprint_lock_state, lock_blueprint, unlock_blueprint
+from bpfw.protection.authority import (
+    get_blueprint_lock_state,
+    lock_blueprint,
+    setup_blueprint_protection,
+    unlock_blueprint,
+)
 
 
 @dataclass(slots=True)
@@ -106,10 +111,57 @@ class AuthorityLockStep(PipelineStep):
                 source=self.name,
                 details={"lock_state": lock_state, "resource_id": "project_blueprint"},
             )
+        if lock_state == "unsupported":
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=(
+                    "BPFW could not enforce an OS lock for "
+                    f"{CANONICAL_BLUEPRINT_FILE}. Run with sudo on a filesystem "
+                    "that supports ownership changes or immutable flags."
+                ),
+                source=self.name,
+                details={"lock_state": lock_state, "resource_id": "project_blueprint"},
+            )
 
         return StepResult(
             status=ResultStatus.OK,
             message=f"Blueprint locked: {CANONICAL_BLUEPRINT_FILE}",
+            source=self.name,
+            details={"lock_state": lock_state, "resource_id": "project_blueprint"},
+        )
+
+
+@dataclass(slots=True)
+class AuthorityProtectSetupStep(PipelineStep):
+    """Prepare OS-level protection for the MVP blueprint resource."""
+
+    name: str = "protection.setup"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        lock_state = setup_blueprint_protection(project_root=context.project_root)
+        if lock_state == "unknown":
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=f"BPFW blueprint does not exist: {CANONICAL_BLUEPRINT_FILE}. Run bpfw init first.",
+                source=self.name,
+                details={"lock_state": lock_state, "resource_id": "project_blueprint"},
+            )
+        if lock_state == "unsupported":
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=(
+                    "BPFW could not prepare OS protection for "
+                    f"{CANONICAL_BLUEPRINT_FILE}. Use a terminal where sudo can run "
+                    "or move the project to a filesystem that supports ownership "
+                    "changes or immutable flags."
+                ),
+                source=self.name,
+                details={"lock_state": lock_state, "resource_id": "project_blueprint"},
+            )
+
+        return StepResult(
+            status=ResultStatus.OK,
+            message=f"Blueprint protection enabled: {CANONICAL_BLUEPRINT_FILE}",
             source=self.name,
             details={"lock_state": lock_state, "resource_id": "project_blueprint"},
         )
@@ -173,6 +225,7 @@ def build_default_registry() -> dict[str, Pipeline]:
         "init": Pipeline(name="init", steps=[InitProjectStep()]),
         "wizard": Pipeline(name="wizard", steps=[WizardStep()]),
         "verify": Pipeline(name="verify", steps=[VerifyBlueprintStep()]),
+        "protect.setup": Pipeline(name="protect.setup", steps=[AuthorityProtectSetupStep()]),
         "lock": Pipeline(name="lock", steps=[AuthorityLockStep()]),
         "unlock": Pipeline(name="unlock", steps=[AuthorityUnlockStep()]),
         "status": Pipeline(name="status", steps=[AuthorityStatusStep()]),
