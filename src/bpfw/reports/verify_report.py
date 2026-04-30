@@ -2,14 +2,15 @@
 
 from typing import Dict
 
+from bpfw.catalog.lifecycle import ALLOWED_LIFECYCLES
 from bpfw.catalog.models import VerificationReport
 from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, Finding
 
 # Suggested actions keyed by finding code.
 _SUGGESTED_ACTIONS: Dict[str, str] = {
     "UNDECLARED_CODE": (
-        "Add it to bpfw/blueprint.yaml with lifecycle experimental, legacy, "
-        "deprecated, or active. If it duplicates an existing intent, do not "
+        "Add it to bpfw/blueprint.yaml with lifecycle "
+        f"{', '.join(ALLOWED_LIFECYCLES)}. If it duplicates an existing intent, do not "
         "mark both as active."
     ),
     "MISSING_DECLARED_CODE": (
@@ -17,10 +18,10 @@ _SUGGESTED_ACTIONS: Dict[str, str] = {
         "intentionally."
     ),
     "DUPLICATE_ACTIVE_INTENT": (
-        "Keep one responsibility active and mark the others experimental, "
-        "legacy, or deprecated."
+        "Keep one responsibility active and mark the others "
+        "experimental, legacy, or deprecated."
     ),
-    "INVALID_LIFECYCLE": "Use active, experimental, legacy, or deprecated.",
+    "INVALID_LIFECYCLE": f"Use {', '.join(ALLOWED_LIFECYCLES)}.",
     "INCOMPLETE_RESPONSIBILITY": (
         "Complete intent, canonical_name, owner_layer, lifecycle, "
         "location.path, location.symbol, and location.symbol_type."

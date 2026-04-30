@@ -1,7 +1,5 @@
 """Result contracts produced by engine and steps."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from enum import StrEnum
 

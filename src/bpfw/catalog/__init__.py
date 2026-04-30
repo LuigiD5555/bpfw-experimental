@@ -1,16 +1,18 @@
 """Catalog verification and wizard support for MVP."""
 
-from bpfw.catalog.models import (
+from bpfw.catalog.lifecycle import (
     ALLOWED_LIFECYCLES,
+    LIFECYCLE_ACTIVE,
+    LIFECYCLE_DEPRECATED,
+    LIFECYCLE_EXPERIMENTAL,
+    LIFECYCLE_LEGACY,
+)
+from bpfw.catalog.models import (
     AUTHORITY_STATE_DEFINED,
     AUTHORITY_STATE_DRAFT,
     AUTHORITY_STATE_EMPTY,
     AUTHORITY_STATE_INVALID,
     AUTHORITY_STATE_MISSING,
-    LIFECYCLE_ACTIVE,
-    LIFECYCLE_DEPRECATED,
-    LIFECYCLE_EXPERIMENTAL,
-    LIFECYCLE_LEGACY,
     BlueprintLoadResult,
     DiscoveredCodeUnit,
     ScanResult,

@@ -3,6 +3,8 @@
 from pathlib import Path
 from typing import Any, Dict, List
 
+from bpfw.catalog.access_control import ensure_blueprint_can_be_written
+from bpfw.catalog.lifecycle import ALLOWED_LIFECYCLES
 from bpfw.catalog.models import DiscoveredCodeUnit
 from bpfw.catalog.paths import resolve_blueprint_path
 
@@ -107,12 +109,7 @@ def build_initial_blueprint(
             "mode": "catalog",
             "empty_blueprint_allows_execution": True,
             "defined_blueprint_blocks_on_drift": True,
-            "allowed_lifecycles": [
-                "active",
-                "experimental",
-                "legacy",
-                "deprecated",
-            ],
+            "allowed_lifecycles": list(ALLOWED_LIFECYCLES),
             "single_active_per_intent": True,
             "undeclared_code_blocks": True,
             "missing_declared_code_blocks": True,
@@ -135,6 +132,8 @@ def write_blueprint(blueprint_path: Path, blueprint_data: Dict[str, Any]) -> Non
     except ImportError:
         raise ImportError("PyYAML is required but not installed")
     
+    project_root = blueprint_path.parent.parent
+    ensure_blueprint_can_be_written(project_root=project_root)
     blueprint_path.parent.mkdir(parents=True, exist_ok=True)
     rendered = yaml.safe_dump(blueprint_data, sort_keys=False, allow_unicode=True)
     blueprint_path.write_text(rendered, encoding="utf-8")

@@ -1,7 +1,5 @@
 """Pipeline types and deterministic execution helpers."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Protocol
 

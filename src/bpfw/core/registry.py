@@ -1,8 +1,6 @@
 """Command registry for BPFW MVP Catalog Mode."""
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
 
 from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
 from bpfw.catalog.verify import run_verify
@@ -10,44 +8,7 @@ from bpfw.catalog.wizard import complete_human_fields
 from bpfw.catalog.writer import run_init
 from bpfw.core.pipeline import Pipeline, PipelineStep
 from bpfw.core.result import ResultStatus, StepResult
-from bpfw.protection.state import UnlockWindow, load_authority_state, save_authority_state
-
-
-def _parse_ttl_to_minutes(raw_ttl: str) -> int:
-    """Parse a TTL string into minutes."""
-
-    normalized_ttl = raw_ttl.strip().lower()
-    if not normalized_ttl:
-        raise ValueError("Missing --ttl value")
-    if normalized_ttl.endswith("m"):
-        return int(normalized_ttl[:-1] or "0")
-    if normalized_ttl.endswith("h"):
-        return int(normalized_ttl[:-1] or "0") * 60
-    return int(normalized_ttl)
-
-
-def _is_unlock_window_active(unlock_window: UnlockWindow | None) -> bool:
-    """Return True when the current blueprint unlock window is still valid."""
-
-    if unlock_window is None or unlock_window.resource_id != "project_blueprint":
-        return False
-
-    try:
-        expiration_time = datetime.fromisoformat(unlock_window.expires_at)
-    except ValueError:
-        return False
-
-    if expiration_time.tzinfo is None:
-        expiration_time = expiration_time.replace(tzinfo=timezone.utc)
-
-    return expiration_time > datetime.now(timezone.utc)
-
-
-def _is_blueprint_locked(project_root: Path) -> bool:
-    """Return lock state for the MVP blueprint resource."""
-
-    state = load_authority_state(project_root=project_root)
-    return not _is_unlock_window_active(state.active_unlock_window)
+from bpfw.protection.authority import get_blueprint_lock_state, lock_blueprint, unlock_blueprint
 
 
 @dataclass(slots=True)
@@ -73,7 +34,7 @@ class WizardStep(PipelineStep):
     name: str = "catalog.wizard"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
-        if _is_blueprint_locked(project_root=context.project_root):
+        if get_blueprint_lock_state(project_root=context.project_root) == "locked":
             return StepResult(
                 status=ResultStatus.BLOCK,
                 message="BLOCK: Blueprint is locked. Run bpfw unlock before editing.",
@@ -137,53 +98,44 @@ class AuthorityLockStep(PipelineStep):
     name: str = "protection.lock"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
-        state = load_authority_state(project_root=context.project_root)
-        state.active_unlock_window = None
-        state.last_relock_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-        save_authority_state(project_root=context.project_root, state=state)
+        lock_state = lock_blueprint(project_root=context.project_root)
+        if lock_state == "unknown":
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=f"BPFW blueprint does not exist: {CANONICAL_BLUEPRINT_FILE}. Run bpfw init first.",
+                source=self.name,
+                details={"lock_state": lock_state, "resource_id": "project_blueprint"},
+            )
 
         return StepResult(
             status=ResultStatus.OK,
             message=f"Blueprint locked: {CANONICAL_BLUEPRINT_FILE}",
             source=self.name,
-            details={"lock_state": "locked", "resource_id": "project_blueprint"},
+            details={"lock_state": lock_state, "resource_id": "project_blueprint"},
         )
 
 
 @dataclass(slots=True)
 class AuthorityUnlockStep(PipelineStep):
-    """Open a scoped unlock window for the MVP blueprint resource."""
+    """Unlock the MVP blueprint resource."""
 
     name: str = "protection.unlock"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
-        ttl_minutes = _parse_ttl_to_minutes(context.command_arguments.get("ttl", "10m"))
-        if ttl_minutes <= 0:
+        lock_state = unlock_blueprint(project_root=context.project_root)
+        if lock_state == "unknown":
             return StepResult(
                 status=ResultStatus.BLOCK,
-                message="ttl must be greater than zero",
+                message=f"BPFW blueprint does not exist: {CANONICAL_BLUEPRINT_FILE}. Run bpfw init first.",
                 source=self.name,
-                details={"error_code": "AUTH_UNLOCK_TTL"},
+                details={"lock_state": lock_state, "resource_id": "project_blueprint"},
             )
-
-        expiration_time = datetime.now(timezone.utc) + timedelta(minutes=ttl_minutes)
-        unlock_window = UnlockWindow(
-            resource_id="project_blueprint",
-            resource_path=CANONICAL_BLUEPRINT_FILE,
-            scope=str(context.command_arguments.get("scope", "manual") or "manual"),
-            operation=str(context.command_arguments.get("operation", "unlock") or "unlock"),
-            expires_at=expiration_time.replace(microsecond=0).isoformat(),
-        )
-
-        state = load_authority_state(project_root=context.project_root)
-        state.active_unlock_window = unlock_window
-        save_authority_state(project_root=context.project_root, state=state)
 
         return StepResult(
             status=ResultStatus.OK,
-            message=f"Blueprint unlocked for {ttl_minutes} minutes",
+            message=f"Blueprint unlocked: {CANONICAL_BLUEPRINT_FILE}",
             source=self.name,
-            details={"resource_id": "project_blueprint", "expires_at": unlock_window.expires_at},
+            details={"resource_id": "project_blueprint", "lock_state": lock_state},
         )
 
 
@@ -195,7 +147,7 @@ class AuthorityStatusStep(PipelineStep):
 
     def run(self, context) -> StepResult:  # noqa: ANN001
         report, _exit_code = run_verify(project_root=context.project_root)
-        lock_state = "locked" if _is_blueprint_locked(project_root=context.project_root) else "unlocked"
+        lock_state = get_blueprint_lock_state(project_root=context.project_root)
         drift_state = "drift" if report.missing_declared_count or report.undeclared_count else "clean"
         lifecycle_state = "invalid" if report.invalid_lifecycle_count else "valid"
 

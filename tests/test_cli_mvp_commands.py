@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import pytest
 
 from bpfw.cli import MVP_COMMANDS, normalize_command

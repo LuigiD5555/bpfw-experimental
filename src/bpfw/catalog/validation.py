@@ -2,8 +2,8 @@
 
 from typing import Any, Dict, List
 
+from bpfw.catalog.lifecycle import ALLOWED_LIFECYCLES, is_allowed_lifecycle
 from bpfw.catalog.models import (
-    ALLOWED_LIFECYCLES,
     AUTHORITY_STATE_EMPTY,
     AUTHORITY_STATE_INVALID,
     AUTHORITY_STATE_MISSING,
@@ -88,7 +88,7 @@ def _validate_responsibility_lifecycle(
         return
 
     lifecycle = responsibility.get("lifecycle")
-    if lifecycle is not None and lifecycle not in ALLOWED_LIFECYCLES:
+    if lifecycle is not None and not is_allowed_lifecycle(lifecycle):
         findings.append(
             Finding(
                 source=_SOURCE,

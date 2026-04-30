@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from bpfw.cli import _print_human
 
 

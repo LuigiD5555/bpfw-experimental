@@ -3,6 +3,13 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+from bpfw.catalog.lifecycle import (
+    ALLOWED_LIFECYCLES,
+    LIFECYCLE_ACTIVE,
+    LIFECYCLE_DEPRECATED,
+    LIFECYCLE_EXPERIMENTAL,
+    LIFECYCLE_LEGACY,
+)
 from bpfw.reports.finding import Finding
 
 # Authority state constants
@@ -11,20 +18,6 @@ AUTHORITY_STATE_EMPTY = "empty"
 AUTHORITY_STATE_DRAFT = "draft"
 AUTHORITY_STATE_DEFINED = "defined"
 AUTHORITY_STATE_INVALID = "invalid"
-
-# Lifecycle constants
-LIFECYCLE_ACTIVE = "active"
-LIFECYCLE_EXPERIMENTAL = "experimental"
-LIFECYCLE_LEGACY = "legacy"
-LIFECYCLE_DEPRECATED = "deprecated"
-
-ALLOWED_LIFECYCLES = (
-    LIFECYCLE_ACTIVE,
-    LIFECYCLE_EXPERIMENTAL,
-    LIFECYCLE_LEGACY,
-    LIFECYCLE_DEPRECATED,
-)
-
 
 @dataclass(frozen=True)
 class DiscoveredCodeUnit:

@@ -1,4 +1,4 @@
-"""Command line interface for Blueprint Framework — MVP Catalog Mode."""
+"""Command line interface for Blueprint Framework MVP Catalog Mode."""
 
 import argparse
 import json
@@ -29,9 +29,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("command", choices=MVP_COMMANDS)
     parser.add_argument("subcommand", nargs="?")
     parser.add_argument("--project-root", default=".")
-    parser.add_argument("--scope", default="")
-    parser.add_argument("--operation", default="")
-    parser.add_argument("--reason", default="")
     parser.add_argument("--ttl", default="10m")
     parser.add_argument("--accept-scan", action="store_true")
     parser.add_argument("--force-new", action="store_true")
@@ -181,12 +178,9 @@ def main() -> int:
     engine = BlueprintEngine()
     command_arguments: dict[str, str] = {}
 
-    # unlock args — resource comes from subcommand (2nd positional)
+    # unlock keeps --ttl accepted for MVP compatibility; logical locks do not expire.
     if normalized_command == "unlock":
         command_arguments["resource_id"] = parsed_arguments.subcommand or "blueprint"
-        command_arguments["scope"] = parsed_arguments.scope
-        command_arguments["operation"] = parsed_arguments.operation
-        command_arguments["reason"] = parsed_arguments.reason
         command_arguments["ttl"] = parsed_arguments.ttl
 
     result = engine.run(

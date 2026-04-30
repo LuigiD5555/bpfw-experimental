@@ -1,10 +1,9 @@
 """Status report rendering for BPFW MVP Catalog Mode."""
 
-from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Dict, List, Tuple
 
-from bpfw.protection.state import load_authority_state
+from bpfw.catalog.lifecycle import count_lifecycles
 from bpfw.catalog.loader import BlueprintLoader
 from bpfw.catalog.models import (
     AUTHORITY_STATE_EMPTY,
@@ -13,6 +12,7 @@ from bpfw.catalog.models import (
     VerificationReport,
 )
 from bpfw.catalog.verify import run_verify
+from bpfw.protection.authority import get_blueprint_lock_state
 
 _BLUEPRINT_DISPLAY_PATH = "bpfw/blueprint.yaml"
 
@@ -25,56 +25,7 @@ def _determine_lock_state(project_root: Path, authority_state: str) -> str:
     if authority_state == AUTHORITY_STATE_MISSING:
         return "unknown"
 
-    state_path = project_root / ".bpfw" / "state.json"
-    if not state_path.exists():
-        return "unknown"
-
-    try:
-        protection_state = load_authority_state(project_root=project_root)
-    except (OSError, ValueError, KeyError):
-        return "unknown"
-
-    unlock_window = protection_state.active_unlock_window
-    if unlock_window is None:
-        return "locked"
-
-    try:
-        expiration = datetime.fromisoformat(unlock_window.expires_at)
-        if expiration.tzinfo is None:
-            expiration = expiration.replace(tzinfo=timezone.utc)
-        if expiration > datetime.now(timezone.utc):
-            return "unlocked"
-    except ValueError:
-        pass
-
-    return "locked"
-
-
-def _count_lifecycles(blueprint_data: Dict[str, Any]) -> Dict[str, int]:
-    """Count lifecycle values from loaded responsibilities.
-
-    Only counts lifecycles that are present and match the allowed set.
-    Null or missing lifecycle values are not counted.
-    """
-    counts: Dict[str, int] = {
-        "active": 0,
-        "experimental": 0,
-        "legacy": 0,
-        "deprecated": 0,
-    }
-
-    responsibilities = blueprint_data.get("responsibilities")
-    if not isinstance(responsibilities, list):
-        return counts
-
-    for responsibility in responsibilities:
-        if not isinstance(responsibility, dict):
-            continue
-        lifecycle = responsibility.get("lifecycle")
-        if isinstance(lifecycle, str) and lifecycle in counts:
-            counts[lifecycle] += 1
-
-    return counts
+    return get_blueprint_lock_state(project_root=project_root)
 
 
 def run_status(project_root: Path) -> Tuple[str, int]:
@@ -116,7 +67,7 @@ def run_status(project_root: Path) -> Tuple[str, int]:
     )
 
     # Lifecycle counts from loaded responsibilities
-    lifecycle_counts = _count_lifecycles(load_result.data)
+    lifecycle_counts = count_lifecycles(load_result.data)
 
     # Step 5: Missing — no scan, execution allowed
     if authority_state == AUTHORITY_STATE_MISSING:

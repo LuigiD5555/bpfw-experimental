@@ -4,6 +4,7 @@ from pathlib import Path
 
 import yaml
 
+from bpfw.catalog.access_control import ensure_blueprint_can_be_written
 from bpfw.catalog.loader import BlueprintLoader
 
 
@@ -13,6 +14,7 @@ DEFAULT_LIFECYCLE = "active"
 def complete_human_fields(project_root: Path) -> tuple[Path, int]:
     """Fill missing intent and lifecycle fields deterministically."""
 
+    ensure_blueprint_can_be_written(project_root=project_root)
     loader = BlueprintLoader(project_root=project_root)
     load_result = loader.load()
     blueprint_path = Path(load_result.path)
