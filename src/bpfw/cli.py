@@ -7,6 +7,7 @@ from pathlib import Path
 from bpfw.catalog.verify import run_verify
 from bpfw.catalog.writer import run_init
 from bpfw.core.engine import BlueprintEngine, build_command
+from bpfw.reports.status_report import run_status
 from bpfw.reports.verify_report import render_verify_report
 
 
@@ -167,6 +168,13 @@ def main() -> int:
         project_root = Path(parsed_arguments.project_root).resolve()
         report, exit_code = run_verify(project_root=project_root)
         output = render_verify_report(report)
+        print(output)
+        return exit_code
+
+    # status is handled directly by the status report pipeline
+    if normalized_command == "status":
+        project_root = Path(parsed_arguments.project_root).resolve()
+        output, exit_code = run_status(project_root=project_root)
         print(output)
         return exit_code
 
