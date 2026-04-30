@@ -49,8 +49,8 @@ def normalize_command(command: str, subcommand: str | None) -> str:
             raise ValueError("lock does not accept subcommands")
         return "lock"
     if command == "unlock":
-        if subcommand is None:
-            raise ValueError("unlock requires a resource target. Usage: bpfw unlock <resource>")
+        if subcommand is not None and subcommand != "blueprint":
+            raise ValueError("unlock only supports blueprint resource in MVP. Usage: bpfw unlock [blueprint]")
         return "unlock"
     if command == "wizard":
         if subcommand is not None:
@@ -125,7 +125,16 @@ def _print_human(payload: dict) -> None:
             print(payload["message"])
         return
 
-    # lock, unlock, status, wizard: print message directly
+    if payload["command_name"] == "status":
+        details = payload.get("primary_step", {}).get("details", {})
+        print("BPFW STATUS")
+        print(f"  lock: {details.get('lock', 'unknown')}")
+        print(f"  blueprint: {details.get('blueprint_state', 'unknown')}")
+        print(f"  drift: {details.get('drift_state', 'unknown')}")
+        print(f"  lifecycle: {details.get('lifecycle_state', 'unknown')}")
+        return
+
+    # lock, unlock, wizard: print message directly
     if payload["message"]:
         print(payload["message"])
         return
@@ -171,7 +180,7 @@ def main() -> int:
 
     # unlock args — resource comes from subcommand (2nd positional)
     if normalized_command == "unlock":
-        command_arguments["resource_id"] = parsed_arguments.subcommand or ""
+        command_arguments["resource_id"] = parsed_arguments.subcommand or "blueprint"
         command_arguments["scope"] = parsed_arguments.scope
         command_arguments["operation"] = parsed_arguments.operation
         command_arguments["reason"] = parsed_arguments.reason

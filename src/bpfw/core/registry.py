@@ -2,759 +2,356 @@
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
-import json
+from pathlib import Path
 
-from bpfw.access.authorization_policy import AccessAuthorizationError
-from bpfw.access.grant_store import AccessGrantStore
-from bpfw.access.service import AccessService
-from bpfw.authority.lock_manager import AuthorityLockManager
-from bpfw.authority.lock_policy import OsLockPolicyError
-from bpfw.authority.policy import AuthorityPolicy
-from bpfw.authority.resources import AuthorityResourceRegistry
-from bpfw.authority.state import (
-    AuthorityState,
-    UnlockWindow,
-    clear_unlock_window,
-    load_authority_state,
-    save_authority_state,
-    set_unlock_window,
-    _window_from_dict,
-)
-from bpfw.blueprint.snapshot import build_snapshot
+import yaml
+
+from bpfw.authority.state import AuthorityState, UnlockWindow, load_authority_state, save_authority_state
+from bpfw.blueprint.schema import CANONICAL_BLUEPRINT_FILE
 from bpfw.blueprint.validator import validate_blueprint
+from bpfw.catalog.verify import run_catalog_verify
+from bpfw.catalog.wizard import complete_human_fields
 from bpfw.core.pipeline import Pipeline, PipelineStep
 from bpfw.core.result import ResultStatus, StepResult
-from bpfw.enforcement.pre_commit import HookInstallError, install_pre_commit_hook
-from bpfw.integrity.manifest import IntegrityManifestError, write_manifest
-from bpfw.init.acceptor import InitialBaselineAcceptor
 from bpfw.init.detector import ProjectDetector
-from bpfw.init.generator import InitialBlueprintGenerator
 from bpfw.init.scanner import MechanicalProjectScanner
-from bpfw.integrity.signer import IntegritySigningError
-from bpfw.integrity.verifier import verify_integrity
-from bpfw.security.keyring import ensure_local_hmac_key
-
-
-@dataclass(slots=True)
-class StaticStep(PipelineStep):
-    """MVP placeholder step used for wizard (not implemented yet)."""
-
-    name: str
-    message: str
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        del context
-        return StepResult(
-            status=ResultStatus.WARNING,
-            message=self.message,
-            source=self.name,
-            details={"implementation_state": "not_implemented"},
-            suggested_actions=["Wizard will be implemented in future prompts"],
-        )
 
 
 def _parse_ttl_to_minutes(raw_ttl: str) -> int:
     """Parse TTL string to minutes for unlock duration."""
-    normalized = raw_ttl.strip().lower()
-    if not normalized:
+
+    normalized_ttl = raw_ttl.strip().lower()
+    if not normalized_ttl:
         raise ValueError("Missing --ttl value")
-    if normalized.endswith("m"):
-        return int(normalized[:-1] or "0")
-    if normalized.endswith("h"):
-        return int(normalized[:-1] or "0") * 60
-    return int(normalized)
+    if normalized_ttl.endswith("m"):
+        return int(normalized_ttl[:-1] or "0")
+    if normalized_ttl.endswith("h"):
+        return int(normalized_ttl[:-1] or "0") * 60
+    return int(normalized_ttl)
 
 
-def _normalize_resource_id(resource_id: str) -> str:
-    """Normalize resource ID shorthand to full ID."""
-    normalized = resource_id.strip()
-    if normalized == "blueprint":
-        return "project_blueprint"
-    if normalized == "architecture":
-        return "architecture_profile"
-    return normalized
+def _is_unlock_window_active(unlock_window: UnlockWindow | None) -> bool:
+    """Check if unlock window is still valid."""
+
+    if unlock_window is None:
+        return False
+    if unlock_window.resource_id != "project_blueprint":
+        return False
+
+    try:
+        expiration_time = datetime.fromisoformat(unlock_window.expires_at)
+    except ValueError:
+        return False
+
+    if expiration_time.tzinfo is None:
+        expiration_time = expiration_time.replace(tzinfo=timezone.utc)
+
+    return expiration_time > datetime.now(timezone.utc)
 
 
-def _build_unsealed_block_message() -> str:
-    """Build error message for unsealed projects."""
-    return "Project is not sealed.\nRun bpfw init or accept the generated baseline."
+def _is_blueprint_locked(project_root: Path) -> bool:
+    """Return lock state for blueprint authority resource."""
+
+    authority_state = load_authority_state(project_root=project_root)
+    return not _is_unlock_window_active(authority_state.active_unlock_window)
 
 
-def _ensure_manifest_for_protected_mode(project_root):  # noqa: ANN001
-    """Ensure manifest exists when protection is enabled."""
-    state = load_authority_state(project_root=project_root)
-    manifest_file = project_root / ".bpfw/manifest.json"
-    if state.protection_enabled and not manifest_file.exists():
-        raise RuntimeError(_build_unsealed_block_message())
+def _seed_blueprint_payload(project_root: Path) -> dict:
+    """Create deterministic initial blueprint payload from mechanical scan."""
 
+    scanner = MechanicalProjectScanner()
+    scan_result = scanner.scan(project_root=project_root)
 
-@dataclass(slots=True)
-class VerifyAuthorityStep(PipelineStep):
-    """Verify authority resources haven't been manually edited."""
+    symbols_by_file: dict[str, list[str]] = {}
+    for symbol in scan_result.symbols:
+        if symbol.kind in {"class", "function"}:
+            symbols_by_file.setdefault(symbol.file_path, []).append(symbol.name)
 
-    name: str = "authority.verify"
+    responsibilities_payload: list[dict] = []
+    for file_index, file_path in enumerate(sorted(set(scan_result.files)), start=1):
+        file_symbols = sorted(set(symbols_by_file.get(file_path, [])))
+        if not file_symbols:
+            continue
 
-    def _blocked_message(self, relative_path: str) -> str:
-        return (
-            "CRITICAL\n\n"
-            "Authority drift detected.\n\n"
-            "Resource:\n"
-            f"{relative_path}\n\n"
-            "Direct authority edits are not allowed.\n\n"
-            "Do not retry this edit.\n\n"
-            "Allowed next action:\n"
-            "Revert the manual edit and use unlock flow."
+        responsibility_id = f"responsibility_{file_index:03d}"
+        canonical_name = Path(file_path).stem.replace("_", " ").title().replace(" ", "")
+        primary_symbol = file_symbols[0]
+        implementation_id = f"{responsibility_id}_default"
+
+        responsibilities_payload.append(
+            {
+                "responsibility_id": responsibility_id,
+                "canonical_name": canonical_name or responsibility_id,
+                "owner_layer": "application" if "/application/" in f"/{file_path}" else "domain",
+                "intent": "",
+                "lifecycle_state": "active",
+                "allowed_files": [file_path],
+                "allowed_symbols": file_symbols,
+                "allowed_implementations": [
+                    {
+                        "implementation_id": implementation_id,
+                        "class_name": primary_symbol,
+                        "file": file_path,
+                        "lifecycle_state": "active",
+                        "replacement_id": None,
+                        "disabled_reason": None,
+                        "removal_plan": None,
+                    }
+                ],
+                "active_implementation": implementation_id,
+                "forbidden_duplicates": [],
+                "mutability": "editable",
+                "owner": "project_owner",
+            }
         )
 
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        from bpfw.authority.resources import AuthorityResourceRegistry
-        from bpfw.integrity.manifest import IntegrityManifestError, load_manifest, manifest_path
-        from bpfw.integrity.hash_provider import compute_sha256
-
-        try:
-            manifest_payload = load_manifest(project_root=context.project_root)
-        except IntegrityManifestError:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message="Project is not sealed.\nRun bpfw init or accept the generated baseline.",
-                source=self.name,
-            )
-
-        files = manifest_payload.get("files")
-        if not isinstance(files, list):
-            return StepResult(status=ResultStatus.OK, message="Authority verify skipped because manifest format is invalid", source=self.name)
-
-        registry = AuthorityResourceRegistry()
-        changed_resources: dict[str, str] = {}
-
-        for entry in files:
-            if not isinstance(entry, dict):
-                continue
-            relative_path = str(entry.get("path", "")).strip()
-            expected_hash = str(entry.get("sha256", "")).strip()
-            if not relative_path or not expected_hash:
-                continue
-
-            absolute_path = context.project_root / relative_path
-            if not absolute_path.exists() or not absolute_path.is_file():
-                continue
-            if compute_sha256(absolute_path) == expected_hash:
-                continue
-            if registry.is_authority_path(relative_path):
-                resource = registry.resolve_by_path(relative_path)
-                changed_resources[relative_path] = resource.resource_id if resource is not None else relative_path
-
-        if not changed_resources:
-            return StepResult(
-                status=ResultStatus.OK,
-                message="Authority resources validated successfully",
-                source=self.name,
-                details={"authority_manifest_path": str(manifest_path(project_root=context.project_root))},
-            )
-        relative_path, resource_id = sorted(changed_resources.items())[0]
-        return StepResult(
-            status=ResultStatus.CRITICAL,
-            message=self._blocked_message(relative_path=relative_path),
-            source=self.name,
-            details={"error_code": "AUTH001", "resource_id": resource_id},
-            affected_resources=[str(context.project_root / relative_path)],
-            suggested_actions=["Revert manual authority edits and use unlock flow."],
-        )
-
-
-@dataclass(slots=True)
-class AuthoritySealPrecheckStep(PipelineStep):
-    """Prevent sealing unauthorized authority drift into the manifest."""
-
-    name: str = "authority.seal_precheck"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        from bpfw.access.grant_store import AccessGrantStore
-        from bpfw.authority.resources import AuthorityResourceRegistry
-        from bpfw.integrity.hash_provider import compute_sha256
-        from bpfw.integrity.manifest import IntegrityManifestError, load_manifest
-
-        manifest_file = context.project_root / ".bpfw/manifest.json"
-        if not manifest_file.exists():
-            if str(context.command_arguments.get("init_accept_scan", "")).strip().lower() == "true":
-                return StepResult(status=ResultStatus.OK, message="Initial baseline seal precheck passed", source=self.name)
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message="Cannot seal authority drift.\n\nProject is not sealed yet.\nUse `bpfw init` to create the first baseline.",
-                source=self.name,
-                suggested_actions=["Run `bpfw init` and accept the initial baseline before writing a manifest."],
-            )
-
-        try:
-            manifest_payload = load_manifest(project_root=context.project_root)
-        except IntegrityManifestError as error:
-            return StepResult(status=ResultStatus.BLOCK, message=str(error), source=self.name)
-
-        files = manifest_payload.get("files")
-        if not isinstance(files, list):
-            return StepResult(status=ResultStatus.BLOCK, message="Cannot seal authority drift.\n\nManifest format is invalid.", source=self.name)
-
-        registry = AuthorityResourceRegistry()
-        drifted_authority_paths: dict[str, str] = {}
-        for entry in files:
-            if not isinstance(entry, dict):
-                continue
-            relative_path = str(entry.get("path", "")).strip()
-            expected_hash = str(entry.get("sha256", "")).strip()
-            if not relative_path or not expected_hash:
-                continue
-            absolute_path = context.project_root / relative_path
-            if not absolute_path.exists() or not absolute_path.is_file():
-                continue
-            if compute_sha256(absolute_path) == expected_hash:
-                continue
-            if registry.is_authority_path(relative_path):
-                resource = registry.resolve_by_path(relative_path)
-                drifted_authority_paths[relative_path] = resource.resource_id if resource is not None else relative_path
-
-        if not drifted_authority_paths:
-            return StepResult(status=ResultStatus.OK, message="Authority seal precheck passed", source=self.name)
-
-        audit_path = context.project_root / ".bpfw/audit/authority-events.jsonl"
-        audit_events: list[dict[str, str]] = []
-        if audit_path.exists():
-            for raw_line in audit_path.read_text(encoding="utf-8").splitlines():
-                line = raw_line.strip()
-                if not line:
-                    continue
-                try:
-                    payload = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if isinstance(payload, dict):
-                    audit_events.append({str(key): str(value) for key, value in payload.items()})
-
-        active_grants = {grant.grant_id: grant for grant in AccessGrantStore().list_active(project_root=context.project_root)}
-
-        for relative_path, resource_id in sorted(drifted_authority_paths.items()):
-            matching_event = next(
-                (
-                    event
-                    for event in reversed(audit_events)
-                    if event.get("event_type") == "authority_change_applied" and event.get("resource_id") == resource_id
-                ),
-                None,
-            )
-            if matching_event is None:
-                return StepResult(
-                    status=ResultStatus.BLOCK,
-                    message=(
-                        "Cannot seal authority drift.\n\n"
-                        "The following authority resource changed outside controlled authority operation:\n"
-                        f"- {relative_path}\n\n"
-                        "Use unlock flow."
-                    ),
-                    source=self.name,
-                    affected_resources=[str(context.project_root / relative_path)],
-                )
-            grant_id = matching_event.get("grant_id", "")
-            if not grant_id or grant_id not in active_grants:
-                return StepResult(
-                    status=ResultStatus.BLOCK,
-                    message=(
-                        "Cannot seal authority drift.\n\n"
-                        "The following authority resource changed with invalid authority grant:\n"
-                        f"- {relative_path}\n\n"
-                        "Use unlock flow."
-                    ),
-                    source=self.name,
-                    affected_resources=[str(context.project_root / relative_path)],
-                )
-            matched_grant = active_grants[grant_id]
-            if matched_grant.resource_id != resource_id:
-                return StepResult(
-                    status=ResultStatus.BLOCK,
-                    message=(
-                        "Cannot seal authority drift.\n\n"
-                        "The following authority resource changed with invalid authority grant:\n"
-                        f"- {relative_path}\n\n"
-                        "Use unlock flow."
-                    ),
-                    source=self.name,
-                    affected_resources=[str(context.project_root / relative_path)],
-                )
-
-        return StepResult(status=ResultStatus.OK, message="Authority seal precheck passed", source=self.name)
-
-
-@dataclass(slots=True)
-class VerifyBlueprintStep(PipelineStep):
-    """Verify blueprint.yaml exists and is valid."""
-
-    name: str = "blueprint.verify"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        validation_result = validate_blueprint(project_root=context.project_root)
-        if validation_result.is_valid and validation_result.blueprint is not None:
-            snapshot = build_snapshot(validation_result.blueprint)
-            return StepResult(
-                status=ResultStatus.OK,
-                message="Blueprint loaded and validated successfully",
-                source=self.name,
-                details={
-                    "responsibility_count": str(snapshot.responsibility_count),
-                    "blueprint_path": snapshot.blueprint_path,
-                },
-            )
-
-        first_error = validation_result.errors[0]
-        return StepResult(
-            status=ResultStatus.BLOCK,
-            message=first_error.message,
-            source=self.name,
-            details={"error_code": first_error.code},
-            affected_resources=[first_error.file_path],
-            suggested_actions=[first_error.recommendation],
-        )
-
-
-@dataclass(slots=True)
-class ManifestWriteStep(PipelineStep):
-    """Generate integrity manifest from current approved state."""
-
-    name: str = "integrity.manifest.write"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        try:
-            write_result = write_manifest(project_root=context.project_root)
-        except (IntegrityManifestError, IntegritySigningError) as error:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=str(error),
-                source=self.name,
-                details={
-                    "error_code": "INT_WRITE_BLOCK",
-                    "manifest_path": str(context.project_root / ".bpfw/manifest.json"),
-                },
-                affected_resources=[str(context.project_root / ".bpfw/manifest.json")],
-                suggested_actions=["Configure BPFW_MANIFEST_HMAC_KEY and run `bpfw init` again"],
-            )
-
-        return StepResult(
-            status=ResultStatus.OK,
-            message="Integrity manifest generated and signed successfully",
-            source=self.name,
-            details={
-                "manifest_path": str(write_result.manifest_path),
-                "manifest_updated_at": write_result.updated_at,
-                "integrity_checked_files": str(write_result.file_count),
-            },
-        )
-
-
-@dataclass(slots=True)
-class VerifyIntegrityStep(PipelineStep):
-    """Verify integrity manifest signature and protected file hashes."""
-
-    strict: bool = True
-    name: str = "integrity.verify"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        ci_mode_enabled = str(context.command_arguments.get("ci", "")).strip().lower() == "true"
-        diagnostic_mode_enabled = str(context.command_arguments.get("diagnostic", "")).strip().lower() == "true"
-        strict_mode_enabled = self.strict and not diagnostic_mode_enabled
-        verification_result = verify_integrity(project_root=context.project_root)
-        if verification_result.issues:
-            first_issue = verification_result.issues[0]
-
-            status = ResultStatus.WARNING
-            if first_issue.severity == "critical":
-                status = ResultStatus.CRITICAL
-            elif first_issue.severity == "block":
-                status = ResultStatus.BLOCK
-
-            if any(issue.severity == "critical" for issue in verification_result.issues):
-                status = ResultStatus.CRITICAL
-            elif any(issue.severity == "block" for issue in verification_result.issues):
-                status = ResultStatus.BLOCK
-
-            if not strict_mode_enabled and verification_result.only_precondition_issues and not ci_mode_enabled:
-                status = ResultStatus.WARNING
-
-            protected_precondition_issue_codes = {"INT001", "INT002", "AUTH001", "INT004"}
-            protected_precondition_issue_found = any(
-                issue.code in protected_precondition_issue_codes for issue in verification_result.issues
-            )
-            if ci_mode_enabled and (
-                verification_result.checked_files == 0 or protected_precondition_issue_found
-            ):
-                status = ResultStatus.CRITICAL
-                return StepResult(
-                    status=status,
-                    message=(
-                        "Protected integrity could not be verified, commit blocked.\n\n"
-                        f"{first_issue.message}"
-                    ),
-                    source=self.name,
-                    details={
-                        "error_code": first_issue.code,
-                        "manifest_path": verification_result.manifest_path,
-                        "integrity_checked_files": str(verification_result.checked_files),
-                    },
-                    affected_resources=[first_issue.file_path] if first_issue.file_path else [],
-                    suggested_actions=[first_issue.recommendation],
-                )
-
-            return StepResult(
-                status=status,
-                message=first_issue.message,
-                source=self.name,
-                details={
-                    "error_code": first_issue.code,
-                    "manifest_path": verification_result.manifest_path,
-                    "integrity_checked_files": str(verification_result.checked_files),
-                },
-                affected_resources=[first_issue.file_path] if first_issue.file_path else [],
-                suggested_actions=[first_issue.recommendation],
-            )
-
-        return StepResult(
-            status=ResultStatus.CRITICAL,
-            message="Protected integrity could not be verified, commit blocked.\n\nChecked files: 0",
-            source=self.name,
-            details={
-                "error_code": "INT008",
-                "manifest_path": verification_result.manifest_path,
-                "integrity_checked_files": str(verification_result.checked_files),
-            },
-            suggested_actions=["Regenerate manifest from trusted state and ensure protected targets are included"],
-        ) if ci_mode_enabled and verification_result.checked_files == 0 else StepResult(
-            status=ResultStatus.OK,
-            message="Integrity verification passed",
-            source=self.name,
-            details={
-                "manifest_path": verification_result.manifest_path,
-                "integrity_checked_files": str(verification_result.checked_files),
-            },
-        )
-
-
-@dataclass(slots=True)
-class InstallHooksStep(PipelineStep):
-    """Install deterministic git hooks for local enforcement."""
-
-    name: str = "enforcement.install_hooks"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        try:
-            installed_hook = install_pre_commit_hook(project_root=context.project_root)
-        except HookInstallError as error:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=str(error),
-                source=self.name,
-                details={"error_code": "ENF_HOOK_INSTALL_BLOCK"},
-                suggested_actions=["Run inside a git repository with a writable .git/hooks directory"],
-            )
-
-        return StepResult(
-            status=ResultStatus.OK,
-            message="Pre-commit hook installed successfully",
-            source=self.name,
-            details={"installed_hook_path": str(installed_hook)},
-            affected_resources=[str(installed_hook)],
-        )
-
-
-@dataclass(slots=True)
-class AuthorityStatusStep(PipelineStep):
-    """Report authority lock and protection status."""
-
-    name: str = "authority.status"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        state = load_authority_state(project_root=context.project_root)
-        registry = AuthorityResourceRegistry()
-        resources = registry.list_resources()
-        manifest_path = context.project_root / ".bpfw/manifest.json"
-        hooks_path = context.project_root / ".git" / "hooks" / "pre-commit"
-
-        # Check if resources are locked based on unlock window
-        unlocked_resource_id = state.active_unlock_window.resource_id if state.active_unlock_window else None
-        locked_count = sum(1 for r in resources if r.resource_id != unlocked_resource_id)
-        total_count = len(resources)
-
-        status_lines = [
-            f"Protection enabled: {state.protection_enabled}",
-            f"Locked resources: {locked_count} / {total_count}",
-            f"Manifest sealed: {manifest_path.exists()}",
-            f"Git hooks installed: {hooks_path.exists()}",
-        ]
-
-        if state.active_unlock_window:
-            status_lines.append(f"Unlock window active: YES (expires at {state.active_unlock_window.expires_at})")
-        else:
-            status_lines.append("Unlock window active: NO")
-
-        if resources:
-            status_lines.append("\nResources:")
-            for resource in resources:
-                is_unlocked = resource.resource_id == unlocked_resource_id
-                lock_status = "UNLOCKED" if is_unlocked else "LOCKED"
-                status_lines.append(f"  - {resource.resource_id}: {lock_status}")
-
-        return StepResult(
-            status=ResultStatus.OK,
-            message="Authority status reported",
-            source=self.name,
-            details={
-                "protection_enabled": str(state.protection_enabled).lower(),
-                "locked_resource_count": str(locked_count),
-                "total_resource_count": str(total_count),
-                "manifest_sealed": str(manifest_path.exists()).lower(),
-                "git_hooks_installed": str(hooks_path.exists()).lower(),
-                "unlock_window_active": str(state.active_unlock_window is not None).lower(),
-            },
-        )
-
-
-@dataclass(slots=True)
-class AuthorityLockStep(PipelineStep):
-    """Lock all authority resources against edits."""
-
-    name: str = "authority.lock"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        try:
-            _ensure_manifest_for_protected_mode(project_root=context.project_root)
-        except RuntimeError as error:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=str(error),
-                source=self.name,
-                details={"error_code": "AUTH_LOCK_PRECHECK"},
-            )
-
-        lock_manager = AuthorityLockManager()
-        state = load_authority_state(project_root=context.project_root)
-
-        try:
-            lock_manager.lock_all(project_root=context.project_root)
-        except OsLockPolicyError as error:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=str(error),
-                source=self.name,
-                details={"error_code": "AUTH_LOCK_OS_BLOCK"},
-            )
-
-        clear_unlock_window(project_root=context.project_root, state=state)
-        save_authority_state(project_root=context.project_root, state=state)
-
-        registry = AuthorityResourceRegistry()
-        locked_count = len(registry.list_resources())
-
-        return StepResult(
-            status=ResultStatus.OK,
-            message=f"Locked {locked_count} authority resource(s)",
-            source=self.name,
-            details={"locked_resource_count": str(locked_count)},
-        )
-
-
-@dataclass(slots=True)
-class AuthorityUnlockStep(PipelineStep):
-    """Unlock a specific authority resource with TTL."""
-
-    name: str = "authority.unlock"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        resource_id_input = context.command_arguments.get("resource_id", "").strip()
-        if not resource_id_input:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message="Missing resource_id. Usage: bpfw unlock <resource>",
-                source=self.name,
-                details={"error_code": "AUTH_UNLOCK_USAGE"},
-            )
-
-        resource_id = _normalize_resource_id(resource_id_input)
-        try:
-            _ensure_manifest_for_protected_mode(project_root=context.project_root)
-        except RuntimeError as error:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=str(error),
-                source=self.name,
-                details={"error_code": "AUTH_UNLOCK_PRECHECK"},
-            )
-
-        registry = AuthorityResourceRegistry()
-        resource = registry.get(resource_id)
-        if resource is None:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=f"Resource not found: {resource_id}",
-                source=self.name,
-                details={"error_code": "AUTH_UNLOCK_NOT_FOUND", "resource_id": resource_id},
-                suggested_actions=["Use 'bpfw status' to list available resources"],
-            )
-
-        ttl_minutes = _parse_ttl_to_minutes(context.command_arguments.get("ttl", "10m"))
-        expires_at = datetime.now(timezone.utc) + timedelta(minutes=ttl_minutes)
-        unlock_window = UnlockWindow(
-            resource_id=resource_id,
-            resource_path=resource.path if resource else "",
-            scope="manual",
-            operation="unlock",
-            expires_at=expires_at.astimezone(timezone.utc).isoformat(),
-            granted_by="cli",
-            request_id="",
-            grant_id=f"manual_{resource_id}_{int(expires_at.timestamp())}",
-        )
-
-        state = load_authority_state(project_root=context.project_root)
-        state.active_unlock_window = unlock_window
-        save_authority_state(project_root=context.project_root, state=state)
-
-        # MVP: Skip OS-level unlock (not required for catalog mode, and may fail on some filesystems)
-
-        return StepResult(
-            status=ResultStatus.OK,
-            message=f"Unlocked resource '{resource_id}' for {ttl_minutes} minutes",
-            source=self.name,
-            details={
-                "resource_id": resource_id,
-                "expires_at": expires_at.astimezone(timezone.utc).isoformat(),
-                "ttl_minutes": str(ttl_minutes),
-            },
-        )
+    return {
+        "version": 1,
+        "responsibilities": responsibilities_payload,
+        "locked_resources": [
+            {
+                "resource_id": "project_blueprint",
+                "path": CANONICAL_BLUEPRINT_FILE,
+                "mutability": "locked",
+                "owner": "project_owner",
+            }
+        ],
+    }
 
 
 @dataclass(slots=True)
 class InitProjectStep(PipelineStep):
-    """Initialize project with baseline blueprint and manifest."""
+    """Initialize project with baseline blueprint for MVP."""
 
     name: str = "init.project"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
         force_new = str(context.command_arguments.get("force_new", "")).strip().lower() == "true"
-        accept_scan = str(context.command_arguments.get("accept_scan", "")).strip().lower() == "true"
-        watch_mode = str(context.command_arguments.get("watch", "")).strip().lower() == "true"
-        no_os_lock = str(context.command_arguments.get("no_os_lock", "")).strip().lower() == "true"
 
         detector = ProjectDetector()
         detection_result = detector.detect(project_root=context.project_root)
-
         if detection_result.is_initialized and not force_new:
             return StepResult(
                 status=ResultStatus.WARNING,
-                message="Project already initialized.\nUse --force-new to reinitialize.",
+                message="Project already initialized. Use --force-new to reinitialize.",
                 source=self.name,
-                details={"existing_blueprint": str(detection_result.project_root / "blueprint.yaml")},
+                details={"blueprint_path": str(context.project_root / CANONICAL_BLUEPRINT_FILE)},
             )
 
-        ensure_local_hmac_key()
-        scanner = MechanicalProjectScanner(project_root=context.project_root)
-        scan_result = scanner.scan()
+        blueprint_path = context.project_root / CANONICAL_BLUEPRINT_FILE
+        blueprint_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = _seed_blueprint_payload(project_root=context.project_root)
+        blueprint_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
 
-        generator = InitialBlueprintGenerator(scan_result=scan_result)
-        entries = generator.generate()
-
-        acceptor = InitialBaselineAcceptor(project_root=context.project_root, entries=entries, accept=accept_scan)
-
-        try:
-            acceptor.accept()
-        except RuntimeError as error:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=str(error),
-                source=self.name,
-                details={"error_code": "INIT_ACCEPT_BLOCK"},
-            )
-
-        if accept_scan:
-            try:
-                write_manifest(project_root=context.project_root)
-            except (IntegrityManifestError, IntegritySigningError) as error:
-                return StepResult(
-                    status=ResultStatus.BLOCK,
-                    message=f"Blueprint generated but manifest failed: {error}",
-                    source=self.name,
-                    details={"error_code": "INIT_MANIFEST_BLOCK"},
-                )
-
-        try:
-            install_pre_commit_hook(project_root=context.project_root)
-        except HookInstallError:
-            pass
-
-        state = load_authority_state(project_root=context.project_root)
-        state.protection_enabled = True
-        save_authority_state(project_root=context.project_root, state=state)
-
-        if not no_os_lock:
-            lock_manager = AuthorityLockManager()
-            try:
-                lock_manager.lock_all(project_root=context.project_root)
-            except OsLockPolicyError:
-                pass
+        authority_state = AuthorityState(
+            protection_enabled=True,
+            os_lock_enabled=False,
+            active_unlock_window=None,
+            last_relock_at=datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        )
+        save_authority_state(project_root=context.project_root, state=authority_state)
 
         return StepResult(
             status=ResultStatus.OK,
-            message="Project initialized successfully",
+            message=f"BPFW initialized. Blueprint generated at {CANONICAL_BLUEPRINT_FILE}",
             source=self.name,
             details={
-                "blueprint_generated": str(acceptor.blueprint_path),
-                "manifest_sealed": str(accept_scan).lower(),
-                "protection_enabled": "true",
+                "blueprint_path": str(blueprint_path),
+                "responsibility_count": str(len(payload.get("responsibilities", []))),
             },
-            affected_resources=[str(acceptor.blueprint_path)],
+            affected_resources=[str(blueprint_path)],
+        )
+
+
+@dataclass(slots=True)
+class WizardStep(PipelineStep):
+    """Complete human fields in blueprint deterministically."""
+
+    name: str = "wizard.complete"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        if _is_blueprint_locked(project_root=context.project_root):
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message="BLOCK: Blueprint is locked. Run bpfw unlock before editing.",
+                source=self.name,
+                details={"error_code": "WIZARD_LOCKED"},
+            )
+
+        blueprint_path, updated_entries = complete_human_fields(project_root=context.project_root)
+        return StepResult(
+            status=ResultStatus.OK,
+            message=f"Wizard completed. Updated fields: {updated_entries}",
+            source=self.name,
+            details={"blueprint_path": str(blueprint_path), "updated_fields": str(updated_entries)},
+            affected_resources=[str(blueprint_path)],
+        )
+
+
+@dataclass(slots=True)
+class VerifyBlueprintStep(PipelineStep):
+    """Run catalog mode verify against blueprint and project code."""
+
+    name: str = "catalog.verify"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        validation_result = validate_blueprint(project_root=context.project_root)
+        if not validation_result.is_valid or validation_result.blueprint is None:
+            first_error = validation_result.errors[0]
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=first_error.message,
+                source=self.name,
+                details={"error_code": first_error.code},
+                affected_resources=[first_error.file_path],
+                suggested_actions=[first_error.recommendation],
+            )
+
+        verify_result = run_catalog_verify(project_root=context.project_root, blueprint=validation_result.blueprint)
+
+        blocked_findings = [finding for finding in verify_result.findings if finding.status == "block"]
+        if blocked_findings:
+            first_finding = blocked_findings[0]
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=first_finding.message,
+                source=self.name,
+                details={
+                    "error_code": first_finding.code,
+                    **verify_result.summary,
+                    "blocking_reasons": str(len(blocked_findings)),
+                },
+                affected_resources=[first_finding.resource],
+                suggested_actions=["Run bpfw wizard, update bpfw/blueprint.yaml, then run bpfw verify"],
+            )
+
+        message_text = "BPFW VERIFY PASSED"
+        if validation_result.warnings:
+            message_text = f"{message_text} (with migration warning)"
+
+        return StepResult(
+            status=ResultStatus.OK,
+            message=message_text,
+            source=self.name,
+            details={**verify_result.summary, "blocking_reasons": "0"},
+        )
+
+
+@dataclass(slots=True)
+class AuthorityLockStep(PipelineStep):
+    """Lock blueprint authority resource."""
+
+    name: str = "authority.lock"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        authority_state = load_authority_state(project_root=context.project_root)
+        authority_state.active_unlock_window = None
+        authority_state.last_relock_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+        save_authority_state(project_root=context.project_root, state=authority_state)
+
+        return StepResult(
+            status=ResultStatus.OK,
+            message=f"Blueprint locked: {CANONICAL_BLUEPRINT_FILE}",
+            source=self.name,
+            details={"lock_state": "locked", "resource_id": "project_blueprint"},
+        )
+
+
+@dataclass(slots=True)
+class AuthorityUnlockStep(PipelineStep):
+    """Unlock blueprint resource with TTL window."""
+
+    name: str = "authority.unlock"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        ttl_minutes = _parse_ttl_to_minutes(context.command_arguments.get("ttl", "10m"))
+        if ttl_minutes <= 0:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message="ttl must be greater than zero",
+                source=self.name,
+                details={"error_code": "AUTH_UNLOCK_TTL"},
+            )
+
+        expiration_time = datetime.now(timezone.utc) + timedelta(minutes=ttl_minutes)
+        unlock_window = UnlockWindow(
+            resource_id="project_blueprint",
+            resource_path=CANONICAL_BLUEPRINT_FILE,
+            scope=str(context.command_arguments.get("scope", "manual") or "manual"),
+            operation=str(context.command_arguments.get("operation", "unlock") or "unlock"),
+            expires_at=expiration_time.replace(microsecond=0).isoformat(),
+            granted_by="cli",
+            request_id="",
+            grant_id=f"manual_project_blueprint_{int(expiration_time.timestamp())}",
+        )
+
+        authority_state = load_authority_state(project_root=context.project_root)
+        authority_state.active_unlock_window = unlock_window
+        save_authority_state(project_root=context.project_root, state=authority_state)
+
+        return StepResult(
+            status=ResultStatus.OK,
+            message=f"Blueprint unlocked for {ttl_minutes} minutes",
+            source=self.name,
+            details={"resource_id": "project_blueprint", "expires_at": unlock_window.expires_at},
+        )
+
+
+@dataclass(slots=True)
+class AuthorityStatusStep(PipelineStep):
+    """Report MVP status for lock, blueprint and catalog checks."""
+
+    name: str = "authority.status"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        validation_result = validate_blueprint(project_root=context.project_root)
+        lock_state = "locked" if _is_blueprint_locked(project_root=context.project_root) else "unlocked"
+
+        if not validation_result.is_valid or validation_result.blueprint is None:
+            first_error = validation_result.errors[0]
+            return StepResult(
+                status=ResultStatus.WARNING,
+                message="Blueprint status reported with validation warnings",
+                source=self.name,
+                details={
+                    "lock": lock_state,
+                    "blueprint_state": "invalid",
+                    "drift_state": "unknown",
+                    "lifecycle_state": "unknown",
+                    "first_error": first_error.code,
+                },
+            )
+
+        verify_result = run_catalog_verify(project_root=context.project_root, blueprint=validation_result.blueprint)
+        drift_state = "clean"
+        lifecycle_state = "valid"
+        if int(verify_result.summary.get("missing_declared_code", "0")) > 0 or int(verify_result.summary.get("undeclared_code", "0")) > 0:
+            drift_state = "drift"
+        if int(verify_result.summary.get("invalid_lifecycles", "0")) > 0:
+            lifecycle_state = "invalid"
+
+        return StepResult(
+            status=ResultStatus.OK,
+            message="MVP status reported",
+            source=self.name,
+            details={
+                "lock": lock_state,
+                "blueprint_state": "defined",
+                "drift_state": drift_state,
+                "lifecycle_state": lifecycle_state,
+                **verify_result.summary,
+            },
         )
 
 
 def build_default_registry() -> dict[str, Pipeline]:
     """Build default pipeline registry for BPFW MVP."""
 
-    verify_pipeline = Pipeline(
-        name="verify",
-        steps=[
-            VerifyBlueprintStep(),
-            VerifyAuthorityStep(),
-            VerifyIntegrityStep(strict=True),
-        ],
-    )
-
-    lock_pipeline = Pipeline(
-        name="lock",
-        steps=[AuthorityLockStep()],
-    )
-
-    unlock_pipeline = Pipeline(
-        name="unlock",
-        steps=[AuthorityUnlockStep()],
-    )
-
-    status_pipeline = Pipeline(
-        name="status",
-        steps=[AuthorityStatusStep()],
-    )
-
-    init_pipeline = Pipeline(
-        name="init",
-        steps=[InitProjectStep()],
-    )
-
-    wizard_pipeline = Pipeline(
-        name="wizard",
-        steps=[
-            StaticStep(
-                name="wizard.scaffold",
-                message="Wizard not implemented yet. TODO: implement interactive blueprint scaffolding in future prompts.",
-            ),
-        ],
-    )
-
     return {
-        "verify": verify_pipeline,
-        "lock": lock_pipeline,
-        "unlock": unlock_pipeline,
-        "status": status_pipeline,
-        "init": init_pipeline,
-        "wizard": wizard_pipeline,
+        "verify": Pipeline(name="verify", steps=[VerifyBlueprintStep()]),
+        "lock": Pipeline(name="lock", steps=[AuthorityLockStep()]),
+        "unlock": Pipeline(name="unlock", steps=[AuthorityUnlockStep()]),
+        "status": Pipeline(name="status", steps=[AuthorityStatusStep()]),
+        "init": Pipeline(name="init", steps=[InitProjectStep()]),
+        "wizard": Pipeline(name="wizard", steps=[WizardStep()]),
     }

@@ -1,7 +1,5 @@
 """Deterministic engine orchestrating BPFW pipelines."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from bpfw.core.context import EngineCommand, build_project_context
@@ -11,7 +9,7 @@ from bpfw.core.result import EngineResult, ResultStatus, StepResult, aggregate_s
 
 
 class BlueprintEngine:
-    """Minimal engine implementation for Prompt 0 project bootstrap."""
+    """Minimal engine implementation for MVP catalog mode."""
 
     def __init__(self) -> None:
         self._registry = build_default_registry()
@@ -29,9 +27,7 @@ class BlueprintEngine:
                         status=ResultStatus.BLOCK,
                         message=f"Unknown command: {command.command_name}",
                         source="core.registry",
-                        suggested_actions=[
-                            "Use one of: verify, verify_integrity, install_hooks, manifest_write, approve, approvals, start, review, apply, reject, runtime snapshot, wiring check, architecture check, composition check, discover, proposals, show_proposal, accept_proposal, reject_proposal, authority status, authority unlock, authority relock, authority lock, watch, status"
-                        ],
+                        suggested_actions=["Use one of: init, wizard, verify, lock, unlock, status"],
                     )
                 ],
             )
@@ -46,7 +42,6 @@ class BlueprintEngine:
             status=aggregate_status(step_results),
             steps=step_results,
         )
-
 
 
 def build_command(command_name: str, project_root: Path, arguments: dict[str, str]) -> EngineCommand:
