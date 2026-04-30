@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
+from bpfw.catalog.writer import run_init
 from bpfw.core.engine import BlueprintEngine, build_command
 
 
@@ -152,15 +153,15 @@ def main() -> int:
     except ValueError as error:
         parser.error(str(error))
 
+    # init is handled directly by the catalog writer
+    if normalized_command == "init":
+        project_root = Path(parsed_arguments.project_root).resolve()
+        _success, message, exit_code = run_init(project_root=project_root)
+        print(message)
+        return exit_code
+
     engine = BlueprintEngine()
     command_arguments: dict[str, str] = {}
-
-    # init flags
-    if normalized_command == "init":
-        if parsed_arguments.accept_scan:
-            command_arguments["accept_scan"] = "true"
-        if parsed_arguments.force_new:
-            command_arguments["force_new"] = "true"
 
     # unlock args — resource comes from subcommand (2nd positional)
     if normalized_command == "unlock":

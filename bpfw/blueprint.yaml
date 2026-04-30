@@ -2,8 +2,8 @@ version: 1
 
 project:
   id: blueprint_framework
-  name: Blueprint Framework
-  root: .
+  name: blueprint-framework
+  root: /home/luiginorp/Documents/Programacion/Proyectos_Programacion/blueprint-framework
   language: python
   source_roots:
     - src
@@ -13,8 +13,8 @@ project:
     - venv
     - __pycache__
     - node_modules
-    - dist
-    - build
+    - tests
+    - migrations
 
 policy:
   mode: catalog
@@ -31,13 +31,35 @@ policy:
 
 responsibilities:
   - id: framework_entrypoint
-    intent: ""
+    intent: null
     canonical_name: BlueprintFrameworkEntryPoint
-    owner_layer: bootstrap
-    lifecycle: active
-
+    owner_layer: null
+    lifecycle: null
     location:
       path: src/bpfw/cli.py
       module: bpfw.cli
       symbol: main
       symbol_type: function
+      start_line: 140
+      end_line: 182
+    detected:
+      qualified_name: bpfw.cli.main
+      kind: function
+      methods: []
+      functions: []
+      imports: []
+      decorators: []
+      docstring: Entry point for BPFW MVP CLI.
+      signature: main()
+    entrypoints: []
+    related_code: []
+    duplicate_policy:
+      group: null
+      allow_multiple_non_active: true
+      forbidden_active_duplicates: true
+      suspected_duplicates: []
+    replacement:
+      replaces: null
+      replaced_by: null
+      reason: null
+    notes: null
