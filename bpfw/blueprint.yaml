@@ -1,65 +1,2622 @@
 version: 1
-
 project:
   id: blueprint_framework
   name: blueprint-framework
-  root: /home/luiginorp/Documents/Programacion/Proyectos_Programacion/blueprint-framework
+  root: /mnt/Documents/Documents/Programacion/Proyectos_Programacion/blueprint-framework
   language: python
   source_roots:
-    - src
+  - src
   ignored_paths:
-    - .git
-    - .venv
-    - venv
-    - __pycache__
-    - node_modules
-    - tests
-    - migrations
-
+  - .git
+  - .venv
+  - venv
+  - __pycache__
+  - node_modules
+  - tests
+  - migrations
 policy:
   mode: catalog
   empty_blueprint_allows_execution: true
   defined_blueprint_blocks_on_drift: true
   allowed_lifecycles:
-    - active
-    - experimental
-    - legacy
-    - deprecated
+  - active
+  - experimental
+  - legacy
+  - deprecated
   single_active_per_intent: true
   undeclared_code_blocks: true
   missing_declared_code_blocks: true
-
 responsibilities:
-  - id: framework_entrypoint
-    intent: null
-    canonical_name: BlueprintFrameworkEntryPoint
-    owner_layer: null
-    lifecycle: null
-    location:
-      path: src/bpfw/cli.py
-      module: bpfw.cli
-      symbol: main
-      symbol_type: function
-      start_line: 140
-      end_line: 182
-    detected:
-      qualified_name: bpfw.cli.main
-      kind: function
-      methods: []
-      functions: []
-      imports: []
-      decorators: []
-      docstring: Entry point for BPFW MVP CLI.
-      signature: main()
-    entrypoints: []
-    related_code: []
-    duplicate_policy:
-      group: null
-      allow_multiple_non_active: true
-      forbidden_active_duplicates: true
-      suspected_duplicates: []
-    replacement:
-      replaces: null
-      replaced_by: null
-      reason: null
-    notes: null
+- id: query_service
+  intent: null
+  canonical_name: QueryService
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/application/query/query_service.py
+    module: src.application.query.query_service
+    symbol: QueryService
+    symbol_type: class
+    start_line: 1
+    end_line: 6
+  detected:
+    qualified_name: src.application.query.query_service.QueryService
+    kind: class
+    methods:
+    - execute
+    functions: []
+    imports: []
+    decorators: []
+    docstring: Default query execution service.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: retry_policy
+  intent: null
+  canonical_name: RetryPolicy
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/application/query/retry_policy.py
+    module: src.application.query.retry_policy
+    symbol: RetryPolicy
+    symbol_type: class
+    start_line: 1
+    end_line: 8
+  detected:
+    qualified_name: src.application.query.retry_policy.RetryPolicy
+    kind: class
+    methods:
+    - should_retry
+    functions: []
+    imports: []
+    decorators: []
+    docstring: Retry policy for query execution.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: use_case
+  intent: null
+  canonical_name: UseCase
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/application/use_case.py
+    module: src.application.use_case
+    symbol: UseCase
+    symbol_type: class
+    start_line: 4
+    end_line: 9
+  detected:
+    qualified_name: src.application.use_case.UseCase
+    kind: class
+    methods:
+    - execute
+    functions: []
+    imports:
+    - src.domain.entities.Entity
+    - src.domain.repository_port.RepositoryPort
+    decorators: []
+    docstring: null
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: create_repository
+  intent: null
+  canonical_name: create_repository
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bootstrap/wiring.py
+    module: src.bootstrap.wiring
+    symbol: create_repository
+    symbol_type: function
+    start_line: 3
+    end_line: 4
+  detected:
+    qualified_name: src.bootstrap.wiring.create_repository
+    kind: function
+    methods: []
+    functions: []
+    imports:
+    - src.infrastructure.repository.Repository
+    decorators: []
+    docstring: null
+    signature: create_repository()
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: authority_state
+  intent: null
+  canonical_name: AuthorityState
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/authority/state.py
+    module: src.bpfw.authority.state
+    symbol: AuthorityState
+    symbol_type: class
+    start_line: 22
+    end_line: 26
+  detected:
+    qualified_name: src.bpfw.authority.state.AuthorityState
+    kind: class
+    methods: []
+    functions: []
+    imports: &id001
+    - __future__.annotations
+    - dataclasses.dataclass
+    - datetime.datetime
+    - datetime.timezone
+    - json
+    - pathlib.Path
+    decorators:
+    - dataclass
+    docstring: null
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: unlock_window
+  intent: null
+  canonical_name: UnlockWindow
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/authority/state.py
+    module: src.bpfw.authority.state
+    symbol: UnlockWindow
+    symbol_type: class
+    start_line: 10
+    end_line: 18
+  detected:
+    qualified_name: src.bpfw.authority.state.UnlockWindow
+    kind: class
+    methods: []
+    functions: []
+    imports: *id001
+    decorators:
+    - dataclass
+    docstring: null
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: clear_unlock_window
+  intent: null
+  canonical_name: clear_unlock_window
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/authority/state.py
+    module: src.bpfw.authority.state
+    symbol: clear_unlock_window
+    symbol_type: function
+    start_line: 108
+    end_line: 114
+  detected:
+    qualified_name: src.bpfw.authority.state.clear_unlock_window
+    kind: function
+    methods: []
+    functions: []
+    imports: *id001
+    decorators: []
+    docstring: null
+    signature: clear_unlock_window(project_root, mark_locked) -> Path
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: load_authority_state
+  intent: null
+  canonical_name: load_authority_state
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/authority/state.py
+    module: src.bpfw.authority.state
+    symbol: load_authority_state
+    symbol_type: function
+    start_line: 70
+    end_line: 86
+  detected:
+    qualified_name: src.bpfw.authority.state.load_authority_state
+    kind: function
+    methods: []
+    functions: []
+    imports: *id001
+    decorators: []
+    docstring: null
+    signature: load_authority_state(project_root) -> AuthorityState
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: save_authority_state
+  intent: null
+  canonical_name: save_authority_state
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/authority/state.py
+    module: src.bpfw.authority.state
+    symbol: save_authority_state
+    symbol_type: function
+    start_line: 89
+    end_line: 99
+  detected:
+    qualified_name: src.bpfw.authority.state.save_authority_state
+    kind: function
+    methods: []
+    functions: []
+    imports: *id001
+    decorators: []
+    docstring: null
+    signature: save_authority_state(project_root, state) -> Path
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: set_unlock_window
+  intent: null
+  canonical_name: set_unlock_window
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/authority/state.py
+    module: src.bpfw.authority.state
+    symbol: set_unlock_window
+    symbol_type: function
+    start_line: 102
+    end_line: 105
+  detected:
+    qualified_name: src.bpfw.authority.state.set_unlock_window
+    kind: function
+    methods: []
+    functions: []
+    imports: *id001
+    decorators: []
+    docstring: null
+    signature: set_unlock_window(project_root, window) -> Path
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: blueprint_load_error
+  intent: null
+  canonical_name: BlueprintLoadError
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/blueprint/loader.py
+    module: src.bpfw.blueprint.loader
+    symbol: BlueprintLoadError
+    symbol_type: class
+    start_line: 10
+    end_line: 11
+  detected:
+    qualified_name: src.bpfw.blueprint.loader.BlueprintLoadError
+    kind: class
+    methods: []
+    functions: []
+    imports: &id002
+    - pathlib.Path
+    - yaml
+    - bpfw.blueprint.schema.CANONICAL_BLUEPRINT_FILE
+    decorators: []
+    docstring: Raised when blueprint loading/parsing fails.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: load_blueprint_data
+  intent: null
+  canonical_name: load_blueprint_data
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/blueprint/loader.py
+    module: src.bpfw.blueprint.loader
+    symbol: load_blueprint_data
+    symbol_type: function
+    start_line: 26
+    end_line: 41
+  detected:
+    qualified_name: src.bpfw.blueprint.loader.load_blueprint_data
+    kind: function
+    methods: []
+    functions: []
+    imports: *id002
+    decorators: []
+    docstring: Load and parse blueprint data into a dictionary.
+    signature: load_blueprint_data(project_root) -> tuple[Path, dict, list[str]]
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: resolve_blueprint_path
+  intent: null
+  canonical_name: resolve_blueprint_path
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/blueprint/loader.py
+    module: src.bpfw.blueprint.loader
+    symbol: resolve_blueprint_path
+    symbol_type: function
+    start_line: 14
+    end_line: 23
+  detected:
+    qualified_name: src.bpfw.blueprint.loader.resolve_blueprint_path
+    kind: function
+    methods: []
+    functions: []
+    imports: *id002
+    decorators: []
+    docstring: Resolve canonical blueprint path.
+    signature: resolve_blueprint_path(project_root) -> tuple[Path, list[str]]
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: blueprint_implementation
+  intent: null
+  canonical_name: BlueprintImplementation
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/blueprint/models.py
+    module: src.bpfw.blueprint.models
+    symbol: BlueprintImplementation
+    symbol_type: class
+    start_line: 8
+    end_line: 17
+  detected:
+    qualified_name: src.bpfw.blueprint.models.BlueprintImplementation
+    kind: class
+    methods: []
+    functions: []
+    imports: &id003
+    - dataclasses.dataclass
+    - dataclasses.field
+    - pathlib.Path
+    decorators:
+    - dataclass
+    docstring: Implementation option declared for one responsibility.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: blueprint_model
+  intent: null
+  canonical_name: BlueprintModel
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/blueprint/models.py
+    module: src.bpfw.blueprint.models
+    symbol: BlueprintModel
+    symbol_type: class
+    start_line: 49
+    end_line: 55
+  detected:
+    qualified_name: src.bpfw.blueprint.models.BlueprintModel
+    kind: class
+    methods: []
+    functions: []
+    imports: *id003
+    decorators:
+    - dataclass
+    docstring: Typed blueprint root model.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: blueprint_responsibility
+  intent: null
+  canonical_name: BlueprintResponsibility
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/blueprint/models.py
+    module: src.bpfw.blueprint.models
+    symbol: BlueprintResponsibility
+    symbol_type: class
+    start_line: 21
+    end_line: 35
+  detected:
+    qualified_name: src.bpfw.blueprint.models.BlueprintResponsibility
+    kind: class
+    methods: []
+    functions: []
+    imports: *id003
+    decorators:
+    - dataclass
+    docstring: Responsibility contract declared in blueprint.yaml.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: blueprint_validation_error
+  intent: null
+  canonical_name: BlueprintValidationError
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/blueprint/models.py
+    module: src.bpfw.blueprint.models
+    symbol: BlueprintValidationError
+    symbol_type: class
+    start_line: 59
+    end_line: 65
+  detected:
+    qualified_name: src.bpfw.blueprint.models.BlueprintValidationError
+    kind: class
+    methods: []
+    functions: []
+    imports: *id003
+    decorators:
+    - dataclass
+    docstring: Single deterministic validation error with evidence.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: blueprint_validation_result
+  intent: null
+  canonical_name: BlueprintValidationResult
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/blueprint/models.py
+    module: src.bpfw.blueprint.models
+    symbol: BlueprintValidationResult
+    symbol_type: class
+    start_line: 69
+    end_line: 75
+  detected:
+    qualified_name: src.bpfw.blueprint.models.BlueprintValidationResult
+    kind: class
+    methods: []
+    functions: []
+    imports: *id003
+    decorators:
+    - dataclass
+    docstring: Validation output consumed by engine steps.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: locked_resource
+  intent: null
+  canonical_name: LockedResource
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/blueprint/models.py
+    module: src.bpfw.blueprint.models
+    symbol: LockedResource
+    symbol_type: class
+    start_line: 39
+    end_line: 45
+  detected:
+    qualified_name: src.bpfw.blueprint.models.LockedResource
+    kind: class
+    methods: []
+    functions: []
+    imports: *id003
+    decorators:
+    - dataclass
+    docstring: Immutable/controlled resource declared in blueprint.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: build_implementation_index
+  intent: null
+  canonical_name: build_implementation_index
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/blueprint/resolver.py
+    module: src.bpfw.blueprint.resolver
+    symbol: build_implementation_index
+    symbol_type: function
+    start_line: 9
+    end_line: 15
+  detected:
+    qualified_name: src.bpfw.blueprint.resolver.build_implementation_index
+    kind: function
+    methods: []
+    functions: []
+    imports:
+    - __future__.annotations
+    - bpfw.blueprint.models.BlueprintResponsibility
+    decorators: []
+    docstring: Return implementation_id -> lifecycle_state for one responsibility.
+    signature: build_implementation_index(responsibility) -> dict[str, str]
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: validate_blueprint
+  intent: null
+  canonical_name: validate_blueprint
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/blueprint/validator.py
+    module: src.bpfw.blueprint.validator
+    symbol: validate_blueprint
+    symbol_type: function
+    start_line: 39
+    end_line: 221
+  detected:
+    qualified_name: src.bpfw.blueprint.validator.validate_blueprint
+    kind: function
+    methods: []
+    functions: []
+    imports:
+    - pathlib.Path
+    - bpfw.blueprint.loader.BlueprintLoadError
+    - bpfw.blueprint.loader.load_blueprint_data
+    - bpfw.blueprint.models.BlueprintImplementation
+    - bpfw.blueprint.models.BlueprintModel
+    - bpfw.blueprint.models.BlueprintResponsibility
+    - bpfw.blueprint.models.BlueprintValidationError
+    - bpfw.blueprint.models.BlueprintValidationResult
+    - bpfw.blueprint.models.LockedResource
+    - bpfw.blueprint.resolver.build_implementation_index
+    - bpfw.blueprint.schema.REQUIRED_IMPLEMENTATION_FIELDS
+    - bpfw.blueprint.schema.REQUIRED_LOCKED_RESOURCE_FIELDS
+    - bpfw.blueprint.schema.REQUIRED_RESPONSIBILITY_FIELDS
+    - bpfw.blueprint.schema.REQUIRED_ROOT_FIELDS
+    decorators: []
+    docstring: Load and validate minimum blueprint contract for MVP.
+    signature: validate_blueprint(project_root) -> BlueprintValidationResult
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: blueprint_writer
+  intent: null
+  canonical_name: BlueprintWriter
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/blueprint/writer.py
+    module: src.bpfw.blueprint.writer
+    symbol: BlueprintWriter
+    symbol_type: class
+    start_line: 11
+    end_line: 67
+  detected:
+    qualified_name: src.bpfw.blueprint.writer.BlueprintWriter
+    kind: class
+    methods:
+    - write
+    functions: []
+    imports:
+    - pathlib.Path
+    - yaml
+    - bpfw.blueprint.models.BlueprintModel
+    - bpfw.blueprint.schema.CANONICAL_BLUEPRINT_FILE
+    decorators: []
+    docstring: Writes blueprint files using deterministic formatting and atomic replacement.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: blueprint_loader
+  intent: null
+  canonical_name: BlueprintLoader
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/catalog/loader.py
+    module: src.bpfw.catalog.loader
+    symbol: BlueprintLoader
+    symbol_type: class
+    start_line: 18
+    end_line: 165
+  detected:
+    qualified_name: src.bpfw.catalog.loader.BlueprintLoader
+    kind: class
+    methods:
+    - load
+    functions: []
+    imports: &id004
+    - pathlib.Path
+    - typing.Any
+    - typing.Dict
+    - bpfw.catalog.models.AUTHORITY_STATE_DEFINED
+    - bpfw.catalog.models.AUTHORITY_STATE_DRAFT
+    - bpfw.catalog.models.AUTHORITY_STATE_EMPTY
+    - bpfw.catalog.models.AUTHORITY_STATE_INVALID
+    - bpfw.catalog.models.AUTHORITY_STATE_MISSING
+    - bpfw.catalog.models.BlueprintLoadResult
+    - bpfw.catalog.paths.resolve_blueprint_path
+    - bpfw.reports.finding.FINDING_SEVERITY_BLOCK
+    - bpfw.reports.finding.FINDING_SEVERITY_INFO
+    - bpfw.reports.finding.FINDING_SEVERITY_WARNING
+    - bpfw.reports.finding.Finding
+    - yaml
+    decorators: []
+    docstring: Load and parse bpfw/blueprint.yaml.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: is_responsibility_complete
+  intent: null
+  canonical_name: is_responsibility_complete
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/catalog/loader.py
+    module: src.bpfw.catalog.loader
+    symbol: is_responsibility_complete
+    symbol_type: function
+    start_line: 168
+    end_line: 204
+  detected:
+    qualified_name: src.bpfw.catalog.loader.is_responsibility_complete
+    kind: function
+    methods: []
+    functions: []
+    imports: *id004
+    decorators: []
+    docstring: "Check if a responsibility has all required fields.\n\nRequired fields:\n\
+      - id\n- intent\n- canonical_name\n- owner_layer\n- lifecycle\n- location.path\n\
+      - location.symbol\n- location.symbol_type\n\nArgs:\n    responsibility: The\
+      \ responsibility dictionary to check.\n\nReturns:\n    True if all required\
+      \ fields are present and non-empty, False otherwise."
+    signature: is_responsibility_complete(responsibility) -> bool
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: blueprint_load_result
+  intent: null
+  canonical_name: BlueprintLoadResult
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/catalog/models.py
+    module: src.bpfw.catalog.models
+    symbol: BlueprintLoadResult
+    symbol_type: class
+    start_line: 49
+    end_line: 55
+  detected:
+    qualified_name: src.bpfw.catalog.models.BlueprintLoadResult
+    kind: class
+    methods: []
+    functions: []
+    imports: &id005
+    - dataclasses.dataclass
+    - dataclasses.field
+    - typing.Any
+    - typing.Dict
+    - typing.List
+    - typing.Optional
+    - bpfw.reports.finding.Finding
+    decorators:
+    - dataclass
+    docstring: Result of loading and parsing blueprint.yaml.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: discovered_code_unit
+  intent: null
+  canonical_name: DiscoveredCodeUnit
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/catalog/models.py
+    module: src.bpfw.catalog.models
+    symbol: DiscoveredCodeUnit
+    symbol_type: class
+    start_line: 30
+    end_line: 45
+  detected:
+    qualified_name: src.bpfw.catalog.models.DiscoveredCodeUnit
+    kind: class
+    methods: []
+    functions: []
+    imports: *id005
+    decorators:
+    - dataclass
+    docstring: Represent a code unit discovered by AST scanning.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: scan_result
+  intent: null
+  canonical_name: ScanResult
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/catalog/models.py
+    module: src.bpfw.catalog.models
+    symbol: ScanResult
+    symbol_type: class
+    start_line: 59
+    end_line: 63
+  detected:
+    qualified_name: src.bpfw.catalog.models.ScanResult
+    kind: class
+    methods: []
+    functions: []
+    imports: *id005
+    decorators:
+    - dataclass
+    docstring: Result of scanning Python code with AST.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: verification_report
+  intent: null
+  canonical_name: VerificationReport
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/catalog/models.py
+    module: src.bpfw.catalog.models
+    symbol: VerificationReport
+    symbol_type: class
+    start_line: 67
+    end_line: 79
+  detected:
+    qualified_name: src.bpfw.catalog.models.VerificationReport
+    kind: class
+    methods: []
+    functions: []
+    imports: *id005
+    decorators:
+    - dataclass
+    docstring: Report from verifying blueprint against discovered code.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: resolve_blueprint_path
+  intent: null
+  canonical_name: resolve_blueprint_path
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/catalog/paths.py
+    module: src.bpfw.catalog.paths
+    symbol: resolve_blueprint_path
+    symbol_type: function
+    start_line: 21
+    end_line: 30
+  detected:
+    qualified_name: src.bpfw.catalog.paths.resolve_blueprint_path
+    kind: function
+    methods: []
+    functions: []
+    imports: &id006
+    - pathlib.Path
+    - typing.Optional
+    decorators: []
+    docstring: "Resolve the path to bpfw/blueprint.yaml.\n\nArgs:\n    project_root:\
+      \ The project root directory.\n\nReturns:\n    Path to bpfw/blueprint.yaml relative\
+      \ to project root."
+    signature: resolve_blueprint_path(project_root) -> Path
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: resolve_project_root
+  intent: null
+  canonical_name: resolve_project_root
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/catalog/paths.py
+    module: src.bpfw.catalog.paths
+    symbol: resolve_project_root
+    symbol_type: function
+    start_line: 7
+    end_line: 18
+  detected:
+    qualified_name: src.bpfw.catalog.paths.resolve_project_root
+    kind: function
+    methods: []
+    functions: []
+    imports: *id006
+    decorators: []
+    docstring: "Resolve the project root directory.\n\nArgs:\n    explicit_project_root:\
+      \ If provided, return it resolved. Otherwise, return Path.cwd().\n\nReturns:\n\
+      \    Resolved project root path."
+    signature: resolve_project_root(explicit_project_root) -> Path
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: scan_python_project
+  intent: null
+  canonical_name: scan_python_project
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/catalog/scanner.py
+    module: src.bpfw.catalog.scanner
+    symbol: scan_python_project
+    symbol_type: function
+    start_line: 11
+    end_line: 65
+  detected:
+    qualified_name: src.bpfw.catalog.scanner.scan_python_project
+    kind: function
+    methods: []
+    functions: []
+    imports:
+    - ast
+    - pathlib.Path
+    - typing.List
+    - typing.Optional
+    - bpfw.catalog.models.DiscoveredCodeUnit
+    - bpfw.catalog.models.ScanResult
+    - bpfw.reports.finding.Finding
+    decorators: []
+    docstring: "Scan Python project using AST parsing.\n\nArgs:\n    project_root:\
+      \ Root directory of the project.\n    source_roots: List of source root directories\
+      \ relative to project_root.\n    ignored_paths: List of path patterns to ignore.\n\
+      \nReturns:\n    ScanResult containing discovered code units and any findings."
+    signature: scan_python_project(project_root, source_roots, ignored_paths) -> ScanResult
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: catalog_finding
+  intent: null
+  canonical_name: CatalogFinding
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/catalog/verify.py
+    module: src.bpfw.catalog.verify
+    symbol: CatalogFinding
+    symbol_type: class
+    start_line: 13
+    end_line: 19
+  detected:
+    qualified_name: src.bpfw.catalog.verify.CatalogFinding
+    kind: class
+    methods: []
+    functions: []
+    imports: &id007
+    - dataclasses.dataclass
+    - dataclasses.field
+    - pathlib.Path
+    - bpfw.blueprint.models.BlueprintModel
+    - bpfw.init.scanner.MechanicalProjectScanner
+    decorators:
+    - dataclass
+    docstring: Single verify finding.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: catalog_verify_result
+  intent: null
+  canonical_name: CatalogVerifyResult
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/catalog/verify.py
+    module: src.bpfw.catalog.verify
+    symbol: CatalogVerifyResult
+    symbol_type: class
+    start_line: 23
+    end_line: 28
+  detected:
+    qualified_name: src.bpfw.catalog.verify.CatalogVerifyResult
+    kind: class
+    methods: []
+    functions: []
+    imports: *id007
+    decorators:
+    - dataclass
+    docstring: Catalog verify output.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: run_catalog_verify
+  intent: null
+  canonical_name: run_catalog_verify
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/catalog/verify.py
+    module: src.bpfw.catalog.verify
+    symbol: run_catalog_verify
+    symbol_type: function
+    start_line: 41
+    end_line: 140
+  detected:
+    qualified_name: src.bpfw.catalog.verify.run_catalog_verify
+    kind: function
+    methods: []
+    functions: []
+    imports: *id007
+    decorators: []
+    docstring: Run catalog scanner, drift and lifecycle checks.
+    signature: run_catalog_verify(project_root, blueprint) -> CatalogVerifyResult
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: complete_human_fields
+  intent: null
+  canonical_name: complete_human_fields
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/catalog/wizard.py
+    module: src.bpfw.catalog.wizard
+    symbol: complete_human_fields
+    symbol_type: function
+    start_line: 13
+    end_line: 43
+  detected:
+    qualified_name: src.bpfw.catalog.wizard.complete_human_fields
+    kind: function
+    methods: []
+    functions: []
+    imports:
+    - pathlib.Path
+    - yaml
+    - bpfw.blueprint.loader.load_blueprint_data
+    decorators: []
+    docstring: Fill missing intent and lifecycle fields deterministically.
+    signature: complete_human_fields(project_root) -> tuple[Path, int]
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: build_initial_blueprint
+  intent: null
+  canonical_name: build_initial_blueprint
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/catalog/writer.py
+    module: src.bpfw.catalog.writer
+    symbol: build_initial_blueprint
+    symbol_type: function
+    start_line: 33
+    end_line: 123
+  detected:
+    qualified_name: src.bpfw.catalog.writer.build_initial_blueprint
+    kind: function
+    methods: []
+    functions: []
+    imports: &id008
+    - pathlib.Path
+    - typing.Any
+    - typing.Dict
+    - typing.List
+    - bpfw.catalog.models.DiscoveredCodeUnit
+    - bpfw.catalog.paths.resolve_blueprint_path
+    - bpfw.catalog.scanner.scan_python_project
+    - yaml
+    decorators: []
+    docstring: "Build initial blueprint data from project structure and discovered\
+      \ units.\n\nArgs:\n    project_root: Root directory of the project.\n    source_roots:\
+      \ List of source root directories.\n    ignored_paths: List of ignored path\
+      \ patterns.\n    discovered_units: List of discovered code units.\n\nReturns:\n\
+      \    Dictionary containing blueprint data."
+    signature: build_initial_blueprint(project_root, source_roots, ignored_paths,
+      discovered_units) -> Dict[str, Any]
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: run_init
+  intent: null
+  canonical_name: run_init
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/catalog/writer.py
+    module: src.bpfw.catalog.writer
+    symbol: run_init
+    symbol_type: function
+    start_line: 146
+    end_line: 231
+  detected:
+    qualified_name: src.bpfw.catalog.writer.run_init
+    kind: function
+    methods: []
+    functions: []
+    imports: *id008
+    decorators: []
+    docstring: "Run the init command to create initial blueprint.\n\nArgs:\n    project_root:\
+      \ Root directory of the project.\n\nReturns:\n    Tuple of (success, message,\
+      \ exit_code)."
+    signature: run_init(project_root) -> tuple[bool, str, int]
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: to_snake_case
+  intent: null
+  canonical_name: to_snake_case
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/catalog/writer.py
+    module: src.bpfw.catalog.writer
+    symbol: to_snake_case
+    symbol_type: function
+    start_line: 10
+    end_line: 30
+  detected:
+    qualified_name: src.bpfw.catalog.writer.to_snake_case
+    kind: function
+    methods: []
+    functions: []
+    imports: *id008
+    decorators: []
+    docstring: "Convert a string to snake_case.\n\nArgs:\n    value: The string to\
+      \ convert.\n\nReturns:\n    The string converted to snake_case."
+    signature: to_snake_case(value) -> str
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: write_blueprint
+  intent: null
+  canonical_name: write_blueprint
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/catalog/writer.py
+    module: src.bpfw.catalog.writer
+    symbol: write_blueprint
+    symbol_type: function
+    start_line: 126
+    end_line: 140
+  detected:
+    qualified_name: src.bpfw.catalog.writer.write_blueprint
+    kind: function
+    methods: []
+    functions: []
+    imports: *id008
+    decorators: []
+    docstring: "Write blueprint data to YAML file.\n\nArgs:\n    blueprint_path: Path\
+      \ to the blueprint file.\n    blueprint_data: Blueprint data to write."
+    signature: write_blueprint(blueprint_path, blueprint_data) -> None
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: build_parser
+  intent: null
+  canonical_name: build_parser
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/cli.py
+    module: src.bpfw.cli
+    symbol: build_parser
+    symbol_type: function
+    start_line: 22
+    end_line: 36
+  detected:
+    qualified_name: src.bpfw.cli.build_parser
+    kind: function
+    methods: []
+    functions: []
+    imports: &id009
+    - argparse
+    - json
+    - pathlib.Path
+    - bpfw.catalog.writer.run_init
+    - bpfw.core.engine.BlueprintEngine
+    - bpfw.core.engine.build_command
+    decorators: []
+    docstring: Create CLI parser for BPFW MVP commands.
+    signature: build_parser() -> argparse.ArgumentParser
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: main
+  intent: null
+  canonical_name: main
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/cli.py
+    module: src.bpfw.cli
+    symbol: main
+    symbol_type: function
+    start_line: 142
+    end_line: 188
+  detected:
+    qualified_name: src.bpfw.cli.main
+    kind: function
+    methods: []
+    functions: []
+    imports: *id009
+    decorators: []
+    docstring: Entry point for BPFW MVP CLI.
+    signature: main() -> int
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: normalize_command
+  intent: null
+  canonical_name: normalize_command
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/cli.py
+    module: src.bpfw.cli
+    symbol: normalize_command
+    symbol_type: function
+    start_line: 40
+    end_line: 68
+  detected:
+    qualified_name: src.bpfw.cli.normalize_command
+    kind: function
+    methods: []
+    functions: []
+    imports: *id009
+    decorators: []
+    docstring: Map CLI tokens into engine command names for MVP.
+    signature: normalize_command(command, subcommand) -> str
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: engine_command
+  intent: null
+  canonical_name: EngineCommand
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/core/context.py
+    module: src.bpfw.core.context
+    symbol: EngineCommand
+    symbol_type: class
+    start_line: 10
+    end_line: 15
+  detected:
+    qualified_name: src.bpfw.core.context.EngineCommand
+    kind: class
+    methods: []
+    functions: []
+    imports: &id010
+    - dataclasses.dataclass
+    - dataclasses.field
+    - pathlib.Path
+    - bpfw.blueprint.schema.CANONICAL_BLUEPRINT_FILE
+    decorators:
+    - dataclass
+    docstring: User command normalized for deterministic engine execution.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: project_context
+  intent: null
+  canonical_name: ProjectContext
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/core/context.py
+    module: src.bpfw.core.context
+    symbol: ProjectContext
+    symbol_type: class
+    start_line: 19
+    end_line: 26
+  detected:
+    qualified_name: src.bpfw.core.context.ProjectContext
+    kind: class
+    methods: []
+    functions: []
+    imports: *id010
+    decorators:
+    - dataclass
+    docstring: Runtime context shared across pipeline steps.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: build_project_context
+  intent: null
+  canonical_name: build_project_context
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/core/context.py
+    module: src.bpfw.core.context
+    symbol: build_project_context
+    symbol_type: function
+    start_line: 29
+    end_line: 38
+  detected:
+    qualified_name: src.bpfw.core.context.build_project_context
+    kind: function
+    methods: []
+    functions: []
+    imports: *id010
+    decorators: []
+    docstring: Build a minimal project context used by engine pipelines.
+    signature: build_project_context(project_root, command_arguments) -> ProjectContext
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: blueprint_engine
+  intent: null
+  canonical_name: BlueprintEngine
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/core/engine.py
+    module: src.bpfw.core.engine
+    symbol: BlueprintEngine
+    symbol_type: class
+    start_line: 11
+    end_line: 44
+  detected:
+    qualified_name: src.bpfw.core.engine.BlueprintEngine
+    kind: class
+    methods:
+    - run
+    functions: []
+    imports: &id011
+    - pathlib.Path
+    - bpfw.core.context.EngineCommand
+    - bpfw.core.context.build_project_context
+    - bpfw.core.pipeline.execute_pipeline
+    - bpfw.core.registry.build_default_registry
+    - bpfw.core.result.EngineResult
+    - bpfw.core.result.ResultStatus
+    - bpfw.core.result.StepResult
+    - bpfw.core.result.aggregate_status
+    decorators: []
+    docstring: Minimal engine implementation for MVP catalog mode.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: build_command
+  intent: null
+  canonical_name: build_command
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/core/engine.py
+    module: src.bpfw.core.engine
+    symbol: build_command
+    symbol_type: function
+    start_line: 47
+    end_line: 50
+  detected:
+    qualified_name: src.bpfw.core.engine.build_command
+    kind: function
+    methods: []
+    functions: []
+    imports: *id011
+    decorators: []
+    docstring: Normalize runtime arguments into EngineCommand.
+    signature: build_command(command_name, project_root, arguments) -> EngineCommand
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: pipeline
+  intent: null
+  canonical_name: Pipeline
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/core/pipeline.py
+    module: src.bpfw.core.pipeline
+    symbol: Pipeline
+    symbol_type: class
+    start_line: 22
+    end_line: 26
+  detected:
+    qualified_name: src.bpfw.core.pipeline.Pipeline
+    kind: class
+    methods: []
+    functions: []
+    imports: &id012
+    - __future__.annotations
+    - dataclasses.dataclass
+    - typing.Protocol
+    - bpfw.core.context.ProjectContext
+    - bpfw.core.result.StepResult
+    decorators:
+    - dataclass
+    docstring: Ordered list of deterministic steps.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: pipeline_step
+  intent: null
+  canonical_name: PipelineStep
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/core/pipeline.py
+    module: src.bpfw.core.pipeline
+    symbol: PipelineStep
+    symbol_type: class
+    start_line: 12
+    end_line: 18
+  detected:
+    qualified_name: src.bpfw.core.pipeline.PipelineStep
+    kind: class
+    methods:
+    - run
+    functions: []
+    imports: *id012
+    decorators: []
+    docstring: Contract implemented by every pipeline step.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: execute_pipeline
+  intent: null
+  canonical_name: execute_pipeline
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/core/pipeline.py
+    module: src.bpfw.core.pipeline
+    symbol: execute_pipeline
+    symbol_type: function
+    start_line: 30
+    end_line: 33
+  detected:
+    qualified_name: src.bpfw.core.pipeline.execute_pipeline
+    kind: function
+    methods: []
+    functions: []
+    imports: *id012
+    decorators: []
+    docstring: Run all steps in order and collect results.
+    signature: execute_pipeline(pipeline, context) -> list[StepResult]
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: authority_lock_step
+  intent: null
+  canonical_name: AuthorityLockStep
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/core/registry.py
+    module: src.bpfw.core.registry
+    symbol: AuthorityLockStep
+    symbol_type: class
+    start_line: 241
+    end_line: 257
+  detected:
+    qualified_name: src.bpfw.core.registry.AuthorityLockStep
+    kind: class
+    methods:
+    - run
+    functions: []
+    imports: &id013
+    - dataclasses.dataclass
+    - datetime.datetime
+    - datetime.timedelta
+    - datetime.timezone
+    - pathlib.Path
+    - yaml
+    - bpfw.authority.state.AuthorityState
+    - bpfw.authority.state.UnlockWindow
+    - bpfw.authority.state.load_authority_state
+    - bpfw.authority.state.save_authority_state
+    - bpfw.blueprint.schema.CANONICAL_BLUEPRINT_FILE
+    - bpfw.blueprint.validator.validate_blueprint
+    - bpfw.catalog.verify.run_catalog_verify
+    - bpfw.catalog.wizard.complete_human_fields
+    - bpfw.core.pipeline.Pipeline
+    - bpfw.core.pipeline.PipelineStep
+    - bpfw.core.result.ResultStatus
+    - bpfw.core.result.StepResult
+    - bpfw.init.detector.ProjectDetector
+    - bpfw.init.scanner.MechanicalProjectScanner
+    decorators:
+    - dataclass
+    docstring: Lock blueprint authority resource.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: authority_status_step
+  intent: null
+  canonical_name: AuthorityStatusStep
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/core/registry.py
+    module: src.bpfw.core.registry
+    symbol: AuthorityStatusStep
+    symbol_type: class
+    start_line: 301
+    end_line: 344
+  detected:
+    qualified_name: src.bpfw.core.registry.AuthorityStatusStep
+    kind: class
+    methods:
+    - run
+    functions: []
+    imports: *id013
+    decorators:
+    - dataclass
+    docstring: Report MVP status for lock, blueprint and catalog checks.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: authority_unlock_step
+  intent: null
+  canonical_name: AuthorityUnlockStep
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/core/registry.py
+    module: src.bpfw.core.registry
+    symbol: AuthorityUnlockStep
+    symbol_type: class
+    start_line: 261
+    end_line: 297
+  detected:
+    qualified_name: src.bpfw.core.registry.AuthorityUnlockStep
+    kind: class
+    methods:
+    - run
+    functions: []
+    imports: *id013
+    decorators:
+    - dataclass
+    docstring: Unlock blueprint resource with TTL window.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: init_project_step
+  intent: null
+  canonical_name: InitProjectStep
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/core/registry.py
+    module: src.bpfw.core.registry
+    symbol: InitProjectStep
+    symbol_type: class
+    start_line: 123
+    end_line: 163
+  detected:
+    qualified_name: src.bpfw.core.registry.InitProjectStep
+    kind: class
+    methods:
+    - run
+    functions: []
+    imports: *id013
+    decorators:
+    - dataclass
+    docstring: Initialize project with baseline blueprint for MVP.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: verify_blueprint_step
+  intent: null
+  canonical_name: VerifyBlueprintStep
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/core/registry.py
+    module: src.bpfw.core.registry
+    symbol: VerifyBlueprintStep
+    symbol_type: class
+    start_line: 192
+    end_line: 237
+  detected:
+    qualified_name: src.bpfw.core.registry.VerifyBlueprintStep
+    kind: class
+    methods:
+    - run
+    functions: []
+    imports: *id013
+    decorators:
+    - dataclass
+    docstring: Run catalog mode verify against blueprint and project code.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: wizard_step
+  intent: null
+  canonical_name: WizardStep
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/core/registry.py
+    module: src.bpfw.core.registry
+    symbol: WizardStep
+    symbol_type: class
+    start_line: 167
+    end_line: 188
+  detected:
+    qualified_name: src.bpfw.core.registry.WizardStep
+    kind: class
+    methods:
+    - run
+    functions: []
+    imports: *id013
+    decorators:
+    - dataclass
+    docstring: Complete human fields in blueprint deterministically.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: build_default_registry
+  intent: null
+  canonical_name: build_default_registry
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/core/registry.py
+    module: src.bpfw.core.registry
+    symbol: build_default_registry
+    symbol_type: function
+    start_line: 347
+    end_line: 357
+  detected:
+    qualified_name: src.bpfw.core.registry.build_default_registry
+    kind: function
+    methods: []
+    functions: []
+    imports: *id013
+    decorators: []
+    docstring: Build default pipeline registry for BPFW MVP.
+    signature: build_default_registry() -> dict[str, Pipeline]
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: engine_result
+  intent: null
+  canonical_name: EngineResult
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/core/result.py
+    module: src.bpfw.core.result
+    symbol: EngineResult
+    symbol_type: class
+    start_line: 32
+    end_line: 37
+  detected:
+    qualified_name: src.bpfw.core.result.EngineResult
+    kind: class
+    methods: []
+    functions: []
+    imports: &id014
+    - __future__.annotations
+    - dataclasses.dataclass
+    - dataclasses.field
+    - enum.StrEnum
+    decorators:
+    - dataclass
+    docstring: Aggregated output for one executed command.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: result_status
+  intent: null
+  canonical_name: ResultStatus
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/core/result.py
+    module: src.bpfw.core.result
+    symbol: ResultStatus
+    symbol_type: class
+    start_line: 9
+    end_line: 16
+  detected:
+    qualified_name: src.bpfw.core.result.ResultStatus
+    kind: class
+    methods: []
+    functions: []
+    imports: *id014
+    decorators: []
+    docstring: Normalized status values for every engine result.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: step_result
+  intent: null
+  canonical_name: StepResult
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/core/result.py
+    module: src.bpfw.core.result
+    symbol: StepResult
+    symbol_type: class
+    start_line: 20
+    end_line: 28
+  detected:
+    qualified_name: src.bpfw.core.result.StepResult
+    kind: class
+    methods: []
+    functions: []
+    imports: *id014
+    decorators:
+    - dataclass
+    docstring: Single step outcome with evidence payload.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: aggregate_status
+  intent: null
+  canonical_name: aggregate_status
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/core/result.py
+    module: src.bpfw.core.result
+    symbol: aggregate_status
+    symbol_type: function
+    start_line: 50
+    end_line: 55
+  detected:
+    qualified_name: src.bpfw.core.result.aggregate_status
+    kind: function
+    methods: []
+    functions: []
+    imports: *id014
+    decorators: []
+    docstring: Compute final status using the strongest step severity.
+    signature: aggregate_status(step_results) -> ResultStatus
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: project_detection_result
+  intent: null
+  canonical_name: ProjectDetectionResult
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/init/detector.py
+    module: src.bpfw.init.detector
+    symbol: ProjectDetectionResult
+    symbol_type: class
+    start_line: 12
+    end_line: 20
+  detected:
+    qualified_name: src.bpfw.init.detector.ProjectDetectionResult
+    kind: class
+    methods: []
+    functions: []
+    imports: &id015
+    - dataclasses.dataclass
+    - pathlib.Path
+    - bpfw.blueprint.schema.CANONICAL_BLUEPRINT_FILE
+    decorators:
+    - dataclass
+    docstring: Represents the detected initialization state of a project.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: project_detector
+  intent: null
+  canonical_name: ProjectDetector
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/init/detector.py
+    module: src.bpfw.init.detector
+    symbol: ProjectDetector
+    symbol_type: class
+    start_line: 23
+    end_line: 49
+  detected:
+    qualified_name: src.bpfw.init.detector.ProjectDetector
+    kind: class
+    methods:
+    - detect
+    - _has_python_sources
+    functions: []
+    imports: *id015
+    decorators: []
+    docstring: Detects whether a project is new, existing, or already initialized.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: discovered_import
+  intent: null
+  canonical_name: DiscoveredImport
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/init/scanner.py
+    module: src.bpfw.init.scanner
+    symbol: DiscoveredImport
+    symbol_type: class
+    start_line: 25
+    end_line: 30
+  detected:
+    qualified_name: src.bpfw.init.scanner.DiscoveredImport
+    kind: class
+    methods: []
+    functions: []
+    imports: &id016
+    - __future__.annotations
+    - ast
+    - dataclasses.dataclass
+    - pathlib.Path
+    decorators:
+    - dataclass
+    docstring: Represents an import discovered during mechanical scanning.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: discovered_symbol
+  intent: null
+  canonical_name: DiscoveredSymbol
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/init/scanner.py
+    module: src.bpfw.init.scanner
+    symbol: DiscoveredSymbol
+    symbol_type: class
+    start_line: 14
+    end_line: 21
+  detected:
+    qualified_name: src.bpfw.init.scanner.DiscoveredSymbol
+    kind: class
+    methods: []
+    functions: []
+    imports: *id016
+    decorators:
+    - dataclass
+    docstring: Represents a Python symbol discovered during mechanical scanning.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: mechanical_project_scanner
+  intent: null
+  canonical_name: MechanicalProjectScanner
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/init/scanner.py
+    module: src.bpfw.init.scanner
+    symbol: MechanicalProjectScanner
+    symbol_type: class
+    start_line: 44
+    end_line: 158
+  detected:
+    qualified_name: src.bpfw.init.scanner.MechanicalProjectScanner
+    kind: class
+    methods:
+    - scan
+    - _extract_symbols
+    - _extract_imports
+    - _infer_layer
+    - _is_entrypoint_path
+    functions: []
+    imports: *id016
+    decorators: []
+    docstring: Scans a Python project without using AI or semantic inference.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: mechanical_scan_result
+  intent: null
+  canonical_name: MechanicalScanResult
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/init/scanner.py
+    module: src.bpfw.init.scanner
+    symbol: MechanicalScanResult
+    symbol_type: class
+    start_line: 34
+    end_line: 41
+  detected:
+    qualified_name: src.bpfw.init.scanner.MechanicalScanResult
+    kind: class
+    methods: []
+    functions: []
+    imports: *id016
+    decorators:
+    - dataclass
+    docstring: Contains all mechanically discovered project facts.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: finding
+  intent: null
+  canonical_name: Finding
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/bpfw/reports/finding.py
+    module: src.bpfw.reports.finding
+    symbol: Finding
+    symbol_type: class
+    start_line: 13
+    end_line: 22
+  detected:
+    qualified_name: src.bpfw.reports.finding.Finding
+    kind: class
+    methods: []
+    functions: []
+    imports:
+    - dataclasses.dataclass
+    - dataclasses.field
+    - typing.Any
+    - typing.Dict
+    - typing.Optional
+    decorators:
+    - dataclass
+    docstring: Represent a normalized finding produced by BPFW.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: entity
+  intent: null
+  canonical_name: Entity
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/domain/entities.py
+    module: src.domain.entities
+    symbol: Entity
+    symbol_type: class
+    start_line: 1
+    end_line: 3
+  detected:
+    qualified_name: src.domain.entities.Entity
+    kind: class
+    methods: []
+    functions: []
+    imports: []
+    decorators: []
+    docstring: null
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: repository_port
+  intent: null
+  canonical_name: RepositoryPort
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/domain/repository_port.py
+    module: src.domain.repository_port
+    symbol: RepositoryPort
+    symbol_type: class
+    start_line: 3
+    end_line: 6
+  detected:
+    qualified_name: src.domain.repository_port.RepositoryPort
+    kind: class
+    methods:
+    - save
+    functions: []
+    imports:
+    - abc.ABC
+    - abc.abstractmethod
+    decorators: []
+    docstring: null
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: repository
+  intent: null
+  canonical_name: Repository
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/infrastructure/repository.py
+    module: src.infrastructure.repository
+    symbol: Repository
+    symbol_type: class
+    start_line: 1
+    end_line: 3
+  detected:
+    qualified_name: src.infrastructure.repository.Repository
+    kind: class
+    methods:
+    - save
+    functions: []
+    imports: []
+    decorators: []
+    docstring: null
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: a_p_i
+  intent: null
+  canonical_name: API
+  owner_layer: null
+  lifecycle: null
+  location:
+    path: src/public/api.py
+    module: src.public.api
+    symbol: API
+    symbol_type: class
+    start_line: 1
+    end_line: 3
+  detected:
+    qualified_name: src.public.api.API
+    kind: class
+    methods:
+    - get
+    functions: []
+    imports: []
+    decorators: []
+    docstring: null
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: null
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
