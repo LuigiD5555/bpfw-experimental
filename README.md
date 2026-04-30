@@ -9,7 +9,8 @@ This repository contains only the framework code (no application/domain code fro
 - `bpfw/blueprint.yaml` catalog generation
 - Catalog validation against discovered Python code
 - Drift detection for declared responsibilities
-- MVP blueprint lock/unlock state
+- Protected initialization with OS-level blueprint lock
+- Repair flow for incomplete local protection
 - Human-readable `verify` and `status` reports
 
 ## Install (editable)
@@ -27,6 +28,7 @@ bpfw verify
 bpfw status
 bpfw lock
 bpfw unlock
+bpfw repair
 ```
 
 ## Project root resolution
@@ -39,13 +41,22 @@ bpfw verify --project-root /path/to/target-project
 
 The target project may contain `bpfw/blueprint.yaml`. If it does not, run `bpfw init`.
 
-## Lock State
+## Protected Setup
 
-`bpfw lock` and `bpfw unlock` manage the MVP protection state for:
+`bpfw init` creates the blueprint and enables OS-level authority protection for:
 
 ```text
 bpfw/blueprint.yaml
 ```
+
+If an existing project has a broken lock state, run:
+
+```bash
+bpfw repair
+```
+
+`bpfw lock` and `bpfw unlock` remain available for explicit authority edit
+windows.
 
 ## Notes
 

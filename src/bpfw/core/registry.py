@@ -11,9 +11,9 @@ from bpfw.core.result import ResultStatus, StepResult
 from bpfw.protection.authority import (
     get_blueprint_lock_state,
     lock_blueprint,
-    setup_blueprint_protection,
     unlock_blueprint,
 )
+from bpfw.protection.setup import run_protection_setup, run_repair
 
 
 @dataclass(slots=True)
@@ -138,13 +138,17 @@ class AuthorityProtectSetupStep(PipelineStep):
     name: str = "protection.setup"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
-        lock_state = setup_blueprint_protection(project_root=context.project_root)
+        setup_result = run_protection_setup(project_root=context.project_root)
+        lock_state = setup_result.lock_state
         if lock_state == "unknown":
             return StepResult(
                 status=ResultStatus.BLOCK,
                 message=f"BPFW blueprint does not exist: {CANONICAL_BLUEPRINT_FILE}. Run bpfw init first.",
                 source=self.name,
-                details={"lock_state": lock_state, "resource_id": "project_blueprint"},
+                details={
+                    "lock_state": lock_state,
+                    "resource_id": "project_blueprint",
+                },
             )
         if lock_state == "unsupported":
             return StepResult(
@@ -156,14 +160,36 @@ class AuthorityProtectSetupStep(PipelineStep):
                     "changes or immutable flags."
                 ),
                 source=self.name,
-                details={"lock_state": lock_state, "resource_id": "project_blueprint"},
+                details={
+                    "lock_state": lock_state,
+                    "resource_id": "project_blueprint",
+                },
             )
 
         return StepResult(
             status=ResultStatus.OK,
             message=f"Blueprint protection enabled: {CANONICAL_BLUEPRINT_FILE}",
             source=self.name,
-            details={"lock_state": lock_state, "resource_id": "project_blueprint"},
+            details={
+                "lock_state": lock_state,
+                "resource_id": "project_blueprint",
+            },
+        )
+
+
+@dataclass(slots=True)
+class RepairProjectStep(PipelineStep):
+    """Repair BPFW local protection for an existing project."""
+
+    name: str = "protection.repair"
+
+    def run(self, context) -> StepResult:  # noqa: ANN001
+        _success, message, exit_code = run_repair(project_root=context.project_root)
+        return StepResult(
+            status=ResultStatus.OK if exit_code == 0 else ResultStatus.BLOCK,
+            message=message,
+            source=self.name,
+            details={"blueprint_path": CANONICAL_BLUEPRINT_FILE},
         )
 
 
@@ -226,6 +252,7 @@ def build_default_registry() -> dict[str, Pipeline]:
         "wizard": Pipeline(name="wizard", steps=[WizardStep()]),
         "verify": Pipeline(name="verify", steps=[VerifyBlueprintStep()]),
         "protect.setup": Pipeline(name="protect.setup", steps=[AuthorityProtectSetupStep()]),
+        "repair": Pipeline(name="repair", steps=[RepairProjectStep()]),
         "lock": Pipeline(name="lock", steps=[AuthorityLockStep()]),
         "unlock": Pipeline(name="unlock", steps=[AuthorityUnlockStep()]),
         "status": Pipeline(name="status", steps=[AuthorityStatusStep()]),

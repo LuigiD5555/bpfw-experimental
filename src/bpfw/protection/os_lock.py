@@ -13,8 +13,12 @@ UNKNOWN = "unknown"
 UNSUPPORTED = "unsupported"
 
 
-def _lock_path(project_root: Path) -> Path:
-    return project_root / "bpfw" / ".lock"
+def _lock_path(project_root: Path, relative_path: str) -> Path:
+    if relative_path == "bpfw/blueprint.yaml":
+        return project_root / "bpfw" / ".lock"
+
+    safe_name = relative_path.replace("/", "__").replace("\\", "__")
+    return project_root / "bpfw" / ".locks" / f"{safe_name}.lock"
 
 
 def _can_use_sudo() -> bool:
@@ -201,8 +205,10 @@ def lock_file(project_root: Path, relative_path: str) -> str:
     target_path = project_root / relative_path
     if not target_path.exists():
         return UNKNOWN
+    if get_file_lock_state(project_root=project_root, relative_path=relative_path) == LOCKED:
+        return LOCKED
 
-    lock_path = _lock_path(project_root=project_root)
+    lock_path = _lock_path(project_root=project_root, relative_path=relative_path)
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     file_stat = target_path.stat()
     directory_stat = target_path.parent.stat()
@@ -249,7 +255,7 @@ def unlock_file(project_root: Path, relative_path: str) -> str:
     if not target_path.exists():
         return UNKNOWN
 
-    lock_path = _lock_path(project_root=project_root)
+    lock_path = _lock_path(project_root=project_root, relative_path=relative_path)
     _try_clear_immutable(target_path.parent)
     _try_clear_immutable(target_path)
 
@@ -280,7 +286,7 @@ def get_file_lock_state(project_root: Path, relative_path: str) -> str:
     if not target_path.exists():
         return UNKNOWN
 
-    lock_path = _lock_path(project_root=project_root)
+    lock_path = _lock_path(project_root=project_root, relative_path=relative_path)
     if not lock_path.exists():
         return UNLOCKED
 

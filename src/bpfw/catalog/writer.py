@@ -7,6 +7,7 @@ from bpfw.catalog.access_control import ensure_blueprint_can_be_written
 from bpfw.catalog.lifecycle import ALLOWED_LIFECYCLES
 from bpfw.catalog.models import DiscoveredCodeUnit
 from bpfw.catalog.paths import resolve_blueprint_path
+from bpfw.protection.setup import format_init_setup_summary, run_protection_setup
 
 
 def to_snake_case(value: str) -> str:
@@ -157,9 +158,9 @@ def run_init(project_root: Path) -> tuple[bool, str, int]:
     
     # Step 3: If blueprint already exists, do not overwrite
     if blueprint_path.exists():
-        message = f"""BPFW blueprint already exists:
-  {BLUEPRINT_RELATIVE_PATH}"""
-        return True, message, 0
+        setup_result = run_protection_setup(project_root=project_root)
+        message = format_init_setup_summary(result=setup_result)
+        return setup_result.allowed, message, 0 if setup_result.allowed else 1
     
     # Step 4: Create bpfw directory if missing
     blueprint_path.parent.mkdir(parents=True, exist_ok=True)
@@ -201,6 +202,8 @@ def run_init(project_root: Path) -> tuple[bool, str, int]:
     
     # Step 9: Write bpfw/blueprint.yaml
     write_blueprint(blueprint_path=blueprint_path, blueprint_data=blueprint_data)
+
+    setup_result = run_protection_setup(project_root=project_root)
     
     # Step 10: Print init summary
     total_units = len(scan_result.discovered_units)
@@ -208,7 +211,7 @@ def run_init(project_root: Path) -> tuple[bool, str, int]:
     pending_lifecycle = sum(1 for _ in scan_result.discovered_units)
     pending_owner_layer = sum(1 for _ in scan_result.discovered_units)
     
-    message = f"""BPFW initialized.
+    init_summary = f"""BPFW initialized.
 
 Blueprint:
   created: {BLUEPRINT_RELATIVE_PATH}
@@ -227,4 +230,5 @@ Pending fields:
 Next:
   bpfw wizard"""
     
-    return True, message, 0
+    message = f"{init_summary}\n\n{format_init_setup_summary(result=setup_result)}"
+    return setup_result.allowed, message, 0 if setup_result.allowed else 1
