@@ -1,13 +1,9 @@
-"""Integrity verification against signed manifest."""
-
-from __future__ import annotations
+"""Integrity verification against signed manifest — MVP Catalog Mode."""
 
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from bpfw.approval.request import compute_diff_fingerprint
-from bpfw.approval.verifier import ApprovalVerificationError, ApprovalsVerificationResult, verify_all_approvals
 from bpfw.blueprint.loader import BlueprintLoadError, load_blueprint_data
 from bpfw.integrity.hash_provider import compute_sha256, read_file_size
 from bpfw.integrity.manifest import (
@@ -60,6 +56,7 @@ def _issue(code: str, message: str, severity: str, recommendation: str, file_pat
 
 
 def _validate_manifest_shape(manifest_payload: dict[str, Any], manifest_file_path: Path) -> list[IntegrityIssue]:
+    """Validate manifest has required fields with correct types."""
     issues: list[IntegrityIssue] = []
 
     version_value = manifest_payload.get("version")
@@ -69,7 +66,7 @@ def _validate_manifest_shape(manifest_payload: dict[str, Any], manifest_file_pat
                 code="INT003",
                 message="Integrity manifest `version` must be an integer",
                 severity="block",
-                recommendation="Regenerate manifest with `bpfw manifest write`",
+                recommendation="Regenerate manifest with `bpfw init`",
                 file_path=str(manifest_file_path),
             )
         )
@@ -81,7 +78,7 @@ def _validate_manifest_shape(manifest_payload: dict[str, Any], manifest_file_pat
                 code="INT003",
                 message="Integrity manifest `updated_at` must be a non-empty string",
                 severity="block",
-                recommendation="Regenerate manifest with `bpfw manifest write`",
+                recommendation="Regenerate manifest with `bpfw init`",
                 file_path=str(manifest_file_path),
             )
         )
@@ -93,7 +90,7 @@ def _validate_manifest_shape(manifest_payload: dict[str, Any], manifest_file_pat
                 code="INT003",
                 message="Integrity manifest `files` must be a list",
                 severity="block",
-                recommendation="Regenerate manifest with `bpfw manifest write`",
+                recommendation="Regenerate manifest with `bpfw init`",
                 file_path=str(manifest_file_path),
             )
         )
@@ -105,7 +102,7 @@ def _validate_manifest_shape(manifest_payload: dict[str, Any], manifest_file_pat
                 code="INT003",
                 message="Integrity manifest `signature` must be a non-empty string",
                 severity="block",
-                recommendation="Regenerate manifest with `bpfw manifest write`",
+                recommendation="Regenerate manifest with `bpfw init`",
                 file_path=str(manifest_file_path),
             )
         )
@@ -114,6 +111,7 @@ def _validate_manifest_shape(manifest_payload: dict[str, Any], manifest_file_pat
 
 
 def _verify_manifest_signature(manifest_payload: dict[str, Any], manifest_file_path: Path) -> list[IntegrityIssue]:
+    """Verify manifest signature is valid."""
     signature_value = str(manifest_payload.get("signature", "")).strip()
     if not signature_value:
         return [
@@ -121,7 +119,7 @@ def _verify_manifest_signature(manifest_payload: dict[str, Any], manifest_file_p
                 code="INT003",
                 message="Integrity manifest signature is missing",
                 severity="block",
-                recommendation="Regenerate manifest with `bpfw manifest write`",
+                recommendation="Regenerate manifest with `bpfw init`",
                 file_path=str(manifest_file_path),
             )
         ]
@@ -148,7 +146,7 @@ def _verify_manifest_signature(manifest_payload: dict[str, Any], manifest_file_p
                 code="INT004",
                 message="Integrity manifest signature is invalid",
                 severity="critical",
-                recommendation="Run `bpfw manifest write` from trusted state to regenerate signature",
+                recommendation="Run `bpfw init` from trusted state to regenerate signature",
                 file_path=str(manifest_file_path),
             )
         ]
@@ -157,6 +155,7 @@ def _verify_manifest_signature(manifest_payload: dict[str, Any], manifest_file_p
 
 
 def _validate_manifest_coverage(project_root: Path, manifest_payload: dict[str, Any]) -> list[IntegrityIssue]:
+    """Verify manifest covers all protected targets."""
     expected_targets = resolve_protected_targets(project_root=project_root, require_valid_blueprint=False)
     expected_paths = {target.path for target in expected_targets}
 
@@ -182,13 +181,14 @@ def _validate_manifest_coverage(project_root: Path, manifest_payload: dict[str, 
             code="INT005",
             message=f"Integrity manifest is missing protected file `{first_missing_path}`",
             severity="block",
-            recommendation="Regenerate manifest with `bpfw manifest write`",
+            recommendation="Regenerate manifest with `bpfw init`",
             file_path=str(project_root / first_missing_path),
         )
     ]
 
 
 def _locked_resource_ids(project_root: Path) -> set[str]:
+    """Get set of locked resource IDs from blueprint."""
     locked_resource_ids = {"project_blueprint", "architecture_profile"}
     try:
         _, blueprint_payload = load_blueprint_data(project_root=project_root)
@@ -211,44 +211,13 @@ def _locked_resource_ids(project_root: Path) -> set[str]:
     return locked_resource_ids
 
 
-def _approval_issues_as_integrity(approvals_result: ApprovalsVerificationResult) -> list[IntegrityIssue]:
-    return [
-        _issue(
-            code=approval_issue.code,
-            message=approval_issue.message,
-            severity=approval_issue.severity,
-            recommendation=approval_issue.recommendation,
-            file_path=approval_issue.file_path,
-        )
-        for approval_issue in approvals_result.issues
-    ]
-
-
-def _matching_approval_exists(
-    *,
-    approvals_result: ApprovalsVerificationResult,
-    resource_id: str,
-    action: str,
-    diff_fingerprint: str,
-) -> bool:
-    for approval_record in approvals_result.approvals:
-        if approval_record.resource_id != resource_id:
-            continue
-        if approval_record.action != action:
-            continue
-        if approval_record.diff_fingerprint != diff_fingerprint:
-            continue
-        return True
-    return False
-
-
 def _verify_file_entries(
     *,
     project_root: Path,
     manifest_payload: dict[str, Any],
     locked_resource_ids: set[str],
-    approvals_result: ApprovalsVerificationResult,
 ) -> tuple[int, list[IntegrityIssue]]:
+    """Verify all file entries in manifest match current files."""
     files_value = manifest_payload.get("files")
     if not isinstance(files_value, list):
         return 0, []
@@ -263,7 +232,7 @@ def _verify_file_entries(
                     code="INT003",
                     message="Integrity manifest contains invalid file entry",
                     severity="block",
-                    recommendation="Regenerate manifest with `bpfw manifest write`",
+                    recommendation="Regenerate manifest with `bpfw init`",
                     file_path=str(manifest_path(project_root=project_root)),
                 )
             )
@@ -280,7 +249,7 @@ def _verify_file_entries(
                     code="INT003",
                     message="Integrity manifest file entry is incomplete",
                     severity="block",
-                    recommendation="Regenerate manifest with `bpfw manifest write`",
+                    recommendation="Regenerate manifest with `bpfw init`",
                     file_path=str(manifest_path(project_root=project_root)),
                 )
             )
@@ -318,32 +287,17 @@ def _verify_file_entries(
         if current_size == size_value and current_hash == expected_hash:
             continue
 
+        # MVP: Simplified handling - locked resources require unlock flow
         if resource_id_value in locked_resource_ids:
-            diff_fingerprint = compute_diff_fingerprint(
-                path=file_path_value,
-                expected_sha256=expected_hash,
-                observed_sha256=current_hash,
-                expected_size=size_value,
-                observed_size=current_size,
-                action="modify",
-            )
-            if _matching_approval_exists(
-                approvals_result=approvals_result,
-                resource_id=resource_id_value,
-                action="modify",
-                diff_fingerprint=diff_fingerprint,
-            ):
-                continue
-
             issues.append(
                 _issue(
-                    code="APP006",
+                    code="AUTH001",
                     message=(
-                        f"Approval required for locked resource `{file_path_value}`. "
-                        "No automatic request was generated."
+                        f"Locked resource `{file_path_value}` was modified. "
+                        "Use `bpfw unlock` to authorize changes."
                     ),
-                    severity="block",
-                    recommendation="Use proposal flow or request scoped authority access and verify again",
+                    severity="critical",
+                    recommendation=f"Run `bpfw unlock {resource_id_value}` before editing, then `bpfw lock` when done",
                     file_path=str(absolute_path),
                 )
             )
@@ -378,7 +332,7 @@ def verify_integrity(project_root: Path) -> IntegrityVerificationResult:
                     code="INT002",
                     message=str(error),
                     severity="block",
-                    recommendation="Generate manifest with `bpfw manifest write`",
+                    recommendation="Generate manifest with `bpfw init`",
                     file_path=str(current_manifest_path),
                 )
             ],
@@ -402,33 +356,14 @@ def verify_integrity(project_root: Path) -> IntegrityVerificationResult:
             issues=signature_issues,
         )
 
-    try:
-        approvals_result = verify_all_approvals(project_root=project_root)
-    except ApprovalVerificationError as error:
-        return IntegrityVerificationResult(
-            is_valid=False,
-            manifest_path=str(current_manifest_path),
-            checked_files=0,
-            issues=[
-                _issue(
-                    code="APP007",
-                    message=str(error),
-                    severity="critical",
-                    recommendation="Repair approval storage under .bpfw/approvals",
-                    file_path=str(project_root / ".bpfw/approvals"),
-                )
-            ],
-        )
-
+    # MVP: Skip approval verification (not in scope)
     coverage_issues = _validate_manifest_coverage(project_root=project_root, manifest_payload=manifest_payload)
     checked_files, file_issues = _verify_file_entries(
         project_root=project_root,
         manifest_payload=manifest_payload,
         locked_resource_ids=_locked_resource_ids(project_root=project_root),
-        approvals_result=approvals_result,
     )
     issues = [
-        *_approval_issues_as_integrity(approvals_result),
         *coverage_issues,
         *file_issues,
     ]

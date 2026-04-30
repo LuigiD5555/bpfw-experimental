@@ -1,21 +1,17 @@
-from __future__ import annotations
-
 from datetime import datetime, timedelta, timezone
-import os
 from pathlib import Path
 
-from bpfw.access.authorization_policy import AccessAuthorizationPolicy
+from bpfw.access.authorization_policy import AccessAuthorizationError
 from bpfw.access.grant_store import AccessGrantStore
 from bpfw.access.models import AccessGrant, AccessRequest
 from bpfw.access.request_store import AccessRequestStore
 from bpfw.access.signer import AccessGrantSigner
-from bpfw.approval.os_auth import ApprovalRequestContext, DummyAuthBackend, SudoAuthBackend
 from bpfw.authority.resources import AuthorityResourceRegistry
 from bpfw.security.keyring import resolve_hmac_key
 
 
 class AccessService:
-    """Coordinates access request creation and grant issuance."""
+    """Coordinates access request creation and grant issuance for MVP unlock flow."""
 
     def __init__(
         self,
@@ -28,6 +24,7 @@ class AccessService:
         self._signer = signer or AccessGrantSigner()
 
     def create_request(self, project_root: Path, resource_id: str, operation: str, scope: str, reason: str) -> AccessRequest:
+        """Create an access request for unlocking a resource."""
         registry = AuthorityResourceRegistry()
         normalized_resource_id = "project_blueprint" if resource_id == "blueprint" else resource_id
         resource = next((item for item in registry.list_resources() if item.resource_id == normalized_resource_id), None)
@@ -49,27 +46,13 @@ class AccessService:
         return request
 
     def grant_request(self, project_root: Path, request_id: str, granted_by: str, duration_minutes: int) -> AccessGrant:
+        """Grant an access request without external approval (MVP simplified flow)."""
         request = self._request_store.load(project_root=project_root, request_id=request_id)
         if request.status != "pending":
             raise ValueError(f"Access request is not pending: {request_id}")
         if duration_minutes <= 0:
             raise ValueError("duration_minutes must be greater than zero")
-        backend_name = os.getenv("BPFW_AUTH_BACKEND", "dummy").strip().lower() or "dummy"
-        AccessAuthorizationPolicy().validate_backend(backend_name=backend_name)
-        auth_backend = SudoAuthBackend() if backend_name == "sudo" else DummyAuthBackend()
-        auth_decision = auth_backend.authorize(
-            ApprovalRequestContext(
-                request_id=request.request_id,
-                resource_id=request.resource_id,
-                action=request.operation,
-                change_id="access-grant",
-                expires_at="",
-                diff_fingerprint="",
-                project_root=project_root,
-            )
-        )
-        if not auth_decision.approved:
-            raise ValueError(f"Authorization failed: {auth_decision.reason}")
+        
         created_at = datetime.now(tz=timezone.utc).replace(microsecond=0)
         grant_id = self._next_id(project_root=project_root, directory_name="access_grants", prefix="access-grant", created_at=created_at)
         expires_at = created_at + timedelta(minutes=duration_minutes)
@@ -80,7 +63,7 @@ class AccessService:
             resource_path=request.resource_path,
             operation=request.operation,
             scope=request.scope,
-            granted_by=granted_by or auth_decision.approved_by,
+            granted_by=granted_by or "system",
             created_at=created_at,
             expires_at=expires_at,
             signature="",
@@ -104,6 +87,7 @@ class AccessService:
         return grant
 
     def _load_signing_key(self, project_root: Path) -> str:
+        """Load signing key for access grants."""
         return resolve_hmac_key(
             project_root=project_root,
             purpose="access",
@@ -111,6 +95,7 @@ class AccessService:
         )
 
     def _next_id(self, project_root: Path, directory_name: str, prefix: str, created_at: datetime) -> str:
+        """Generate next sequential ID."""
         directory_path = project_root / ".bpfw" / directory_name
         date_token = created_at.strftime("%Y%m%d")
         if not directory_path.exists():

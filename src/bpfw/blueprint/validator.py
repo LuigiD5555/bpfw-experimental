@@ -1,6 +1,4 @@
-"""Minimum validator for executable Blueprint authority."""
-
-from __future__ import annotations
+"""Minimum validator for executable Blueprint authority — MVP Catalog Mode."""
 
 from pathlib import Path
 
@@ -20,9 +18,6 @@ from bpfw.blueprint.schema import (
     REQUIRED_RESPONSIBILITY_FIELDS,
     REQUIRED_ROOT_FIELDS,
 )
-from bpfw.lifecycle.lifecycle_reporter import summarize_lifecycle_errors
-from bpfw.lifecycle.validator import validate_lifecycle
-
 
 
 def _error(code: str, message: str, file_path: Path, recommendation: str) -> BlueprintValidationError:
@@ -34,8 +29,8 @@ def _error(code: str, message: str, file_path: Path, recommendation: str) -> Blu
     )
 
 
-
 def _is_repo_safe_path(value: str) -> bool:
+    """Check if path is safe (repo-relative, no absolute paths, no '..')."""
     raw_path = Path(value)
     if raw_path.is_absolute():
         return False
@@ -45,9 +40,8 @@ def _is_repo_safe_path(value: str) -> bool:
     return True
 
 
-
 def validate_blueprint(project_root: Path) -> BlueprintValidationResult:
-    """Load and validate minimum phase-1 blueprint contract."""
+    """Load and validate minimum blueprint contract for MVP."""
 
     try:
         blueprint_path, payload = load_blueprint_data(project_root=project_root)
@@ -380,22 +374,6 @@ def validate_blueprint(project_root: Path) -> BlueprintValidationResult:
         locked_resources=locked_resources,
         source_path=blueprint_path,
     )
-    lifecycle_errors = validate_lifecycle(blueprint=blueprint_model, explicit_experimental_approval=False)
-    if lifecycle_errors:
-        lifecycle_summary = summarize_lifecycle_errors(lifecycle_errors)
-        first_error = lifecycle_errors[0]
-        return BlueprintValidationResult(
-            is_valid=False,
-            errors=[
-                BlueprintValidationError(
-                    code=first_error.code,
-                    message=first_error.message,
-                    file_path=first_error.file_path,
-                    recommendation=(
-                        f"{first_error.recommendation} "
-                        f"(lifecycle_error_count={lifecycle_summary['lifecycle_error_count']})"
-                    ),
-                )
-            ],
-        )
+    
+    # MVP: Skip lifecycle validation (not in scope)
     return BlueprintValidationResult(is_valid=True, blueprint=blueprint_model)

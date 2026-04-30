@@ -1,17 +1,9 @@
-"""Command registry for BPFW engine pipelines."""
-
-from __future__ import annotations
+"""Command registry for BPFW engine pipelines — MVP Catalog Mode."""
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import json
-import os
 
-from bpfw.apply.transaction import ApplyTransactionError, apply_change_transaction
-from bpfw.approval.broker import ApprovalBrokerError, approve_request
-from bpfw.approval.request import ApprovalRequestError
-from bpfw.approval.verifier import ApprovalVerificationError, verify_all_approvals
-from bpfw.architecture.architecture_validator import validate_architecture
 from bpfw.access.authorization_policy import AccessAuthorizationError
 from bpfw.access.grant_store import AccessGrantStore
 from bpfw.access.service import AccessService
@@ -26,54 +18,26 @@ from bpfw.authority.state import (
     load_authority_state,
     save_authority_state,
     set_unlock_window,
+    _window_from_dict,
 )
 from bpfw.blueprint.snapshot import build_snapshot
-from bpfw.blueprint.loader import load_blueprint_data
 from bpfw.blueprint.validator import validate_blueprint
-from bpfw.blueprint_mode.contract_validator import validate_blueprint_mode_contracts
-from bpfw.change.scope import ScopeResolutionError, resolve_scope
-from bpfw.change.session import (
-    ChangeSessionError,
-    create_change_session,
-    load_change_session,
-    update_change_status,
-)
-from bpfw.composition.checker import validate_composition
 from bpfw.core.pipeline import Pipeline, PipelineStep
 from bpfw.core.result import ResultStatus, StepResult
-from bpfw.discover.classifier import classify_findings
-from bpfw.discover.proposal_builder import build_proposals
-from bpfw.discover.scanner import scan_repository
-from bpfw.duplication.duplication_reporter import (
-    findings_to_human_lines,
-    primary_finding as duplication_primary_finding,
-    summarize_counts,
-)
-from bpfw.duplication.similarity_detector import detect_duplication
 from bpfw.enforcement.pre_commit import HookInstallError, install_pre_commit_hook
 from bpfw.integrity.manifest import IntegrityManifestError, write_manifest
-import yaml
 from bpfw.init.acceptor import InitialBaselineAcceptor
 from bpfw.init.detector import ProjectDetector
 from bpfw.init.generator import InitialBlueprintGenerator
 from bpfw.init.scanner import MechanicalProjectScanner
 from bpfw.integrity.signer import IntegritySigningError
 from bpfw.integrity.verifier import verify_integrity
-from bpfw.review.decision import ReviewDecisionError, primary_finding as review_primary_finding, review_session
-from bpfw.runtime.collector import collect_runtime_snapshot
-from bpfw.runtime.snapshot import snapshot_to_dict, snapshot_to_human_lines, snapshot_to_json
-from bpfw.guard.watcher import AuthorityWatcher
 from bpfw.security.keyring import ensure_local_hmac_key
-from bpfw.proposal.renderer import render_proposal_detail, render_proposal_list
-from bpfw.proposal.resolver import ProposalResolutionError, accept_proposal, reject_proposal
-from bpfw.proposal.store import ProposalStoreError, list_proposals, load_proposal
-from bpfw.wiring.verifier import verify_wiring
-from bpfw.workspace.builder import WorkspaceBuildError, build_workspace
 
 
 @dataclass(slots=True)
 class StaticStep(PipelineStep):
-    """Prompt 0 placeholder step used to keep the engine executable."""
+    """MVP placeholder step used for wizard (not implemented yet)."""
 
     name: str
     message: str
@@ -85,13 +49,12 @@ class StaticStep(PipelineStep):
             message=self.message,
             source=self.name,
             details={"implementation_state": "not_implemented"},
-            suggested_actions=["Implement concrete validators in next prompts"],
+            suggested_actions=["Wizard will be implemented in future prompts"],
         )
 
 
-
-
 def _parse_ttl_to_minutes(raw_ttl: str) -> int:
+    """Parse TTL string to minutes for unlock duration."""
     normalized = raw_ttl.strip().lower()
     if not normalized:
         raise ValueError("Missing --ttl value")
@@ -103,6 +66,7 @@ def _parse_ttl_to_minutes(raw_ttl: str) -> int:
 
 
 def _normalize_resource_id(resource_id: str) -> str:
+    """Normalize resource ID shorthand to full ID."""
     normalized = resource_id.strip()
     if normalized == "blueprint":
         return "project_blueprint"
@@ -112,10 +76,12 @@ def _normalize_resource_id(resource_id: str) -> str:
 
 
 def _build_unsealed_block_message() -> str:
+    """Build error message for unsealed projects."""
     return "Project is not sealed.\nRun bpfw init or accept the generated baseline."
 
 
 def _ensure_manifest_for_protected_mode(project_root):  # noqa: ANN001
+    """Ensure manifest exists when protection is enabled."""
     state = load_authority_state(project_root=project_root)
     manifest_file = project_root / ".bpfw/manifest.json"
     if state.protection_enabled and not manifest_file.exists():
@@ -124,7 +90,7 @@ def _ensure_manifest_for_protected_mode(project_root):  # noqa: ANN001
 
 @dataclass(slots=True)
 class VerifyAuthorityStep(PipelineStep):
-    """Executable authority step for direct-change access control."""
+    """Verify authority resources haven't been manually edited."""
 
     name: str = "authority.verify"
 
@@ -137,7 +103,7 @@ class VerifyAuthorityStep(PipelineStep):
             "Direct authority edits are not allowed.\n\n"
             "Do not retry this edit.\n\n"
             "Allowed next action:\n"
-            "Revert the manual edit and use proposal/access flow."
+            "Revert the manual edit and use unlock flow."
         )
 
     def run(self, context) -> StepResult:  # noqa: ANN001
@@ -192,7 +158,7 @@ class VerifyAuthorityStep(PipelineStep):
             source=self.name,
             details={"error_code": "AUTH001", "resource_id": resource_id},
             affected_resources=[str(context.project_root / relative_path)],
-            suggested_actions=["Revert manual authority edits and use proposal/access flow."],
+            suggested_actions=["Revert manual authority edits and use unlock flow."],
         )
 
 
@@ -281,7 +247,7 @@ class AuthoritySealPrecheckStep(PipelineStep):
                         "Cannot seal authority drift.\n\n"
                         "The following authority resource changed outside controlled authority operation:\n"
                         f"- {relative_path}\n\n"
-                        "Use proposal flow or scoped access."
+                        "Use unlock flow."
                     ),
                     source=self.name,
                     affected_resources=[str(context.project_root / relative_path)],
@@ -294,7 +260,7 @@ class AuthoritySealPrecheckStep(PipelineStep):
                         "Cannot seal authority drift.\n\n"
                         "The following authority resource changed with invalid authority grant:\n"
                         f"- {relative_path}\n\n"
-                        "Use proposal flow or scoped access."
+                        "Use unlock flow."
                     ),
                     source=self.name,
                     affected_resources=[str(context.project_root / relative_path)],
@@ -307,16 +273,18 @@ class AuthoritySealPrecheckStep(PipelineStep):
                         "Cannot seal authority drift.\n\n"
                         "The following authority resource changed with invalid authority grant:\n"
                         f"- {relative_path}\n\n"
-                        "Use proposal flow or scoped access."
+                        "Use unlock flow."
                     ),
                     source=self.name,
                     affected_resources=[str(context.project_root / relative_path)],
                 )
 
         return StepResult(status=ResultStatus.OK, message="Authority seal precheck passed", source=self.name)
+
+
 @dataclass(slots=True)
 class VerifyBlueprintStep(PipelineStep):
-    """Executable verify step for blueprint authority validation."""
+    """Verify blueprint.yaml exists and is valid."""
 
     name: str = "blueprint.verify"
 
@@ -346,279 +314,6 @@ class VerifyBlueprintStep(PipelineStep):
 
 
 @dataclass(slots=True)
-class VerifyArchitectureStep(PipelineStep):
-    """Executable architecture step for layer and import validation."""
-
-    name: str = "architecture.check"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        validation_result = validate_architecture(project_root=context.project_root)
-        if validation_result.errors:
-            first_error = validation_result.errors[0]
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=first_error.message,
-                source=self.name,
-                details={"error_code": first_error.code},
-                affected_resources=[first_error.file_path],
-                suggested_actions=[first_error.recommendation],
-            )
-
-        if validation_result.warnings:
-            first_warning = validation_result.warnings[0]
-            return StepResult(
-                status=ResultStatus.WARNING,
-                message=first_warning.message,
-                source=self.name,
-                details={"error_code": first_warning.code},
-                affected_resources=[first_warning.file_path],
-                suggested_actions=[first_warning.recommendation],
-            )
-
-        profile_id = ""
-        if validation_result.profile is not None:
-            profile_id = validation_result.profile.profile_id
-        return StepResult(
-            status=ResultStatus.OK,
-            message="Architecture profile loaded and import rules validated successfully",
-            source=self.name,
-            details={"architecture_profile_id": profile_id},
-        )
-
-
-@dataclass(slots=True)
-class VerifyCompositionStep(PipelineStep):
-    """Executable composition step for concrete wiring checks."""
-
-    name: str = "composition.check"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        validation_result = validate_composition(project_root=context.project_root)
-        if validation_result.errors:
-            first_error = validation_result.errors[0]
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=first_error.message,
-                source=self.name,
-                details={"error_code": first_error.code},
-                affected_resources=[first_error.file_path],
-                suggested_actions=[first_error.recommendation],
-            )
-
-        return StepResult(
-            status=ResultStatus.OK,
-            message="Composition roots validated successfully",
-            source=self.name,
-        )
-
-
-@dataclass(slots=True)
-class VerifyRuntimeSnapshotStep(PipelineStep):
-    """Executable runtime snapshot step for active binding visibility."""
-
-    name: str = "runtime.snapshot"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        collection_result = collect_runtime_snapshot(project_root=context.project_root)
-        if collection_result.errors:
-            first_error = collection_result.errors[0]
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=first_error.message,
-                source=self.name,
-                details={
-                    "error_code": first_error.code,
-                },
-                affected_resources=[first_error.file_path],
-                suggested_actions=[first_error.recommendation],
-            )
-
-        if collection_result.snapshot is None:
-            return StepResult(
-                status=ResultStatus.WARNING,
-                message="Runtime snapshot could not be collected",
-                source=self.name,
-                details={"runtime_snapshot": "{}"},
-                suggested_actions=["Declare runtime bindings metadata in wiring or .bpfw/runtime_bindings.yaml"],
-            )
-
-        snapshot = collection_result.snapshot
-        warning_count = len(collection_result.warnings)
-        if warning_count > 0:
-            first_warning = collection_result.warnings[0]
-            return StepResult(
-                status=ResultStatus.WARNING,
-                message=first_warning.message,
-                source=self.name,
-                details={
-                    "warning_code": first_warning.code,
-                    "runtime_snapshot_json": snapshot_to_json(snapshot),
-                    "runtime_snapshot_human": snapshot_to_human_lines(snapshot),
-                    "warning_count": str(warning_count),
-                },
-                affected_resources=[first_warning.file_path],
-                suggested_actions=[first_warning.recommendation],
-            )
-
-        return StepResult(
-            status=ResultStatus.OK,
-            message="Runtime snapshot collected successfully",
-            source=self.name,
-            details={
-                "runtime_snapshot_json": snapshot_to_json(snapshot),
-                "runtime_snapshot_human": snapshot_to_human_lines(snapshot),
-                "active_bindings_count": str(len(snapshot_to_dict(snapshot)["active_bindings"])),
-            },
-        )
-
-
-@dataclass(slots=True)
-class VerifyWiringStep(PipelineStep):
-    """Executable wiring step for blueprint/runtime active implementation alignment."""
-
-    name: str = "wiring.check"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        verification_result = verify_wiring(project_root=context.project_root)
-        if verification_result.issues:
-            first_issue = verification_result.issues[0]
-            status = ResultStatus.WARNING
-            if first_issue.severity == "block":
-                status = ResultStatus.BLOCK
-            elif first_issue.severity == "critical":
-                status = ResultStatus.CRITICAL
-
-            if any(issue.severity == "critical" for issue in verification_result.issues):
-                status = ResultStatus.CRITICAL
-            elif any(issue.severity == "block" for issue in verification_result.issues):
-                status = ResultStatus.BLOCK
-
-            return StepResult(
-                status=status,
-                message=first_issue.message,
-                source=self.name,
-                details={
-                    "error_code": first_issue.code,
-                    "wiring_issue_count": str(len(verification_result.issues)),
-                },
-                affected_resources=[first_issue.file_path],
-                suggested_actions=[first_issue.recommendation],
-            )
-
-        return StepResult(
-            status=ResultStatus.OK,
-            message="Wiring verification passed",
-            source=self.name,
-            details={
-                "active_bindings_count": str(len(verification_result.active_bindings)),
-            },
-        )
-
-
-@dataclass(slots=True)
-class VerifyDuplicationStep(PipelineStep):
-    """Executable duplication step for intent-duplication detection."""
-
-    name: str = "duplication.check"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        detection_result = detect_duplication(project_root=context.project_root)
-        primary = duplication_primary_finding(detection_result)
-        summary_counts = summarize_counts(detection_result)
-
-        if primary is None:
-            return StepResult(
-                status=ResultStatus.OK,
-                message="No duplication findings detected",
-                source=self.name,
-                details={
-                    **summary_counts,
-                    "duplication_findings_human": findings_to_human_lines(detection_result),
-                },
-            )
-
-        status = ResultStatus.WARNING
-        if primary.severity == "critical":
-            status = ResultStatus.CRITICAL
-        elif primary.severity == "block":
-            status = ResultStatus.BLOCK
-
-        if summary_counts["duplication_critical_count"] != "0":
-            status = ResultStatus.CRITICAL
-        elif summary_counts["duplication_block_count"] != "0":
-            status = ResultStatus.BLOCK
-
-        return StepResult(
-            status=status,
-            message=primary.message,
-            source=self.name,
-            details={
-                "error_code": primary.code,
-                "duplication_symbol": primary.symbol_name,
-                "duplication_responsibility_id": primary.responsibility_id,
-                "duplication_findings_human": findings_to_human_lines(detection_result),
-                **summary_counts,
-            },
-            affected_resources=[primary.file_path],
-            suggested_actions=[primary.recommendation],
-        )
-
-
-@dataclass(slots=True)
-class VerifyBlueprintModeStep(PipelineStep):
-    """Executable blueprint_mode step for opt-in operation contract checks."""
-
-    name: str = "blueprint_mode.verify"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        validation_result = validate_blueprint_mode_contracts(project_root=context.project_root)
-        if validation_result.issues:
-            first_issue = validation_result.issues[0]
-            status = ResultStatus.BLOCK
-            if first_issue.severity == "critical":
-                status = ResultStatus.CRITICAL
-            elif first_issue.severity == "warning":
-                status = ResultStatus.WARNING
-
-            return StepResult(
-                status=status,
-                message=first_issue.message,
-                source=self.name,
-                details={
-                    "error_code": first_issue.code,
-                    "blueprint_mode_enabled": str(validation_result.config.enabled).lower(),
-                    "blueprint_mode_operation_count": str(len(validation_result.config.operations)),
-                    "blueprint_mode_issue_count": str(len(validation_result.issues)),
-                },
-                affected_resources=[first_issue.file_path],
-                suggested_actions=[first_issue.recommendation],
-            )
-
-        if validation_result.config.enabled:
-            return StepResult(
-                status=ResultStatus.OK,
-                message="Blueprint mode contracts validated successfully",
-                source=self.name,
-                details={
-                    "blueprint_mode_enabled": "true",
-                    "blueprint_mode_operation_count": str(len(validation_result.config.operations)),
-                    "blueprint_mode_issue_count": "0",
-                },
-            )
-
-        return StepResult(
-            status=ResultStatus.OK,
-            message="Blueprint mode disabled; contract checks skipped",
-            source=self.name,
-            details={
-                "blueprint_mode_enabled": "false",
-                "blueprint_mode_operation_count": "0",
-                "blueprint_mode_issue_count": "0",
-            },
-        )
-
-
-@dataclass(slots=True)
 class ManifestWriteStep(PipelineStep):
     """Generate integrity manifest from current approved state."""
 
@@ -637,7 +332,7 @@ class ManifestWriteStep(PipelineStep):
                     "manifest_path": str(context.project_root / ".bpfw/manifest.json"),
                 },
                 affected_resources=[str(context.project_root / ".bpfw/manifest.json")],
-                suggested_actions=["Configure BPFW_MANIFEST_HMAC_KEY and run `bpfw manifest write` again"],
+                suggested_actions=["Configure BPFW_MANIFEST_HMAC_KEY and run `bpfw init` again"],
             )
 
         return StepResult(
@@ -681,7 +376,7 @@ class VerifyIntegrityStep(PipelineStep):
             if not strict_mode_enabled and verification_result.only_precondition_issues and not ci_mode_enabled:
                 status = ResultStatus.WARNING
 
-            protected_precondition_issue_codes = {"INT001", "INT002", "AUTH001", "APP006", "APP007", "INT004"}
+            protected_precondition_issue_codes = {"INT001", "INT002", "AUTH001", "INT004"}
             protected_precondition_issue_found = any(
                 issue.code in protected_precondition_issue_codes for issue in verification_result.issues
             )
@@ -767,1436 +462,299 @@ class InstallHooksStep(PipelineStep):
 
 
 @dataclass(slots=True)
-class ApproveRequestStep(PipelineStep):
-    """Approve one pending request with configured auth backend."""
-
-    name: str = "approval.approve"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        from bpfw.access.authorization_policy import AccessAuthorizationError
-
-        request_id = context.command_arguments.get("request_id", "").strip()
-        if not request_id:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message="Missing request_id. Usage: bpfw approve <request_id>",
-                source=self.name,
-                details={"error_code": "APP_APPROVE_USAGE"},
-                suggested_actions=["Pass a request id generated by verify-integrity"],
-            )
-
-        try:
-            approval_result = approve_request(project_root=context.project_root, request_id=request_id)
-        except (ApprovalBrokerError, ApprovalRequestError) as error:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=str(error),
-                source=self.name,
-                details={"error_code": "APP_APPROVE_BLOCK", "request_id": request_id},
-                affected_resources=[str(context.project_root / ".bpfw/approval_requests")],
-                suggested_actions=["Create or use a valid request id and ensure signing keys are configured"],
-            )
-
-        return StepResult(
-            status=ResultStatus.OK,
-            message=f"Approval issued for request `{request_id}`",
-            source=self.name,
-            details={
-                "approval_id": approval_result.approval_id,
-                "request_id": approval_result.request_id,
-                "approval_backend": approval_result.backend,
-                "approval_approved_by": approval_result.approved_by,
-            },
-            affected_resources=[str(approval_result.file_path)],
-        )
-
-
-@dataclass(slots=True)
-class ListApprovalsStep(PipelineStep):
-    """List and validate stored approvals."""
-
-    name: str = "approval.list"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        try:
-            verification_result = verify_all_approvals(project_root=context.project_root)
-        except ApprovalVerificationError as error:
-            return StepResult(
-                status=ResultStatus.CRITICAL,
-                message=str(error),
-                source=self.name,
-                details={"error_code": "APP_LIST_CRITICAL"},
-                affected_resources=[str(context.project_root / ".bpfw/approvals")],
-                suggested_actions=["Repair approval storage and run approvals again"],
-            )
-
-        if verification_result.issues:
-            first_issue = verification_result.issues[0]
-            status = ResultStatus.WARNING
-            if first_issue.severity == "critical":
-                status = ResultStatus.CRITICAL
-            elif first_issue.severity == "block":
-                status = ResultStatus.BLOCK
-
-            if any(issue.severity == "critical" for issue in verification_result.issues):
-                status = ResultStatus.CRITICAL
-            elif any(issue.severity == "block" for issue in verification_result.issues):
-                status = ResultStatus.BLOCK
-
-            return StepResult(
-                status=status,
-                message=first_issue.message,
-                source=self.name,
-                details={
-                    "error_code": first_issue.code,
-                    "approval_count": str(len(verification_result.approvals)),
-                    "approval_issue_count": str(len(verification_result.issues)),
-                },
-                affected_resources=[first_issue.file_path] if first_issue.file_path else [],
-                suggested_actions=[first_issue.recommendation],
-            )
-
-        return StepResult(
-            status=ResultStatus.OK,
-            message="Approvals are valid",
-            source=self.name,
-            details={
-                "approval_count": str(len(verification_result.approvals)),
-                "approval_issue_count": "0",
-            },
-        )
-
-
-@dataclass(slots=True)
-class AccessRequestStep(PipelineStep):
-    """Create a scoped authority access request."""
-
-    name: str = "access.request"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        operation = context.command_arguments.get("operation", "").strip()
-        scope = context.command_arguments.get("scope", "").strip()
-        reason = context.command_arguments.get("reason", "").strip()
-        resource_id = context.command_arguments.get("resource_id", "").strip() or "blueprint"
-        if not operation or not scope or not reason:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message="Missing required arguments. Usage: bpfw access request --scope <scope> --operation <operation> --reason <reason>",
-                source=self.name,
-                details={"error_code": "ACCESS_REQUEST_USAGE"},
-            )
-        request = AccessService().create_request(
-            project_root=context.project_root,
-            resource_id=resource_id,
-            operation=operation,
-            scope=scope,
-            reason=reason,
-        )
-        return StepResult(
-            status=ResultStatus.OK,
-            message="Authority access request created.",
-            source=self.name,
-            details={
-                "request_id": request.request_id,
-                "resource_id": request.resource_id,
-                "resource_path": request.resource_path,
-                "scope": request.scope,
-                "operation": request.operation,
-            },
-        )
-
-
-@dataclass(slots=True)
-class AccessGrantStep(PipelineStep):
-    """Grant a pending scoped authority access request."""
-
-    name: str = "access.grant"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        request_id = context.command_arguments.get("request_id", "").strip()
-        raw_duration = context.command_arguments.get("duration_minutes", "30").strip() or "30"
-        try:
-            duration_minutes = int(raw_duration)
-        except ValueError:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message="Invalid --duration-minutes. It must be a positive integer.",
-                source=self.name,
-                details={"error_code": "ACCESS_GRANT_DURATION"},
-            )
-        if not request_id:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message="Missing request id. Usage: bpfw access grant <request_id>",
-                source=self.name,
-                details={"error_code": "ACCESS_GRANT_USAGE"},
-            )
-        try:
-            grant = AccessService().grant_request(
-                project_root=context.project_root,
-                request_id=request_id,
-                granted_by="",
-                duration_minutes=duration_minutes,
-            )
-        except AccessAuthorizationError as error:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=str(error),
-                source=self.name,
-                details={"error_code": "ACCESS_GRANT_BACKEND_BLOCK"},
-            )
-        return StepResult(
-            status=ResultStatus.OK,
-            message="Authority access granted.",
-            source=self.name,
-            details={
-                "grant_id": grant.grant_id,
-                "request_id": grant.request_id,
-                "resource_id": grant.resource_id,
-                "resource_path": grant.resource_path,
-                "scope": grant.scope,
-                "operation": grant.operation,
-                "expires_at": grant.expires_at.astimezone(timezone.utc).isoformat(),
-            },
-        )
-
-
-@dataclass(slots=True)
-class AccessListStep(PipelineStep):
-    """List pending requests and active grants."""
-
-    name: str = "access.list"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        from bpfw.access.grant_store import AccessGrantStore
-        from bpfw.access.request_store import AccessRequestStore
-
-        pending_requests = AccessRequestStore().list_pending(project_root=context.project_root)
-        active_grants = AccessGrantStore().list_active(project_root=context.project_root)
-        requests_human = "\n".join(
-            [
-                f"- {item.request_id} | resource={item.resource_path} | scope={item.scope} | operation={item.operation}"
-                for item in pending_requests
-            ]
-        )
-        grants_human = "\n".join(
-            [
-                f"- {item.grant_id} | request={item.request_id} | resource={item.resource_path} | scope={item.scope} | operation={item.operation} | expires_at={item.expires_at.astimezone(timezone.utc).isoformat()}"
-                for item in active_grants
-            ]
-        )
-        return StepResult(
-            status=ResultStatus.OK,
-            message="Authority access requests and grants listed.",
-            source=self.name,
-            details={
-                "pending_request_count": str(len(pending_requests)),
-                "active_grant_count": str(len(active_grants)),
-                "pending_requests_human": requests_human,
-                "active_grants_human": grants_human,
-            },
-        )
-
-
-@dataclass(slots=True)
 class AuthorityStatusStep(PipelineStep):
-    """Report authority protection status."""
+    """Report authority lock and protection status."""
 
     name: str = "authority.status"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
         state = load_authority_state(project_root=context.project_root)
-        manifest_file = context.project_root / ".bpfw/manifest.json"
-        hooks_dir = context.project_root / ".git/hooks"
-        pre_commit_installed = (hooks_dir / "pre-commit").exists()
-        pre_push_installed = (hooks_dir / "pre-push").exists()
+        registry = AuthorityResourceRegistry()
+        resources = registry.list_resources()
+        manifest_path = context.project_root / ".bpfw/manifest.json"
+        hooks_path = context.project_root / ".git" / "hooks" / "pre-commit"
 
-        try:
-            lock_rows = AuthorityLockManager().status(project_root=context.project_root)
-            lock_lines = "\n".join([f"- {path} [{status}]" for _, path, status in lock_rows])
-        except Exception as error:  # noqa: BLE001
-            lock_lines = f"(unavailable: {error})"
+        # Check if resources are locked based on unlock window
+        unlocked_resource_id = state.active_unlock_window.resource_id if state.active_unlock_window else None
+        locked_count = sum(1 for r in resources if r.resource_id != unlocked_resource_id)
+        total_count = len(resources)
 
-        unlock_window = state.active_unlock_window
-        unlock_human = "(none)"
-        if unlock_window is not None:
-            unlock_human = (
-                f"resource={unlock_window.resource_path} "
-                f"scope={unlock_window.scope} "
-                f"operation={unlock_window.operation} "
-                f"expires_at={unlock_window.expires_at}"
-            )
+        status_lines = [
+            f"Protection enabled: {state.protection_enabled}",
+            f"Locked resources: {locked_count} / {total_count}",
+            f"Manifest sealed: {manifest_path.exists()}",
+            f"Git hooks installed: {hooks_path.exists()}",
+        ]
+
+        if state.active_unlock_window:
+            status_lines.append(f"Unlock window active: YES (expires at {state.active_unlock_window.expires_at})")
+        else:
+            status_lines.append("Unlock window active: NO")
+
+        if resources:
+            status_lines.append("\nResources:")
+            for resource in resources:
+                is_unlocked = resource.resource_id == unlocked_resource_id
+                lock_status = "UNLOCKED" if is_unlocked else "LOCKED"
+                status_lines.append(f"  - {resource.resource_id}: {lock_status}")
 
         return StepResult(
             status=ResultStatus.OK,
-            message=(
-                "Authority protection status:\n\n"
-                "OS lock:\n"
-                f"{'ENABLED' if state.os_lock_enabled else 'DISABLED'}\n\n"
-                "Manifest:\n"
-                f"{'SEALED' if manifest_file.exists() else 'MISSING'}\n\n"
-                "Watcher:\n"
-                "NOT RUNNING\n\n"
-                "Git hooks:\n"
-                f"pre-commit {'installed' if pre_commit_installed else 'missing'}\n"
-                f"pre-push {'installed' if pre_push_installed else 'missing'}\n\n"
-                "Active unlock window:\n"
-                f"{unlock_human}\n\n"
-                "Resource locks:\n"
-                f"{lock_lines}"
-            ),
+            message="Authority status reported",
             source=self.name,
             details={
-                "os_lock_enabled": str(state.os_lock_enabled).lower(),
-                "manifest_present": str(manifest_file.exists()).lower(),
-                "active_unlock_window": unlock_human,
+                "protection_enabled": str(state.protection_enabled).lower(),
+                "locked_resource_count": str(locked_count),
+                "total_resource_count": str(total_count),
+                "manifest_sealed": str(manifest_path.exists()).lower(),
+                "git_hooks_installed": str(hooks_path.exists()).lower(),
+                "unlock_window_active": str(state.active_unlock_window is not None).lower(),
             },
         )
 
 
 @dataclass(slots=True)
 class AuthorityLockStep(PipelineStep):
-    """Apply OS lock to all authority resources."""
+    """Lock all authority resources against edits."""
 
     name: str = "authority.lock"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
         try:
             _ensure_manifest_for_protected_mode(project_root=context.project_root)
-            locked_count = AuthorityLockManager().lock_all(project_root=context.project_root)
-            clear_unlock_window(project_root=context.project_root, mark_locked=True)
-        except (RuntimeError, OsLockPolicyError) as error:
-            return StepResult(status=ResultStatus.BLOCK, message=str(error), source=self.name, details={"error_code": "AUTH_LOCK_BLOCK"})
+        except RuntimeError as error:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=str(error),
+                source=self.name,
+                details={"error_code": "AUTH_LOCK_PRECHECK"},
+            )
 
-        return StepResult(
-            status=ResultStatus.OK,
-            message=f"Authority resources locked at OS level.\nLocked targets: {locked_count}",
-            source=self.name,
-        )
+        lock_manager = AuthorityLockManager()
+        state = load_authority_state(project_root=context.project_root)
 
-
-@dataclass(slots=True)
-class AuthorityRelockStep(PipelineStep):
-    """Relock all authority resources and close active unlock window."""
-
-    name: str = "authority.relock"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
         try:
-            _ensure_manifest_for_protected_mode(project_root=context.project_root)
-            locked_count = AuthorityLockManager().relock_all(project_root=context.project_root)
-            clear_unlock_window(project_root=context.project_root, mark_locked=True)
-        except (RuntimeError, OsLockPolicyError) as error:
-            return StepResult(status=ResultStatus.BLOCK, message=str(error), source=self.name, details={"error_code": "AUTH_RELOCK_BLOCK"})
+            lock_manager.lock_all(project_root=context.project_root)
+        except OsLockPolicyError as error:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=str(error),
+                source=self.name,
+                details={"error_code": "AUTH_LOCK_OS_BLOCK"},
+            )
+
+        clear_unlock_window(project_root=context.project_root, state=state)
+        save_authority_state(project_root=context.project_root, state=state)
+
+        registry = AuthorityResourceRegistry()
+        locked_count = len(registry.list_resources())
 
         return StepResult(
             status=ResultStatus.OK,
-            message=f"Authority relocked.\nLocked targets: {locked_count}",
+            message=f"Locked {locked_count} authority resource(s)",
             source=self.name,
+            details={"locked_resource_count": str(locked_count)},
         )
 
 
 @dataclass(slots=True)
 class AuthorityUnlockStep(PipelineStep):
-    """Open a scoped unlock window for one authority resource."""
+    """Unlock a specific authority resource with TTL."""
 
     name: str = "authority.unlock"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
-        resource_input = context.command_arguments.get("resource_id", "").strip()
-        scope = context.command_arguments.get("scope", "").strip()
-        operation = context.command_arguments.get("operation", "").strip()
-        reason = context.command_arguments.get("reason", "").strip()
-        raw_ttl = context.command_arguments.get("ttl", "10m").strip() or "10m"
-        if not resource_input or not scope or not operation or not reason:
+        resource_id_input = context.command_arguments.get("resource_id", "").strip()
+        if not resource_id_input:
             return StepResult(
                 status=ResultStatus.BLOCK,
-                message=(
-                    "Usage: bpfw authority unlock <resource> "
-                    "--scope <scope> --operation <operation> --ttl <duration> --reason <reason>"
-                ),
+                message="Missing resource_id. Usage: bpfw unlock <resource>",
                 source=self.name,
                 details={"error_code": "AUTH_UNLOCK_USAGE"},
             )
 
+        resource_id = _normalize_resource_id(resource_id_input)
         try:
             _ensure_manifest_for_protected_mode(project_root=context.project_root)
-            ttl_minutes = _parse_ttl_to_minutes(raw_ttl)
-            if ttl_minutes <= 0:
-                raise ValueError("TTL must be greater than zero")
-        except (RuntimeError, ValueError) as error:
-            return StepResult(status=ResultStatus.BLOCK, message=str(error), source=self.name, details={"error_code": "AUTH_UNLOCK_TTL"})
+        except RuntimeError as error:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=str(error),
+                source=self.name,
+                details={"error_code": "AUTH_UNLOCK_PRECHECK"},
+            )
 
-        resource_id = _normalize_resource_id(resource_input)
         registry = AuthorityResourceRegistry()
         resource = registry.get(resource_id)
         if resource is None:
             return StepResult(
                 status=ResultStatus.BLOCK,
-                message=f"Unknown authority resource: {resource_input}",
+                message=f"Resource not found: {resource_id}",
                 source=self.name,
-                details={"error_code": "AUTH_UNLOCK_RESOURCE"},
+                details={"error_code": "AUTH_UNLOCK_NOT_FOUND", "resource_id": resource_id},
+                suggested_actions=["Use 'bpfw status' to list available resources"],
             )
 
-        matching_grant = AccessGrantStore().find_matching(
-            project_root=context.project_root,
+        ttl_minutes = _parse_ttl_to_minutes(context.command_arguments.get("ttl", "10m"))
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=ttl_minutes)
+        unlock_window = UnlockWindow(
             resource_id=resource_id,
-            operation=operation,
-            scope=scope,
+            resource_path=resource.path if resource else "",
+            scope="manual",
+            operation="unlock",
+            expires_at=expires_at.astimezone(timezone.utc).isoformat(),
+            granted_by="cli",
+            request_id="",
+            grant_id=f"manual_{resource_id}_{int(expires_at.timestamp())}",
         )
-        if matching_grant is None:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=(
-                    "BLOCK\n\n"
-                    f"No active scoped grant found for {resource.path}.\n\n"
-                    "Required access:\n"
-                    f"- resource: {resource.path}\n"
-                    f"- scope: {scope}\n"
-                    f"- operation: {operation}"
-                ),
-                source=self.name,
-                details={"error_code": "AUTH_UNLOCK_GRANT_MISSING"},
-            )
 
-        now_utc = datetime.now(tz=timezone.utc)
-        requested_expiry = now_utc + timedelta(minutes=ttl_minutes)
-        expires_at = min(requested_expiry, matching_grant.expires_at.astimezone(timezone.utc))
-        if expires_at <= now_utc:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message="Cannot open unlock window because matching grant is expired.",
-                source=self.name,
-                details={"error_code": "AUTH_UNLOCK_GRANT_EXPIRED"},
-            )
+        state = load_authority_state(project_root=context.project_root)
+        state.active_unlock_window = unlock_window
+        save_authority_state(project_root=context.project_root, state=state)
 
-        try:
-            unlocked_count = AuthorityLockManager().unlock_resource(project_root=context.project_root, resource_id=resource_id)
-        except (RuntimeError, OsLockPolicyError) as error:
-            return StepResult(status=ResultStatus.BLOCK, message=str(error), source=self.name, details={"error_code": "AUTH_UNLOCK_BLOCK"})
-
-        window = UnlockWindow(
-            resource_id=resource_id,
-            resource_path=resource.path,
-            scope=scope,
-            operation=operation,
-            expires_at=expires_at.isoformat(),
-            granted_by=matching_grant.granted_by,
-            request_id=matching_grant.request_id,
-            grant_id=matching_grant.grant_id,
-        )
-        set_unlock_window(project_root=context.project_root, window=window)
+        # MVP: Skip OS-level unlock (not required for catalog mode, and may fail on some filesystems)
 
         return StepResult(
             status=ResultStatus.OK,
-            message=(
-                "Authority unlock granted.\n\n"
-                "Resource:\n"
-                f"{resource.path}\n\n"
-                "Scope:\n"
-                f"{scope}\n\n"
-                "Allowed operation:\n"
-                f"{operation}\n\n"
-                "Expires:\n"
-                f"{ttl_minutes} minutes\n\n"
-                "Only BPFW mechanical commands are allowed to use this unlock."
-            ),
+            message=f"Unlocked resource '{resource_id}' for {ttl_minutes} minutes",
             source=self.name,
             details={
-                "resource_path": resource.path,
-                "scope": scope,
-                "operation": operation,
-                "expires_at": expires_at.isoformat(),
-                "unlocked_target_count": str(unlocked_count),
+                "resource_id": resource_id,
+                "expires_at": expires_at.astimezone(timezone.utc).isoformat(),
+                "ttl_minutes": str(ttl_minutes),
             },
-        )
-
-
-@dataclass(slots=True)
-class WatchStep(PipelineStep):
-    """Run one deterministic watcher scan in foreground mode."""
-
-    name: str = "guard.watch"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        try:
-            _ensure_manifest_for_protected_mode(project_root=context.project_root)
-        except RuntimeError as error:
-            return StepResult(status=ResultStatus.BLOCK, message=str(error), source=self.name, details={"error_code": "WATCH_BLOCK"})
-
-        try:
-            watch_report = AuthorityWatcher().scan_once(project_root=context.project_root)
-        except Exception as error:  # noqa: BLE001
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=f"Watcher execution failed: {error}",
-                source=self.name,
-                details={"error_code": "WATCH_RUNTIME_BLOCK"},
-            )
-        status = ResultStatus.OK if watch_report.status == "OK" else ResultStatus.BLOCK
-        return StepResult(
-            status=status,
-            message=watch_report.message,
-            source=self.name,
-            details={"watch_status": watch_report.status},
-        )
-
-
-@dataclass(slots=True)
-class BlueprintAddFileStep(PipelineStep):
-    """Add one allowed file to a blueprint responsibility."""
-
-    name: str = "blueprint.add_file"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        from bpfw.authority.change_engine import AuthorityChangeEngine
-        from bpfw.authority.operation import AuthorityOperation
-
-        responsibility_id = context.command_arguments.get("responsibility_id", "").strip()
-        file_path = context.command_arguments.get("file_path", "").strip()
-        if not responsibility_id or not file_path:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message="Usage: bpfw blueprint add-file <responsibility_id> <path>",
-                source=self.name,
-            )
-
-        operation = AuthorityOperation(
-            operation_id=f"blueprint-add-file-{responsibility_id}",
-            resource_id="project_blueprint",
-            resource_path="blueprint.yaml",
-            operation_type="add_allowed_file",
-            scope=responsibility_id,
-            payload={"responsibility_id": responsibility_id, "file_path": file_path},
-        )
-        try:
-            AuthorityChangeEngine().apply(project_root=context.project_root, operation=operation)
-        except RuntimeError as error:
-            error_message = str(error)
-            if "Access denied" in error_message or "No active access grant" in error_message:
-                return StepResult(
-                    status=ResultStatus.BLOCK,
-                    message=(
-                        "BLOCK\n\n"
-                        "This command modifies blueprint.yaml.\n\n"
-                        "Required access:\n"
-                        "- resource: blueprint.yaml\n"
-                        f"- scope: {responsibility_id}\n"
-                        "- operation: add_allowed_file\n\n"
-                        "Run:\n"
-                        "bpfw access request blueprint "
-                        f"--scope {responsibility_id} --operation add_allowed_file --reason \"Add retry policy file\""
-                    ),
-                    source=self.name,
-                )
-            return StepResult(status=ResultStatus.BLOCK, message=error_message, source=self.name)
-
-        return StepResult(
-            status=ResultStatus.OK,
-            message=(
-                "OK\n\n"
-                "Added allowed file:\n"
-                f"{file_path}\n\n"
-                "Responsibility:\n"
-                f"{responsibility_id}\n\n"
-                "Verification:\n"
-                "OK\n\n"
-                "Manifest:\n"
-                "Updated"
-            ),
-            source=self.name,
-        )
-
-
-@dataclass(slots=True)
-class BlueprintAddSymbolStep(PipelineStep):
-    """Add one allowed symbol to a blueprint responsibility."""
-
-    name: str = "blueprint.add_symbol"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        from bpfw.authority.change_engine import AuthorityChangeEngine
-        from bpfw.authority.operation import AuthorityOperation
-
-        responsibility_id = context.command_arguments.get("responsibility_id", "").strip()
-        symbol_name = context.command_arguments.get("symbol_name", "").strip()
-        if not responsibility_id or not symbol_name:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message="Usage: bpfw blueprint add-symbol <responsibility_id> <symbol>",
-                source=self.name,
-            )
-        operation = AuthorityOperation(
-            operation_id=f"blueprint-add-symbol-{responsibility_id}",
-            resource_id="project_blueprint",
-            resource_path="blueprint.yaml",
-            operation_type="add_allowed_symbol",
-            scope=responsibility_id,
-            payload={"responsibility_id": responsibility_id, "symbol_name": symbol_name},
-        )
-        try:
-            AuthorityChangeEngine().apply(project_root=context.project_root, operation=operation)
-        except RuntimeError as error:
-            return StepResult(status=ResultStatus.BLOCK, message=str(error), source=self.name)
-        return StepResult(status=ResultStatus.OK, message="Blueprint symbol added mechanically.", source=self.name)
-
-
-@dataclass(slots=True)
-class BlueprintCreateResponsibilityStep(PipelineStep):
-    """Create one blueprint responsibility in a target layer."""
-
-    name: str = "blueprint.create_responsibility"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        from bpfw.authority.change_engine import AuthorityChangeEngine
-        from bpfw.authority.operation import AuthorityOperation
-
-        responsibility_id = context.command_arguments.get("responsibility_id", "").strip()
-        owner_layer = context.command_arguments.get("owner_layer", "").strip()
-        if not responsibility_id or not owner_layer:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message="Usage: bpfw blueprint create-responsibility <responsibility_id> --layer <layer>",
-                source=self.name,
-            )
-        operation = AuthorityOperation(
-            operation_id=f"blueprint-create-responsibility-{responsibility_id}",
-            resource_id="project_blueprint",
-            resource_path="blueprint.yaml",
-            operation_type="create_responsibility",
-            scope=responsibility_id,
-            payload={
-                "responsibility_id": responsibility_id,
-                "canonical_name": responsibility_id.replace("_", " ").title(),
-                "owner_layer": owner_layer,
-            },
-        )
-        try:
-            AuthorityChangeEngine().apply(project_root=context.project_root, operation=operation)
-        except RuntimeError as error:
-            return StepResult(status=ResultStatus.BLOCK, message=str(error), source=self.name)
-        return StepResult(
-            status=ResultStatus.OK,
-            message=(
-                "Responsibility created.\n"
-                "Verify passed.\n"
-                "Manifest updated."
-            ),
-            source=self.name,
-        )
-
-
-@dataclass(slots=True)
-class StartChangeStep(PipelineStep):
-    """Start a scoped change session and create its workspace."""
-
-    name: str = "change.start"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        change_id = context.command_arguments.get("change_id", "").strip()
-        scope_resource_id = context.command_arguments.get("scope", "").strip()
-
-        if not change_id:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message="Missing change_id. Usage: bpfw start <change_id> --scope <resource_id>",
-                source=self.name,
-                details={"error_code": "CH_START_USAGE"},
-            )
-        if not scope_resource_id:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message="Missing --scope <resource_id>. Usage: bpfw start <change_id> --scope <resource_id>",
-                source=self.name,
-                details={"error_code": "CH_SCOPE_USAGE"},
-            )
-
-        try:
-            scope = resolve_scope(project_root=context.project_root, scope_resource_id=scope_resource_id)
-        except ScopeResolutionError as error:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=str(error),
-                source=self.name,
-                details={"error_code": "CH_SCOPE_INVALID"},
-                suggested_actions=["Use a responsibility_id or locked resource_id defined in blueprint.yaml"],
-            )
-
-        if scope.locked:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=f"Scope `{scope.resource_id}` is locked and requires approval workflow",
-                source=self.name,
-                details={"error_code": "CH_SCOPE_LOCKED", "scope_resource_id": scope.resource_id},
-                suggested_actions=["Use approval flow for locked resources"],
-            )
-
-        try:
-            session = create_change_session(project_root=context.project_root, change_id=change_id, scope=scope)
-            workspace_path = build_workspace(project_root=context.project_root, session=session)
-        except (ChangeSessionError, WorkspaceBuildError) as error:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=str(error),
-                source=self.name,
-                details={"error_code": "CH_START_BLOCK", "scope_resource_id": scope_resource_id},
-            )
-
-        return StepResult(
-            status=ResultStatus.OK,
-            message=f"Workspace created for change `{change_id}`",
-            source=self.name,
-            details={
-                "change_id": change_id,
-                "scope_resource_id": scope.resource_id,
-                "workspace_path": str(workspace_path),
-                "allowed_file_count": str(len(session.allowed_files)),
-            },
-            affected_resources=[str(workspace_path)],
-        )
-
-
-@dataclass(slots=True)
-class ReviewChangeStep(PipelineStep):
-    """Review one workspace change against scope policy."""
-
-    name: str = "change.review"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        change_id = context.command_arguments.get("change_id", "").strip()
-        if not change_id:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message="Missing change_id. Usage: bpfw review <change_id>",
-                source=self.name,
-                details={"error_code": "CH_REVIEW_USAGE"},
-            )
-
-        try:
-            session = load_change_session(project_root=context.project_root, change_id=change_id)
-            decision = review_session(project_root=context.project_root, session=session)
-        except (ChangeSessionError, ReviewDecisionError) as error:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=str(error),
-                source=self.name,
-                details={"error_code": "CH_REVIEW_BLOCK", "change_id": change_id},
-            )
-
-        changed_count = len(decision.diff.file_changes)
-        if decision.status == "ALLOW":
-            update_change_status(project_root=context.project_root, session=session, status="review_allow")
-            return StepResult(
-                status=ResultStatus.OK,
-                message=f"Review ALLOW for change `{change_id}`",
-                source=self.name,
-                details={
-                    "change_id": change_id,
-                    "review_status": decision.status,
-                    "changed_file_count": str(changed_count),
-                    "workspace_path": decision.diff.workspace_path,
-                },
-            )
-
-        update_change_status(project_root=context.project_root, session=session, status="review_block")
-        finding = review_primary_finding(decision.findings)
-        if finding is None:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=f"Review blocked for change `{change_id}`",
-                source=self.name,
-                details={"change_id": change_id, "review_status": decision.status},
-            )
-
-        return StepResult(
-            status=ResultStatus.BLOCK,
-            message=finding.message,
-            source=self.name,
-            details={
-                "error_code": finding.code,
-                "change_id": change_id,
-                "review_status": decision.status,
-                "changed_file_count": str(changed_count),
-            },
-            affected_resources=[str(context.project_root / finding.file_path)] if finding.file_path else [],
-            suggested_actions=[finding.recommendation],
-        )
-
-
-@dataclass(slots=True)
-class ApplyChangeStep(PipelineStep):
-    """Apply reviewed workspace changes transactionally into repository."""
-
-    name: str = "change.apply"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        change_id = context.command_arguments.get("change_id", "").strip()
-        if not change_id:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message="Missing change_id. Usage: bpfw apply <change_id>",
-                source=self.name,
-                details={"error_code": "CH_APPLY_USAGE"},
-            )
-
-        try:
-            session = load_change_session(project_root=context.project_root, change_id=change_id)
-            decision = review_session(project_root=context.project_root, session=session)
-        except (ChangeSessionError, ReviewDecisionError) as error:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=str(error),
-                source=self.name,
-                details={"error_code": "CH_APPLY_REVIEW_BLOCK", "change_id": change_id},
-            )
-
-        if decision.status != "ALLOW":
-            finding = review_primary_finding(decision.findings)
-            if finding is None:
-                return StepResult(
-                    status=ResultStatus.BLOCK,
-                    message=f"Apply blocked because review did not pass for `{change_id}`",
-                    source=self.name,
-                    details={"change_id": change_id, "review_status": decision.status},
-                )
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=finding.message,
-                source=self.name,
-                details={
-                    "error_code": finding.code,
-                    "change_id": change_id,
-                    "review_status": decision.status,
-                },
-                affected_resources=[str(context.project_root / finding.file_path)] if finding.file_path else [],
-                suggested_actions=[finding.recommendation],
-            )
-
-        try:
-            transaction_result = apply_change_transaction(
-                project_root=context.project_root,
-                workspace_root=context.project_root / session.workspace_relative_path,
-                change_id=change_id,
-                file_changes=decision.diff.file_changes,
-            )
-            update_change_status(project_root=context.project_root, session=session, status="applied")
-        except (ApplyTransactionError, ChangeSessionError) as error:
-            return StepResult(
-                status=ResultStatus.CRITICAL,
-                message=str(error),
-                source=self.name,
-                details={"error_code": "CH_APPLY_CRITICAL", "change_id": change_id},
-            )
-
-        return StepResult(
-            status=ResultStatus.OK,
-            message=f"Applied change `{change_id}` successfully",
-            source=self.name,
-            details={
-                "change_id": change_id,
-                "applied_file_count": str(len(transaction_result.applied_paths)),
-                "transaction_path": str(transaction_result.transaction_path),
-            },
-            affected_resources=[str(context.project_root / file_path) for file_path in transaction_result.applied_paths[:1]],
-        )
-
-
-@dataclass(slots=True)
-class RejectChangeStep(PipelineStep):
-    """Reject one change session without applying workspace changes."""
-
-    name: str = "change.reject"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        change_id = context.command_arguments.get("change_id", "").strip()
-        if not change_id:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message="Missing change_id. Usage: bpfw reject <change_id>",
-                source=self.name,
-                details={"error_code": "CH_REJECT_USAGE"},
-            )
-
-        try:
-            session = load_change_session(project_root=context.project_root, change_id=change_id)
-            update_change_status(project_root=context.project_root, session=session, status="rejected")
-        except ChangeSessionError as error:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=str(error),
-                source=self.name,
-                details={"error_code": "CH_REJECT_BLOCK", "change_id": change_id},
-            )
-
-        return StepResult(
-            status=ResultStatus.INFO,
-            message=f"Change `{change_id}` marked as rejected",
-            source=self.name,
-            details={"change_id": change_id, "session_status": "rejected"},
-        )
-
-
-@dataclass(slots=True)
-class DiscoverStep(PipelineStep):
-    """Run discover scanner/classifier and persist proposals."""
-
-    name: str = "discover.scan"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        scan_result = scan_repository(project_root=context.project_root)
-        classified_findings = classify_findings(findings=scan_result.findings)
-        proposal_result = build_proposals(project_root=context.project_root, classified_findings=classified_findings)
-        pending_proposals = [proposal for proposal in list_proposals(context.project_root) if proposal.status == "pending"]
-
-        if not classified_findings:
-            return StepResult(
-                status=ResultStatus.OK,
-                message="No discover findings detected",
-                source=self.name,
-                details={
-                    "discover_proposal_count": "0",
-                    "discover_pending_count": str(len(pending_proposals)),
-                },
-            )
-
-        status = ResultStatus.INFO
-        if any(item.severity == "critical" for item in classified_findings):
-            status = ResultStatus.CRITICAL
-        elif any(item.severity == "high" for item in classified_findings):
-            status = ResultStatus.WARNING
-
-        created_proposal_ids = [proposal.proposal_id for proposal in proposal_result.created]
-        details: dict[str, str] = {
-            "discover_proposal_count": str(len(proposal_result.created)),
-            "discover_pending_count": str(len(pending_proposals)),
-        }
-        if created_proposal_ids:
-            details["proposals_human"] = "\n".join(f"- {proposal_id}" for proposal_id in created_proposal_ids)
-
-        discover_message = f"Discover generated {len(proposal_result.created)} proposal(s)"
-        if proposal_result.created:
-            first_proposal = proposal_result.created[0]
-            first_file = first_proposal.detected_files[0] if first_proposal.detected_files else ""
-            discover_message = (
-                "Discovered undeclared file:\n"
-                f"{first_file}\n\n"
-                "Suggested responsibility:\n"
-                f"{first_proposal.suggested_responsibility}\n\n"
-                "Proposal created:\n"
-                f"{first_proposal.proposal_id}"
-            )
-
-        return StepResult(
-            status=status,
-            message=discover_message,
-            source=self.name,
-            details=details,
-        )
-
-
-@dataclass(slots=True)
-class ListProposalsStep(PipelineStep):
-    """List stored discover proposals."""
-
-    name: str = "proposal.list"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        proposals = list_proposals(project_root=context.project_root)
-        return StepResult(
-            status=ResultStatus.INFO,
-            message=f"Loaded {len(proposals)} proposal(s)",
-            source=self.name,
-            details={
-                "proposal_count": str(len(proposals)),
-                "proposals_human": render_proposal_list(proposals),
-            },
-        )
-
-
-@dataclass(slots=True)
-class ShowProposalStep(PipelineStep):
-    """Show one proposal by id."""
-
-    name: str = "proposal.show"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        proposal_id = context.command_arguments.get("proposal_id", "").strip()
-        if not proposal_id:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message="Missing proposal_id. Usage: bpfw show-proposal <proposal_id>",
-                source=self.name,
-                details={"error_code": "PR_SHOW_USAGE"},
-            )
-
-        try:
-            proposal = load_proposal(project_root=context.project_root, proposal_id=proposal_id)
-        except ProposalStoreError as error:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=str(error),
-                source=self.name,
-                details={"error_code": "PR_SHOW_BLOCK", "proposal_id": proposal_id},
-            )
-
-        return StepResult(
-            status=ResultStatus.INFO,
-            message=f"Loaded proposal `{proposal.proposal_id}`",
-            source=self.name,
-            details={
-                "proposal_id": proposal.proposal_id,
-                "proposal_status": proposal.status,
-                "proposal_risk": proposal.risk,
-                "proposal_human": render_proposal_detail(proposal),
-            },
-        )
-
-
-@dataclass(slots=True)
-class AcceptProposalStep(PipelineStep):
-    """Accept one pending proposal and update blueprint."""
-
-    name: str = "proposal.accept"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        proposal_id = context.command_arguments.get("proposal_id", "").strip()
-        if not proposal_id:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message="Missing proposal_id. Usage: bpfw accept-proposal <proposal_id>",
-                source=self.name,
-                details={"error_code": "PR_ACCEPT_USAGE"},
-            )
-
-        try:
-            result = accept_proposal(
-                project_root=context.project_root,
-                proposal_id=proposal_id,
-                responsibility_id=context.command_arguments.get("responsibility", "").strip(),
-                new_responsibility_id=context.command_arguments.get("as_new_responsibility", "").strip(),
-                state=context.command_arguments.get("state", "").strip(),
-            )
-        except ProposalResolutionError as error:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=str(error),
-                source=self.name,
-                details={"error_code": "PR_ACCEPT_BLOCK", "proposal_id": proposal_id},
-            )
-
-        return StepResult(
-            status=ResultStatus.OK,
-            message=(
-                "Proposal accepted.\n"
-                "Blueprint updated mechanically.\n"
-                "Verify passed.\n"
-                "Manifest updated."
-            ),
-            source=self.name,
-            details={
-                "proposal_id": result.proposal.proposal_id,
-                "proposal_status": result.proposal.status,
-                "proposal_action": result.proposal.resolution.get("action", ""),
-                "blueprint_modified": str(result.modified_blueprint).lower(),
-            },
-            affected_resources=[str(context.project_root / "blueprint.yaml")] if result.modified_blueprint else [],
-        )
-
-
-@dataclass(slots=True)
-class RejectProposalStep(PipelineStep):
-    """Reject one pending proposal and apply selected disposition action."""
-
-    name: str = "proposal.reject"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        proposal_id = context.command_arguments.get("proposal_id", "").strip()
-        if not proposal_id:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message="Missing proposal_id. Usage: bpfw reject-proposal <proposal_id>",
-                source=self.name,
-                details={"error_code": "PR_REJECT_USAGE"},
-            )
-
-        reject_action = context.command_arguments.get("reject_action", "").strip() or "move_to_rejected"
-        try:
-            result = reject_proposal(
-                project_root=context.project_root,
-                proposal_id=proposal_id,
-                action=reject_action,
-            )
-        except ProposalResolutionError as error:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=str(error),
-                source=self.name,
-                details={"error_code": "PR_REJECT_BLOCK", "proposal_id": proposal_id},
-            )
-
-        return StepResult(
-            status=ResultStatus.INFO,
-            message=f"Proposal `{result.proposal.proposal_id}` rejected",
-            source=self.name,
-            details={
-                "proposal_id": result.proposal.proposal_id,
-                "proposal_status": result.proposal.status,
-                "proposal_action": result.proposal.resolution.get("reject_action", reject_action),
-                "moved_file_count": str(len(result.moved_files)),
-            },
-            affected_resources=result.moved_files[:1],
         )
 
 
 @dataclass(slots=True)
 class InitProjectStep(PipelineStep):
-    """Initialize BPFW governance for a new or existing project."""
+    """Initialize project with baseline blueprint and manifest."""
 
     name: str = "init.project"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
-        accept_scan = context.command_arguments.get("accept_scan", "").strip() == "true"
-        force_new = context.command_arguments.get("force_new", "").strip() == "true"
-        no_os_lock = context.command_arguments.get("no_os_lock", "").strip() == "true"
-        watch_mode = context.command_arguments.get("watch", "").strip() == "true"
-        if no_os_lock:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message="--no-os-lock is not allowed in protected mode.",
-                source=self.name,
-                details={"error_code": "INIT_OS_LOCK_REQUIRED"},
-            )
+        force_new = str(context.command_arguments.get("force_new", "")).strip().lower() == "true"
+        accept_scan = str(context.command_arguments.get("accept_scan", "")).strip().lower() == "true"
+        watch_mode = str(context.command_arguments.get("watch", "")).strip().lower() == "true"
+        no_os_lock = str(context.command_arguments.get("no_os_lock", "")).strip().lower() == "true"
+
         detector = ProjectDetector()
         detection_result = detector.detect(project_root=context.project_root)
-        ensure_local_hmac_key(project_root=context.project_root)
 
-        if detection_result.is_initialized and not force_new and not accept_scan:
+        if detection_result.is_initialized and not force_new:
             return StepResult(
                 status=ResultStatus.WARNING,
-                message="BPFW INIT\n\nProject is already initialized.\n\nProtection is already active.",
+                message="Project already initialized.\nUse --force-new to reinitialize.",
                 source=self.name,
-                details={"blueprint_path": str(context.project_root / "blueprint.yaml")},
+                details={"existing_blueprint": str(detection_result.project_root / "blueprint.yaml")},
+            )
+
+        ensure_local_hmac_key()
+        scanner = MechanicalProjectScanner(project_root=context.project_root)
+        scan_result = scanner.scan()
+
+        generator = InitialBlueprintGenerator(scan_result=scan_result)
+        entries = generator.generate()
+
+        acceptor = InitialBaselineAcceptor(project_root=context.project_root, entries=entries, accept=accept_scan)
+
+        try:
+            acceptor.accept()
+        except RuntimeError as error:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=str(error),
+                source=self.name,
+                details={"error_code": "INIT_ACCEPT_BLOCK"},
             )
 
         if accept_scan:
             try:
-                acceptance_result = InitialBaselineAcceptor().accept(project_root=context.project_root)
-                locked_count = AuthorityLockManager().lock_all(project_root=context.project_root)
-                hooks_installed = False
-                if (context.project_root / ".git/hooks").exists():
-                    install_pre_commit_hook(project_root=context.project_root)
-                    hooks_installed = True
-            except (RuntimeError, IntegrityManifestError, IntegritySigningError) as error:
-                return StepResult(
-                    status=ResultStatus.BLOCK,
-                    message=str(error),
-                    source=self.name,
-                    details={"error_code": "INIT_ACCEPT_BLOCK"},
-                )
-            except (HookInstallError, OsLockPolicyError) as error:
-                return StepResult(
-                    status=ResultStatus.BLOCK,
-                    message=str(error),
-                    source=self.name,
-                    details={"error_code": "INIT_LOCK_BLOCK"},
-                )
-            return StepResult(
-                status=ResultStatus.OK,
-                message=(
-                    "Initial baseline accepted.\n"
-                    "Protection active by default.\n"
-                    "Manifest written."
-                ),
-                source=self.name,
-                details={
-                    "blueprint_path": str(acceptance_result.blueprint_path),
-                    "manifest_path": str(acceptance_result.manifest_path),
-                    "os_lock_enabled": "true",
-                    "locked_target_count": str(locked_count),
-                    "hooks_installed": str(hooks_installed).lower(),
-                    "watch_recommended": str(watch_mode).lower(),
-                },
-            )
-
-        generator = InitialBlueprintGenerator()
-        if force_new or not detection_result.is_existing_project:
-            baseline = generator.generate_empty_baseline(project_root=context.project_root)
-            bpfw_root = context.project_root / ".bpfw"
-            for relative_directory in ["access_requests", "access_grants", "approvals", "proposals", "audit"]:
-                (bpfw_root / relative_directory).mkdir(parents=True, exist_ok=True)
-            save_authority_state(
-                project_root=context.project_root,
-                state=AuthorityState(
-                    protection_enabled=True,
-                    os_lock_enabled=False,
-                    active_unlock_window=None,
-                    last_relock_at="",
-                ),
-            )
-            try:
-                manifest_result = write_manifest(project_root=context.project_root)
-                locked_count = AuthorityLockManager().lock_all(project_root=context.project_root)
-                hooks_installed = False
-                if (context.project_root / ".git/hooks").exists():
-                    install_pre_commit_hook(project_root=context.project_root)
-                    hooks_installed = True
+                write_manifest(project_root=context.project_root)
             except (IntegrityManifestError, IntegritySigningError) as error:
                 return StepResult(
                     status=ResultStatus.BLOCK,
-                    message=str(error),
+                    message=f"Blueprint generated but manifest failed: {error}",
                     source=self.name,
                     details={"error_code": "INIT_MANIFEST_BLOCK"},
                 )
-            except (HookInstallError, OsLockPolicyError, RuntimeError) as error:
-                return StepResult(
-                    status=ResultStatus.BLOCK,
-                    message=str(error),
-                    source=self.name,
-                    details={"error_code": "INIT_LOCK_BLOCK"},
-                )
-            return StepResult(
-                status=ResultStatus.OK,
-                message=(
-                    "New project detected.\n"
-                    "Created protected baseline.\n"
-                    "Protection active by default."
-                ),
-                source=self.name,
-                details={
-                    "blueprint_path": str(baseline.blueprint_path),
-                    "manifest_path": str(manifest_result.manifest_path),
-                    "os_lock_enabled": "true",
-                    "locked_target_count": str(locked_count),
-                    "hooks_installed": str(hooks_installed).lower(),
-                    "watch_recommended": str(watch_mode).lower(),
-                },
-            )
 
-        scan_result = MechanicalProjectScanner().scan(project_root=context.project_root)
-        generated_baseline = generator.generate(project_root=context.project_root, scan_result=scan_result)
-        class_count = len([symbol for symbol in scan_result.symbols if symbol.kind == "class"])
-        function_count = len([symbol for symbol in scan_result.symbols if symbol.kind == "function"])
-        responsibility_count = generated_baseline.blueprint_path.read_text(encoding="utf-8").count("responsibility_id:")
-        layer_count = len(set(scan_result.probable_layers.values()))
+        try:
+            install_pre_commit_hook(project_root=context.project_root)
+        except HookInstallError:
+            pass
+
+        state = load_authority_state(project_root=context.project_root)
+        state.protection_enabled = True
+        save_authority_state(project_root=context.project_root, state=state)
+
+        if not no_os_lock:
+            lock_manager = AuthorityLockManager()
+            try:
+                lock_manager.lock_all(project_root=context.project_root)
+            except OsLockPolicyError:
+                pass
 
         return StepResult(
-            status=ResultStatus.INFO,
-            message=(
-                "Existing project detected.\n"
-                "Mechanical scan completed.\n"
-                "Generated blueprint.generated.yaml.\n"
-                "Generated architecture.generated.yaml.\n"
-                "Generated scan_report.md."
-            ),
+            status=ResultStatus.OK,
+            message="Project initialized successfully",
             source=self.name,
             details={
-                "scan_file_count": str(len(scan_result.files)),
-                "scan_class_count": str(class_count),
-                "scan_function_count": str(function_count),
-                "scan_probable_responsibility_count": str(responsibility_count),
-                "scan_probable_layer_count": str(layer_count),
-                "blueprint_path": str(generated_baseline.blueprint_path),
+                "blueprint_generated": str(acceptor.blueprint_path),
+                "manifest_sealed": str(accept_scan).lower(),
+                "protection_enabled": "true",
             },
+            affected_resources=[str(acceptor.blueprint_path)],
         )
 
 
-
 def build_default_registry() -> dict[str, Pipeline]:
-    """Create base command to pipeline mapping."""
+    """Build default pipeline registry for BPFW MVP."""
 
     verify_pipeline = Pipeline(
         name="verify",
         steps=[
             VerifyBlueprintStep(),
-            VerifyArchitectureStep(),
-            VerifyCompositionStep(),
-            VerifyRuntimeSnapshotStep(),
-            VerifyWiringStep(),
-            VerifyDuplicationStep(),
-            VerifyBlueprintModeStep(),
             VerifyAuthorityStep(),
             VerifyIntegrityStep(strict=True),
         ],
     )
-    verify_integrity_pipeline = Pipeline(
-        name="verify_integrity",
-        steps=[VerifyIntegrityStep(strict=True)],
-    )
-    manifest_write_pipeline = Pipeline(
-        name="manifest_write",
-        steps=[
-            AuthoritySealPrecheckStep(),
-            VerifyBlueprintStep(),
-            VerifyArchitectureStep(),
-            VerifyCompositionStep(),
-            VerifyRuntimeSnapshotStep(),
-            VerifyWiringStep(),
-            VerifyDuplicationStep(),
-            VerifyBlueprintModeStep(),
-            VerifyAuthorityStep(),
-            ManifestWriteStep(),
-        ],
-    )
-    approve_pipeline = Pipeline(
-        name="approve",
-        steps=[ApproveRequestStep()],
-    )
-    approvals_pipeline = Pipeline(
-        name="approvals",
-        steps=[ListApprovalsStep()],
-    )
-    start_pipeline = Pipeline(
-        name="start",
-        steps=[StartChangeStep()],
-    )
-    review_pipeline = Pipeline(
-        name="review",
-        steps=[ReviewChangeStep()],
-    )
-    apply_pipeline = Pipeline(
-        name="apply",
-        steps=[ApplyChangeStep()],
-    )
-    reject_pipeline = Pipeline(
-        name="reject",
-        steps=[RejectChangeStep()],
-    )
-    architecture_check_pipeline = Pipeline(
-        name="architecture_check",
-        steps=[VerifyArchitectureStep()],
-    )
-    composition_check_pipeline = Pipeline(
-        name="composition_check",
-        steps=[VerifyCompositionStep()],
-    )
-    runtime_snapshot_pipeline = Pipeline(
-        name="runtime_snapshot",
-        steps=[VerifyRuntimeSnapshotStep()],
-    )
-    wiring_check_pipeline = Pipeline(
-        name="wiring_check",
-        steps=[VerifyWiringStep()],
-    )
-    discover_pipeline = Pipeline(
-        name="discover",
-        steps=[DiscoverStep()],
-    )
-    proposals_pipeline = Pipeline(
-        name="proposals",
-        steps=[ListProposalsStep()],
-    )
-    show_proposal_pipeline = Pipeline(
-        name="show_proposal",
-        steps=[ShowProposalStep()],
-    )
-    accept_proposal_pipeline = Pipeline(
-        name="accept_proposal",
-        steps=[AcceptProposalStep()],
-    )
-    reject_proposal_pipeline = Pipeline(
-        name="reject_proposal",
-        steps=[RejectProposalStep()],
-    )
-    install_hooks_pipeline = Pipeline(
-        name="install_hooks",
-        steps=[InstallHooksStep()],
-    )
-    access_request_pipeline = Pipeline(
-        name="access_request",
-        steps=[AccessRequestStep()],
-    )
-    access_grant_pipeline = Pipeline(
-        name="access_grant",
-        steps=[AccessGrantStep()],
-    )
-    access_list_pipeline = Pipeline(
-        name="access_list",
-        steps=[AccessListStep()],
-    )
-    authority_status_pipeline = Pipeline(
-        name="authority_status",
-        steps=[AuthorityStatusStep()],
-    )
-    authority_unlock_pipeline = Pipeline(
-        name="authority_unlock",
-        steps=[AuthorityUnlockStep()],
-    )
-    authority_relock_pipeline = Pipeline(
-        name="authority_relock",
-        steps=[AuthorityRelockStep()],
-    )
-    authority_lock_pipeline = Pipeline(
-        name="authority_lock",
+
+    lock_pipeline = Pipeline(
+        name="lock",
         steps=[AuthorityLockStep()],
     )
-    watch_pipeline = Pipeline(
-        name="watch",
-        steps=[WatchStep()],
+
+    unlock_pipeline = Pipeline(
+        name="unlock",
+        steps=[AuthorityUnlockStep()],
     )
-    blueprint_add_file_pipeline = Pipeline(
-        name="blueprint_add_file",
-        steps=[BlueprintAddFileStep()],
+
+    status_pipeline = Pipeline(
+        name="status",
+        steps=[AuthorityStatusStep()],
     )
-    blueprint_add_symbol_pipeline = Pipeline(
-        name="blueprint_add_symbol",
-        steps=[BlueprintAddSymbolStep()],
-    )
-    blueprint_create_responsibility_pipeline = Pipeline(
-        name="blueprint_create_responsibility",
-        steps=[BlueprintCreateResponsibilityStep()],
-    )
+
     init_pipeline = Pipeline(
         name="init",
         steps=[InitProjectStep()],
     )
-    bootstrap_pipeline = Pipeline(
-        name="bootstrap",
+
+    wizard_pipeline = Pipeline(
+        name="wizard",
         steps=[
             StaticStep(
-                name="blueprint.authority",
-                message="Blueprint authority validation is not implemented yet",
-            ),
-            StaticStep(
-                name="architecture.profile",
-                message="Architecture profile validation is not implemented yet",
-            ),
-            StaticStep(
-                name="lifecycle.rules",
-                message="Lifecycle validation is not implemented yet",
+                name="wizard.scaffold",
+                message="Wizard not implemented yet. TODO: implement interactive blueprint scaffolding in future prompts.",
             ),
         ],
     )
+
     return {
         "verify": verify_pipeline,
-        "verify_integrity": verify_integrity_pipeline,
-        "manifest_write": manifest_write_pipeline,
-        "approve": approve_pipeline,
-        "approvals": approvals_pipeline,
-        "start": start_pipeline,
-        "review": review_pipeline,
-        "apply": apply_pipeline,
-        "reject": reject_pipeline,
-        "architecture_check": architecture_check_pipeline,
-        "composition_check": composition_check_pipeline,
-        "runtime_snapshot": runtime_snapshot_pipeline,
-        "wiring_check": wiring_check_pipeline,
-        "discover": discover_pipeline,
-        "proposals": proposals_pipeline,
-        "show_proposal": show_proposal_pipeline,
-        "accept_proposal": accept_proposal_pipeline,
-        "reject_proposal": reject_proposal_pipeline,
-        "install_hooks": install_hooks_pipeline,
-        "access_request": access_request_pipeline,
-        "access_grant": access_grant_pipeline,
-        "access_list": access_list_pipeline,
-        "authority_status": authority_status_pipeline,
-        "authority_unlock": authority_unlock_pipeline,
-        "authority_relock": authority_relock_pipeline,
-        "authority_lock": authority_lock_pipeline,
-        "blueprint_add_file": blueprint_add_file_pipeline,
-        "blueprint_add_symbol": blueprint_add_symbol_pipeline,
-        "blueprint_create_responsibility": blueprint_create_responsibility_pipeline,
+        "lock": lock_pipeline,
+        "unlock": unlock_pipeline,
+        "status": status_pipeline,
         "init": init_pipeline,
-        "watch": watch_pipeline,
-        "status": bootstrap_pipeline,
+        "wizard": wizard_pipeline,
     }
