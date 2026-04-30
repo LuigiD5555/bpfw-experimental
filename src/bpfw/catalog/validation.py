@@ -34,14 +34,14 @@ def _validate_responsibility_fields(
     responsibility_index: int,
     findings: List[Finding],
 ) -> None:
-    """Validate that all required authority fields are present and non-blank."""
+    """Validate that all required catalog fields are present and non-blank."""
     if not isinstance(responsibility, dict):
         findings.append(
             Finding(
                 source=_SOURCE,
                 code="INCOMPLETE_RESPONSIBILITY",
                 severity=FINDING_SEVERITY_BLOCK,
-                message="A declared responsibility is missing required authority fields.",
+                message="A declared responsibility is missing required catalog fields.",
                 evidence={
                     "responsibility_index": responsibility_index,
                     "missing_fields": list(
@@ -70,7 +70,7 @@ def _validate_responsibility_fields(
                 severity=FINDING_SEVERITY_BLOCK,
                 path=_safe_location_field(responsibility, "path"),
                 symbol=_safe_location_field(responsibility, "symbol"),
-                message="A declared responsibility is missing required authority fields.",
+                message="A declared responsibility is missing required catalog fields.",
                 evidence={
                     "responsibility_index": responsibility_index,
                     "missing_fields": missing_fields,
@@ -193,14 +193,14 @@ def validate_blueprint_structure(
     -------
     list[Finding]
         Normalized findings.  Returns an empty list for non-actionable
-        authority states (``missing``, ``empty``).
+        catalog states (``missing``, ``empty``).
     """
 
     # Non-actionable states – nothing to validate.
     if authority_state in (AUTHORITY_STATE_MISSING, AUTHORITY_STATE_EMPTY):
         return []
 
-    # Invalid authority – the file could not be parsed as valid YAML.
+    # Invalid catalog file: the file could not be parsed as valid YAML.
     if authority_state == AUTHORITY_STATE_INVALID:
         return [
             Finding(

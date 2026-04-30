@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from bpfw.authority.state import load_authority_state
+from bpfw.protection.state import load_authority_state
 from bpfw.catalog.loader import BlueprintLoader
 from bpfw.catalog.models import (
     AUTHORITY_STATE_EMPTY,
@@ -18,7 +18,7 @@ _BLUEPRINT_DISPLAY_PATH = "bpfw/blueprint.yaml"
 
 
 def _determine_lock_state(project_root: Path, authority_state: str) -> str:
-    """Determine the lock state for the blueprint authority.
+    """Determine the lock state for the blueprint.
 
     Returns one of: locked, unlocked, unknown.
     """
@@ -30,11 +30,11 @@ def _determine_lock_state(project_root: Path, authority_state: str) -> str:
         return "unknown"
 
     try:
-        authority = load_authority_state(project_root=project_root)
+        protection_state = load_authority_state(project_root=project_root)
     except (OSError, ValueError, KeyError):
         return "unknown"
 
-    unlock_window = authority.active_unlock_window
+    unlock_window = protection_state.active_unlock_window
     if unlock_window is None:
         return "locked"
 
@@ -83,7 +83,7 @@ def run_status(project_root: Path) -> Tuple[str, int]:
     Pipeline:
     1. Resolve project_root.
     2. Load blueprint.
-    3. Determine authority state.
+    3. Determine blueprint state.
     4. Determine lock state.
     5. If state is missing: do not scan, render allowed.
     6. If state is empty: do not scan, render allowed.
@@ -185,7 +185,7 @@ def render_status_report(
     Parameters
     ----------
     report:
-        The verification report with authority state, counts, and allowed flag.
+        The verification report with blueprint state, counts, and allowed flag.
     blueprint_path:
         Display path for the blueprint file (e.g. ``bpfw/blueprint.yaml``).
     lock_state:
@@ -244,6 +244,6 @@ def render_status_report(
     # Reason block for missing authority
     if report.authority_state == AUTHORITY_STATE_MISSING:
         lines.append("Reason:")
-        lines.append("  No authority exists yet.")
+        lines.append("  No blueprint exists yet.")
 
     return "\n".join(lines)

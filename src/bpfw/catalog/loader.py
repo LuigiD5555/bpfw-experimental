@@ -38,7 +38,7 @@ class BlueprintLoader:
                 source="bpfw",
                 code="NO_AUTHORITY",
                 severity=FINDING_SEVERITY_INFO,
-                message="No BPFW authority file was found.",
+                message="No BPFW blueprint file was found.",
             )
             return BlueprintLoadResult(
                 state=AUTHORITY_STATE_MISSING,
@@ -60,7 +60,7 @@ class BlueprintLoader:
                 source="bpfw",
                 code="NO_AUTHORITY",
                 severity=FINDING_SEVERITY_INFO,
-                message="No BPFW authority file was found.",
+                message="No BPFW blueprint file was found.",
             )
             return BlueprintLoadResult(
                 state=AUTHORITY_STATE_MISSING,

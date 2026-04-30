@@ -3,6 +3,8 @@
 from pathlib import Path
 from typing import Optional
 
+CANONICAL_BLUEPRINT_FILE = "bpfw/blueprint.yaml"
+
 
 def resolve_project_root(explicit_project_root: Optional[Path] = None) -> Path:
     """Resolve the project root directory.
@@ -27,4 +29,4 @@ def resolve_blueprint_path(project_root: Path) -> Path:
     Returns:
         Path to bpfw/blueprint.yaml relative to project root.
     """
-    return project_root / "bpfw" / "blueprint.yaml"
+    return project_root / CANONICAL_BLUEPRINT_FILE

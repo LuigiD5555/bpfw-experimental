@@ -4,7 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from bpfw.blueprint.loader import load_blueprint_data
+from bpfw.catalog.loader import BlueprintLoader
 
 
 DEFAULT_LIFECYCLE = "active"
@@ -13,7 +13,10 @@ DEFAULT_LIFECYCLE = "active"
 def complete_human_fields(project_root: Path) -> tuple[Path, int]:
     """Fill missing intent and lifecycle fields deterministically."""
 
-    blueprint_path, payload, _warnings = load_blueprint_data(project_root=project_root)
+    loader = BlueprintLoader(project_root=project_root)
+    load_result = loader.load()
+    blueprint_path = Path(load_result.path)
+    payload = load_result.data
     responsibilities = payload.get("responsibilities", [])
     if not isinstance(responsibilities, list):
         return blueprint_path, 0
@@ -23,12 +26,12 @@ def complete_human_fields(project_root: Path) -> tuple[Path, int]:
         if not isinstance(responsibility, dict):
             continue
 
-        if not str(responsibility.get("lifecycle_state", "")).strip():
-            responsibility["lifecycle_state"] = DEFAULT_LIFECYCLE
+        if not str(responsibility.get("lifecycle", "")).strip():
+            responsibility["lifecycle"] = DEFAULT_LIFECYCLE
             updated_entries += 1
 
         if not str(responsibility.get("intent", "")).strip():
-            responsibility_identifier = str(responsibility.get("responsibility_id", "")).strip()
+            responsibility_identifier = str(responsibility.get("id", "")).strip()
             canonical_name = str(responsibility.get("canonical_name", "")).strip().lower()
             generated_intent = (
                 f"{canonical_name}:{responsibility_identifier}"

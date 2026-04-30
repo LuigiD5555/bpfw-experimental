@@ -23,9 +23,5 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .
 
-      - name: Run BPFW verify in CI mode
-        env:
-          BPFW_MANIFEST_HMAC_KEY: ${{ secrets.BPFW_MANIFEST_HMAC_KEY }}
-          BPFW_ACCESS_HMAC_KEY: ${{ secrets.BPFW_ACCESS_HMAC_KEY }}
-          BPFW_APPROVAL_HMAC_KEY: ${{ secrets.BPFW_APPROVAL_HMAC_KEY }}
-        run: bpfw verify --ci
+      - name: Run BPFW verify
+        run: bpfw verify

@@ -139,7 +139,7 @@ def compare_declared_to_discovered(
 ) -> List[Finding]:
     """Compare declared responsibilities against discovered code units.
 
-    Drift only runs when authority is in the ``defined`` state.  For all
+    Drift only runs when the blueprint is in the ``defined`` state.  For all
     other states (``missing``, ``empty``, ``invalid``, ``draft``) the
     function returns an empty list — validation handles those cases.
 
@@ -162,7 +162,7 @@ def compare_declared_to_discovered(
         Drift findings (``MISSING_DECLARED_CODE`` and/or
         ``UNDECLARED_CODE``).
     """
-    # Rules 1-4: non-actionable authority states — return no drift findings.
+    # Rules 1-4: non-actionable blueprint states return no drift findings.
     if authority_state != AUTHORITY_STATE_DEFINED:
         return []
 

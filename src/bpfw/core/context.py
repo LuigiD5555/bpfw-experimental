@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from bpfw.blueprint.schema import CANONICAL_BLUEPRINT_FILE
+from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
 
 
 @dataclass(slots=True)
@@ -21,8 +21,6 @@ class ProjectContext:
 
     project_root: Path
     blueprint_file: Path
-    architecture_file: Path
-    lifecycle_file: Path
     command_arguments: dict[str, str] = field(default_factory=dict)
 
 
@@ -32,7 +30,5 @@ def build_project_context(project_root: Path, command_arguments: dict[str, str] 
     return ProjectContext(
         project_root=project_root,
         blueprint_file=project_root / CANONICAL_BLUEPRINT_FILE,
-        architecture_file=project_root / "architecture.yaml",
-        lifecycle_file=project_root / "lifecycle.yaml",
         command_arguments=command_arguments or {},
     )

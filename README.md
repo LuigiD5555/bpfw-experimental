@@ -1,16 +1,16 @@
 # Blueprint Framework (BPFW)
 
-Blueprint Framework (BPFW) is an AI-oriented architecture governance framework extracted from a RAG project.
+Blueprint Framework (BPFW) is an MVP catalog control tool for Python projects.
 
 This repository contains only the framework code (no application/domain code from the original project).
 
 ## What it provides
 
-- Architecture checks
-- Runtime contract validation
-- Catalog governance and locking utilities
-- Executable catalog validation
-- Unified CLI for governance operations
+- `bpfw/blueprint.yaml` catalog generation
+- Catalog validation against discovered Python code
+- Drift detection for declared responsibilities
+- MVP blueprint lock/unlock state
+- Human-readable `verify` and `status` reports
 
 ## Install (editable)
 
@@ -21,10 +21,9 @@ pip install -e .
 ## CLI
 
 ```bash
-bpfw check-architecture
-bpfw validate-migration
-bpfw preflight
-bpfw check-executables
+bpfw init
+bpfw wizard
+bpfw verify
 bpfw status
 bpfw lock
 bpfw unlock
@@ -35,38 +34,18 @@ bpfw unlock
 When running BPFW against another project, point it to that project root:
 
 ```bash
-export BPFW_PROJECT_ROOT=/path/to/target-project
+bpfw verify --project-root /path/to/target-project
 ```
 
-The target project must contain `src/catalog/responsibilities`.
+The target project may contain `bpfw/blueprint.yaml`. If it does not, run `bpfw init`.
 
-## External write safety
+## Lock State
 
-By default, write-like catalog operations are blocked when `BPFW_PROJECT_ROOT`
-points to a different directory than the current working directory. This
-prevents accidental catalog mutations in external projects.
+`bpfw lock` and `bpfw unlock` manage the MVP protection state for:
 
-To allow this intentionally, set:
-
-```bash
-export BPFW_ALLOW_EXTERNAL_CATALOG_WRITES=1
+```text
+bpfw/blueprint.yaml
 ```
-
-## Lock phases
-
-`bpfw lock` is designed to protect in three phases:
-
-- Phase 1 (edit access): catalog YAML files become read-only.
-- Phase 2 (save): write/save attempts fail because files are read-only.
-- Phase 3 (commit): pre-commit hook rejects catalog mutations while locked.
-
-Implementation details:
-
-- Lock backend is `linux_immutable` (`chattr +i`) and requires `sudo`.
-- Unlock requires `sudo`; bypassing with internal non-sudo calls is rejected.
-- `.catalog/lockstate.json` is hardened when locked and checked for tampering.
-
-If immutable locking cannot be enforced, `bpfw lock` fails with error.
 
 ## Notes
 
