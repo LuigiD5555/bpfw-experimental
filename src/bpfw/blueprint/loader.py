@@ -4,7 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from bpfw.blueprint.schema import CANONICAL_BLUEPRINT_FILE, LEGACY_BLUEPRINT_FILE
+from bpfw.blueprint.schema import CANONICAL_BLUEPRINT_FILE
 
 
 class BlueprintLoadError(RuntimeError):
@@ -12,21 +12,13 @@ class BlueprintLoadError(RuntimeError):
 
 
 def resolve_blueprint_path(project_root: Path) -> tuple[Path, list[str]]:
-    """Resolve canonical blueprint path with temporary legacy fallback."""
+    """Resolve canonical blueprint path."""
 
     warnings: list[str] = []
     canonical_blueprint_path = project_root / CANONICAL_BLUEPRINT_FILE
-    legacy_blueprint_path = project_root / LEGACY_BLUEPRINT_FILE
 
     if canonical_blueprint_path.exists():
         return canonical_blueprint_path, warnings
-
-    if legacy_blueprint_path.exists():
-        warnings.append(
-            "Deprecated blueprint path detected (blueprint.yaml). "
-            "Move it to bpfw/blueprint.yaml."
-        )
-        return legacy_blueprint_path, warnings
 
     raise BlueprintLoadError(f"{CANONICAL_BLUEPRINT_FILE} does not exist")
 

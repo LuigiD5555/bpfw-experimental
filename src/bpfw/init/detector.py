@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from bpfw.blueprint.schema import CANONICAL_BLUEPRINT_FILE, LEGACY_BLUEPRINT_FILE
+from bpfw.blueprint.schema import CANONICAL_BLUEPRINT_FILE
 
 _IGNORED_ROOTS = {".venv", ".git", ".bpfw", "build", "dist", "__pycache__"}
 
@@ -26,8 +26,8 @@ class ProjectDetector:
     def detect(self, project_root: Path) -> ProjectDetectionResult:
         """Inspect the project root and return its initialization state."""
 
-        has_blueprint = (project_root / CANONICAL_BLUEPRINT_FILE).exists() or (project_root / LEGACY_BLUEPRINT_FILE).exists()
-        has_manifest = (project_root / ".bpfw/manifest.json").exists()
+        has_blueprint = (project_root / CANONICAL_BLUEPRINT_FILE).exists()
+        has_manifest = False
         has_source_files = self._has_python_sources(project_root=project_root)
         is_initialized = has_blueprint
         is_existing_project = has_source_files and not is_initialized

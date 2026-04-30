@@ -1,7 +1,6 @@
 """Schema constants and canonical paths for BPFW MVP Catalog Mode."""
 
 CANONICAL_BLUEPRINT_FILE = "bpfw/blueprint.yaml"
-LEGACY_BLUEPRINT_FILE = "blueprint.yaml"
 
 REQUIRED_ROOT_FIELDS = (
     "version",
