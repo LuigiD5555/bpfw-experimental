@@ -1,7 +1,5 @@
 """Integrity manifest builder and loader."""
 
-from __future__ import annotations
-
 import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -87,7 +85,7 @@ def _collect_locked_targets(blueprint: BlueprintModel | None) -> dict[str, str]:
 
 def _load_locked_targets_lenient(project_root: Path) -> dict[str, str]:
     try:
-        _, payload = load_blueprint_data(project_root=project_root)
+        _, payload, _warnings = load_blueprint_data(project_root=project_root)
     except BlueprintLoadError:
         return {}
 
@@ -162,8 +160,7 @@ def resolve_protected_targets(project_root: Path, require_valid_blueprint: bool)
         locked_targets = _load_locked_targets_lenient(project_root=project_root)
 
     required_targets: dict[str, str] = {
-        "blueprint.yaml": "project_blueprint",
-        "architecture.yaml": "architecture_profile",
+        "bpfw/blueprint.yaml": "project_blueprint",
     }
     required_targets.update(locked_targets)
     required_targets.update(_critical_framework_targets(project_root=project_root))

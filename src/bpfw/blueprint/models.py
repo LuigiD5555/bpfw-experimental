@@ -1,7 +1,5 @@
 """Domain models for executable Blueprint authority."""
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -28,6 +26,7 @@ class BlueprintResponsibility:
     owner_layer: str
     lifecycle_state: str
     allowed_files: list[str]
+    intent: str | None = None
     allowed_symbols: list[str] = field(default_factory=list)
     allowed_implementations: list[BlueprintImplementation] = field(default_factory=list)
     active_implementation: str = ""
@@ -73,3 +72,4 @@ class BlueprintValidationResult:
     is_valid: bool
     errors: list[BlueprintValidationError] = field(default_factory=list)
     blueprint: BlueprintModel | None = None
+    warnings: list[str] = field(default_factory=list)

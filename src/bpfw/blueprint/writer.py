@@ -1,18 +1,20 @@
-from __future__ import annotations
+"""Blueprint writer with deterministic formatting."""
 
 from pathlib import Path
 
 import yaml
 
 from bpfw.blueprint.models import BlueprintModel
+from bpfw.blueprint.schema import CANONICAL_BLUEPRINT_FILE
 
 
 class BlueprintWriter:
     """Writes blueprint files using deterministic formatting and atomic replacement."""
 
     def write(self, project_root: Path, blueprint: BlueprintModel) -> Path:
-        blueprint_path = project_root / "blueprint.yaml"
-        temporary_path = project_root / "blueprint.yaml.tmp"
+        blueprint_path = project_root / CANONICAL_BLUEPRINT_FILE
+        blueprint_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary_path = blueprint_path.with_suffix(".yaml.tmp")
 
         responsibilities_payload = []
         for responsibility in sorted(blueprint.responsibilities, key=lambda item: item.responsibility_id):
@@ -21,6 +23,7 @@ class BlueprintWriter:
                     "responsibility_id": responsibility.responsibility_id,
                     "canonical_name": responsibility.canonical_name,
                     "owner_layer": responsibility.owner_layer,
+                    "intent": getattr(responsibility, "intent", None),
                     "lifecycle_state": responsibility.lifecycle_state,
                     "allowed_files": responsibility.allowed_files,
                     "allowed_symbols": responsibility.allowed_symbols,

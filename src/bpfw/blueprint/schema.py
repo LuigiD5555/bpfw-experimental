@@ -1,13 +1,14 @@
-"""Schema constants for minimum executable Blueprint model."""
+"""Schema constants and canonical paths for BPFW MVP Catalog Mode."""
 
-from __future__ import annotations
+CANONICAL_BLUEPRINT_FILE = "bpfw/blueprint.yaml"
+LEGACY_BLUEPRINT_FILE = "blueprint.yaml"
 
-REQUIRED_ROOT_FIELDS: tuple[str, ...] = (
+REQUIRED_ROOT_FIELDS = (
     "version",
     "responsibilities",
 )
 
-REQUIRED_RESPONSIBILITY_FIELDS: tuple[str, ...] = (
+REQUIRED_RESPONSIBILITY_FIELDS = (
     "responsibility_id",
     "canonical_name",
     "owner_layer",
@@ -17,18 +18,18 @@ REQUIRED_RESPONSIBILITY_FIELDS: tuple[str, ...] = (
     "active_implementation",
 )
 
-REQUIRED_IMPLEMENTATION_FIELDS: tuple[str, ...] = (
+REQUIRED_IMPLEMENTATION_FIELDS = (
     "implementation_id",
     "class_name",
     "file",
     "lifecycle_state",
 )
 
-REQUIRED_LOCKED_RESOURCE_FIELDS: tuple[str, ...] = (
+REQUIRED_LOCKED_RESOURCE_FIELDS = (
     "resource_id",
     "path",
     "mutability",
     "owner",
 )
 
-BLUEPRINT_FILE_NAME = "blueprint.yaml"
+BLUEPRINT_FILE_NAME = CANONICAL_BLUEPRINT_FILE

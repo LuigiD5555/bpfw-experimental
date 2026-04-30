@@ -189,9 +189,9 @@ def _validate_manifest_coverage(project_root: Path, manifest_payload: dict[str, 
 
 def _locked_resource_ids(project_root: Path) -> set[str]:
     """Get set of locked resource IDs from blueprint."""
-    locked_resource_ids = {"project_blueprint", "architecture_profile"}
+    locked_resource_ids = {"project_blueprint"}
     try:
-        _, blueprint_payload = load_blueprint_data(project_root=project_root)
+        _, blueprint_payload, _warnings = load_blueprint_data(project_root=project_root)
     except BlueprintLoadError:
         return locked_resource_ids
 
