@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 
 from bpfw.core.engine import BlueprintEngine, build_command
-from bpfw.enforcement.ci import ci_exit_code, render_ci_report
 
 
 MVP_COMMANDS = (
@@ -32,11 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--ttl", default="10m")
     parser.add_argument("--accept-scan", action="store_true")
     parser.add_argument("--force-new", action="store_true")
-    parser.add_argument("--ci", action="store_true", dest="ci_mode")
-    parser.add_argument("--diagnostic", action="store_true")
     parser.add_argument("--json", action="store_true", dest="as_json")
-    parser.add_argument("--watch", action="store_true", dest="watch_mode")
-    parser.add_argument("--no-os-lock", action="store_true", dest="no_os_lock")
     return parser
 
 
@@ -166,17 +161,6 @@ def main() -> int:
             command_arguments["accept_scan"] = "true"
         if parsed_arguments.force_new:
             command_arguments["force_new"] = "true"
-        if parsed_arguments.watch_mode:
-            command_arguments["watch"] = "true"
-        if parsed_arguments.no_os_lock:
-            command_arguments["no_os_lock"] = "true"
-
-    # verify flags
-    if normalized_command == "verify":
-        if parsed_arguments.ci_mode:
-            command_arguments["ci"] = "true"
-        if parsed_arguments.diagnostic:
-            command_arguments["diagnostic"] = "true"
 
     # unlock args — resource comes from subcommand (2nd positional)
     if normalized_command == "unlock":
@@ -199,11 +183,7 @@ def main() -> int:
         print(json.dumps(payload, indent=2))
     else:
         _print_human(payload)
-        if normalized_command == "verify" and parsed_arguments.ci_mode:
-            print(render_ci_report(payload=payload))
 
-    if normalized_command == "verify" and parsed_arguments.ci_mode:
-        return ci_exit_code(payload=payload)
     return 0 if result.status in {"OK", "INFO", "WARNING"} else 1
 
 
