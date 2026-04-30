@@ -4,8 +4,10 @@ import argparse
 import json
 from pathlib import Path
 
+from bpfw.catalog.verify import run_verify
 from bpfw.catalog.writer import run_init
 from bpfw.core.engine import BlueprintEngine, build_command
+from bpfw.reports.verify_report import render_verify_report
 
 
 MVP_COMMANDS = (
@@ -158,6 +160,14 @@ def main() -> int:
         project_root = Path(parsed_arguments.project_root).resolve()
         _success, message, exit_code = run_init(project_root=project_root)
         print(message)
+        return exit_code
+
+    # verify is handled directly by the catalog verify pipeline
+    if normalized_command == "verify":
+        project_root = Path(parsed_arguments.project_root).resolve()
+        report, exit_code = run_verify(project_root=project_root)
+        output = render_verify_report(report)
+        print(output)
         return exit_code
 
     engine = BlueprintEngine()
