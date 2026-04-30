@@ -1,0 +1,43 @@
+version: 1
+
+project:
+  id: blueprint_framework
+  name: Blueprint Framework
+  root: .
+  language: python
+  source_roots:
+    - src
+  ignored_paths:
+    - .git
+    - .venv
+    - venv
+    - __pycache__
+    - node_modules
+    - dist
+    - build
+
+policy:
+  mode: catalog
+  empty_blueprint_allows_execution: true
+  defined_blueprint_blocks_on_drift: true
+  allowed_lifecycles:
+    - active
+    - experimental
+    - legacy
+    - deprecated
+  single_active_per_intent: true
+  undeclared_code_blocks: true
+  missing_declared_code_blocks: true
+
+responsibilities:
+  - id: framework_entrypoint
+    intent: ""
+    canonical_name: BlueprintFrameworkEntryPoint
+    owner_layer: bootstrap
+    lifecycle: active
+
+    location:
+      path: src/bpfw/cli.py
+      module: bpfw.cli
+      symbol: main
+      symbol_type: function
