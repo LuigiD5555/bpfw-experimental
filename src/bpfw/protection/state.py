@@ -13,9 +13,6 @@ class UnlockWindow:
     scope: str
     operation: str
     expires_at: str
-    granted_by: str
-    request_id: str
-    grant_id: str
 
 
 @dataclass(slots=True)
@@ -46,9 +43,6 @@ def _window_from_dict(payload: dict[str, str]) -> UnlockWindow:
         scope=str(payload.get("scope", "")),
         operation=str(payload.get("operation", "")),
         expires_at=str(payload.get("expires_at", "")),
-        granted_by=str(payload.get("granted_by", "")),
-        request_id=str(payload.get("request_id", "")),
-        grant_id=str(payload.get("grant_id", "")),
     )
 
 
@@ -61,9 +55,6 @@ def _window_to_dict(window: UnlockWindow | None) -> dict[str, str] | None:
         "scope": window.scope,
         "operation": window.operation,
         "expires_at": window.expires_at,
-        "granted_by": window.granted_by,
-        "request_id": window.request_id,
-        "grant_id": window.grant_id,
     }
 
 

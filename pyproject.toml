@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "blueprint-framework"
 version = "0.1.0"
-description = "Blueprint Framework (BPFW) - AI-oriented architecture governance framework"
+description = "Blueprint Framework (BPFW) - MVP catalog control framework"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}

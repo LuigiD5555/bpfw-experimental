@@ -173,9 +173,6 @@ class AuthorityUnlockStep(PipelineStep):
             scope=str(context.command_arguments.get("scope", "manual") or "manual"),
             operation=str(context.command_arguments.get("operation", "unlock") or "unlock"),
             expires_at=expiration_time.replace(microsecond=0).isoformat(),
-            granted_by="cli",
-            request_id="",
-            grant_id=f"manual_project_blueprint_{int(expiration_time.timestamp())}",
         )
 
         state = load_authority_state(project_root=context.project_root)

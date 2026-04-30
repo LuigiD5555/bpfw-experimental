@@ -14,8 +14,6 @@ project:
   - node_modules
   - tests
   - migrations
-  - examples
-  - archive
 policy:
   mode: catalog
   empty_blueprint_allows_execution: true
@@ -1134,7 +1132,6 @@ responsibilities:
     - bpfw.core.pipeline.PipelineStep
     - bpfw.core.result.ResultStatus
     - bpfw.core.result.StepResult
-    - bpfw.protection.state.AuthorityState
     - bpfw.protection.state.UnlockWindow
     - bpfw.protection.state.load_authority_state
     - bpfw.protection.state.save_authority_state
@@ -1164,8 +1161,8 @@ responsibilities:
     module: src.bpfw.core.registry
     symbol: AuthorityStatusStep
     symbol_type: class
-    start_line: 194
-    end_line: 217
+    start_line: 191
+    end_line: 214
   detected:
     qualified_name: src.bpfw.core.registry.AuthorityStatusStep
     kind: class
@@ -1200,7 +1197,7 @@ responsibilities:
     symbol: AuthorityUnlockStep
     symbol_type: class
     start_line: 154
-    end_line: 190
+    end_line: 187
   detected:
     qualified_name: src.bpfw.core.registry.AuthorityUnlockStep
     kind: class
@@ -1339,8 +1336,8 @@ responsibilities:
     module: src.bpfw.core.registry
     symbol: build_default_registry
     symbol_type: function
-    start_line: 220
-    end_line: 230
+    start_line: 217
+    end_line: 227
   detected:
     qualified_name: src.bpfw.core.registry.build_default_registry
     kind: function
@@ -1510,8 +1507,8 @@ responsibilities:
     module: src.bpfw.protection.state
     symbol: AuthorityState
     symbol_type: class
-    start_line: 22
-    end_line: 26
+    start_line: 19
+    end_line: 23
   detected:
     qualified_name: src.bpfw.protection.state.AuthorityState
     kind: class
@@ -1551,7 +1548,7 @@ responsibilities:
     symbol: UnlockWindow
     symbol_type: class
     start_line: 10
-    end_line: 18
+    end_line: 15
   detected:
     qualified_name: src.bpfw.protection.state.UnlockWindow
     kind: class
@@ -1584,8 +1581,8 @@ responsibilities:
     module: src.bpfw.protection.state
     symbol: clear_unlock_window
     symbol_type: function
-    start_line: 108
-    end_line: 114
+    start_line: 99
+    end_line: 105
   detected:
     qualified_name: src.bpfw.protection.state.clear_unlock_window
     kind: function
@@ -1617,8 +1614,8 @@ responsibilities:
     module: src.bpfw.protection.state
     symbol: load_authority_state
     symbol_type: function
-    start_line: 70
-    end_line: 86
+    start_line: 61
+    end_line: 77
   detected:
     qualified_name: src.bpfw.protection.state.load_authority_state
     kind: function
@@ -1650,8 +1647,8 @@ responsibilities:
     module: src.bpfw.protection.state
     symbol: save_authority_state
     symbol_type: function
-    start_line: 89
-    end_line: 99
+    start_line: 80
+    end_line: 90
   detected:
     qualified_name: src.bpfw.protection.state.save_authority_state
     kind: function
@@ -1683,8 +1680,8 @@ responsibilities:
     module: src.bpfw.protection.state
     symbol: set_unlock_window
     symbol_type: function
-    start_line: 102
-    end_line: 105
+    start_line: 93
+    end_line: 96
   detected:
     qualified_name: src.bpfw.protection.state.set_unlock_window
     kind: function

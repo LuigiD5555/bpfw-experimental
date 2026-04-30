@@ -15,9 +15,6 @@ def test_protection_state_roundtrip(tmp_path: Path) -> None:
             scope="manual",
             operation="unlock",
             expires_at="2026-01-01T00:10:00+00:00",
-            granted_by="tester",
-            request_id="access-request-001",
-            grant_id="access-grant-001",
         ),
         last_relock_at="2026-01-01T00:00:00+00:00",
     )
