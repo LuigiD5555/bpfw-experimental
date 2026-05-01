@@ -6,6 +6,7 @@ from bpfw.integrations.wizard import (
     get_incomplete_responsibilities,
     suggest_owner_layer,
 )
+from bpfw.integrations import wizard as wizard_adapter
 from bpfw.integrations.wizard_base import load_wizard_session
 from bpfw.integrations.wizard_text import render_text_screen, run_text_wizard_session
 
@@ -235,3 +236,20 @@ def test_text_wizard_falls_back_when_input_is_unavailable(tmp_path: Path) -> Non
     assert exit_code == 0
     assert "Interactive wizard unavailable. Running automatic fallback." in output
     assert "exampleservice:example" in saved
+
+
+def test_wizard_runs_automatic_fallback_without_interactive_terminal(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    called = {"fallback": False}
+
+    def fake_complete(project_root: Path) -> tuple[Path, int]:
+        called["fallback"] = project_root == tmp_path
+        return tmp_path / "bpfw" / "blueprint.yaml", 3
+
+    monkeypatch.setattr(wizard_adapter, "_can_use_interactive_terminal", lambda: False)
+    monkeypatch.setattr(wizard_adapter, "complete_human_fields", fake_complete)
+
+    assert wizard_adapter.run_wizard(tmp_path) == 0
+    assert called["fallback"] is True
