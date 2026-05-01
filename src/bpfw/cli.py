@@ -6,6 +6,7 @@ from pathlib import Path
 
 from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
 from bpfw.catalog.verify import run_verify
+from bpfw.catalog.wizard import run_wizard
 from bpfw.catalog.writer import run_init
 from bpfw.core.engine import BlueprintEngine, build_command
 from bpfw.protection.authority import (
@@ -198,6 +199,11 @@ def main() -> int:
         output, exit_code = run_status(project_root=project_root)
         print(output)
         return exit_code
+
+    # wizard is handled directly as an interactive terminal flow
+    if normalized_command == "wizard":
+        project_root = Path(parsed_arguments.project_root).resolve()
+        return run_wizard(project_root=project_root)
 
     # lock is handled directly by the protection authority
     if normalized_command == "lock":
