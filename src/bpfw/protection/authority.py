@@ -74,21 +74,19 @@ def setup_blueprint_protection(project_root: Path) -> str:
 def lock_blueprint(project_root: Path) -> str:
     """Lock the canonical MVP blueprint resource.
 
-    Attempts OS-level enforcement first.  When the OS lock cannot be
+    Attempts OS-level enforcement only. When the OS lock cannot be
     enforced (for example on a filesystem that does not support chmod
-    or chattr), falls back to a simple logical lock marker file at
-    ``bpfw/.lock``.  The fallback does not claim strong OS security.
+    or chattr), the command reports ``unsupported`` instead of claiming
+    that the blueprint is protected.
     """
 
     if not (project_root / CANONICAL_BLUEPRINT_FILE).exists():
         return "unknown"
 
     result = lock_file(project_root=project_root, relative_path=CANONICAL_BLUEPRINT_FILE)
-    if result == "locked":
-        return "locked"
-
-    # OS enforcement unavailable — use fallback logical lock
-    _write_fallback_lock(project_root=project_root)
+    if result != "locked":
+        _remove_fallback_lock(project_root=project_root)
+        return result
     return "locked"
 
 
@@ -113,8 +111,5 @@ def get_blueprint_lock_state(project_root: Path) -> str:
     if result == "locked":
         return "locked"
 
-    # Check fallback logical lock
-    if _is_fallback_locked(project_root=project_root):
-        return "locked"
-
+    _remove_fallback_lock(project_root=project_root)
     return "unlocked"
