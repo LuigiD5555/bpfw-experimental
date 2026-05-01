@@ -4,9 +4,11 @@ import argparse
 import json
 from pathlib import Path
 
+from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
 from bpfw.catalog.verify import run_verify
 from bpfw.catalog.writer import run_init
 from bpfw.core.engine import BlueprintEngine, build_command
+from bpfw.protection.authority import get_blueprint_lock_state, lock_blueprint, unlock_blueprint
 from bpfw.reports.status_report import run_status
 from bpfw.reports.verify_report import render_verify_report
 
@@ -184,6 +186,69 @@ def main() -> int:
         output, exit_code = run_status(project_root=project_root)
         print(output)
         return exit_code
+
+    # lock is handled directly by the protection authority
+    if normalized_command == "lock":
+        project_root = Path(parsed_arguments.project_root).resolve()
+        lock_state = lock_blueprint(project_root=project_root)
+        if lock_state == "unknown":
+            print(
+                "BPFW blueprint does not exist:\n"
+                f"  {CANONICAL_BLUEPRINT_FILE}\n\n"
+                "Run bpfw init first."
+            )
+            return 1
+        if lock_state == "unsupported":
+            print(
+                "BPFW could not lock the blueprint.\n\n"
+                "Protected:\n"
+                f"  {CANONICAL_BLUEPRINT_FILE}\n\n"
+                "Status:\n"
+                "  UNSUPPORTED\n\n"
+                "Try running from a terminal where file permissions can be changed."
+            )
+            return 1
+        print(
+            "Blueprint locked.\n\n"
+            "Protected:\n"
+            f"  {CANONICAL_BLUEPRINT_FILE}\n\n"
+            "Status:\n"
+            "  LOCKED"
+        )
+        return 0
+
+    # unlock is handled directly by the protection authority
+    if normalized_command == "unlock":
+        project_root = Path(parsed_arguments.project_root).resolve()
+        current_lock_state = get_blueprint_lock_state(project_root=project_root)
+        if current_lock_state == "unknown":
+            print(
+                "BPFW blueprint does not exist:\n"
+                f"  {CANONICAL_BLUEPRINT_FILE}\n\n"
+                "Run bpfw init first."
+            )
+            return 1
+        unlock_state = unlock_blueprint(project_root=project_root)
+        if unlock_state == "unsupported":
+            print(
+                "BPFW could not unlock the blueprint.\n\n"
+                "Protected:\n"
+                f"  {CANONICAL_BLUEPRINT_FILE}\n\n"
+                "Status:\n"
+                "  UNSUPPORTED\n\n"
+                "Try running from a terminal where file permissions can be changed."
+            )
+            return 1
+        print(
+            "Blueprint unlocked.\n\n"
+            "Protected:\n"
+            f"  {CANONICAL_BLUEPRINT_FILE}\n\n"
+            "Status:\n"
+            "  UNLOCKED\n\n"
+            "Reminder:\n"
+            "  Run bpfw verify before locking again."
+        )
+        return 0
 
     engine = BlueprintEngine()
     command_arguments: dict[str, str] = {}
