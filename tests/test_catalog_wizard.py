@@ -6,6 +6,8 @@ from bpfw.integrations.wizard import (
     get_incomplete_responsibilities,
     suggest_owner_layer,
 )
+from bpfw.integrations.wizard_base import load_wizard_session
+from bpfw.integrations.wizard_text import render_text_screen, run_text_wizard_session
 
 
 def _responsibility(
@@ -101,3 +103,135 @@ def test_complete_human_fields_fills_missing_entries(tmp_path: Path) -> None:
 
     assert resolved_path == blueprint_path
     assert updated_entries >= 2
+
+
+def test_text_wizard_renders_expected_sections(tmp_path: Path) -> None:
+    responsibility = _responsibility(
+        responsibility_id="example",
+        intent="",
+        lifecycle="active",
+        path="src/bpfw/catalog/example.py",
+    )
+    output: list[str] = []
+
+    render_text_screen(
+        project_root=tmp_path,
+        responsibility=responsibility,
+        index=11,
+        total=82,
+        print_func=output.append,
+    )
+
+    rendered = "\n".join(output)
+    assert "BPFW Wizard  12/82  draft" in rendered
+    assert "src/bpfw/catalog/example.py :: ExampleService" in rendered
+    assert "Code" in rendered
+    assert "Authority" in rendered
+    assert "Suggestions" in rendered
+    assert "[i] intent" in rendered
+
+
+def test_text_wizard_edits_fields_and_accepts(tmp_path: Path) -> None:
+    blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
+    blueprint_path.parent.mkdir(parents=True)
+    blueprint_path.write_text(
+        "version: 1\n"
+        "responsibilities:\n"
+        "  - id: example\n"
+        "    canonical_name: ExampleService\n"
+        "    owner_layer: ''\n"
+        "    lifecycle: ''\n"
+        "    intent: ''\n"
+        "    notes: ''\n"
+        "    location:\n"
+        "      path: src/bpfw/catalog/example.py\n"
+        "      symbol: ExampleService\n"
+        "      symbol_type: class\n"
+        "      start_line: 1\n"
+        "      end_line: 1\n",
+        encoding="utf-8",
+    )
+    session = load_wizard_session(project_root=tmp_path)
+    answers = iter(
+        [
+            "i",
+            "maintain example",
+            "o",
+            "catalog",
+            "l",
+            "experimental",
+            "n",
+            "reviewed",
+            "a",
+        ]
+    )
+    output: list[str] = []
+
+    exit_code = run_text_wizard_session(
+        session=session,
+        input_func=lambda _prompt: next(answers),
+        print_func=output.append,
+    )
+
+    saved = blueprint_path.read_text(encoding="utf-8")
+    assert exit_code == 0
+    assert "maintain example" in saved
+    assert "experimental" in saved
+    assert "reviewed" in saved
+
+
+def test_text_wizard_accept_blocks_missing_required_fields(tmp_path: Path) -> None:
+    blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
+    blueprint_path.parent.mkdir(parents=True)
+    blueprint_path.write_text(
+        "version: 1\n"
+        "responsibilities:\n"
+        "  - id: example\n"
+        "    canonical_name: ''\n"
+        "    owner_layer: catalog\n"
+        "    lifecycle: active\n"
+        "    intent: maintain example\n",
+        encoding="utf-8",
+    )
+    session = load_wizard_session(project_root=tmp_path)
+    answers = iter(["a", "q"])
+    output: list[str] = []
+
+    exit_code = run_text_wizard_session(
+        session=session,
+        input_func=lambda _prompt: next(answers),
+        print_func=output.append,
+    )
+
+    assert exit_code == 0
+    assert any("Missing required fields: canonical_name" in line for line in output)
+
+
+def test_text_wizard_falls_back_when_input_is_unavailable(tmp_path: Path) -> None:
+    blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
+    blueprint_path.parent.mkdir(parents=True)
+    blueprint_path.write_text(
+        "version: 1\n"
+        "responsibilities:\n"
+        "  - id: example\n"
+        "    canonical_name: ExampleService\n"
+        "    lifecycle: ''\n"
+        "    intent: ''\n",
+        encoding="utf-8",
+    )
+    session = load_wizard_session(project_root=tmp_path)
+    output: list[str] = []
+
+    def unavailable_input(_prompt: str) -> str:
+        raise EOFError
+
+    exit_code = run_text_wizard_session(
+        session=session,
+        input_func=unavailable_input,
+        print_func=output.append,
+    )
+
+    saved = blueprint_path.read_text(encoding="utf-8")
+    assert exit_code == 0
+    assert "Interactive wizard unavailable. Running automatic fallback." in output
+    assert "exampleservice:example" in saved
