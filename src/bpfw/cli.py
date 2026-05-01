@@ -8,7 +8,13 @@ from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
 from bpfw.catalog.verify import run_verify
 from bpfw.catalog.writer import run_init
 from bpfw.core.engine import BlueprintEngine, build_command
-from bpfw.protection.authority import get_blueprint_lock_state, lock_blueprint, unlock_blueprint
+from bpfw.protection.authority import (
+    MISSING_BLUEPRINT_STATUS,
+    ProtectionResult,
+    get_blueprint_lock_state,
+    lock_authority,
+    unlock_authority,
+)
 from bpfw.reports.status_report import run_status
 from bpfw.reports.verify_report import render_verify_report
 
@@ -20,7 +26,6 @@ MVP_COMMANDS = (
     "lock",
     "unlock",
     "status",
-    "protect",
     "repair",
 )
 
@@ -52,10 +57,6 @@ def normalize_command(command: str, subcommand: str | None) -> str:
         if subcommand is not None and subcommand != "blueprint":
             raise ValueError("unlock only supports blueprint resource in MVP. Usage: bpfw unlock [blueprint]")
         return "unlock"
-    if command == "protect":
-        if subcommand != "setup":
-            raise ValueError("protect only supports setup in MVP. Usage: bpfw protect setup")
-        return "protect.setup"
     if command == "repair":
         if subcommand is not None:
             raise ValueError("repair does not accept subcommands")
@@ -78,6 +79,17 @@ def normalize_command(command: str, subcommand: str | None) -> str:
         return "status"
 
     raise ValueError(f"Unknown command: {command}")
+
+
+def _format_protected_resources(result: ProtectionResult) -> str:
+    """Format protected resources for CLI output."""
+
+    lines = []
+    for resource in result.protected_resources:
+        lines.append(f"  {resource.path}")
+    for resource in result.skipped_resources:
+        lines.append(f"  {resource.path} (skipped: missing)")
+    return "\n".join(lines)
 
 
 
@@ -190,28 +202,37 @@ def main() -> int:
     # lock is handled directly by the protection authority
     if normalized_command == "lock":
         project_root = Path(parsed_arguments.project_root).resolve()
-        lock_state = lock_blueprint(project_root=project_root)
-        if lock_state == "unknown":
+        lock_result = lock_authority(project_root=project_root)
+        if lock_result.status == MISSING_BLUEPRINT_STATUS:
             print(
                 "BPFW blueprint does not exist:\n"
                 f"  {CANONICAL_BLUEPRINT_FILE}\n\n"
                 "Run bpfw init first."
             )
             return 1
-        if lock_state == "unsupported":
+        if lock_result.status == "unsupported":
             print(
-                "BPFW could not lock the blueprint.\n\n"
+                "BPFW could not lock authority resources.\n\n"
                 "Protected:\n"
-                f"  {CANONICAL_BLUEPRINT_FILE}\n\n"
+                f"{_format_protected_resources(result=lock_result)}\n\n"
                 "Status:\n"
                 "  UNSUPPORTED\n\n"
                 "Try running from a terminal where file permissions can be changed."
             )
             return 1
+        if lock_result.status != "locked":
+            print(
+                "BPFW authority protection is incomplete.\n\n"
+                "Protected:\n"
+                f"{_format_protected_resources(result=lock_result)}\n\n"
+                "Status:\n"
+                f"  {lock_result.status.upper()}"
+            )
+            return 1
         print(
-            "Blueprint locked.\n\n"
+            "Authority locked.\n\n"
             "Protected:\n"
-            f"  {CANONICAL_BLUEPRINT_FILE}\n\n"
+            f"{_format_protected_resources(result=lock_result)}\n\n"
             "Status:\n"
             "  LOCKED"
         )
@@ -228,23 +249,23 @@ def main() -> int:
                 "Run bpfw init first."
             )
             return 1
-        unlock_state = unlock_blueprint(project_root=project_root)
-        if unlock_state == "unsupported":
+        unlock_result = unlock_authority(project_root=project_root)
+        if unlock_result.status == "unsupported":
             print(
-                "BPFW could not unlock the blueprint.\n\n"
+                "BPFW could not unlock authority resources.\n\n"
                 "Protected:\n"
-                f"  {CANONICAL_BLUEPRINT_FILE}\n\n"
+                f"{_format_protected_resources(result=unlock_result)}\n\n"
                 "Status:\n"
                 "  UNSUPPORTED\n\n"
                 "Try running from a terminal where file permissions can be changed."
             )
             return 1
         print(
-            "Blueprint unlocked.\n\n"
+            "Authority unlocked.\n\n"
             "Protected:\n"
-            f"  {CANONICAL_BLUEPRINT_FILE}\n\n"
+            f"{_format_protected_resources(result=unlock_result)}\n\n"
             "Status:\n"
-            "  UNLOCKED\n\n"
+            f"  {unlock_result.status.upper()}\n\n"
             "Reminder:\n"
             "  Run bpfw verify before locking again."
         )

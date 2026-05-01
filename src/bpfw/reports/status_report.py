@@ -20,7 +20,7 @@ _BLUEPRINT_DISPLAY_PATH = "bpfw/blueprint.yaml"
 def _determine_lock_state(project_root: Path, authority_state: str) -> str:
     """Determine the lock state for the blueprint.
 
-    Returns one of: locked, unlocked, unknown.
+    Returns one of: locked, degraded, unlocked, unknown.
     """
     if authority_state == AUTHORITY_STATE_MISSING:
         return "unknown"
@@ -140,7 +140,7 @@ def render_status_report(
     blueprint_path:
         Display path for the blueprint file (e.g. ``bpfw/blueprint.yaml``).
     lock_state:
-        Lock status string: locked, unlocked, or unknown.
+        Lock status string: locked, degraded, unlocked, unsupported, or unknown.
     lifecycle_counts:
         Dict with keys ``active``, ``experimental``, ``legacy``, ``deprecated``
         mapping to their respective counts from loaded responsibilities.

@@ -9,11 +9,12 @@ from bpfw.catalog.writer import run_init
 from bpfw.core.pipeline import Pipeline, PipelineStep
 from bpfw.core.result import ResultStatus, StepResult
 from bpfw.protection.authority import (
+    MISSING_BLUEPRINT_STATUS,
     get_blueprint_lock_state,
-    lock_blueprint,
-    unlock_blueprint,
+    lock_authority,
+    unlock_authority,
 )
-from bpfw.protection.setup import run_protection_setup, run_repair
+from bpfw.protection.setup import run_repair
 
 
 @dataclass(slots=True)
@@ -39,7 +40,7 @@ class WizardStep(PipelineStep):
     name: str = "catalog.wizard"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
-        if get_blueprint_lock_state(project_root=context.project_root) == "locked":
+        if get_blueprint_lock_state(project_root=context.project_root) in {"locked", "degraded"}:
             return StepResult(
                 status=ResultStatus.BLOCK,
                 message="BLOCK: Blueprint is locked. Run bpfw unlock before editing.",
@@ -98,56 +99,56 @@ class VerifyBlueprintStep(PipelineStep):
 
 @dataclass(slots=True)
 class AuthorityLockStep(PipelineStep):
-    """Lock the MVP blueprint resource."""
+    """Lock the MVP authority resources."""
 
     name: str = "protection.lock"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
-        lock_state = lock_blueprint(project_root=context.project_root)
-        if lock_state == "unknown":
+        lock_result = lock_authority(project_root=context.project_root)
+        if lock_result.status == MISSING_BLUEPRINT_STATUS:
             return StepResult(
                 status=ResultStatus.BLOCK,
                 message=f"BPFW blueprint does not exist: {CANONICAL_BLUEPRINT_FILE}. Run bpfw init first.",
                 source=self.name,
-                details={"lock_state": lock_state, "resource_id": "project_blueprint"},
+                details={"lock_state": lock_result.status, "resource_id": "authority"},
             )
-        if lock_state == "unsupported":
+        if lock_result.status == "unsupported":
             return StepResult(
                 status=ResultStatus.BLOCK,
                 message=(
                     "BPFW could not enforce an OS lock for "
-                    f"{CANONICAL_BLUEPRINT_FILE}. Run with sudo on a filesystem "
+                    "authority resources. Run with sudo on a filesystem "
                     "that supports ownership changes or immutable flags."
                 ),
                 source=self.name,
-                details={"lock_state": lock_state, "resource_id": "project_blueprint"},
+                details={"lock_state": lock_result.status, "resource_id": "authority"},
             )
 
         return StepResult(
             status=ResultStatus.OK,
-            message=f"Blueprint locked: {CANONICAL_BLUEPRINT_FILE}",
+            message="Authority locked",
             source=self.name,
-            details={"lock_state": lock_state, "resource_id": "project_blueprint"},
+            details={"lock_state": lock_result.status, "resource_id": "authority"},
         )
 
 
 @dataclass(slots=True)
 class AuthorityProtectSetupStep(PipelineStep):
-    """Prepare OS-level protection for the MVP blueprint resource."""
+    """Hidden compatibility alias for the lock pipeline."""
 
     name: str = "protection.setup"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
-        setup_result = run_protection_setup(project_root=context.project_root)
-        lock_state = setup_result.lock_state
-        if lock_state == "unknown":
+        lock_result = lock_authority(project_root=context.project_root)
+        lock_state = lock_result.status
+        if lock_state == MISSING_BLUEPRINT_STATUS:
             return StepResult(
                 status=ResultStatus.BLOCK,
                 message=f"BPFW blueprint does not exist: {CANONICAL_BLUEPRINT_FILE}. Run bpfw init first.",
                 source=self.name,
                 details={
                     "lock_state": lock_state,
-                    "resource_id": "project_blueprint",
+                    "resource_id": "authority",
                 },
             )
         if lock_state == "unsupported":
@@ -155,24 +156,24 @@ class AuthorityProtectSetupStep(PipelineStep):
                 status=ResultStatus.BLOCK,
                 message=(
                     "BPFW could not prepare OS protection for "
-                    f"{CANONICAL_BLUEPRINT_FILE}. Use a terminal where sudo can run "
+                    "authority resources. Use a terminal where sudo can run "
                     "or move the project to a filesystem that supports ownership "
                     "changes or immutable flags."
                 ),
                 source=self.name,
                 details={
                     "lock_state": lock_state,
-                    "resource_id": "project_blueprint",
+                    "resource_id": "authority",
                 },
             )
 
         return StepResult(
             status=ResultStatus.OK,
-            message=f"Blueprint protection enabled: {CANONICAL_BLUEPRINT_FILE}",
+            message="Authority locked",
             source=self.name,
             details={
                 "lock_state": lock_state,
-                "resource_id": "project_blueprint",
+                "resource_id": "authority",
             },
         )
 
@@ -195,25 +196,25 @@ class RepairProjectStep(PipelineStep):
 
 @dataclass(slots=True)
 class AuthorityUnlockStep(PipelineStep):
-    """Unlock the MVP blueprint resource."""
+    """Unlock the MVP authority resources."""
 
     name: str = "protection.unlock"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
-        lock_state = unlock_blueprint(project_root=context.project_root)
-        if lock_state == "unknown":
+        unlock_result = unlock_authority(project_root=context.project_root)
+        if unlock_result.status == MISSING_BLUEPRINT_STATUS:
             return StepResult(
                 status=ResultStatus.BLOCK,
                 message=f"BPFW blueprint does not exist: {CANONICAL_BLUEPRINT_FILE}. Run bpfw init first.",
                 source=self.name,
-                details={"lock_state": lock_state, "resource_id": "project_blueprint"},
+                details={"lock_state": unlock_result.status, "resource_id": "authority"},
             )
 
         return StepResult(
             status=ResultStatus.OK,
-            message=f"Blueprint unlocked: {CANONICAL_BLUEPRINT_FILE}",
+            message="Authority unlocked",
             source=self.name,
-            details={"resource_id": "project_blueprint", "lock_state": lock_state},
+            details={"resource_id": "authority", "lock_state": unlock_result.status},
         )
 
 

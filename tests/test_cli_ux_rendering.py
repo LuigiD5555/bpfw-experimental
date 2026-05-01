@@ -19,11 +19,11 @@ def test_print_human_lock_uses_message_only(capsys) -> None:
     payload = {
         "command_name": "lock",
         "status": "ok",
-        "message": "Blueprint locked: bpfw/blueprint.yaml",
+        "message": "Authority locked",
         "primary_step": {},
         "steps": [],
     }
 
     _print_human(payload)
     output = capsys.readouterr().out
-    assert output == "Blueprint locked: bpfw/blueprint.yaml\n"
+    assert output == "Authority locked\n"
