@@ -195,6 +195,6 @@ def render_status_report(
     # Reason block for missing authority
     if report.authority_state == AUTHORITY_STATE_MISSING:
         lines.append("Reason:")
-        lines.append("  No blueprint exists yet.")
+        lines.append("  No authority exists yet.")
 
     return "\n".join(lines)

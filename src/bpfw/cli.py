@@ -236,7 +236,7 @@ def main() -> int:
             )
             return 1
         print(
-            "Authority locked.\n\n"
+            "Blueprint locked.\n\n"
             "Protected:\n"
             f"{_format_protected_resources(result=lock_result)}\n\n"
             "Status:\n"
@@ -267,7 +267,7 @@ def main() -> int:
             )
             return 1
         print(
-            "Authority unlocked.\n\n"
+            "Blueprint unlocked.\n\n"
             "Protected:\n"
             f"{_format_protected_resources(result=unlock_result)}\n\n"
             "Status:\n"

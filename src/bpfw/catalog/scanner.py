@@ -128,7 +128,7 @@ def _scan_python_file(
                 source="bpfw",
                 code="PYTHON_PARSE_ERROR",
                 severity="block",
-                message=f"Syntax error: {e.msg}",
+                message="BPFW could not parse this Python file.",
                 path=str(relative_path),
                 evidence={
                     "line": e.lineno,

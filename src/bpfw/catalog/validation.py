@@ -41,7 +41,7 @@ def _validate_responsibility_fields(
                 source=_SOURCE,
                 code="INCOMPLETE_RESPONSIBILITY",
                 severity=FINDING_SEVERITY_BLOCK,
-                message="A declared responsibility is missing required catalog fields.",
+                message="A declared responsibility is missing required authority fields.",
                 evidence={
                     "responsibility_index": responsibility_index,
                     "missing_fields": list(
@@ -70,7 +70,7 @@ def _validate_responsibility_fields(
                 severity=FINDING_SEVERITY_BLOCK,
                 path=_safe_location_field(responsibility, "path"),
                 symbol=_safe_location_field(responsibility, "symbol"),
-                message="A declared responsibility is missing required catalog fields.",
+                message="A declared responsibility is missing required authority fields.",
                 evidence={
                     "responsibility_index": responsibility_index,
                     "missing_fields": missing_fields,
@@ -219,7 +219,7 @@ def validate_blueprint_structure(
                 source=_SOURCE,
                 code="INVALID_BLUEPRINT",
                 severity=FINDING_SEVERITY_BLOCK,
-                message="The blueprint responsibilities field must be a list.",
+                message="The blueprint file is invalid and cannot be used as authority.",
             )
         ]
 
