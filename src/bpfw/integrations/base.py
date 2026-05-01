@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import List
 
 from bpfw.integrations.result import ExternalToolFinding
 
@@ -16,5 +17,5 @@ class ExternalToolAdapter(ABC):
         """Return True when the external tool is available."""
 
     @abstractmethod
-    def run(self, project_root: Path) -> list[ExternalToolFinding]:
+    def run(self, project_root: Path) -> List[ExternalToolFinding]:
         """Run the external tool against a project root."""

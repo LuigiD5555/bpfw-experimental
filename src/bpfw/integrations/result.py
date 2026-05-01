@@ -1,10 +1,10 @@
 """Result objects for dormant external tool integrations."""
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 
-@dataclass(frozen=True)
+@dataclass
 class ExternalToolFinding:
     """Represent a finding produced by an external tool adapter."""
 
@@ -15,4 +15,4 @@ class ExternalToolFinding:
     path: Optional[str] = None
     line: Optional[int] = None
     symbol: Optional[str] = None
-    raw: dict[str, Any] = field(default_factory=dict)
+    raw: Dict[str, Any] = field(default_factory=dict)
