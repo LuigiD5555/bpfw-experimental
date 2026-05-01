@@ -15,3 +15,4 @@ docs/
 .conda/
 .cache/
 .bpfw/
+.lock
