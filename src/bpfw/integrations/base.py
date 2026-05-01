@@ -1,21 +1,20 @@
-"""Base adapter contract for dormant external tool integrations."""
+"""Base adapter contract for optional BPFW integrations."""
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import List
 
-from bpfw.integrations.result import ExternalToolFinding
+from bpfw.integrations.result import OptionalIntegrationResult
 
 
-class ExternalToolAdapter(ABC):
-    """Abstract adapter for future external analysis tools."""
+class OptionalIntegration(ABC):
+    """Abstract adapter for a replaceable BPFW capability."""
 
     name: str
 
     @abstractmethod
     def is_available(self) -> bool:
-        """Return True when the external tool is available."""
+        """Return True when the optional integration can run."""
 
     @abstractmethod
-    def run(self, project_root: Path) -> List[ExternalToolFinding]:
-        """Run the external tool against a project root."""
+    def run(self, project_root: Path) -> OptionalIntegrationResult:
+        """Run the optional integration against a project root."""

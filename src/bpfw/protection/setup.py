@@ -55,6 +55,12 @@ def _format_setup_summary(result: ProtectionSetupResult, action: str) -> str:
     return "\n".join(lines)
 
 
+def format_setup_summary(result: ProtectionSetupResult, action: str) -> str:
+    """Format a protection setup summary for callers."""
+
+    return _format_setup_summary(result=result, action=action)
+
+
 def run_protection_setup(project_root: Path) -> ProtectionSetupResult:
     """Lock the full BPFW authority surface at OS level."""
 
@@ -66,26 +72,7 @@ def run_protection_setup(project_root: Path) -> ProtectionSetupResult:
     )
 
 
-def run_repair(project_root: Path) -> tuple[bool, str, int]:
-    """Repair an existing BPFW project without regenerating the blueprint."""
-
-    blueprint_path = project_root / CANONICAL_BLUEPRINT_FILE
-    if not blueprint_path.exists():
-        message = (
-            "BPFW repair blocked.\n\n"
-            "Blueprint:\n"
-            f"  missing: {CANONICAL_BLUEPRINT_FILE}\n\n"
-            "Next:\n"
-            "  Run bpfw init."
-        )
-        return False, message, 1
-
-    result = run_protection_setup(project_root=project_root)
-    message = _format_setup_summary(result=result, action="repair completed")
-    return result.allowed, message, 0 if result.allowed else 1
-
-
 def format_init_setup_summary(result: ProtectionSetupResult) -> str:
     """Format protection setup details for init output."""
 
-    return _format_setup_summary(result=result, action="protection configured")
+    return format_setup_summary(result=result, action="protection configured")

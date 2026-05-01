@@ -15,7 +15,7 @@ from bpfw.protection.authority import (
     unlock_authority,
     unlock_blueprint,
 )
-from bpfw.protection.setup import run_protection_setup, run_repair
+from bpfw.protection.setup import run_protection_setup
 
 __all__ = [
     "ProtectedResource",
@@ -29,7 +29,6 @@ __all__ = [
     "resolve_project_blueprint_path",
     "resolve_protected_resources",
     "run_protection_setup",
-    "run_repair",
     "setup_blueprint_protection",
     "unlock_authority",
     "unlock_blueprint",

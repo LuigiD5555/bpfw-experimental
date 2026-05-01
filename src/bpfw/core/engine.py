@@ -6,13 +6,14 @@ from bpfw.core.context import EngineCommand, build_project_context
 from bpfw.core.pipeline import execute_pipeline
 from bpfw.core.registry import build_default_registry
 from bpfw.core.result import EngineResult, ResultStatus, StepResult, aggregate_status
+from bpfw.integrations.registry import IntegrationRegistry
 
 
 class BlueprintEngine:
     """Minimal engine implementation for MVP catalog mode."""
 
-    def __init__(self) -> None:
-        self._registry = build_default_registry()
+    def __init__(self, integration_registry: IntegrationRegistry | None = None) -> None:
+        self._registry = build_default_registry(integration_registry=integration_registry)
 
     def run(self, command: EngineCommand) -> EngineResult:
         """Execute command against registry pipeline."""

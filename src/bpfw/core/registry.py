@@ -4,17 +4,19 @@ from dataclasses import dataclass
 
 from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
 from bpfw.catalog.verify import run_verify
-from bpfw.catalog.wizard import complete_human_fields
 from bpfw.catalog.writer import run_init
 from bpfw.core.pipeline import Pipeline, PipelineStep
 from bpfw.core.result import ResultStatus, StepResult
+from bpfw.integrations.registry import (
+    IntegrationRegistry,
+    build_default_integration_registry,
+)
 from bpfw.protection.authority import (
     MISSING_BLUEPRINT_STATUS,
     get_blueprint_lock_state,
     lock_authority,
     unlock_authority,
 )
-from bpfw.protection.setup import run_repair
 
 
 @dataclass(slots=True)
@@ -35,12 +37,14 @@ class InitProjectStep(PipelineStep):
 
 @dataclass(slots=True)
 class WizardStep(PipelineStep):
-    """Complete human catalog fields deterministically."""
+    """Run the optional catalog wizard integration."""
 
-    name: str = "catalog.wizard"
+    integration_registry: IntegrationRegistry
+    name: str = "integrations.wizard"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
-        if get_blueprint_lock_state(project_root=context.project_root) in {"locked", "degraded"}:
+        lock_state = get_blueprint_lock_state(project_root=context.project_root)
+        if lock_state in {"locked", "degraded"}:
             return StepResult(
                 status=ResultStatus.BLOCK,
                 message="BLOCK: Blueprint is locked. Run bpfw unlock before editing.",
@@ -48,13 +52,15 @@ class WizardStep(PipelineStep):
                 details={"error_code": "WIZARD_LOCKED"},
             )
 
-        blueprint_path, updated_entries = complete_human_fields(project_root=context.project_root)
+        result = self.integration_registry.run(
+            name="wizard",
+            project_root=context.project_root,
+        )
         return StepResult(
-            status=ResultStatus.OK,
-            message=f"Wizard completed. Updated fields: {updated_entries}",
+            status=ResultStatus.OK if result.success else ResultStatus.BLOCK,
+            message=result.message,
             source=self.name,
-            details={"blueprint_path": str(blueprint_path), "updated_fields": str(updated_entries)},
-            affected_resources=[str(blueprint_path)],
+            details={"integration": "wizard"},
         )
 
 
@@ -180,17 +186,21 @@ class AuthorityProtectSetupStep(PipelineStep):
 
 @dataclass(slots=True)
 class RepairProjectStep(PipelineStep):
-    """Repair BPFW local protection for an existing project."""
+    """Run the optional local protection repair integration."""
 
-    name: str = "protection.repair"
+    integration_registry: IntegrationRegistry
+    name: str = "integrations.repair"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
-        _success, message, exit_code = run_repair(project_root=context.project_root)
+        result = self.integration_registry.run(
+            name="repair",
+            project_root=context.project_root,
+        )
         return StepResult(
-            status=ResultStatus.OK if exit_code == 0 else ResultStatus.BLOCK,
-            message=message,
+            status=ResultStatus.OK if result.success else ResultStatus.BLOCK,
+            message=result.message,
             source=self.name,
-            details={"blueprint_path": CANONICAL_BLUEPRINT_FILE},
+            details={"blueprint_path": CANONICAL_BLUEPRINT_FILE, "integration": "repair"},
         )
 
 
@@ -245,15 +255,24 @@ class AuthorityStatusStep(PipelineStep):
         )
 
 
-def build_default_registry() -> dict[str, Pipeline]:
+def build_default_registry(
+    integration_registry: IntegrationRegistry | None = None,
+) -> dict[str, Pipeline]:
     """Build the exact MVP command registry."""
 
+    optional_integrations = integration_registry or build_default_integration_registry()
     return {
         "init": Pipeline(name="init", steps=[InitProjectStep()]),
-        "wizard": Pipeline(name="wizard", steps=[WizardStep()]),
+        "wizard": Pipeline(
+            name="wizard",
+            steps=[WizardStep(integration_registry=optional_integrations)],
+        ),
         "verify": Pipeline(name="verify", steps=[VerifyBlueprintStep()]),
         "protect.setup": Pipeline(name="protect.setup", steps=[AuthorityProtectSetupStep()]),
-        "repair": Pipeline(name="repair", steps=[RepairProjectStep()]),
+        "repair": Pipeline(
+            name="repair",
+            steps=[RepairProjectStep(integration_registry=optional_integrations)],
+        ),
         "lock": Pipeline(name="lock", steps=[AuthorityLockStep()]),
         "unlock": Pipeline(name="unlock", steps=[AuthorityUnlockStep()]),
         "status": Pipeline(name="status", steps=[AuthorityStatusStep()]),
