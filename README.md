@@ -9,7 +9,7 @@ This repository contains only the framework code (no application/domain code fro
 - `bpfw/blueprint.yaml` catalog generation
 - Catalog validation against discovered Python code
 - Drift detection for declared responsibilities
-- Protected initialization with OS-level blueprint lock
+- Protected initialization with OS-level authority lock
 - Repair flow for incomplete local protection
 - Human-readable `verify` and `status` reports
 
@@ -41,12 +41,14 @@ bpfw verify --project-root /path/to/target-project
 
 The target project may contain `bpfw/blueprint.yaml`. If it does not, run `bpfw init`.
 
-## Protected Setup
+## Authority Lock
 
-`bpfw init` creates the blueprint and enables OS-level authority protection for:
+`bpfw init` creates the blueprint and enables OS-level authority protection.
+`bpfw lock` protects exactly:
 
 ```text
 bpfw/blueprint.yaml
+BPFW internal guard files
 ```
 
 If an existing project has a broken lock state, run:
@@ -55,8 +57,8 @@ If an existing project has a broken lock state, run:
 bpfw repair
 ```
 
-`bpfw lock` and `bpfw unlock` remain available for explicit authority edit
-windows.
+`bpfw unlock` reverses the same protection for intentional authority edit
+windows. There is no separate public protection setup flow.
 
 ## Notes
 
