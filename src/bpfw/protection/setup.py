@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
-from bpfw.protection.authority import setup_blueprint_protection
+from bpfw.protection.authority import lock_authority
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,6 +35,7 @@ def _format_setup_summary(result: ProtectionSetupResult, action: str) -> str:
         "",
         "Authority protection:",
         f"  os lock: {protection_line}",
+        "  scope: blueprint and BPFW guard files",
     ]
 
     if result.lock_state != "locked":
@@ -55,10 +56,10 @@ def _format_setup_summary(result: ProtectionSetupResult, action: str) -> str:
 
 
 def run_protection_setup(project_root: Path) -> ProtectionSetupResult:
-    """Lock the canonical blueprint at OS level."""
+    """Lock the full BPFW authority surface at OS level."""
 
     blueprint_path = project_root / CANONICAL_BLUEPRINT_FILE
-    lock_state = setup_blueprint_protection(project_root=project_root)
+    lock_state = lock_authority(project_root=project_root).status
     return ProtectionSetupResult(
         blueprint_exists=blueprint_path.exists(),
         lock_state=lock_state,
