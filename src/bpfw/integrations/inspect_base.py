@@ -11,12 +11,28 @@ from bpfw.catalog.loader import BlueprintLoader
 from bpfw.catalog.models import (
     AUTHORITY_STATE_INVALID,
     AUTHORITY_STATE_MISSING,
+    DiscoveredCodeUnit,
 )
+from bpfw.catalog.scanner import scan_python_project
+from bpfw.catalog.verify import _read_ignored_paths, _read_source_roots
+from bpfw.catalog.verify import run_verify
 from bpfw.catalog.writer import to_snake_case
 from bpfw.core.errors import BlueprintLockedError
+from bpfw.reports.finding import Finding
 
 ALLOWED_LIFECYCLES = ("active", "experimental", "legacy", "deprecated")
 REQUIRED_HUMAN_FIELDS = ("intent", "canonical_name", "owner_layer", "lifecycle")
+ISSUE_DRAFT = "draft"
+ISSUE_NEW_DETECTED = "new_detected"
+
+
+@dataclass(slots=True)
+class InspectIssue:
+    """One responsibility-level item to review in inspect."""
+
+    issue_type: str
+    responsibility: Dict[str, Any]
+    add_on_accept: bool = False
 
 
 @dataclass(slots=True)
@@ -27,7 +43,12 @@ class InspectLoadResult:
     blueprint_path: Path | None
     blueprint_data: Dict[str, Any]
     incomplete: List[Dict[str, Any]]
+    issues: list[InspectIssue]
     authority_state: str
+    discovered_count: int = 0
+    undeclared_count: int = 0
+    missing_declared_count: int = 0
+    drift_findings: list[Finding] | None = None
     message: str | None = None
     exit_code: int = 0
 
@@ -51,6 +72,7 @@ def load_inspect_session(project_root: Path) -> InspectLoadResult:
             blueprint_path=None,
             blueprint_data={},
             incomplete=[],
+            issues=[],
             authority_state=load_result.state,
             message="No blueprint found. Run bpfw init first.",
             exit_code=1,
@@ -62,6 +84,7 @@ def load_inspect_session(project_root: Path) -> InspectLoadResult:
             blueprint_path=Path(load_result.path),
             blueprint_data={},
             incomplete=[],
+            issues=[],
             authority_state=load_result.state,
             message="Blueprint is invalid. Fix bpfw/blueprint.yaml before running inspect.",
             exit_code=1,
@@ -75,19 +98,148 @@ def load_inspect_session(project_root: Path) -> InspectLoadResult:
             blueprint_path=Path(load_result.path),
             blueprint_data=load_result.data,
             incomplete=[],
+            issues=[],
             authority_state=load_result.state,
             message="Blueprint is locked. Run bpfw unlock before editing.",
             exit_code=1,
         )
 
     blueprint_data = load_result.data
+    report, _exit_code = run_verify(project_root=resolved_root)
+    drift_findings = [
+        finding
+        for finding in report.findings
+        if finding.code in {"UNDECLARED_CODE", "MISSING_DECLARED_CODE"}
+    ]
+    incomplete = get_incomplete_responsibilities(blueprint_data)
+    issues = build_inspect_issues(
+        project_root=resolved_root,
+        blueprint_data=blueprint_data,
+        incomplete=incomplete,
+    )
     return InspectLoadResult(
         project_root=resolved_root,
         blueprint_path=Path(load_result.path),
         blueprint_data=blueprint_data,
-        incomplete=get_incomplete_responsibilities(blueprint_data),
+        incomplete=incomplete,
+        issues=issues,
         authority_state=load_result.state,
+        discovered_count=report.discovered_count,
+        undeclared_count=report.undeclared_count,
+        missing_declared_count=report.missing_declared_count,
+        drift_findings=drift_findings,
     )
+
+
+def _responsibility_key(responsibility: Dict[str, Any]) -> tuple[str, str, str] | None:
+    """Return the path, symbol, and type key for a responsibility."""
+
+    location = responsibility.get("location")
+    if not isinstance(location, dict):
+        return None
+
+    path = clean_string(location.get("path"))
+    symbol = clean_string(location.get("symbol"))
+    symbol_type = clean_string(location.get("symbol_type"))
+    if path is None or symbol is None or symbol_type is None:
+        return None
+    return path, symbol, symbol_type
+
+
+def _discovered_key(unit: DiscoveredCodeUnit) -> tuple[str, str, str]:
+    """Return the path, symbol, and type key for discovered code."""
+
+    return unit.path, unit.symbol, unit.symbol_type
+
+
+def build_new_detected_responsibility(unit: DiscoveredCodeUnit) -> Dict[str, Any]:
+    """Build a pending responsibility from one newly detected code unit."""
+
+    return {
+        "id": to_snake_case(unit.symbol),
+        "intent": None,
+        "canonical_name": unit.symbol,
+        "owner_layer": None,
+        "lifecycle": "active",
+        "location": {
+            "path": unit.path,
+            "module": unit.module,
+            "symbol": unit.symbol,
+            "symbol_type": unit.symbol_type,
+            "start_line": unit.start_line,
+            "end_line": unit.end_line,
+        },
+        "detected": {
+            "qualified_name": unit.qualified_name,
+            "kind": unit.symbol_type,
+            "methods": unit.methods,
+            "functions": unit.functions,
+            "imports": unit.imports,
+            "decorators": unit.decorators,
+            "docstring": unit.docstring,
+            "signature": unit.signature,
+        },
+        "entrypoints": [],
+        "related_code": [],
+        "duplicate_policy": {
+            "group": None,
+            "allow_multiple_non_active": True,
+            "forbidden_active_duplicates": True,
+            "suspected_duplicates": [],
+        },
+        "replacement": {
+            "replaces": None,
+            "replaced_by": None,
+            "reason": None,
+        },
+        "notes": None,
+    }
+
+
+def build_inspect_issues(
+    project_root: Path,
+    blueprint_data: Dict[str, Any],
+    incomplete: List[Dict[str, Any]],
+) -> list[InspectIssue]:
+    """Build ordered inspect issues from incomplete and newly detected code."""
+
+    issues = [
+        InspectIssue(issue_type=ISSUE_DRAFT, responsibility=responsibility)
+        for responsibility in incomplete
+    ]
+
+    source_roots = _read_source_roots(blueprint_data)
+    ignored_paths = _read_ignored_paths(blueprint_data)
+    scan_result = scan_python_project(
+        project_root=project_root,
+        source_roots=source_roots,
+        ignored_paths=ignored_paths,
+    )
+
+    responsibilities = blueprint_data.get("responsibilities")
+    if not isinstance(responsibilities, list):
+        responsibilities = []
+
+    declared_keys = {
+        key
+        for responsibility in responsibilities
+        if isinstance(responsibility, dict)
+        for key in [_responsibility_key(responsibility)]
+        if key is not None
+    }
+
+    for unit in scan_result.discovered_units:
+        if _discovered_key(unit) in declared_keys:
+            continue
+        issues.append(
+            InspectIssue(
+                issue_type=ISSUE_NEW_DETECTED,
+                responsibility=build_new_detected_responsibility(unit),
+                add_on_accept=True,
+            )
+        )
+
+    return issues
 
 
 def get_incomplete_responsibilities(
@@ -203,10 +355,12 @@ def build_authority_lines(responsibility: Dict[str, Any]) -> list[str]:
     """Build authority field lines for display."""
 
     return [
-        f"  intent       {display_value(responsibility.get('intent'))}",
-        f"  owner_layer  {display_value(responsibility.get('owner_layer'))}",
-        f"  lifecycle    {display_value(responsibility.get('lifecycle'))}",
-        f"  notes        {display_value(responsibility.get('notes'))}",
+        f"  id              {display_value(responsibility.get('id'))}",
+        f"  intent          {display_value(responsibility.get('intent'))}",
+        f"  canonical_name  {display_value(responsibility.get('canonical_name'))}",
+        f"  owner_layer     {display_value(responsibility.get('owner_layer'))}",
+        f"  lifecycle       {display_value(responsibility.get('lifecycle'))}",
+        f"  notes           {display_value(responsibility.get('notes'))}",
     ]
 
 

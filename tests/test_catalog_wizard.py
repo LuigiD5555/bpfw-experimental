@@ -7,7 +7,11 @@ from bpfw.integrations.inspect_base import (
 )
 from bpfw.integrations import wizard as wizard_adapter
 from bpfw.integrations.inspect_base import load_inspect_session
-from bpfw.integrations.inspect_text import render_text_screen, run_text_inspect_session
+from bpfw.integrations.inspect_text import (
+    render_text_screen,
+    run_text_inspect,
+    run_text_inspect_session,
+)
 from bpfw.integrations.wizard_router import WizardRoute
 
 
@@ -97,6 +101,7 @@ def test_text_inspect_renders_expected_sections(tmp_path: Path) -> None:
 
     render_text_screen(
         project_root=tmp_path,
+        issue_type="draft",
         responsibility=responsibility,
         index=11,
         total=82,
@@ -110,6 +115,7 @@ def test_text_inspect_renders_expected_sections(tmp_path: Path) -> None:
     assert "Authority" in rendered
     assert "Suggestions" in rendered
     assert "[i] intent" in rendered
+    assert "[c] canonical" in rendered
 
 
 def test_text_inspect_edits_fields_and_accepts(tmp_path: Path) -> None:
@@ -216,6 +222,65 @@ def test_text_inspect_blocks_when_input_is_unavailable(tmp_path: Path) -> None:
     assert exit_code == 1
     assert "Interactive inspect input unavailable." in output
     assert "exampleservice:example" not in saved
+
+
+def test_text_inspect_accepts_new_detected_code(tmp_path: Path) -> None:
+    source_path = tmp_path / "src" / "demo"
+    source_path.mkdir(parents=True)
+    (source_path / "app.py").write_text(
+        "def declared_func():\n"
+        "    return 1\n"
+        "\n"
+        "def extra_func():\n"
+        "    return 2\n",
+        encoding="utf-8",
+    )
+    blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
+    blueprint_path.parent.mkdir(parents=True)
+    blueprint_path.write_text(
+        "version: 1\n"
+        "project:\n"
+        "  source_roots:\n"
+        "    - src\n"
+        "  ignored_paths:\n"
+        "    - tests\n"
+        "responsibilities:\n"
+        "  - id: declared_func\n"
+        "    intent: maintain declared func\n"
+        "    canonical_name: declared_func\n"
+        "    owner_layer: demo\n"
+        "    lifecycle: active\n"
+        "    location:\n"
+        "      path: src/demo/app.py\n"
+        "      module: src.demo.app\n"
+        "      symbol: declared_func\n"
+        "      symbol_type: function\n",
+        encoding="utf-8",
+    )
+    output: list[str] = []
+    answers = iter(
+        [
+            "i",
+            "maintain extra func",
+            "o",
+            "demo",
+            "a",
+        ]
+    )
+
+    exit_code = run_text_inspect(
+        project_root=tmp_path,
+        input_func=lambda _prompt: next(answers),
+        print_func=output.append,
+    )
+
+    rendered = "\n".join(output)
+    saved = blueprint_path.read_text(encoding="utf-8")
+    assert exit_code == 0
+    assert "BPFW Inspect  1/1  new_detected" in rendered
+    assert "src/demo/app.py :: extra_func" in rendered
+    assert "maintain extra func" in saved
+    assert "extra_func" in saved
 
 
 def test_wizard_reports_selected_route_without_interactive_terminal(

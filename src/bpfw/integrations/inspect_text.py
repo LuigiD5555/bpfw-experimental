@@ -7,7 +7,9 @@ from typing import Any, Dict
 from bpfw.catalog.models import AUTHORITY_STATE_EMPTY
 from bpfw.integrations.inspect_base import (
     ALLOWED_LIFECYCLES,
+    ISSUE_NEW_DETECTED,
     InspectLoadResult,
+    InspectIssue,
     apply_suggestions,
     build_authority_lines,
     build_code_lines,
@@ -39,8 +41,37 @@ def _location_header(responsibility: Dict[str, Any]) -> tuple[str, str]:
     return f"{path} :: {symbol}", f"{symbol_type}  {line_text}"
 
 
+def render_drift_summary(
+    session: InspectLoadResult,
+    print_func: PrintFunc = print,
+) -> None:
+    """Render code drift that still needs inspection."""
+
+    print_func("BPFW Inspect")
+    print_func("")
+    print_func("Code drift needs inspection.")
+    print_func("")
+    print_func("Code:")
+    print_func(f"  discovered: {session.discovered_count}")
+    print_func(f"  undeclared: {session.undeclared_count}")
+    print_func(f"  missing declared: {session.missing_declared_count}")
+    print_func("")
+    print_func("Findings:")
+    for finding in (session.drift_findings or [])[:10]:
+        print_func(f"  [{finding.code}] {finding.path or '-'} :: {finding.symbol or '-'}")
+
+    remaining_count = max(0, len(session.drift_findings or []) - 10)
+    if remaining_count:
+        print_func(f"  ... {remaining_count} more")
+
+    print_func("")
+    print_func("Next:")
+    print_func("  Run bpfw verify for the full drift list.")
+
+
 def render_text_screen(
     project_root: Path,
+    issue_type: str,
     responsibility: Dict[str, Any],
     index: int,
     total: int,
@@ -50,7 +81,7 @@ def render_text_screen(
 
     location_line, kind_line = _location_header(responsibility)
     print_func("")
-    print_func(f"BPFW Inspect  {index + 1}/{total}  draft")
+    print_func(f"BPFW Inspect  {index + 1}/{total}  {issue_type}")
     print_func("")
     print_func(location_line)
     print_func(kind_line)
@@ -68,8 +99,9 @@ def render_text_screen(
         print_func(line)
     print_func("")
     print_func("Actions")
-    print_func("  [i] intent   [o] owner   [l] lifecycle   [n] notes")
-    print_func("  [a] accept   [s] skip    [b] back        [q] quit")
+    print_func("  [i] intent      [c] canonical    [o] owner")
+    print_func("  [l] lifecycle   [n] notes        [a] accept")
+    print_func("  [s] skip        [b] back         [q] quit")
     print_func("")
 
 
@@ -83,6 +115,30 @@ def _edit_text_field(
     value = input_func(prompt).strip()
     if value:
         responsibility[field_name] = value
+
+
+def _accept_issue(session: InspectLoadResult, issue: InspectIssue) -> bool:
+    """Accept one issue and persist the blueprint."""
+
+    missing_fields = validate_ready_to_accept(issue.responsibility)
+    if missing_fields:
+        return False
+    if session.blueprint_path is None:
+        return False
+
+    if issue.add_on_accept:
+        responsibilities = session.blueprint_data.setdefault("responsibilities", [])
+        if not isinstance(responsibilities, list):
+            return False
+        if issue.responsibility not in responsibilities:
+            responsibilities.append(issue.responsibility)
+        issue.add_on_accept = False
+
+    save_blueprint(
+        blueprint_path=session.blueprint_path,
+        blueprint_data=session.blueprint_data,
+    )
+    return True
 
 
 def _edit_lifecycle(
@@ -111,7 +167,10 @@ def run_text_inspect(
         print_func(session.message or "Inspect blocked.")
         return session.exit_code
 
-    if not session.incomplete:
+    if not session.issues:
+        if session.missing_declared_count:
+            render_drift_summary(session=session, print_func=print_func)
+            return 1
         if session.authority_state == AUTHORITY_STATE_EMPTY:
             print_func("No responsibilities to complete.")
         else:
@@ -133,12 +192,15 @@ def run_text_inspect_session(
     """Run text inspect against an already loaded session."""
 
     current_index = 0
-    total = len(session.incomplete)
+    total = len(session.issues)
     while current_index < total:
-        responsibility = session.incomplete[current_index]
-        apply_suggestions(responsibility)
+        issue = session.issues[current_index]
+        responsibility = issue.responsibility
+        if issue.issue_type != ISSUE_NEW_DETECTED:
+            apply_suggestions(responsibility)
         render_text_screen(
             project_root=session.project_root,
+            issue_type=issue.issue_type,
             responsibility=responsibility,
             index=current_index,
             total=total,
@@ -156,6 +218,9 @@ def run_text_inspect_session(
         if action == "i":
             _edit_text_field(responsibility, "intent", input_func)
             continue
+        if action == "c":
+            _edit_text_field(responsibility, "canonical_name", input_func)
+            continue
         if action == "o":
             _edit_text_field(responsibility, "owner_layer", input_func)
             continue
@@ -170,13 +235,9 @@ def run_text_inspect_session(
             if missing_fields:
                 print_func(f"Missing required fields: {', '.join(missing_fields)}")
                 continue
-            if session.blueprint_path is None:
+            if not _accept_issue(session=session, issue=issue):
                 print_func("Blueprint path is unavailable.")
                 return 1
-            save_blueprint(
-                blueprint_path=session.blueprint_path,
-                blueprint_data=session.blueprint_data,
-            )
             print_func("Saved.")
             current_index += 1
             continue
@@ -187,15 +248,10 @@ def run_text_inspect_session(
             current_index = max(0, current_index - 1)
             continue
         if action == "q":
-            if session.blueprint_path is not None:
-                save_blueprint(
-                    blueprint_path=session.blueprint_path,
-                    blueprint_data=session.blueprint_data,
-                )
-            print_func("Saved. Inspect stopped.")
+            print_func("Inspect stopped.")
             return 0
 
-        print_func("Unknown action. Use i, o, l, n, a, s, b, or q.")
+        print_func("Unknown action. Use i, c, o, l, n, a, s, b, or q.")
 
     print_func("")
     print_func("Inspect completed.")
