@@ -1,20 +1,19 @@
-"""Text wizard UI for BPFW catalog completion."""
+"""Text inspect UI for BPFW catalog completion."""
 
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Dict
 
 from bpfw.catalog.models import AUTHORITY_STATE_EMPTY
-from bpfw.integrations.wizard_base import (
+from bpfw.integrations.inspect_base import (
     ALLOWED_LIFECYCLES,
-    WizardLoadResult,
+    InspectLoadResult,
     apply_suggestions,
     build_authority_lines,
     build_code_lines,
     build_suggestion_lines,
     clean_string,
-    complete_human_fields,
-    load_wizard_session,
+    load_inspect_session,
     save_blueprint,
     validate_ready_to_accept,
 )
@@ -47,11 +46,11 @@ def render_text_screen(
     total: int,
     print_func: PrintFunc = print,
 ) -> None:
-    """Render the free text wizard screen."""
+    """Render the free text inspect screen."""
 
     location_line, kind_line = _location_header(responsibility)
     print_func("")
-    print_func(f"BPFW Wizard  {index + 1}/{total}  draft")
+    print_func(f"BPFW Inspect  {index + 1}/{total}  draft")
     print_func("")
     print_func(location_line)
     print_func(kind_line)
@@ -100,27 +99,16 @@ def _edit_lifecycle(
         print_func("Invalid lifecycle. Use active, experimental, legacy, or deprecated.")
 
 
-def _run_automatic_fallback(
-    project_root: Path,
-    print_func: PrintFunc,
-) -> int:
-    print_func("Interactive wizard unavailable. Running automatic fallback.")
-    blueprint_path, updated_entries = complete_human_fields(project_root=project_root)
-    print_func(f"Wizard completed. Updated fields: {updated_entries}")
-    print_func(f"Blueprint saved at: {blueprint_path}")
-    return 0
-
-
-def run_text_wizard(
+def run_text_inspect(
     project_root: Path,
     input_func: InputFunc = input,
     print_func: PrintFunc = print,
 ) -> int:
-    """Run the free text wizard UI."""
+    """Run the free text inspect UI."""
 
-    session = load_wizard_session(project_root=project_root)
+    session = load_inspect_session(project_root=project_root)
     if session.blocked:
-        print_func(session.message or "Wizard blocked.")
+        print_func(session.message or "Inspect blocked.")
         return session.exit_code
 
     if not session.incomplete:
@@ -130,19 +118,19 @@ def run_text_wizard(
             print_func("All responsibilities are already complete.")
         return 0
 
-    return run_text_wizard_session(
+    return run_text_inspect_session(
         session=session,
         input_func=input_func,
         print_func=print_func,
     )
 
 
-def run_text_wizard_session(
-    session: WizardLoadResult,
+def run_text_inspect_session(
+    session: InspectLoadResult,
     input_func: InputFunc = input,
     print_func: PrintFunc = print,
 ) -> int:
-    """Run the text wizard against an already loaded session."""
+    """Run text inspect against an already loaded session."""
 
     current_index = 0
     total = len(session.incomplete)
@@ -159,10 +147,11 @@ def run_text_wizard_session(
         try:
             action = input_func("> ").strip().lower()
         except EOFError:
-            return _run_automatic_fallback(
-                project_root=session.project_root,
-                print_func=print_func,
-            )
+            print_func("Interactive inspect input unavailable.")
+            print_func("")
+            print_func("Next:")
+            print_func("  Run bpfw inspect in an interactive terminal.")
+            return 1
 
         if action == "i":
             _edit_text_field(responsibility, "intent", input_func)
@@ -203,13 +192,13 @@ def run_text_wizard_session(
                     blueprint_path=session.blueprint_path,
                     blueprint_data=session.blueprint_data,
                 )
-            print_func("Saved. Wizard stopped.")
+            print_func("Saved. Inspect stopped.")
             return 0
 
         print_func("Unknown action. Use i, o, l, n, a, s, b, or q.")
 
     print_func("")
-    print_func("Wizard completed.")
+    print_func("Inspect completed.")
     print_func("")
     print_func("Next:")
     print_func("  bpfw verify")

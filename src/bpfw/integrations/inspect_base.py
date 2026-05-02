@@ -1,4 +1,4 @@
-"""Shared wizard behavior for BPFW catalog completion."""
+"""Shared inspect behavior for BPFW catalog completion."""
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,7 +9,6 @@ import yaml
 from bpfw.catalog.access_control import ensure_blueprint_can_be_written
 from bpfw.catalog.loader import BlueprintLoader
 from bpfw.catalog.models import (
-    AUTHORITY_STATE_EMPTY,
     AUTHORITY_STATE_INVALID,
     AUTHORITY_STATE_MISSING,
 )
@@ -21,8 +20,8 @@ REQUIRED_HUMAN_FIELDS = ("intent", "canonical_name", "owner_layer", "lifecycle")
 
 
 @dataclass(slots=True)
-class WizardLoadResult:
-    """Loaded wizard state or a blocking message."""
+class InspectLoadResult:
+    """Loaded inspect state or a blocking message."""
 
     project_root: Path
     blueprint_path: Path | None
@@ -34,20 +33,20 @@ class WizardLoadResult:
 
     @property
     def blocked(self) -> bool:
-        """Return True when the wizard cannot continue."""
+        """Return True when inspect cannot continue."""
 
         return self.exit_code != 0
 
 
-def load_wizard_session(project_root: Path) -> WizardLoadResult:
-    """Load blueprint data and return the wizard work set."""
+def load_inspect_session(project_root: Path) -> InspectLoadResult:
+    """Load blueprint data and return the inspect work set."""
 
     resolved_root = project_root.resolve()
     loader = BlueprintLoader(project_root=resolved_root)
     load_result = loader.load()
 
     if load_result.state == AUTHORITY_STATE_MISSING:
-        return WizardLoadResult(
+        return InspectLoadResult(
             project_root=resolved_root,
             blueprint_path=None,
             blueprint_data={},
@@ -58,20 +57,20 @@ def load_wizard_session(project_root: Path) -> WizardLoadResult:
         )
 
     if load_result.state == AUTHORITY_STATE_INVALID:
-        return WizardLoadResult(
+        return InspectLoadResult(
             project_root=resolved_root,
             blueprint_path=Path(load_result.path),
             blueprint_data={},
             incomplete=[],
             authority_state=load_result.state,
-            message="Blueprint is invalid. Fix bpfw/blueprint.yaml before running wizard.",
+            message="Blueprint is invalid. Fix bpfw/blueprint.yaml before running inspect.",
             exit_code=1,
         )
 
     try:
         ensure_blueprint_can_be_written(project_root=resolved_root)
     except BlueprintLockedError:
-        return WizardLoadResult(
+        return InspectLoadResult(
             project_root=resolved_root,
             blueprint_path=Path(load_result.path),
             blueprint_data=load_result.data,
@@ -82,7 +81,7 @@ def load_wizard_session(project_root: Path) -> WizardLoadResult:
         )
 
     blueprint_data = load_result.data
-    return WizardLoadResult(
+    return InspectLoadResult(
         project_root=resolved_root,
         blueprint_path=Path(load_result.path),
         blueprint_data=blueprint_data,
@@ -261,41 +260,3 @@ def save_blueprint(
     apply_automatic_authority_fields(blueprint_data)
     rendered = yaml.dump(blueprint_data, sort_keys=False, allow_unicode=True)
     blueprint_path.write_text(rendered, encoding="utf-8")
-
-
-def complete_human_fields(project_root: Path) -> tuple[Path, int]:
-    """Fill missing human fields deterministically."""
-
-    ensure_blueprint_can_be_written(project_root=project_root)
-    loader = BlueprintLoader(project_root=project_root)
-    load_result = loader.load()
-    blueprint_path = Path(load_result.path)
-    payload = load_result.data
-    responsibilities = payload.get("responsibilities", [])
-    if not isinstance(responsibilities, list):
-        return blueprint_path, 0
-
-    updated_entries = 0
-    for responsibility in responsibilities:
-        if not isinstance(responsibility, dict):
-            continue
-
-        lifecycle_value = responsibility.get("lifecycle")
-        if lifecycle_value is None or (isinstance(lifecycle_value, str) and not lifecycle_value.strip()):
-            responsibility["lifecycle"] = "active"
-            updated_entries += 1
-
-        intent_value = responsibility.get("intent")
-        if intent_value is None or (isinstance(intent_value, str) and not intent_value.strip()):
-            responsibility_identifier = str(responsibility.get("id", "")).strip()
-            canonical_name = str(responsibility.get("canonical_name", "")).strip().lower()
-            generated_intent = (
-                f"{canonical_name}:{responsibility_identifier}"
-                if canonical_name
-                else responsibility_identifier.replace("_", " ")
-            )
-            responsibility["intent"] = generated_intent.strip() or "define intent"
-            updated_entries += 1
-
-    save_blueprint(blueprint_path=blueprint_path, blueprint_data=payload)
-    return blueprint_path, updated_entries

@@ -1,53 +1,74 @@
-"""Wizard integration for BPFW MVP catalog completion."""
+"""Wizard router integration for BPFW."""
 
 from pathlib import Path
 import sys
 
 from bpfw.integrations.base import OptionalIntegration
+from bpfw.integrations.inspect import run_inspect
+from bpfw.integrations.plan import run_plan
 from bpfw.integrations.result import OptionalIntegrationResult
-from bpfw.integrations.wizard_base import (
-    apply_automatic_authority_fields,
-    complete_human_fields,
-    get_incomplete_responsibilities,
-    suggest_owner_layer,
+from bpfw.integrations.wizard_router import (
+    render_wizard_route_screen,
+    select_wizard_route,
 )
-from bpfw.integrations.wizard_text import run_text_wizard
 
 
-def _can_use_interactive_terminal() -> bool:
-    """Return True when standard streams can support an interactive wizard."""
+def can_use_interactive_terminal() -> bool:
+    """Return True when standard streams support interactive routing."""
 
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
-def _run_automatic_fallback(project_root: Path) -> int:
-    print("Interactive wizard unavailable. Running automatic fallback.")
-    blueprint_path, updated_entries = complete_human_fields(project_root=project_root)
-    print(f"Wizard completed. Updated fields: {updated_entries}")
-    print(f"Blueprint saved at: {blueprint_path}")
+def run_wizard(project_root: Path) -> int:
+    """Run the wizard router."""
+
+    route = select_wizard_route(project_root=project_root)
+    render_wizard_route_screen(route=route)
+
+    if route.blocked:
+        return route.exit_code
+
+    if route.route_name == "inspect":
+        if not can_use_interactive_terminal():
+            print(
+                "\nInteractive terminal unavailable.\n\n"
+                "Detected route:\n"
+                "  inspect\n\n"
+                "Next:\n"
+                "  Run this command in an interactive terminal:\n"
+                "    bpfw inspect"
+            )
+            return 1
+        return run_inspect(project_root=project_root)
+
+    if route.route_name == "plan":
+        if not can_use_interactive_terminal():
+            print(
+                "\nInteractive terminal unavailable.\n\n"
+                "Detected route:\n"
+                "  plan\n\n"
+                "Next:\n"
+                "  Run this command in an interactive terminal:\n"
+                "    bpfw plan"
+            )
+            return 1
+        return run_plan(project_root=project_root)
+
     return 0
 
 
-def run_wizard(project_root: Path) -> int:
-    """Run the free text wizard integration."""
-
-    if not _can_use_interactive_terminal():
-        return _run_automatic_fallback(project_root=project_root)
-    return run_text_wizard(project_root=project_root)
-
-
-class RichWizardIntegration(OptionalIntegration):
-    """Optional wizard integration for catalog completion."""
+class WizardRouterIntegration(OptionalIntegration):
+    """Optional integration that routes users to inspect or plan."""
 
     name = "wizard"
 
     def is_available(self) -> bool:
-        """Return True when the wizard integration can run."""
+        """Return True when the wizard router can run."""
 
         return True
 
     def run(self, project_root: Path) -> OptionalIntegrationResult:
-        """Run the wizard integration."""
+        """Run wizard routing against the given project root."""
 
         exit_code = run_wizard(project_root=project_root)
         return OptionalIntegrationResult(message="", exit_code=exit_code)

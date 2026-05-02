@@ -1,14 +1,14 @@
 from pathlib import Path
 
-from bpfw.integrations.wizard import (
+from bpfw.integrations.inspect_base import (
     apply_automatic_authority_fields,
-    complete_human_fields,
     get_incomplete_responsibilities,
     suggest_owner_layer,
 )
 from bpfw.integrations import wizard as wizard_adapter
-from bpfw.integrations.wizard_base import load_wizard_session
-from bpfw.integrations.wizard_text import render_text_screen, run_text_wizard_session
+from bpfw.integrations.inspect_base import load_inspect_session
+from bpfw.integrations.inspect_text import render_text_screen, run_text_inspect_session
+from bpfw.integrations.wizard_router import WizardRoute
 
 
 def _responsibility(
@@ -86,27 +86,7 @@ def test_apply_automatic_authority_fields_derives_groups() -> None:
     ]
 
 
-def test_complete_human_fields_fills_missing_entries(tmp_path: Path) -> None:
-    project_root = tmp_path
-    blueprint_path = project_root / "bpfw" / "blueprint.yaml"
-    blueprint_path.parent.mkdir(parents=True)
-    blueprint_path.write_text(
-        "version: 1\n"
-        "responsibilities:\n"
-        "  - id: example\n"
-        "    canonical_name: ExampleService\n"
-        "    lifecycle: ''\n"
-        "    intent: ''\n",
-        encoding="utf-8",
-    )
-
-    resolved_path, updated_entries = complete_human_fields(project_root=project_root)
-
-    assert resolved_path == blueprint_path
-    assert updated_entries >= 2
-
-
-def test_text_wizard_renders_expected_sections(tmp_path: Path) -> None:
+def test_text_inspect_renders_expected_sections(tmp_path: Path) -> None:
     responsibility = _responsibility(
         responsibility_id="example",
         intent="",
@@ -124,7 +104,7 @@ def test_text_wizard_renders_expected_sections(tmp_path: Path) -> None:
     )
 
     rendered = "\n".join(output)
-    assert "BPFW Wizard  12/82  draft" in rendered
+    assert "BPFW Inspect  12/82  draft" in rendered
     assert "src/bpfw/catalog/example.py :: ExampleService" in rendered
     assert "Code" in rendered
     assert "Authority" in rendered
@@ -132,7 +112,7 @@ def test_text_wizard_renders_expected_sections(tmp_path: Path) -> None:
     assert "[i] intent" in rendered
 
 
-def test_text_wizard_edits_fields_and_accepts(tmp_path: Path) -> None:
+def test_text_inspect_edits_fields_and_accepts(tmp_path: Path) -> None:
     blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
     blueprint_path.parent.mkdir(parents=True)
     blueprint_path.write_text(
@@ -152,7 +132,7 @@ def test_text_wizard_edits_fields_and_accepts(tmp_path: Path) -> None:
         "      end_line: 1\n",
         encoding="utf-8",
     )
-    session = load_wizard_session(project_root=tmp_path)
+    session = load_inspect_session(project_root=tmp_path)
     answers = iter(
         [
             "i",
@@ -168,7 +148,7 @@ def test_text_wizard_edits_fields_and_accepts(tmp_path: Path) -> None:
     )
     output: list[str] = []
 
-    exit_code = run_text_wizard_session(
+    exit_code = run_text_inspect_session(
         session=session,
         input_func=lambda _prompt: next(answers),
         print_func=output.append,
@@ -181,7 +161,7 @@ def test_text_wizard_edits_fields_and_accepts(tmp_path: Path) -> None:
     assert "reviewed" in saved
 
 
-def test_text_wizard_accept_blocks_missing_required_fields(tmp_path: Path) -> None:
+def test_text_inspect_accept_blocks_missing_required_fields(tmp_path: Path) -> None:
     blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
     blueprint_path.parent.mkdir(parents=True)
     blueprint_path.write_text(
@@ -194,11 +174,11 @@ def test_text_wizard_accept_blocks_missing_required_fields(tmp_path: Path) -> No
         "    intent: maintain example\n",
         encoding="utf-8",
     )
-    session = load_wizard_session(project_root=tmp_path)
+    session = load_inspect_session(project_root=tmp_path)
     answers = iter(["a", "q"])
     output: list[str] = []
 
-    exit_code = run_text_wizard_session(
+    exit_code = run_text_inspect_session(
         session=session,
         input_func=lambda _prompt: next(answers),
         print_func=output.append,
@@ -208,7 +188,7 @@ def test_text_wizard_accept_blocks_missing_required_fields(tmp_path: Path) -> No
     assert any("Missing required fields: canonical_name" in line for line in output)
 
 
-def test_text_wizard_falls_back_when_input_is_unavailable(tmp_path: Path) -> None:
+def test_text_inspect_blocks_when_input_is_unavailable(tmp_path: Path) -> None:
     blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
     blueprint_path.parent.mkdir(parents=True)
     blueprint_path.write_text(
@@ -220,36 +200,36 @@ def test_text_wizard_falls_back_when_input_is_unavailable(tmp_path: Path) -> Non
         "    intent: ''\n",
         encoding="utf-8",
     )
-    session = load_wizard_session(project_root=tmp_path)
+    session = load_inspect_session(project_root=tmp_path)
     output: list[str] = []
 
     def unavailable_input(_prompt: str) -> str:
         raise EOFError
 
-    exit_code = run_text_wizard_session(
+    exit_code = run_text_inspect_session(
         session=session,
         input_func=unavailable_input,
         print_func=output.append,
     )
 
     saved = blueprint_path.read_text(encoding="utf-8")
-    assert exit_code == 0
-    assert "Interactive wizard unavailable. Running automatic fallback." in output
-    assert "exampleservice:example" in saved
+    assert exit_code == 1
+    assert "Interactive inspect input unavailable." in output
+    assert "exampleservice:example" not in saved
 
 
-def test_wizard_runs_automatic_fallback_without_interactive_terminal(
+def test_wizard_reports_selected_route_without_interactive_terminal(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
-    called = {"fallback": False}
+    route = WizardRoute(
+        route_name="inspect",
+        authority_state="draft",
+        discovered_count=1,
+        message="Existing code detected. Routing to inspect.",
+    )
 
-    def fake_complete(project_root: Path) -> tuple[Path, int]:
-        called["fallback"] = project_root == tmp_path
-        return tmp_path / "bpfw" / "blueprint.yaml", 3
+    monkeypatch.setattr(wizard_adapter, "select_wizard_route", lambda project_root: route)
+    monkeypatch.setattr(wizard_adapter, "can_use_interactive_terminal", lambda: False)
 
-    monkeypatch.setattr(wizard_adapter, "_can_use_interactive_terminal", lambda: False)
-    monkeypatch.setattr(wizard_adapter, "complete_human_fields", fake_complete)
-
-    assert wizard_adapter.run_wizard(tmp_path) == 0
-    assert called["fallback"] is True
+    assert wizard_adapter.run_wizard(tmp_path) == 1

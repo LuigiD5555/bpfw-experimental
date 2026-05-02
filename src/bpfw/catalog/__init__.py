@@ -1,4 +1,4 @@
-"""Catalog verification and wizard support for MVP."""
+"""Catalog verification support for MVP."""
 
 from bpfw.catalog.lifecycle import (
     ALLOWED_LIFECYCLES,
