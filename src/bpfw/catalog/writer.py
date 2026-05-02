@@ -72,12 +72,6 @@ def build_initial_blueprint(
             "detected": {
                 "qualified_name": unit.qualified_name,
                 "kind": unit.symbol_type,
-                "methods": unit.methods,
-                "functions": unit.functions,
-                "imports": unit.imports,
-                "decorators": unit.decorators,
-                "docstring": unit.docstring,
-                "signature": unit.signature,
             },
             "entrypoints": [],
             "related_code": [],
@@ -101,7 +95,7 @@ def build_initial_blueprint(
         "project": {
             "id": project_id,
             "name": project_directory_name,
-            "root": str(project_root),
+            "root": ".",
             "language": "python",
             "source_roots": source_roots,
             "ignored_paths": ignored_paths,
@@ -114,6 +108,11 @@ def build_initial_blueprint(
             "single_active_per_intent": True,
             "undeclared_code_blocks": True,
             "missing_declared_code_blocks": True,
+            "security": {
+                "no_secrets_in_blueprint": True,
+                "public_safe_mode": True,
+                "detected_detail_level": "minimal",
+            },
         },
         "responsibilities": responsibilities,
     }

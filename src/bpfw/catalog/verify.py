@@ -12,6 +12,7 @@ from bpfw.catalog.models import (
     VerificationReport,
 )
 from bpfw.catalog.scanner import scan_python_project
+from bpfw.catalog.security import validate_no_blueprint_secrets
 from bpfw.catalog.validation import validate_blueprint_structure
 from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, Finding
 
@@ -150,6 +151,9 @@ def run_verify(project_root: Path) -> Tuple[VerificationReport, int]:
         authority_state=load_result.state,
     )
 
+    # Security validation: detect secrets and absolute paths
+    security_findings = validate_no_blueprint_secrets(load_result.data)
+
     # Drift comparison only for defined state
     drift_findings = compare_declared_to_discovered(
         blueprint_data=load_result.data,
@@ -162,6 +166,7 @@ def run_verify(project_root: Path) -> Tuple[VerificationReport, int]:
     all_findings.extend(load_result.findings)
     all_findings.extend(scan_result.findings)
     all_findings.extend(validation_findings)
+    all_findings.extend(security_findings)
     all_findings.extend(drift_findings)
 
     # Count declared responsibilities
