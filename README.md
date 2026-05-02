@@ -25,6 +25,7 @@ pip install -e .
 bpfw init
 bpfw inspect
 bpfw plan
+bpfw editor
 bpfw verify
 bpfw status
 bpfw lock

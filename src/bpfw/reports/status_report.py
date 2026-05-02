@@ -6,6 +6,8 @@ from typing import Dict, List, Tuple
 from bpfw.catalog.lifecycle import count_lifecycles
 from bpfw.catalog.loader import BlueprintLoader
 from bpfw.catalog.models import (
+    AUTHORITY_STATE_DEFINED,
+    AUTHORITY_STATE_DRAFT,
     AUTHORITY_STATE_EMPTY,
     AUTHORITY_STATE_INVALID,
     AUTHORITY_STATE_MISSING,
@@ -15,6 +17,43 @@ from bpfw.catalog.verify import run_verify
 from bpfw.protection.authority import get_blueprint_lock_state
 
 _BLUEPRINT_DISPLAY_PATH = "bpfw/blueprint.yaml"
+
+
+def _suggest_next_command(report: VerificationReport, lock_state: str) -> tuple[str, str]:
+    """Return the passive next command suggestion for the current status."""
+
+    if report.authority_state == AUTHORITY_STATE_MISSING:
+        return "bpfw init", "No blueprint authority exists yet."
+
+    if report.authority_state == AUTHORITY_STATE_INVALID:
+        return "bpfw editor", "The blueprint authority is invalid and needs direct correction."
+
+    has_structural_problem = (
+        report.duplicate_active_intent_count
+        or report.invalid_lifecycle_count
+        or report.missing_declared_count
+    )
+    if has_structural_problem:
+        return "bpfw editor", "The existing blueprint authority has structural problems."
+
+    if report.undeclared_count or report.incomplete_responsibility_count:
+        return "bpfw inspect", "Some detected code units are not declared or are incomplete."
+
+    if (
+        report.authority_state == AUTHORITY_STATE_EMPTY
+        and report.declared_count == 0
+        and report.discovered_count == 0
+    ):
+        return "bpfw plan", "No responsibilities are declared yet."
+
+    if (
+        report.authority_state in {AUTHORITY_STATE_DRAFT, AUTHORITY_STATE_DEFINED}
+        and report.allowed
+        and lock_state == "unlocked"
+    ):
+        return "bpfw lock", "The blueprint authority is valid but unlocked."
+
+    return "bpfw verify", "Verify code and blueprint alignment."
 
 
 def _determine_lock_state(project_root: Path, authority_state: str) -> str:
@@ -192,9 +231,12 @@ def render_status_report(
         lines.append("Execution:")
         lines.append("  blocked")
 
-    # Reason block for missing authority
-    if report.authority_state == AUTHORITY_STATE_MISSING:
-        lines.append("Reason:")
-        lines.append("  No authority exists yet.")
+    suggested_command, reason = _suggest_next_command(report=report, lock_state=lock_state)
+    lines.append("")
+    lines.append("Suggested next command:")
+    lines.append(f"  {suggested_command}")
+    lines.append("")
+    lines.append("Reason:")
+    lines.append(f"  {reason}")
 
     return "\n".join(lines)

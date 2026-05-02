@@ -23,6 +23,7 @@ MVP_COMMANDS = (
     "init",
     "inspect",
     "plan",
+    "editor",
     "verify",
     "lock",
     "unlock",
@@ -70,6 +71,10 @@ def normalize_command(command: str, subcommand: str | None) -> str:
         if subcommand is not None:
             raise ValueError("plan does not accept subcommands")
         return "plan"
+    if command == "editor":
+        if subcommand is not None:
+            raise ValueError("editor does not accept subcommands")
+        return "editor"
     if command == "init":
         if subcommand is not None:
             raise ValueError("init does not accept subcommands")
@@ -159,10 +164,10 @@ def _print_human(payload: dict) -> None:
         print(f"  lifecycle: {details.get('lifecycle_state', 'unknown')}")
         return
 
-    if payload["command_name"] in {"inspect", "plan"} and not payload["message"]:
+    if payload["command_name"] in {"inspect", "plan", "editor"} and not payload["message"]:
         return
 
-    # lock, unlock, inspect, plan, repair: print message directly
+    # lock, unlock, inspect, plan, editor, repair: print message directly
     if payload["message"]:
         print(payload["message"])
         return
