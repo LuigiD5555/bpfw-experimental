@@ -18,6 +18,8 @@ from bpfw.protection.authority import (
     unlock_authority,
 )
 
+AUTHORITY_EDITING_PLUGINS = {"inspect", "plan", "editor"}
+
 
 @dataclass(slots=True)
 class InitProjectStep(PipelineStep):
@@ -36,8 +38,8 @@ class InitProjectStep(PipelineStep):
 
 
 @dataclass(slots=True)
-class IntegrationStep(PipelineStep):
-    """Run a named optional BPFW integration."""
+class PluginStep(PipelineStep):
+    """Run a named optional BPFW plugin."""
 
     integration_registry: IntegrationRegistry
     integration_name: str
@@ -45,7 +47,7 @@ class IntegrationStep(PipelineStep):
 
     def run(self, context) -> StepResult:  # noqa: ANN001
         lock_state = get_blueprint_lock_state(project_root=context.project_root)
-        if self.integration_name in {"wizard", "inspect", "plan"} and lock_state in {"locked", "degraded"}:
+        if self.integration_name in AUTHORITY_EDITING_PLUGINS and lock_state in {"locked", "degraded"}:
             return StepResult(
                 status=ResultStatus.BLOCK,
                 message=(
@@ -189,26 +191,6 @@ class AuthorityProtectSetupStep(PipelineStep):
 
 
 @dataclass(slots=True)
-class RepairProjectStep(PipelineStep):
-    """Run the optional local protection repair integration."""
-
-    integration_registry: IntegrationRegistry
-    name: str = "integrations.repair"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        result = self.integration_registry.run(
-            name="repair",
-            project_root=context.project_root,
-        )
-        return StepResult(
-            status=ResultStatus.OK if result.success else ResultStatus.BLOCK,
-            message=result.message,
-            source=self.name,
-            details={"blueprint_path": CANONICAL_BLUEPRINT_FILE, "integration": "repair"},
-        )
-
-
-@dataclass(slots=True)
 class AuthorityUnlockStep(PipelineStep):
     """Unlock the MVP authority resources."""
 
@@ -265,45 +247,27 @@ def build_default_registry(
     """Build the exact MVP command registry."""
 
     optional_integrations = integration_registry or build_default_integration_registry()
-    return {
+    pipelines = {
         "init": Pipeline(name="init", steps=[InitProjectStep()]),
-        "wizard": Pipeline(
-            name="wizard",
-            steps=[
-                IntegrationStep(
-                    integration_registry=optional_integrations,
-                    integration_name="wizard",
-                    name="integrations.wizard",
-                )
-            ],
-        ),
-        "inspect": Pipeline(
-            name="inspect",
-            steps=[
-                IntegrationStep(
-                    integration_registry=optional_integrations,
-                    integration_name="inspect",
-                    name="integrations.inspect",
-                )
-            ],
-        ),
-        "plan": Pipeline(
-            name="plan",
-            steps=[
-                IntegrationStep(
-                    integration_registry=optional_integrations,
-                    integration_name="plan",
-                    name="integrations.plan",
-                )
-            ],
-        ),
         "verify": Pipeline(name="verify", steps=[VerifyBlueprintStep()]),
         "protect.setup": Pipeline(name="protect.setup", steps=[AuthorityProtectSetupStep()]),
-        "repair": Pipeline(
-            name="repair",
-            steps=[RepairProjectStep(integration_registry=optional_integrations)],
-        ),
         "lock": Pipeline(name="lock", steps=[AuthorityLockStep()]),
         "unlock": Pipeline(name="unlock", steps=[AuthorityUnlockStep()]),
         "status": Pipeline(name="status", steps=[AuthorityStatusStep()]),
     }
+
+    for integration in optional_integrations.list_integrations():
+        if integration.name in pipelines:
+            continue
+        pipelines[integration.name] = Pipeline(
+            name=integration.name,
+            steps=[
+                PluginStep(
+                    integration_registry=optional_integrations,
+                    integration_name=integration.name,
+                    name=f"plugins.{integration.name}",
+                )
+            ],
+        )
+
+    return pipelines

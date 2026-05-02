@@ -1,10 +1,12 @@
 """Registry for optional BPFW integrations."""
 
-from importlib import import_module
+from importlib.metadata import EntryPoint, entry_points
 from pathlib import Path
 
 from bpfw.integrations.base import OptionalIntegration
 from bpfw.integrations.result import OptionalIntegrationResult
+
+INTEGRATION_ENTRY_POINT_GROUP = "bpfw.integrations"
 
 
 class IntegrationRegistry:
@@ -44,20 +46,27 @@ class IntegrationRegistry:
         return integration.run(project_root=project_root)
 
 
+def _load_entry_point_integration(entry_point: EntryPoint) -> OptionalIntegration | None:
+    """Load one integration entry point if it implements the plugin contract."""
+
+    try:
+        integration_class = entry_point.load()
+        integration = integration_class()
+    except Exception:
+        return None
+
+    if not isinstance(integration, OptionalIntegration):
+        return None
+
+    return integration
+
+
 def build_default_integration_registry() -> IntegrationRegistry:
-    """Build the default optional integration registry."""
+    """Build the default optional integration registry from plugin entry points."""
 
     registry = IntegrationRegistry()
-    for module_name, class_name in (
-        ("bpfw.integrations.wizard", "WizardRouterIntegration"),
-        ("bpfw.integrations.inspect", "InspectIntegration"),
-        ("bpfw.integrations.plan", "PlanIntegration"),
-        ("bpfw.integrations.repair", "ProtectionRepairIntegration"),
-    ):
-        try:
-            module = import_module(module_name)
-            integration_class = getattr(module, class_name)
-        except (ImportError, AttributeError):
-            continue
-        registry.register(integration_class())
+    for entry_point in entry_points(group=INTEGRATION_ENTRY_POINT_GROUP):
+        integration = _load_entry_point_integration(entry_point=entry_point)
+        if integration is not None:
+            registry.register(integration)
     return registry

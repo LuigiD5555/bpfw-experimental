@@ -20,6 +20,11 @@ class BlueprintEngine:
 
         pipeline = self._registry.get(command.command_name)
         if pipeline is None:
+            command_names = [
+                command_name
+                for command_name in sorted(self._registry)
+                if command_name != "protect.setup"
+            ]
             return EngineResult(
                 command_name=command.command_name,
                 status=ResultStatus.BLOCK,
@@ -29,7 +34,7 @@ class BlueprintEngine:
                         message=f"Unknown command: {command.command_name}",
                         source="core.registry",
                         suggested_actions=[
-                            "Use one of: init, wizard, inspect, plan, verify, lock, unlock, status, repair"
+                            f"Use one of: {', '.join(command_names)}"
                         ],
                     )
                 ],

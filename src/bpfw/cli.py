@@ -25,9 +25,9 @@ MVP_COMMANDS = (
     "plan",
     "editor",
     "verify",
+    "status",
     "lock",
     "unlock",
-    "status",
     "repair",
 )
 
@@ -36,8 +36,17 @@ MVP_COMMANDS = (
 def build_parser() -> argparse.ArgumentParser:
     """Create CLI parser for BPFW MVP commands."""
 
-    parser = argparse.ArgumentParser(prog="bpfw")
-    parser.add_argument("command", choices=MVP_COMMANDS)
+    parser = argparse.ArgumentParser(
+        prog="bpfw",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Built-in commands:\n"
+            "  init inspect plan editor verify status lock unlock repair\n\n"
+            "Plugin commands:\n"
+            "  Installed entry points under bpfw.integrations are also accepted."
+        ),
+    )
+    parser.add_argument("command")
     parser.add_argument("subcommand", nargs="?")
     parser.add_argument("--project-root", default=".")
     parser.add_argument("--ttl", default="10m")
@@ -51,44 +60,14 @@ def build_parser() -> argparse.ArgumentParser:
 def normalize_command(command: str, subcommand: str | None) -> str:
     """Map CLI tokens into engine command names for MVP."""
 
-    if command == "lock":
-        if subcommand is not None:
-            raise ValueError("lock does not accept subcommands")
-        return "lock"
     if command == "unlock":
         if subcommand is not None and subcommand != "blueprint":
             raise ValueError("unlock only supports blueprint resource in MVP. Usage: bpfw unlock [blueprint]")
         return "unlock"
-    if command == "repair":
-        if subcommand is not None:
-            raise ValueError("repair does not accept subcommands")
-        return "repair"
-    if command == "inspect":
-        if subcommand is not None:
-            raise ValueError("inspect does not accept subcommands")
-        return "inspect"
-    if command == "plan":
-        if subcommand is not None:
-            raise ValueError("plan does not accept subcommands")
-        return "plan"
-    if command == "editor":
-        if subcommand is not None:
-            raise ValueError("editor does not accept subcommands")
-        return "editor"
-    if command == "init":
-        if subcommand is not None:
-            raise ValueError("init does not accept subcommands")
-        return "init"
-    if command == "verify":
-        if subcommand is not None:
-            raise ValueError("verify does not accept subcommands")
-        return "verify"
-    if command == "status":
-        if subcommand is not None:
-            raise ValueError("status does not accept subcommands")
-        return "status"
+    if subcommand is not None:
+        raise ValueError(f"{command} does not accept subcommands")
 
-    raise ValueError(f"Unknown command: {command}")
+    return command
 
 
 def _format_protected_resources(result: ProtectionResult) -> str:

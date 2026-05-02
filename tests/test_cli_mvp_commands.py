@@ -1,6 +1,6 @@
 import pytest
 
-from bpfw.cli import MVP_COMMANDS, normalize_command
+from bpfw.cli import MVP_COMMANDS, build_parser, normalize_command
 
 
 def test_public_command_surface_is_mvp_only() -> None:
@@ -10,9 +10,9 @@ def test_public_command_surface_is_mvp_only() -> None:
         "plan",
         "editor",
         "verify",
+        "status",
         "lock",
         "unlock",
-        "status",
         "repair",
     )
 
@@ -30,7 +30,7 @@ def test_repair_maps_without_subcommands() -> None:
     assert normalize_command("repair", None) == "repair"
 
 
-def test_inspect_and_plan_map_without_subcommands() -> None:
+def test_integration_commands_map_without_subcommands() -> None:
     assert normalize_command("inspect", None) == "inspect"
     assert normalize_command("plan", None) == "plan"
     assert normalize_command("editor", None) == "editor"
@@ -52,6 +52,18 @@ def test_repair_rejects_subcommands() -> None:
         normalize_command("repair", "extra")
 
 
-def test_unknown_command_is_rejected() -> None:
-    with pytest.raises(ValueError, match="Unknown command"):
-        normalize_command("unknown", None)
+def test_external_plugin_command_maps_without_subcommands() -> None:
+    assert normalize_command("external", None) == "external"
+
+
+def test_external_plugin_command_rejects_subcommands() -> None:
+    with pytest.raises(ValueError, match="external does not accept subcommands"):
+        normalize_command("external", "extra")
+
+
+def test_parser_accepts_external_plugin_command() -> None:
+    parser = build_parser()
+
+    parsed_arguments = parser.parse_args(["external"])
+
+    assert parsed_arguments.command == "external"
