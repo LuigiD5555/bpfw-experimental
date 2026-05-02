@@ -19,7 +19,7 @@ _SUGGESTED_ACTIONS: Dict[str, str] = {
         "Fix bpfw/blueprint.yaml so it can be parsed and loaded."
     ),
     "INCOMPLETE_RESPONSIBILITY": (
-        "Complete intent, canonical_name, owner_layer, lifecycle, "
+        "Complete intent, canonical_name, domain, lifecycle, "
         "location.path, location.symbol, and location.symbol_type."
     ),
     "INVALID_LIFECYCLE": (

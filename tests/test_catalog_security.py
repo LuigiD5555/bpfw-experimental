@@ -23,7 +23,7 @@ def test_validate_no_blueprint_secrets_allows_clean_blueprint() -> None:
                 "id": "user_service",
                 "intent": "manage_users",
                 "canonical_name": "User Service",
-                "owner_layer": "users",
+                "domain": "users",
                 "lifecycle": "active",
                 "location": {
                     "path": "src/users.py",

@@ -59,7 +59,7 @@ def build_initial_blueprint(
             "id": to_snake_case(unit.symbol),
             "intent": None,
             "canonical_name": unit.symbol,
-            "owner_layer": None,
+            "domain": None,
             "lifecycle": None,
             "location": {
                 "path": unit.path,
@@ -72,6 +72,8 @@ def build_initial_blueprint(
             "detected": {
                 "qualified_name": unit.qualified_name,
                 "kind": unit.symbol_type,
+                "methods": unit.methods,
+                "functions": unit.functions,
             },
             "entrypoints": [],
             "related_code": [],
@@ -208,7 +210,7 @@ def run_init(project_root: Path) -> tuple[bool, str, int]:
     total_units = len(scan_result.discovered_units)
     pending_intent = sum(1 for _ in scan_result.discovered_units)
     pending_lifecycle = sum(1 for _ in scan_result.discovered_units)
-    pending_owner_layer = sum(1 for _ in scan_result.discovered_units)
+    pending_domain = sum(1 for _ in scan_result.discovered_units)
     
     init_summary = f"""BPFW initialized.
 
@@ -224,7 +226,7 @@ Detected code units:
 Pending fields:
   intent: {pending_intent}
   lifecycle: {pending_lifecycle}
-  owner_layer: {pending_owner_layer}
+  domain: {pending_domain}
 
 Next:
   bpfw inspect"""

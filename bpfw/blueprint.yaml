@@ -34,7 +34,7 @@ responsibilities:
 - id: catalog_access_control_ensure_blueprint_can_be_written
   intent: maintain catalog ensure_blueprint_can_be_written
   canonical_name: ensure_blueprint_can_be_written
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/catalog/access_control.py
@@ -61,7 +61,7 @@ responsibilities:
 - id: catalog_drift_compare_declared_to_discovered
   intent: maintain catalog compare_declared_to_discovered
   canonical_name: compare_declared_to_discovered
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/catalog/drift.py
@@ -88,7 +88,7 @@ responsibilities:
 - id: catalog_lifecycle_count_lifecycles
   intent: maintain catalog count_lifecycles
   canonical_name: count_lifecycles
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/catalog/lifecycle.py
@@ -115,7 +115,7 @@ responsibilities:
 - id: catalog_lifecycle_is_allowed_lifecycle
   intent: maintain catalog is_allowed_lifecycle
   canonical_name: is_allowed_lifecycle
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/catalog/lifecycle.py
@@ -142,7 +142,7 @@ responsibilities:
 - id: catalog_loader_blueprint_loader
   intent: maintain catalog blueprint_loader
   canonical_name: BlueprintLoader
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/catalog/loader.py
@@ -169,7 +169,7 @@ responsibilities:
 - id: catalog_loader_is_responsibility_complete
   intent: maintain catalog is_responsibility_complete
   canonical_name: is_responsibility_complete
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/catalog/loader.py
@@ -196,7 +196,7 @@ responsibilities:
 - id: catalog_models_blueprint_load_result
   intent: maintain catalog blueprint_load_result
   canonical_name: BlueprintLoadResult
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/catalog/models.py
@@ -223,7 +223,7 @@ responsibilities:
 - id: catalog_models_discovered_code_unit
   intent: maintain catalog discovered_code_unit
   canonical_name: DiscoveredCodeUnit
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/catalog/models.py
@@ -250,7 +250,7 @@ responsibilities:
 - id: catalog_models_scan_result
   intent: maintain catalog scan_result
   canonical_name: ScanResult
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/catalog/models.py
@@ -277,7 +277,7 @@ responsibilities:
 - id: catalog_models_verification_report
   intent: maintain catalog verification_report
   canonical_name: VerificationReport
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/catalog/models.py
@@ -304,7 +304,7 @@ responsibilities:
 - id: catalog_paths_resolve_blueprint_path
   intent: maintain catalog resolve_blueprint_path
   canonical_name: resolve_blueprint_path
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/catalog/paths.py
@@ -331,7 +331,7 @@ responsibilities:
 - id: catalog_paths_resolve_project_root
   intent: maintain catalog resolve_project_root
   canonical_name: resolve_project_root
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/catalog/paths.py
@@ -358,7 +358,7 @@ responsibilities:
 - id: catalog_scanner_scan_python_project
   intent: maintain catalog scan_python_project
   canonical_name: scan_python_project
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/catalog/scanner.py
@@ -385,7 +385,7 @@ responsibilities:
 - id: catalog_validation_validate_blueprint_structure
   intent: maintain catalog validate_blueprint_structure
   canonical_name: validate_blueprint_structure
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/catalog/validation.py
@@ -412,7 +412,7 @@ responsibilities:
 - id: catalog_verify_run_verify
   intent: maintain catalog run_verify
   canonical_name: run_verify
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/catalog/verify.py
@@ -439,7 +439,7 @@ responsibilities:
 - id: catalog_wizard_complete_human_fields
   intent: maintain catalog complete_human_fields
   canonical_name: complete_human_fields
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/catalog/wizard.py
@@ -466,7 +466,7 @@ responsibilities:
 - id: catalog_writer_build_initial_blueprint
   intent: maintain catalog build_initial_blueprint
   canonical_name: build_initial_blueprint
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/catalog/writer.py
@@ -493,7 +493,7 @@ responsibilities:
 - id: catalog_writer_run_init
   intent: maintain catalog run_init
   canonical_name: run_init
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/catalog/writer.py
@@ -520,7 +520,7 @@ responsibilities:
 - id: catalog_writer_to_snake_case
   intent: maintain catalog to_snake_case
   canonical_name: to_snake_case
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/catalog/writer.py
@@ -547,7 +547,7 @@ responsibilities:
 - id: catalog_writer_write_blueprint
   intent: maintain catalog write_blueprint
   canonical_name: write_blueprint
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/catalog/writer.py
@@ -574,7 +574,7 @@ responsibilities:
 - id: cli_py_cli_build_parser
   intent: maintain cli.py build_parser
   canonical_name: build_parser
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/cli.py
@@ -601,7 +601,7 @@ responsibilities:
 - id: cli_py_cli_main
   intent: maintain cli.py main
   canonical_name: main
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/cli.py
@@ -628,7 +628,7 @@ responsibilities:
 - id: cli_py_cli_normalize_command
   intent: maintain cli.py normalize_command
   canonical_name: normalize_command
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/cli.py
@@ -655,7 +655,7 @@ responsibilities:
 - id: core_context_engine_command
   intent: maintain core engine_command
   canonical_name: EngineCommand
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/context.py
@@ -682,7 +682,7 @@ responsibilities:
 - id: core_context_project_context
   intent: maintain core project_context
   canonical_name: ProjectContext
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/context.py
@@ -709,7 +709,7 @@ responsibilities:
 - id: core_context_build_project_context
   intent: maintain core build_project_context
   canonical_name: build_project_context
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/context.py
@@ -736,7 +736,7 @@ responsibilities:
 - id: core_engine_blueprint_engine
   intent: maintain core blueprint_engine
   canonical_name: BlueprintEngine
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/engine.py
@@ -763,7 +763,7 @@ responsibilities:
 - id: core_engine_build_command
   intent: maintain core build_command
   canonical_name: build_command
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/engine.py
@@ -790,7 +790,7 @@ responsibilities:
 - id: core_errors_blueprint_locked_error
   intent: maintain core blueprint_locked_error
   canonical_name: BlueprintLockedError
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/errors.py
@@ -817,7 +817,7 @@ responsibilities:
 - id: core_errors_blueprint_missing_error
   intent: maintain core blueprint_missing_error
   canonical_name: BlueprintMissingError
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/errors.py
@@ -844,7 +844,7 @@ responsibilities:
 - id: core_errors_bpfw_error
   intent: maintain core bpfw_error
   canonical_name: BpfwError
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/errors.py
@@ -871,7 +871,7 @@ responsibilities:
 - id: core_pipeline_pipeline
   intent: maintain core pipeline
   canonical_name: Pipeline
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/pipeline.py
@@ -898,7 +898,7 @@ responsibilities:
 - id: core_pipeline_pipeline_step
   intent: maintain core pipeline_step
   canonical_name: PipelineStep
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/pipeline.py
@@ -925,7 +925,7 @@ responsibilities:
 - id: core_pipeline_execute_pipeline
   intent: maintain core execute_pipeline
   canonical_name: execute_pipeline
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/pipeline.py
@@ -952,7 +952,7 @@ responsibilities:
 - id: core_registry_authority_lock_step
   intent: maintain core authority_lock_step
   canonical_name: AuthorityLockStep
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/registry.py
@@ -979,7 +979,7 @@ responsibilities:
 - id: core_registry_authority_status_step
   intent: maintain core authority_status_step
   canonical_name: AuthorityStatusStep
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/registry.py
@@ -1006,7 +1006,7 @@ responsibilities:
 - id: core_registry_authority_unlock_step
   intent: maintain core authority_unlock_step
   canonical_name: AuthorityUnlockStep
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/registry.py
@@ -1033,7 +1033,7 @@ responsibilities:
 - id: core_registry_init_project_step
   intent: maintain core init_project_step
   canonical_name: InitProjectStep
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/registry.py
@@ -1060,7 +1060,7 @@ responsibilities:
 - id: core_registry_verify_blueprint_step
   intent: maintain core verify_blueprint_step
   canonical_name: VerifyBlueprintStep
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/registry.py
@@ -1087,7 +1087,7 @@ responsibilities:
 - id: core_registry_wizard_step
   intent: maintain core wizard_step
   canonical_name: WizardStep
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/registry.py
@@ -1114,7 +1114,7 @@ responsibilities:
 - id: core_registry_build_default_registry
   intent: maintain core build_default_registry
   canonical_name: build_default_registry
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/registry.py
@@ -1141,7 +1141,7 @@ responsibilities:
 - id: core_result_engine_result
   intent: maintain core engine_result
   canonical_name: EngineResult
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/result.py
@@ -1168,7 +1168,7 @@ responsibilities:
 - id: core_result_result_status
   intent: maintain core result_status
   canonical_name: ResultStatus
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/result.py
@@ -1195,7 +1195,7 @@ responsibilities:
 - id: core_result_step_result
   intent: maintain core step_result
   canonical_name: StepResult
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/result.py
@@ -1222,7 +1222,7 @@ responsibilities:
 - id: core_result_aggregate_status
   intent: maintain core aggregate_status
   canonical_name: aggregate_status
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/core/result.py
@@ -1249,7 +1249,7 @@ responsibilities:
 - id: integrations_base_external_tool_adapter
   intent: maintain integrations external_tool_adapter
   canonical_name: ExternalToolAdapter
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/integrations/base.py
@@ -1276,7 +1276,7 @@ responsibilities:
 - id: integrations_registry_integration_registry
   intent: maintain integrations integration_registry
   canonical_name: IntegrationRegistry
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/integrations/registry.py
@@ -1303,7 +1303,7 @@ responsibilities:
 - id: integrations_result_external_tool_finding
   intent: maintain integrations external_tool_finding
   canonical_name: ExternalToolFinding
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/integrations/result.py
@@ -1330,7 +1330,7 @@ responsibilities:
 - id: protection_authority_get_blueprint_lock_state
   intent: maintain protection get_blueprint_lock_state
   canonical_name: get_blueprint_lock_state
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/protection/authority.py
@@ -1357,7 +1357,7 @@ responsibilities:
 - id: protection_authority_lock_blueprint
   intent: maintain protection lock_blueprint
   canonical_name: lock_blueprint
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/protection/authority.py
@@ -1384,7 +1384,7 @@ responsibilities:
 - id: protection_authority_unlock_blueprint
   intent: maintain protection unlock_blueprint
   canonical_name: unlock_blueprint
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/protection/authority.py
@@ -1411,7 +1411,7 @@ responsibilities:
 - id: protection_os_lock_get_file_lock_state
   intent: maintain protection get_file_lock_state
   canonical_name: get_file_lock_state
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/protection/os_lock.py
@@ -1438,7 +1438,7 @@ responsibilities:
 - id: protection_os_lock_lock_file
   intent: maintain protection lock_file
   canonical_name: lock_file
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/protection/os_lock.py
@@ -1465,7 +1465,7 @@ responsibilities:
 - id: protection_os_lock_unlock_file
   intent: maintain protection unlock_file
   canonical_name: unlock_file
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/protection/os_lock.py
@@ -1492,7 +1492,7 @@ responsibilities:
 - id: reports_finding_finding
   intent: maintain reports finding
   canonical_name: Finding
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/reports/finding.py
@@ -1519,7 +1519,7 @@ responsibilities:
 - id: reports_status_report_render_status_report
   intent: maintain reports render_status_report
   canonical_name: render_status_report
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/reports/status_report.py
@@ -1546,7 +1546,7 @@ responsibilities:
 - id: reports_status_report_run_status
   intent: maintain reports run_status
   canonical_name: run_status
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/reports/status_report.py
@@ -1573,7 +1573,7 @@ responsibilities:
 - id: reports_verify_report_render_verify_report
   intent: maintain reports render_verify_report
   canonical_name: render_verify_report
-  owner_layer: framework
+  domain: framework
   lifecycle: active
   location:
     path: src/bpfw/reports/verify_report.py
@@ -1600,7 +1600,7 @@ responsibilities:
 - id: contains_secret_keyword
   intent: check_if_secret_keyword
   canonical_name: contains_secret_keyword
-  owner_layer: data_security
+  domain: data_security
   lifecycle: active
   location:
     path: src/bpfw/catalog/security.py
@@ -1624,3 +1624,85 @@ responsibilities:
     replaced_by: null
     reason: null
   notes: null
+- id: is_allowed_security_policy_path
+  intent: security_policy_checker
+  canonical_name: is_allowed_security_policy_path
+  domain: data_security
+  lifecycle: active
+  location:
+    path: src/bpfw/catalog/security.py
+    module: src.bpfw.catalog.security
+    symbol: is_allowed_security_policy_path
+    symbol_type: function
+    start_line: 166
+    end_line: 181
+  detected:
+    qualified_name: src.bpfw.catalog.security.is_allowed_security_policy_path
+    kind: function
+    methods: []
+    functions: []
+    imports:
+    - re
+    - pathlib.PurePosixPath
+    - pathlib.PureWindowsPath
+    - typing.Any
+    - bpfw.reports.finding.FINDING_SEVERITY_BLOCK
+    - bpfw.reports.finding.Finding
+    decorators: []
+    docstring: "Return whether a path belongs to allowed security policy metadata.\n\
+      \nArgs:\n    path: Logical YAML path.\n\nReturns:\n    True when the path is\
+      \ allowed to mention security keywords."
+    signature: is_allowed_security_policy_path(path) -> bool
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: security_policy_checker
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: looks_like_absolute_path
+  intent: To check if is absolute path
+  canonical_name: looks_like_absolute_path
+  domain: System tools
+  lifecycle: active
+  location:
+    path: src/bpfw/catalog/security.py
+    module: src.bpfw.catalog.security
+    symbol: looks_like_absolute_path
+    symbol_type: function
+    start_line: 149
+    end_line: 163
+  detected:
+    qualified_name: src.bpfw.catalog.security.looks_like_absolute_path
+    kind: function
+    methods: []
+    functions: []
+    imports:
+    - re
+    - pathlib.PurePosixPath
+    - pathlib.PureWindowsPath
+    - typing.Any
+    - bpfw.reports.finding.FINDING_SEVERITY_BLOCK
+    - bpfw.reports.finding.Finding
+    decorators: []
+    docstring: "Return whether a value looks like an absolute filesystem path.\n\n\
+      Args:\n    value: String value to inspect.\n\nReturns:\n    True when the value\
+      \ looks like a POSIX or Windows absolute path."
+    signature: looks_like_absolute_path(value) -> bool
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: to_check_if_is_absolute_path
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: This should work on multi OS terminal (command prompt)

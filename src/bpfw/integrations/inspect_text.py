@@ -13,15 +13,16 @@ from bpfw.integrations.inspect_base import (
     apply_suggestions,
     build_authority_lines,
     build_code_lines,
+    build_nested_snippet_lines,
     build_suggestion_lines,
     clean_string,
     load_inspect_session,
     save_blueprint,
-    validate_ready_to_accept,
 )
 
 InputFunc = Callable[[str], str]
 PrintFunc = Callable[[str], None]
+ACTION_COLUMN_WIDTH = 18
 
 
 def _location_header(responsibility: Dict[str, Any]) -> tuple[str, str]:
@@ -87,7 +88,10 @@ def render_text_screen(
     print_func(kind_line)
     print_func("")
     print_func("Code")
-    for code_line in build_code_lines(project_root, responsibility)[:10]:
+    for code_line in build_code_lines(
+        project_root,
+        responsibility,
+    )[:32]:
         print_func(f"  {code_line}")
     print_func("")
     print_func("Authority")
@@ -97,32 +101,78 @@ def render_text_screen(
     print_func("Suggestions")
     for line in build_suggestion_lines(responsibility):
         print_func(line)
+    nested_lines = build_nested_snippet_lines(responsibility)
+    if nested_lines:
+        print_func("")
+        print_func("Nested snippets")
+        for line in nested_lines[:16]:
+            print_func(line)
     print_func("")
     print_func("Actions")
-    print_func("  [i] intent      [c] canonical    [o] owner")
-    print_func("  [l] lifecycle   [n] notes        [a] accept")
-    print_func("  [s] skip        [b] back         [q] quit")
+    for action_line in build_action_lines():
+        print_func(action_line)
     print_func("")
+
+
+def build_action_lines() -> list[str]:
+    """Build aligned inspect action menu lines."""
+
+    return [
+        _format_action_row(("[i] intent", "[n] name", "[d] domain")),
+        _format_action_row(("[l] lifecycle", "[o] observations", "[h] help")),
+        _format_action_row(("[s] save + next", "[b] back", "[q] quit")),
+    ]
+
+
+def _format_action_row(actions: tuple[str, ...]) -> str:
+    """Format one row of inspect actions with stable columns."""
+
+    padded_actions = [
+        action.ljust(ACTION_COLUMN_WIDTH)
+        for action in actions[:-1]
+    ]
+    padded_actions.append(actions[-1])
+    return f"  {''.join(padded_actions)}"
+
+
+def render_help_screen(print_func: PrintFunc = print) -> None:
+    """Render inspect action help."""
+
+    print_func("")
+    print_func("BPFW Inspect Help")
+    print_func("")
+    print_func("  i  intent        What this snippet is meant to accomplish.")
+    print_func("  n  name          The name you want to recognize this responsibility by.")
+    print_func("  d  domain        The project area this responsibility belongs to.")
+    print_func(
+        "  l  lifecycle     The status of this code snippet: active, experimental, "
+        "legacy, or deprecated."
+    )
+    print_func("  o  observations  Write notes for context, doubts, or follow-up decisions.")
+    print_func("  s  save + next   Save current values and move to the next snippet.")
+    print_func("  b  back          Return to the previous snippet.")
+    print_func("  h  help          Show this action reference.")
+    print_func("  q  quit          Exit without saving changes on the current screen.")
+    print_func("")
+    print_func("Press Enter to return to inspect.")
 
 
 def _edit_text_field(
     responsibility: Dict[str, Any],
     field_name: str,
     input_func: InputFunc,
+    label: str | None = None,
 ) -> None:
     current_value = clean_string(responsibility.get(field_name)) or ""
-    prompt = f"{field_name} [{current_value}]: "
+    prompt = f"{label or field_name} [{current_value}]: "
     value = input_func(prompt).strip()
     if value:
         responsibility[field_name] = value
 
 
-def _accept_issue(session: InspectLoadResult, issue: InspectIssue) -> bool:
-    """Accept one issue and persist the blueprint."""
+def _save_issue(session: InspectLoadResult, issue: InspectIssue) -> bool:
+    """Save one issue and persist the blueprint."""
 
-    missing_fields = validate_ready_to_accept(issue.responsibility)
-    if missing_fields:
-        return False
     if session.blueprint_path is None:
         return False
 
@@ -218,40 +268,40 @@ def run_text_inspect_session(
         if action == "i":
             _edit_text_field(responsibility, "intent", input_func)
             continue
-        if action == "c":
-            _edit_text_field(responsibility, "canonical_name", input_func)
+        if action == "n":
+            _edit_text_field(responsibility, "canonical_name", input_func, label="name")
             continue
-        if action == "o":
-            _edit_text_field(responsibility, "owner_layer", input_func)
+        if action == "d":
+            _edit_text_field(responsibility, "domain", input_func, label="domain")
             continue
         if action == "l":
             _edit_lifecycle(responsibility, input_func, print_func)
             continue
-        if action == "n":
-            _edit_text_field(responsibility, "notes", input_func)
+        if action == "o":
+            _edit_text_field(responsibility, "notes", input_func, label="observations")
             continue
-        if action == "a":
-            missing_fields = validate_ready_to_accept(responsibility)
-            if missing_fields:
-                print_func(f"Missing required fields: {', '.join(missing_fields)}")
-                continue
-            if not _accept_issue(session=session, issue=issue):
+        if action == "s":
+            if not _save_issue(session=session, issue=issue):
                 print_func("Blueprint path is unavailable.")
                 return 1
             print_func("Saved.")
             current_index += 1
             continue
-        if action == "s":
-            current_index += 1
-            continue
         if action == "b":
             current_index = max(0, current_index - 1)
+            continue
+        if action == "h":
+            render_help_screen(print_func=print_func)
+            try:
+                input_func("")
+            except EOFError:
+                return 1
             continue
         if action == "q":
             print_func("Inspect stopped.")
             return 0
 
-        print_func("Unknown action. Use i, c, o, l, n, a, s, b, or q.")
+        print_func("Unknown action. Use i, n, d, l, o, s, b, h, or q.")
 
     print_func("")
     print_func("Inspect completed.")

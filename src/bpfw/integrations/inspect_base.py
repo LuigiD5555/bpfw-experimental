@@ -21,7 +21,7 @@ from bpfw.core.errors import BlueprintLockedError
 from bpfw.reports.finding import Finding
 
 ALLOWED_LIFECYCLES = ("active", "experimental", "legacy", "deprecated")
-REQUIRED_HUMAN_FIELDS = ("intent", "canonical_name", "owner_layer", "lifecycle")
+REQUIRED_HUMAN_FIELDS = ("intent", "canonical_name", "domain", "lifecycle")
 ISSUE_DRAFT = "draft"
 ISSUE_NEW_DETECTED = "new_detected"
 
@@ -159,7 +159,7 @@ def build_new_detected_responsibility(unit: DiscoveredCodeUnit) -> Dict[str, Any
         "id": to_snake_case(unit.symbol),
         "intent": None,
         "canonical_name": unit.symbol,
-        "owner_layer": None,
+        "domain": None,
         "lifecycle": "active",
         "location": {
             "path": unit.path,
@@ -278,8 +278,8 @@ def display_value(value: Any) -> str:
     return clean_string(value) or "-"
 
 
-def suggest_owner_layer(responsibility: Dict[str, Any]) -> str | None:
-    """Suggest owner_layer from the code path."""
+def suggest_domain(responsibility: Dict[str, Any]) -> str | None:
+    """Suggest domain from the code path."""
 
     location = responsibility.get("location", {})
     if not isinstance(location, dict):
@@ -307,25 +307,18 @@ def suggest_lifecycle(_responsibility: Dict[str, Any]) -> str:
 def apply_suggestions(responsibility: Dict[str, Any]) -> None:
     """Apply deterministic suggestions before rendering one responsibility."""
 
-    if clean_string(responsibility.get("owner_layer")) is None:
-        owner_layer = suggest_owner_layer(responsibility)
-        if owner_layer is not None:
-            responsibility["owner_layer"] = owner_layer
+    if clean_string(responsibility.get("domain")) is None:
+        domain = suggest_domain(responsibility)
+        if domain is not None:
+            responsibility["domain"] = domain
     if clean_string(responsibility.get("lifecycle")) is None:
         responsibility["lifecycle"] = suggest_lifecycle(responsibility)
 
 
-def validate_ready_to_accept(responsibility: Dict[str, Any]) -> list[str]:
-    """Return required fields still missing before accepting."""
-
-    missing_fields = []
-    for field_name in REQUIRED_HUMAN_FIELDS:
-        if clean_string(responsibility.get(field_name)) is None:
-            missing_fields.append(field_name)
-    return missing_fields
-
-
-def build_code_lines(project_root: Path, responsibility: Dict[str, Any]) -> list[str]:
+def build_code_lines(
+    project_root: Path,
+    responsibility: Dict[str, Any],
+) -> list[str]:
     """Build numbered source lines for the responsibility location."""
 
     location = responsibility.get("location", {})
@@ -343,12 +336,47 @@ def build_code_lines(project_root: Path, responsibility: Dict[str, Any]) -> list
         return [f"  -  Source file not found: {relative_path}"]
 
     source_lines = source_path.read_text(encoding="utf-8").splitlines()
-    selected_lines = source_lines[max(start_line - 1, 0):end_line]
-    line_number_width = max(len(str(end_line)), 3)
+    displayed_start_line = _find_display_start_line(
+        source_lines=source_lines,
+        start_line=start_line,
+    )
+    displayed_end_line = _find_display_end_line(
+        source_lines=source_lines,
+        end_line=end_line,
+    )
+    selected_lines = source_lines[max(displayed_start_line - 1, 0):displayed_end_line]
+    line_number_width = max(len(str(displayed_end_line)), 3)
     return [
         f"{line_number:>{line_number_width}}  {line}"
-        for line_number, line in enumerate(selected_lines, start=start_line)
+        for line_number, line in enumerate(selected_lines, start=displayed_start_line)
     ]
+
+
+def _find_display_start_line(source_lines: list[str], start_line: int) -> int:
+    """Include contiguous blank lines before the snippet."""
+
+    displayed_start_line = max(start_line, 1)
+    while displayed_start_line > 1:
+        previous_line = source_lines[displayed_start_line - 2]
+        if previous_line.strip():
+            break
+        displayed_start_line -= 1
+    return displayed_start_line
+
+
+def _find_display_end_line(
+    source_lines: list[str],
+    end_line: int,
+) -> int:
+    """Include contiguous blank lines after the snippet."""
+
+    displayed_end_line = min(end_line, len(source_lines))
+    while displayed_end_line < len(source_lines):
+        next_line = source_lines[displayed_end_line]
+        if next_line.strip():
+            break
+        displayed_end_line += 1
+    return displayed_end_line
 
 
 def build_authority_lines(responsibility: Dict[str, Any]) -> list[str]:
@@ -357,10 +385,10 @@ def build_authority_lines(responsibility: Dict[str, Any]) -> list[str]:
     return [
         f"  id              {display_value(responsibility.get('id'))}",
         f"  intent          {display_value(responsibility.get('intent'))}",
-        f"  canonical_name  {display_value(responsibility.get('canonical_name'))}",
-        f"  owner_layer     {display_value(responsibility.get('owner_layer'))}",
+        f"  name            {display_value(responsibility.get('canonical_name'))}",
+        f"  domain          {display_value(responsibility.get('domain'))}",
         f"  lifecycle       {display_value(responsibility.get('lifecycle'))}",
-        f"  notes           {display_value(responsibility.get('notes'))}",
+        f"  observations    {display_value(responsibility.get('notes'))}",
     ]
 
 
@@ -368,9 +396,29 @@ def build_suggestion_lines(responsibility: Dict[str, Any]) -> list[str]:
     """Build deterministic suggestion lines for display."""
 
     return [
-        f"  owner_layer  {display_value(suggest_owner_layer(responsibility))}",
-        f"  lifecycle    {suggest_lifecycle(responsibility)}",
+        f"  domain     {display_value(suggest_domain(responsibility))}",
+        f"  lifecycle  {suggest_lifecycle(responsibility)}",
     ]
+
+
+def build_nested_snippet_lines(responsibility: Dict[str, Any]) -> list[str]:
+    """Build direct nested snippet lines for display."""
+
+    detected = responsibility.get("detected")
+    if not isinstance(detected, dict):
+        return []
+
+    nested_symbols: list[str] = []
+    for field_name in ("methods", "functions"):
+        values = detected.get(field_name)
+        if not isinstance(values, list):
+            continue
+        for value in values:
+            symbol = clean_string(value)
+            if symbol is not None and symbol not in nested_symbols:
+                nested_symbols.append(symbol)
+
+    return [f"  {symbol}" for symbol in nested_symbols]
 
 
 def apply_automatic_authority_fields(blueprint_data: Dict[str, Any]) -> None:
