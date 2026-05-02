@@ -54,15 +54,24 @@ def scan_python_project(
             discovered_units.extend(file_units)
             findings.extend(file_findings)
 
-    # Sort discovered units by path, symbol_type, symbol
+    # Sort discovered units so inspect reviews children before parent snippets.
     discovered_units.sort(
-        key=lambda u: (u.path, u.symbol_type, u.symbol)
+        key=_discovered_unit_sort_key
     )
 
     return ScanResult(
         discovered_units=discovered_units,
         findings=findings,
     )
+
+
+def _discovered_unit_sort_key(unit: DiscoveredCodeUnit) -> tuple[str, int, int, int, str]:
+    """Return a stable child-before-parent order for inspect traversal."""
+
+    end_line = unit.end_line or unit.start_line or 0
+    start_line = unit.start_line or 0
+    nesting_depth = unit.symbol.count(".")
+    return unit.path, end_line, -nesting_depth, start_line, unit.symbol
 
 
 def _is_path_ignored(file_path: Path, ignored_paths: List[str]) -> bool:
@@ -144,37 +153,121 @@ def _scan_python_file(
     # Extract module path
     module = _derive_module_path(relative_path)
 
-    # Scan top-level nodes
-    for node in tree.body:
-        if isinstance(node, ast.ClassDef):
-            # Skip private classes
-            if node.name.startswith("_"):
-                continue
-
-            unit = _extract_class_unit(
-                node,
-                str(relative_path),
-                module,
-                imports,
-            )
-            if unit:
-                discovered_units.append(unit)
-
-        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            # Skip private functions
-            if node.name.startswith("_"):
-                continue
-
-            unit = _extract_function_unit(
-                node,
-                str(relative_path),
-                module,
-                imports,
-            )
-            if unit:
-                discovered_units.append(unit)
+    discovered_units.extend(
+        _extract_code_units(
+            nodes=tree.body,
+            file_path=str(relative_path),
+            module=module,
+            imports=imports,
+            parent_symbols=[],
+            parent_kind=None,
+        )
+    )
 
     return discovered_units, findings
+
+
+def _extract_code_units(
+    nodes: List[ast.stmt],
+    file_path: str,
+    module: str,
+    imports: List[str],
+    parent_symbols: List[str],
+    parent_kind: str | None,
+) -> List[DiscoveredCodeUnit]:
+    """Extract top-level and nested code units from AST nodes."""
+
+    discovered_units: List[DiscoveredCodeUnit] = []
+    for node in nodes:
+        if isinstance(node, ast.ClassDef):
+            if node.name.startswith("_"):
+                continue
+
+            symbol_parts = parent_symbols + [node.name]
+            unit = _extract_class_unit(
+                node=node,
+                file_path=file_path,
+                module=module,
+                imports=imports,
+                symbol=".".join(symbol_parts),
+                symbol_type=_class_symbol_type(parent_symbols),
+            )
+            if unit:
+                discovered_units.append(unit)
+            discovered_units.extend(
+                _extract_code_units(
+                    nodes=node.body,
+                    file_path=file_path,
+                    module=module,
+                    imports=imports,
+                    parent_symbols=symbol_parts,
+                    parent_kind="class",
+                )
+            )
+            continue
+
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if node.name.startswith("_") and not (
+                node.name.startswith("__") and node.name.endswith("__")
+            ):
+                continue
+
+            symbol_parts = parent_symbols + [node.name]
+            if _should_discover_function(node=node, parent_kind=parent_kind):
+                unit = _extract_function_unit(
+                    node=node,
+                    file_path=file_path,
+                    module=module,
+                    imports=imports,
+                    symbol=".".join(symbol_parts),
+                    symbol_type=_function_symbol_type(
+                        parent_symbols=parent_symbols,
+                        parent_kind=parent_kind,
+                    ),
+                )
+                if unit:
+                    discovered_units.append(unit)
+            discovered_units.extend(
+                _extract_code_units(
+                    nodes=node.body,
+                    file_path=file_path,
+                    module=module,
+                    imports=imports,
+                    parent_symbols=symbol_parts,
+                    parent_kind="function",
+                )
+            )
+
+    return discovered_units
+
+
+def _class_symbol_type(parent_symbols: List[str]) -> str:
+    """Return the catalog symbol type for a class node."""
+
+    if parent_symbols:
+        return "nested_class"
+    return "class"
+
+
+def _function_symbol_type(parent_symbols: List[str], parent_kind: str | None) -> str:
+    """Return the catalog symbol type for a function-like node."""
+
+    if parent_kind == "class":
+        return "method"
+    if parent_symbols:
+        return "nested_function"
+    return "function"
+
+
+def _should_discover_function(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+    parent_kind: str | None,
+) -> bool:
+    """Return whether a function-like node should become a snippet."""
+
+    if parent_kind == "class" and node.name.startswith("__") and node.name.endswith("__"):
+        return False
+    return True
 
 
 def _derive_module_path(relative_path: Path) -> str:
@@ -237,6 +330,8 @@ def _extract_class_unit(
     file_path: str,
     module: str,
     imports: List[str],
+    symbol: str,
+    symbol_type: str,
 ) -> Optional[DiscoveredCodeUnit]:
     """
     Extract class information from AST node.
@@ -250,13 +345,15 @@ def _extract_class_unit(
     Returns:
         DiscoveredCodeUnit or None.
     """
-    # Extract methods (excluding dunder methods)
-    methods: List[str] = []
-    for item in node.body:
-        if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            # Skip dunder methods (methods that start AND end with __)
-            if not (item.name.startswith("__") and item.name.endswith("__")):
-                methods.append(item.name)
+    methods = _extract_direct_child_function_symbols(
+        nodes=node.body,
+        parent_symbol=symbol,
+        skip_dunder=True,
+    )
+    functions = _extract_direct_child_class_symbols(
+        nodes=node.body,
+        parent_symbol=symbol,
+    )
 
     # Extract decorators
     decorators = _extract_decorators(node.decorator_list)
@@ -267,13 +364,13 @@ def _extract_class_unit(
     return DiscoveredCodeUnit(
         path=file_path,
         module=module,
-        symbol=node.name,
-        symbol_type="class",
-        qualified_name=f"{module}.{node.name}",
+        symbol=symbol,
+        symbol_type=symbol_type,
+        qualified_name=f"{module}.{symbol}",
         start_line=node.lineno,
         end_line=node.end_lineno if hasattr(node, "end_lineno") else None,
         methods=methods,
-        functions=[],
+        functions=functions,
         imports=imports,
         decorators=decorators,
         docstring=docstring,
@@ -286,6 +383,8 @@ def _extract_function_unit(
     file_path: str,
     module: str,
     imports: List[str],
+    symbol: str,
+    symbol_type: str,
 ) -> Optional[DiscoveredCodeUnit]:
     """
     Extract function information from AST node.
@@ -307,22 +406,80 @@ def _extract_function_unit(
 
     # Extract signature
     signature = _extract_function_signature(node)
+    functions = _extract_direct_child_symbols(
+        nodes=node.body,
+        parent_symbol=symbol,
+    )
 
     return DiscoveredCodeUnit(
         path=file_path,
         module=module,
-        symbol=node.name,
-        symbol_type="function",
-        qualified_name=f"{module}.{node.name}",
+        symbol=symbol,
+        symbol_type=symbol_type,
+        qualified_name=f"{module}.{symbol}",
         start_line=node.lineno,
         end_line=node.end_lineno if hasattr(node, "end_lineno") else None,
         methods=[],
-        functions=[],
+        functions=functions,
         imports=imports,
         decorators=decorators,
         docstring=docstring,
         signature=signature,
     )
+
+
+def _extract_direct_child_symbols(nodes: List[ast.stmt], parent_symbol: str) -> List[str]:
+    """Return direct nested snippet symbols for a code unit."""
+
+    child_symbols: List[str] = []
+    child_symbols.extend(
+        _extract_direct_child_function_symbols(
+            nodes=nodes,
+            parent_symbol=parent_symbol,
+            skip_dunder=False,
+        )
+    )
+    child_symbols.extend(
+        _extract_direct_child_class_symbols(
+            nodes=nodes,
+            parent_symbol=parent_symbol,
+        )
+    )
+    return child_symbols
+
+
+def _extract_direct_child_function_symbols(
+    nodes: List[ast.stmt],
+    parent_symbol: str,
+    skip_dunder: bool,
+) -> List[str]:
+    """Return direct nested function-like symbols for a code unit."""
+
+    child_symbols: List[str] = []
+    for node in nodes:
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if node.name.startswith("_") and not (
+            node.name.startswith("__") and node.name.endswith("__")
+        ):
+            continue
+        if skip_dunder and node.name.startswith("__") and node.name.endswith("__"):
+            continue
+        child_symbols.append(f"{parent_symbol}.{node.name}")
+    return child_symbols
+
+
+def _extract_direct_child_class_symbols(
+    nodes: List[ast.stmt],
+    parent_symbol: str,
+) -> List[str]:
+    """Return direct nested class symbols for a code unit."""
+
+    child_symbols: List[str] = []
+    for node in nodes:
+        if isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
+            child_symbols.append(f"{parent_symbol}.{node.name}")
+    return child_symbols
 
 
 def _extract_decorators(decorator_list: List[ast.expr]) -> List[str]:
