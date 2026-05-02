@@ -22,6 +22,8 @@ from bpfw.reports.verify_report import render_verify_report
 MVP_COMMANDS = (
     "init",
     "wizard",
+    "inspect",
+    "plan",
     "verify",
     "lock",
     "unlock",
@@ -65,6 +67,14 @@ def normalize_command(command: str, subcommand: str | None) -> str:
         if subcommand is not None:
             raise ValueError("wizard does not accept subcommands")
         return "wizard"
+    if command == "inspect":
+        if subcommand is not None:
+            raise ValueError("inspect does not accept subcommands")
+        return "inspect"
+    if command == "plan":
+        if subcommand is not None:
+            raise ValueError("plan does not accept subcommands")
+        return "plan"
     if command == "init":
         if subcommand is not None:
             raise ValueError("init does not accept subcommands")
@@ -154,10 +164,10 @@ def _print_human(payload: dict) -> None:
         print(f"  lifecycle: {details.get('lifecycle_state', 'unknown')}")
         return
 
-    if payload["command_name"] == "wizard" and not payload["message"]:
+    if payload["command_name"] in {"wizard", "inspect", "plan"} and not payload["message"]:
         return
 
-    # lock, unlock, wizard, repair: print message directly
+    # lock, unlock, wizard, inspect, plan, repair: print message directly
     if payload["message"]:
         print(payload["message"])
         return

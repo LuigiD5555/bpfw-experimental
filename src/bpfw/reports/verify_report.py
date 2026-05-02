@@ -12,7 +12,7 @@ _SUGGESTED_ACTIONS: Dict[str, str] = {
         "Run bpfw init when you are ready to create project authority."
     ),
     "EMPTY_AUTHORITY": (
-        "Add responsibilities with bpfw init or bpfw wizard "
+        "Add responsibilities with bpfw init or bpfw inspect "
         "when you are ready to enforce authority."
     ),
     "INVALID_BLUEPRINT": (

@@ -36,31 +36,35 @@ class InitProjectStep(PipelineStep):
 
 
 @dataclass(slots=True)
-class WizardStep(PipelineStep):
-    """Run the optional catalog wizard integration."""
+class IntegrationStep(PipelineStep):
+    """Run a named optional BPFW integration."""
 
     integration_registry: IntegrationRegistry
-    name: str = "integrations.wizard"
+    integration_name: str
+    name: str
 
     def run(self, context) -> StepResult:  # noqa: ANN001
         lock_state = get_blueprint_lock_state(project_root=context.project_root)
-        if lock_state in {"locked", "degraded"}:
+        if self.integration_name in {"wizard", "inspect", "plan"} and lock_state in {"locked", "degraded"}:
             return StepResult(
                 status=ResultStatus.BLOCK,
-                message="BLOCK: Blueprint is locked. Run bpfw unlock before editing.",
+                message=(
+                    "BLOCK: Blueprint is locked. "
+                    "Run bpfw unlock before editing authority data."
+                ),
                 source=self.name,
-                details={"error_code": "WIZARD_LOCKED"},
+                details={"error_code": "AUTHORITY_LOCKED"},
             )
 
         result = self.integration_registry.run(
-            name="wizard",
+            name=self.integration_name,
             project_root=context.project_root,
         )
         return StepResult(
             status=ResultStatus.OK if result.success else ResultStatus.BLOCK,
             message=result.message,
             source=self.name,
-            details={"integration": "wizard"},
+            details={"integration": self.integration_name},
         )
 
 
@@ -265,7 +269,33 @@ def build_default_registry(
         "init": Pipeline(name="init", steps=[InitProjectStep()]),
         "wizard": Pipeline(
             name="wizard",
-            steps=[WizardStep(integration_registry=optional_integrations)],
+            steps=[
+                IntegrationStep(
+                    integration_registry=optional_integrations,
+                    integration_name="wizard",
+                    name="integrations.wizard",
+                )
+            ],
+        ),
+        "inspect": Pipeline(
+            name="inspect",
+            steps=[
+                IntegrationStep(
+                    integration_registry=optional_integrations,
+                    integration_name="inspect",
+                    name="integrations.inspect",
+                )
+            ],
+        ),
+        "plan": Pipeline(
+            name="plan",
+            steps=[
+                IntegrationStep(
+                    integration_registry=optional_integrations,
+                    integration_name="plan",
+                    name="integrations.plan",
+                )
+            ],
         ),
         "verify": Pipeline(name="verify", steps=[VerifyBlueprintStep()]),
         "protect.setup": Pipeline(name="protect.setup", steps=[AuthorityProtectSetupStep()]),

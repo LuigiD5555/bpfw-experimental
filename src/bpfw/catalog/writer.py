@@ -228,7 +228,7 @@ Pending fields:
   owner_layer: {pending_owner_layer}
 
 Next:
-  bpfw wizard"""
+  bpfw inspect"""
     
     message = f"{init_summary}\n\n{format_init_setup_summary(result=setup_result)}"
     return setup_result.allowed, message, 0 if setup_result.allowed else 1
