@@ -23,7 +23,6 @@ pip install -e .
 
 ```bash
 bpfw init
-bpfw wizard
 bpfw inspect
 bpfw plan
 bpfw verify

@@ -6,14 +6,12 @@ from bpfw.integrations.inspect_base import (
     get_incomplete_responsibilities,
     suggest_domain,
 )
-from bpfw.integrations import wizard as wizard_adapter
 from bpfw.integrations.inspect_base import load_inspect_session
 from bpfw.integrations.inspect_text import (
     render_text_screen,
     run_text_inspect,
     run_text_inspect_session,
 )
-from bpfw.integrations.wizard_router import WizardRoute
 
 
 def _responsibility(
@@ -476,20 +474,3 @@ def test_text_inspect_accepts_new_detected_code(tmp_path: Path) -> None:
     assert "src/demo/app.py :: extra_func" in rendered
     assert "maintain extra func" in saved
     assert "extra_func" in saved
-
-
-def test_wizard_reports_selected_route_without_interactive_terminal(
-    tmp_path: Path,
-    monkeypatch,
-) -> None:
-    route = WizardRoute(
-        route_name="inspect",
-        authority_state="draft",
-        discovered_count=1,
-        message="Existing code detected. Routing to inspect.",
-    )
-
-    monkeypatch.setattr(wizard_adapter, "select_wizard_route", lambda project_root: route)
-    monkeypatch.setattr(wizard_adapter, "can_use_interactive_terminal", lambda: False)
-
-    assert wizard_adapter.run_wizard(tmp_path) == 1

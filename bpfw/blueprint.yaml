@@ -436,33 +436,6 @@ responsibilities:
     replaced_by: null
     reason: null
   notes: null
-- id: catalog_wizard_complete_human_fields
-  intent: maintain catalog complete_human_fields
-  canonical_name: complete_human_fields
-  domain: framework
-  lifecycle: active
-  location:
-    path: src/bpfw/catalog/wizard.py
-    module: src.bpfw.catalog.wizard
-    symbol: complete_human_fields
-    symbol_type: function
-    start_line: 14
-    end_line: 48
-  detected:
-    qualified_name: src.bpfw.catalog.wizard.complete_human_fields
-    kind: function
-  entrypoints: []
-  related_code: []
-  duplicate_policy:
-    group: maintain_catalog_complete_human_fields
-    allow_multiple_non_active: true
-    forbidden_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
 - id: catalog_writer_build_initial_blueprint
   intent: maintain catalog build_initial_blueprint
   canonical_name: build_initial_blueprint
@@ -1076,33 +1049,6 @@ responsibilities:
   related_code: []
   duplicate_policy:
     group: maintain_core_verify_blueprint_step
-    allow_multiple_non_active: true
-    forbidden_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-- id: core_registry_wizard_step
-  intent: maintain core wizard_step
-  canonical_name: WizardStep
-  domain: framework
-  lifecycle: active
-  location:
-    path: src/bpfw/core/registry.py
-    module: src.bpfw.core.registry
-    symbol: WizardStep
-    symbol_type: class
-    start_line: 31
-    end_line: 52
-  detected:
-    qualified_name: src.bpfw.core.registry.WizardStep
-    kind: class
-  entrypoints: []
-  related_code: []
-  duplicate_policy:
-    group: maintain_core_wizard_step
     allow_multiple_non_active: true
     forbidden_active_duplicates: true
     suspected_duplicates: []

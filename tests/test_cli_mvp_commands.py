@@ -6,7 +6,6 @@ from bpfw.cli import MVP_COMMANDS, normalize_command
 def test_public_command_surface_is_mvp_only() -> None:
     assert MVP_COMMANDS == (
         "init",
-        "wizard",
         "inspect",
         "plan",
         "verify",
@@ -36,7 +35,7 @@ def test_inspect_and_plan_map_without_subcommands() -> None:
 
 
 def test_catalog_commands_reject_subcommands() -> None:
-    for command in ("init", "wizard", "inspect", "plan", "verify", "status"):
+    for command in ("init", "inspect", "plan", "verify", "status"):
         with pytest.raises(ValueError):
             normalize_command(command, "extra")
 
