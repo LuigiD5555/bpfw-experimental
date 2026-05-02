@@ -14,7 +14,7 @@ from bpfw.catalog.models import (
     VerificationReport,
 )
 from bpfw.catalog.verify import run_verify
-from bpfw.protection.authority import get_blueprint_lock_state
+from bpfw.protection.authority import get_authority_lock_state
 
 _BLUEPRINT_DISPLAY_PATH = "bpfw/blueprint.yaml"
 
@@ -64,7 +64,7 @@ def _determine_lock_state(project_root: Path, authority_state: str) -> str:
     if authority_state == AUTHORITY_STATE_MISSING:
         return "unknown"
 
-    return get_blueprint_lock_state(project_root=project_root)
+    return get_authority_lock_state(project_root=project_root)
 
 
 def run_status(project_root: Path) -> Tuple[str, int]:

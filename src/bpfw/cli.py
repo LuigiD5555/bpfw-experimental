@@ -11,7 +11,7 @@ from bpfw.core.engine import BlueprintEngine, build_command
 from bpfw.protection.authority import (
     MISSING_BLUEPRINT_STATUS,
     ProtectionResult,
-    get_blueprint_lock_state,
+    get_authority_lock_state,
     lock_authority,
     unlock_authority,
 )
@@ -233,7 +233,7 @@ def main() -> int:
     # unlock is handled directly by the protection authority
     if normalized_command == "unlock":
         project_root = Path(parsed_arguments.project_root).resolve()
-        current_lock_state = get_blueprint_lock_state(project_root=project_root)
+        current_lock_state = get_authority_lock_state(project_root=project_root)
         if current_lock_state == "unknown":
             print(
                 "BPFW blueprint does not exist:\n"
@@ -265,11 +265,6 @@ def main() -> int:
 
     engine = BlueprintEngine()
     command_arguments: dict[str, str] = {}
-
-    # unlock keeps --ttl accepted for MVP compatibility; logical locks do not expire.
-    if normalized_command == "unlock":
-        command_arguments["resource_id"] = parsed_arguments.subcommand or "blueprint"
-        command_arguments["ttl"] = parsed_arguments.ttl
 
     result = engine.run(
         build_command(

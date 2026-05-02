@@ -12,9 +12,6 @@ BLUEPRINT_RESOURCE_TYPE = "blueprint"
 GUARD_RESOURCE_TYPE = "guard"
 MISSING_BLUEPRINT_STATUS = "missing_blueprint"
 
-_FALLBACK_LOCK_PATH = "bpfw/.lock"
-
-
 @dataclass(frozen=True)
 class ProtectedResource:
     """Represent a file protected by BPFW."""
@@ -91,36 +88,6 @@ def _resource_lock_identifier(project_root: Path, resource: ProtectedResource) -
         return CANONICAL_BLUEPRINT_FILE
 
     return str(resource.path.resolve())
-
-
-def _write_fallback_lock(project_root: Path) -> None:
-    """Write a logical-only lock marker when OS enforcement is unavailable."""
-
-    lock_path = project_root / _FALLBACK_LOCK_PATH
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
-    lock_path.write_text(
-        f"locked: true\nresource: {CANONICAL_BLUEPRINT_FILE}\n",
-        encoding="utf-8",
-    )
-
-
-def _remove_fallback_lock(project_root: Path) -> None:
-    """Remove the logical-only lock marker if it exists."""
-
-    lock_path = project_root / _FALLBACK_LOCK_PATH
-    if lock_path.exists():
-        lock_path.unlink()
-
-
-def _is_fallback_locked(project_root: Path) -> bool:
-    """Check whether the fallback logical lock marker is present."""
-
-    lock_path = project_root / _FALLBACK_LOCK_PATH
-    if not lock_path.exists():
-        return False
-
-    content = lock_path.read_text(encoding="utf-8")
-    return "locked: true" in content and CANONICAL_BLUEPRINT_FILE in content
 
 
 def _missing_blueprint_result(operation: str, blueprint_path: Path) -> ProtectionResult:
@@ -203,7 +170,6 @@ def lock_authority(project_root: Path) -> ProtectionResult:
     if status != "locked":
         for protected_resource in reversed(protected_resources):
             _unlock_existing_resource(project_root=project_root, resource=protected_resource)
-        _remove_fallback_lock(project_root=project_root)
 
     return ProtectionResult(
         operation="lock",
@@ -244,8 +210,6 @@ def unlock_authority(project_root: Path) -> ProtectionResult:
         unlock_states.append(unlock_state)
         if unlock_state == "unlocked":
             protected_resources.append(resource)
-
-    _remove_fallback_lock(project_root=project_root)
 
     if unlock_states and all(unlock_state == "unlocked" for unlock_state in unlock_states):
         status = "unlocked"
@@ -309,9 +273,6 @@ def get_authority_protection_status(project_root: Path) -> ProtectionResult:
     else:
         status = "unknown"
 
-    if blueprint_state != "locked" and _is_fallback_locked(project_root=project_root):
-        _remove_fallback_lock(project_root=project_root)
-
     return ProtectionResult(
         operation="status",
         blueprint_path=blueprint_path,
@@ -322,26 +283,8 @@ def get_authority_protection_status(project_root: Path) -> ProtectionResult:
     )
 
 
-def setup_blueprint_protection(project_root: Path) -> str:
-    """Prepare full authority protection as the hidden compatibility path."""
-
-    return lock_authority(project_root=project_root).status
-
-
-def lock_blueprint(project_root: Path) -> str:
-    """Lock the project blueprint and BPFW internal guard files."""
-
-    return lock_authority(project_root=project_root).status
-
-
-def unlock_blueprint(project_root: Path) -> str:
-    """Unlock the project blueprint and BPFW internal guard files."""
-
-    return unlock_authority(project_root=project_root).status
-
-
-def get_blueprint_lock_state(project_root: Path) -> str:
-    """Return the full authority protection state for compatibility callers."""
+def get_authority_lock_state(project_root: Path) -> str:
+    """Return the full authority protection state."""
 
     status = get_authority_protection_status(project_root=project_root).status
     if status == MISSING_BLUEPRINT_STATUS:

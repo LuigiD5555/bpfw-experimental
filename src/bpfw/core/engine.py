@@ -20,11 +20,7 @@ class BlueprintEngine:
 
         pipeline = self._registry.get(command.command_name)
         if pipeline is None:
-            command_names = [
-                command_name
-                for command_name in sorted(self._registry)
-                if command_name != "protect.setup"
-            ]
+            command_names = sorted(self._registry)
             return EngineResult(
                 command_name=command.command_name,
                 status=ResultStatus.BLOCK,
