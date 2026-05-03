@@ -37,21 +37,42 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(
         prog="bpfw",
+        description="BPFW manages blueprint authority for Python projects.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
-            "Built-in commands:\n"
-            "  init inspect editor verify status lock unlock repair\n\n"
-            "Plugin commands:\n"
-            "  Installed entry points under bpfw.integrations are also accepted."
+            "Commands:\n"
+            "  init       Initialize BPFW in the current project.\n"
+            "  inspect    Review detected code and declare responsibilities.\n"
+            "  editor     Navigate and edit the existing blueprint.\n"
+            "  verify     Verify code and blueprint alignment.\n"
+            "  status     Show project, blueprint, drift, and lock status.\n"
+            "  lock       Lock blueprint authority.\n"
+            "  unlock     Unlock blueprint authority.\n"
+            "  repair     Repair local authority protection."
         ),
     )
-    parser.add_argument("command")
-    parser.add_argument("subcommand", nargs="?")
-    parser.add_argument("--project-root", default=".")
-    parser.add_argument("--ttl", default="10m")
-    parser.add_argument("--accept-scan", action="store_true")
-    parser.add_argument("--force-new", action="store_true")
-    parser.add_argument("--json", action="store_true", dest="as_json")
+    parser.add_argument(
+        "command",
+        metavar="command",
+        help="Command to run.",
+    )
+    parser.add_argument(
+        "subcommand",
+        nargs="?",
+        metavar="target",
+        help="Optional target. Only unlock accepts blueprint.",
+    )
+    parser.add_argument(
+        "--project-root",
+        default=".",
+        help="Project root to operate on. Defaults to the current directory.",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        dest="as_json",
+        help="Print engine-backed command output as JSON.",
+    )
     return parser
 
 

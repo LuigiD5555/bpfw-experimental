@@ -65,3 +65,26 @@ def test_parser_accepts_external_plugin_command() -> None:
     parsed_arguments = parser.parse_args(["external"])
 
     assert parsed_arguments.command == "external"
+
+
+def test_parser_help_explains_public_commands(capsys) -> None:
+    parser = build_parser()
+
+    with pytest.raises(SystemExit) as exit_info:
+        parser.parse_args(["-h"])
+
+    output = capsys.readouterr().out
+    assert exit_info.value.code == 0
+    assert "Commands:" in output
+    assert "inspect    Review detected code and declare responsibilities." in output
+    assert "plan" not in output
+    assert "editor     Navigate and edit the existing blueprint." in output
+    assert "repair     Repair local authority protection." in output
+    assert "Extensions:" not in output
+    assert "Plugin commands:" not in output
+    assert "bpfw.integrations" not in output
+    assert "--project-root" in output
+    assert "--json" in output
+    assert "--ttl" not in output
+    assert "--accept-scan" not in output
+    assert "--force-new" not in output
