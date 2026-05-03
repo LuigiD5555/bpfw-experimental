@@ -62,6 +62,7 @@ def test_suggest_domain_from_source_package_path() -> None:
 
 def test_get_incomplete_responsibilities_detects_missing_fields() -> None:
     complete = _responsibility("example", "maintain example", "active")
+    complete["domain"] = "catalog"
     incomplete = _responsibility("missing", "maintain example", "active")
     incomplete["domain"] = ""
     blueprint_data = {"responsibilities": [complete, incomplete]}

@@ -1,7 +1,8 @@
 from pathlib import Path
 
 import bpfw.protection.setup as protection_setup
-from bpfw.protection.setup import ProtectionSetupResult, run_repair
+from bpfw.integrations.repair import run_repair
+from bpfw.protection.setup import ProtectionSetupResult
 
 
 def test_repair_blocks_when_blueprint_is_missing(tmp_path: Path) -> None:
