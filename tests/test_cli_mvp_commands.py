@@ -7,7 +7,6 @@ def test_public_command_surface_is_mvp_only() -> None:
     assert MVP_COMMANDS == (
         "init",
         "inspect",
-        "plan",
         "editor",
         "verify",
         "status",
@@ -32,12 +31,11 @@ def test_repair_maps_without_subcommands() -> None:
 
 def test_integration_commands_map_without_subcommands() -> None:
     assert normalize_command("inspect", None) == "inspect"
-    assert normalize_command("plan", None) == "plan"
     assert normalize_command("editor", None) == "editor"
 
 
 def test_catalog_commands_reject_subcommands() -> None:
-    for command in ("init", "inspect", "plan", "editor", "verify", "status"):
+    for command in ("init", "inspect", "editor", "verify", "status"):
         with pytest.raises(ValueError):
             normalize_command(command, "extra")
 

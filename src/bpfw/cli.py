@@ -22,7 +22,6 @@ from bpfw.reports.verify_report import render_verify_report
 MVP_COMMANDS = (
     "init",
     "inspect",
-    "plan",
     "editor",
     "verify",
     "status",
@@ -41,7 +40,7 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Built-in commands:\n"
-            "  init inspect plan editor verify status lock unlock repair\n\n"
+            "  init inspect editor verify status lock unlock repair\n\n"
             "Plugin commands:\n"
             "  Installed entry points under bpfw.integrations are also accepted."
         ),
@@ -143,10 +142,10 @@ def _print_human(payload: dict) -> None:
         print(f"  lifecycle: {details.get('lifecycle_state', 'unknown')}")
         return
 
-    if payload["command_name"] in {"inspect", "plan", "editor"} and not payload["message"]:
+    if payload["command_name"] in {"inspect", "editor"} and not payload["message"]:
         return
 
-    # lock, unlock, inspect, plan, editor, repair: print message directly
+    # lock, unlock, inspect, editor, repair: print message directly
     if payload["message"]:
         print(payload["message"])
         return

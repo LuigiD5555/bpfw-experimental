@@ -21,7 +21,6 @@ bpfw = "bpfw.cli:main"
 
 [project.entry-points."bpfw.integrations"]
 inspect = "bpfw.integrations.inspect:InspectIntegration"
-plan = "bpfw.integrations.plan:PlanIntegration"
 editor = "bpfw.integrations.editor:EditorIntegration"
 repair = "bpfw.integrations.repair:ProtectionRepairIntegration"
 

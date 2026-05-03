@@ -44,7 +44,7 @@ def _suggest_next_command(report: VerificationReport, lock_state: str) -> tuple[
         and report.declared_count == 0
         and report.discovered_count == 0
     ):
-        return "bpfw plan", "No responsibilities are declared yet."
+        return "bpfw inspect", "No responsibilities are declared yet."
 
     if (
         report.authority_state in {AUTHORITY_STATE_DRAFT, AUTHORITY_STATE_DEFINED}

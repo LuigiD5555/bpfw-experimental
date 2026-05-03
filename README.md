@@ -42,7 +42,6 @@ same Python interpreter that installed the package.
 ```bash
 bpfw init
 bpfw inspect
-bpfw plan
 bpfw editor
 bpfw verify
 bpfw status

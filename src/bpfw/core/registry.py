@@ -18,7 +18,7 @@ from bpfw.protection.authority import (
     unlock_authority,
 )
 
-AUTHORITY_EDITING_PLUGINS = {"inspect", "plan", "editor"}
+AUTHORITY_EDITING_PLUGINS = {"inspect", "editor"}
 
 
 @dataclass(slots=True)
