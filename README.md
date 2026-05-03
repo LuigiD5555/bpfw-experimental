@@ -16,8 +16,26 @@ This repository contains only the framework code (no application/domain code fro
 ## Install (editable)
 
 ```bash
-pip install -e .
+python -m pip install -e .
 ```
+
+Verify the installed command resolves from the same environment:
+
+```bash
+which -a bpfw
+python -m bpfw --help
+```
+
+If `bpfw` points to an older environment, clear the shell command cache and
+check again:
+
+```bash
+hash -r
+which -a bpfw
+```
+
+`python -m bpfw ...` is the environment-safe invocation because it uses the
+same Python interpreter that installed the package.
 
 ## CLI
 
