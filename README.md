@@ -10,7 +10,7 @@ This repository contains only the framework code (no application/domain code fro
 - Catalog validation against discovered Python code
 - Drift detection for declared responsibilities
 - Protected initialization with OS-level authority lock
-- Repair flow for incomplete local protection
+- Inspector for interactive authority completion
 - Human-readable `verify` and `status` reports
 
 ## Install (editable)
@@ -23,13 +23,13 @@ pip install -e .
 
 ```bash
 bpfw init
-bpfw inspect
-bpfw plan
+bpfw inspector
+bpfw editor
+bpfw planner
 bpfw verify
 bpfw status
 bpfw lock
 bpfw unlock
-bpfw repair
 ```
 
 ## Project root resolution
@@ -52,10 +52,10 @@ bpfw/blueprint.yaml
 BPFW internal guard files
 ```
 
-If an existing project has a broken lock state, run:
+If an existing project needs authority completion, run:
 
 ```bash
-bpfw repair
+bpfw inspector
 ```
 
 `bpfw unlock` reverses the same protection for intentional authority edit
