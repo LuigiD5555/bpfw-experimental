@@ -229,7 +229,7 @@ Pending fields:
   domain: {pending_domain}
 
 Next:
-  bpfw inspect"""
+  bpfw inspector"""
     
     message = f"{init_summary}\n\n{format_init_setup_summary(result=setup_result)}"
     return setup_result.allowed, message, 0 if setup_result.allowed else 1

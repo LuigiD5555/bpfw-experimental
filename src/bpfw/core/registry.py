@@ -45,7 +45,7 @@ class IntegrationStep(PipelineStep):
 
     def run(self, context) -> StepResult:  # noqa: ANN001
         lock_state = get_blueprint_lock_state(project_root=context.project_root)
-        if self.integration_name in {"wizard", "inspect", "plan"} and lock_state in {"locked", "degraded"}:
+        if self.integration_name in {"inspector", "editor", "planner"} and lock_state in {"locked", "degraded"}:
             return StepResult(
                 status=ResultStatus.BLOCK,
                 message=(
@@ -189,26 +189,6 @@ class AuthorityProtectSetupStep(PipelineStep):
 
 
 @dataclass(slots=True)
-class RepairProjectStep(PipelineStep):
-    """Run the optional local protection repair integration."""
-
-    integration_registry: IntegrationRegistry
-    name: str = "integrations.repair"
-
-    def run(self, context) -> StepResult:  # noqa: ANN001
-        result = self.integration_registry.run(
-            name="repair",
-            project_root=context.project_root,
-        )
-        return StepResult(
-            status=ResultStatus.OK if result.success else ResultStatus.BLOCK,
-            message=result.message,
-            source=self.name,
-            details={"blueprint_path": CANONICAL_BLUEPRINT_FILE, "integration": "repair"},
-        )
-
-
-@dataclass(slots=True)
 class AuthorityUnlockStep(PipelineStep):
     """Unlock the MVP authority resources."""
 
@@ -267,42 +247,38 @@ def build_default_registry(
     optional_integrations = integration_registry or build_default_integration_registry()
     return {
         "init": Pipeline(name="init", steps=[InitProjectStep()]),
-        "wizard": Pipeline(
-            name="wizard",
+        "inspector": Pipeline(
+            name="inspector",
             steps=[
                 IntegrationStep(
                     integration_registry=optional_integrations,
-                    integration_name="wizard",
-                    name="integrations.wizard",
+                    integration_name="inspector",
+                    name="integrations.inspector",
                 )
             ],
         ),
-        "inspect": Pipeline(
-            name="inspect",
+        "editor": Pipeline(
+            name="editor",
             steps=[
                 IntegrationStep(
                     integration_registry=optional_integrations,
-                    integration_name="inspect",
-                    name="integrations.inspect",
+                    integration_name="editor",
+                    name="integrations.editor",
                 )
             ],
         ),
-        "plan": Pipeline(
-            name="plan",
+        "planner": Pipeline(
+            name="planner",
             steps=[
                 IntegrationStep(
                     integration_registry=optional_integrations,
-                    integration_name="plan",
-                    name="integrations.plan",
+                    integration_name="planner",
+                    name="integrations.planner",
                 )
             ],
         ),
         "verify": Pipeline(name="verify", steps=[VerifyBlueprintStep()]),
         "protect.setup": Pipeline(name="protect.setup", steps=[AuthorityProtectSetupStep()]),
-        "repair": Pipeline(
-            name="repair",
-            steps=[RepairProjectStep(integration_registry=optional_integrations)],
-        ),
         "lock": Pipeline(name="lock", steps=[AuthorityLockStep()]),
         "unlock": Pipeline(name="unlock", steps=[AuthorityUnlockStep()]),
         "status": Pipeline(name="status", steps=[AuthorityStatusStep()]),

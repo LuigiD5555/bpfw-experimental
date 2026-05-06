@@ -1,16 +1,18 @@
 from pathlib import Path
 
-from bpfw.integrations.inspect_base import (
+from bpfw.catalog.intent_suggestions import suggest_intents
+from bpfw.integrations.inspector_base import (
     apply_automatic_authority_fields,
     build_code_lines,
     get_incomplete_responsibilities,
     suggest_domain,
+    suggest_domains,
 )
-from bpfw.integrations.inspect_base import load_inspect_session
-from bpfw.integrations.inspect_text import (
-    render_text_screen,
-    run_text_inspect,
-    run_text_inspect_session,
+from bpfw.integrations.inspector_base import load_inspect_session
+from bpfw.integrations.inspector_text import (
+    render_text_inspector_screen,
+    run_text_inspector,
+    run_text_inspector_session,
 )
 
 
@@ -60,8 +62,22 @@ def test_suggest_domain_from_source_package_path() -> None:
     assert suggest_domain(responsibility) == "protection"
 
 
+def test_suggest_domains_returns_list() -> None:
+    responsibility = _responsibility(
+        responsibility_id="example",
+        intent="maintain example",
+        lifecycle="active",
+        path="src/bpfw/protection/authority.py",
+    )
+
+    domains = suggest_domains(responsibility)
+    assert isinstance(domains, list)
+    assert "protection" in domains
+
+
 def test_get_incomplete_responsibilities_detects_missing_fields() -> None:
     complete = _responsibility("example", "maintain example", "active")
+    complete["domain"] = "example"
     incomplete = _responsibility("missing", "maintain example", "active")
     incomplete["domain"] = ""
     blueprint_data = {"responsibilities": [complete, incomplete]}
@@ -89,7 +105,7 @@ def test_apply_automatic_authority_fields_derives_groups() -> None:
     ]
 
 
-def test_text_inspect_renders_expected_sections(tmp_path: Path) -> None:
+def test_text_inspector_renders_expected_sections(tmp_path: Path) -> None:
     responsibility = _responsibility(
         responsibility_id="example",
         intent="",
@@ -101,34 +117,33 @@ def test_text_inspect_renders_expected_sections(tmp_path: Path) -> None:
         "functions": ["ExampleService.Helper"],
     }
     output: list[str] = []
+    intent_suggestions = suggest_intents(responsibility)
+    domain_suggestions = suggest_domains(responsibility)
 
-    render_text_screen(
+    render_text_inspector_screen(
         project_root=tmp_path,
         issue_type="draft",
         responsibility=responsibility,
         index=11,
         total=82,
+        intent_suggestions=intent_suggestions,
+        domain_suggestions=domain_suggestions,
         print_func=output.append,
     )
 
     rendered = "\n".join(output)
-    assert "BPFW Inspect  12/82  draft" in rendered
-    assert "src/bpfw/catalog/example.py :: ExampleService" in rendered
-    assert "Code" in rendered
-    assert "Authority" in rendered
-    assert "Suggestions" in rendered
-    assert "Nested snippets" in rendered
-    assert "ExampleService.run" in rendered
-    assert "ExampleService.Helper" in rendered
-    assert "[i] intent" in rendered
-    assert "[n] name" in rendered
-    assert "[d] domain" in rendered
-    assert "[l] lifecycle" in rendered
-    assert "[o] observations" in rendered
-    assert "[s] save + next" in rendered
-    assert "[b] back" in rendered
-    assert "[h] help" in rendered
-    assert "[q] quit" in rendered
+    assert "BPFW Inspector" in rendered
+    assert "authority:" in rendered
+    assert "intent suggestions:" in rendered
+    assert "domain suggestions:" in rendered
+    assert "a  active" in rendered
+    assert "e  experimental" in rendered
+    assert "l  legacy" in rendered
+    assert "d  deprecated" in rendered
+    assert "Enter save+next" in rendered
+    assert "s save" not in rendered
+    assert "l1" not in rendered
+    assert "d1" not in rendered
 
 
 def test_code_preview_includes_blank_lines_after_snippet(tmp_path: Path) -> None:
@@ -272,7 +287,7 @@ def test_code_preview_stops_at_next_same_indent_code(tmp_path: Path) -> None:
     assert "ABSOLUTE_PATH_POLICY" not in rendered
 
 
-def test_text_inspect_edits_fields_and_accepts(tmp_path: Path) -> None:
+def test_text_inspector_edits_fields_and_accepts(tmp_path: Path) -> None:
     blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
     blueprint_path.parent.mkdir(parents=True)
     blueprint_path.write_text(
@@ -295,20 +310,16 @@ def test_text_inspect_edits_fields_and_accepts(tmp_path: Path) -> None:
     session = load_inspect_session(project_root=tmp_path)
     answers = iter(
         [
-            "i",
-            "maintain example",
-            "d",
-            "catalog",
-            "l",
-            "experimental",
-            "o",
-            "reviewed",
-            "s",
+            "+maintain example",
+            "w catalog",
+            "e",
+            "o reviewed",
+            "",
         ]
     )
     output: list[str] = []
 
-    exit_code = run_text_inspect_session(
+    exit_code = run_text_inspector_session(
         session=session,
         input_func=lambda _prompt: next(answers),
         print_func=output.append,
@@ -321,24 +332,24 @@ def test_text_inspect_edits_fields_and_accepts(tmp_path: Path) -> None:
     assert "reviewed" in saved
 
 
-def test_text_inspect_save_next_persists_partial_fields(tmp_path: Path) -> None:
+def test_text_inspector_save_next_persists_partial_fields(tmp_path: Path) -> None:
     blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
     blueprint_path.parent.mkdir(parents=True)
     blueprint_path.write_text(
         "version: 1\n"
         "responsibilities:\n"
         "  - id: example\n"
-        "    canonical_name: ''\n"
+        "    canonical_name: ExampleService\n"
         "    domain: catalog\n"
         "    lifecycle: active\n"
-        "    intent: maintain example\n",
+        "    intent: ''\n",
         encoding="utf-8",
     )
     session = load_inspect_session(project_root=tmp_path)
-    answers = iter(["i", "maintain partial example", "s"])
+    answers = iter(["+maintain partial example", ""])
     output: list[str] = []
 
-    exit_code = run_text_inspect_session(
+    exit_code = run_text_inspector_session(
         session=session,
         input_func=lambda _prompt: next(answers),
         print_func=output.append,
@@ -350,7 +361,7 @@ def test_text_inspect_save_next_persists_partial_fields(tmp_path: Path) -> None:
     assert not any("Missing required fields" in line for line in output)
 
 
-def test_text_inspect_help_explains_actions_and_stays_on_current_item(tmp_path: Path) -> None:
+def test_text_inspector_unknown_command_stays_on_current_item(tmp_path: Path) -> None:
     blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
     blueprint_path.parent.mkdir(parents=True)
     blueprint_path.write_text(
@@ -368,10 +379,10 @@ def test_text_inspect_help_explains_actions_and_stays_on_current_item(tmp_path: 
         encoding="utf-8",
     )
     session = load_inspect_session(project_root=tmp_path)
-    answers = iter(["h", "", "i", "maintain example", "s"])
+    answers = iter(["???", "+maintain example", ""])
     output: list[str] = []
 
-    exit_code = run_text_inspect_session(
+    exit_code = run_text_inspector_session(
         session=session,
         input_func=lambda _prompt: next(answers),
         print_func=output.append,
@@ -380,14 +391,12 @@ def test_text_inspect_help_explains_actions_and_stays_on_current_item(tmp_path: 
     rendered = "\n".join(output)
     saved = blueprint_path.read_text(encoding="utf-8")
     assert exit_code == 0
-    assert "BPFW Inspect Help" in rendered
-    assert "d  domain" in rendered
-    assert "Press Enter to return to inspect." in rendered
-    assert rendered.count("BPFW Inspect  1/1  draft") >= 2
+    assert "Unknown command" in rendered
+    assert rendered.count("BPFW Inspector") >= 2
     assert "maintain example" in saved
 
 
-def test_text_inspect_blocks_when_input_is_unavailable(tmp_path: Path) -> None:
+def test_text_inspector_blocks_when_input_is_unavailable(tmp_path: Path) -> None:
     blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
     blueprint_path.parent.mkdir(parents=True)
     blueprint_path.write_text(
@@ -405,7 +414,7 @@ def test_text_inspect_blocks_when_input_is_unavailable(tmp_path: Path) -> None:
     def unavailable_input(_prompt: str) -> str:
         raise EOFError
 
-    exit_code = run_text_inspect_session(
+    exit_code = run_text_inspector_session(
         session=session,
         input_func=unavailable_input,
         print_func=output.append,
@@ -413,11 +422,11 @@ def test_text_inspect_blocks_when_input_is_unavailable(tmp_path: Path) -> None:
 
     saved = blueprint_path.read_text(encoding="utf-8")
     assert exit_code == 1
-    assert "Interactive inspect input unavailable." in output
+    assert "Interactive inspector input unavailable." in output
     assert "exampleservice:example" not in saved
 
 
-def test_text_inspect_accepts_new_detected_code(tmp_path: Path) -> None:
+def test_text_inspector_accepts_new_detected_code(tmp_path: Path) -> None:
     source_path = tmp_path / "src" / "demo"
     source_path.mkdir(parents=True)
     (source_path / "app.py").write_text(
@@ -453,15 +462,13 @@ def test_text_inspect_accepts_new_detected_code(tmp_path: Path) -> None:
     output: list[str] = []
     answers = iter(
         [
-            "i",
-            "maintain extra func",
-            "d",
-            "demo",
-            "s",
+            "+maintain extra func",
+            "w demo",
+            "",
         ]
     )
 
-    exit_code = run_text_inspect(
+    exit_code = run_text_inspector(
         project_root=tmp_path,
         input_func=lambda _prompt: next(answers),
         print_func=output.append,
@@ -470,7 +477,6 @@ def test_text_inspect_accepts_new_detected_code(tmp_path: Path) -> None:
     rendered = "\n".join(output)
     saved = blueprint_path.read_text(encoding="utf-8")
     assert exit_code == 0
-    assert "BPFW Inspect  1/1  new_detected" in rendered
-    assert "src/demo/app.py :: extra_func" in rendered
+    assert "BPFW Inspector" in rendered
     assert "maintain extra func" in saved
     assert "extra_func" in saved

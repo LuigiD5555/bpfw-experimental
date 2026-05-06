@@ -21,13 +21,13 @@ from bpfw.reports.verify_report import render_verify_report
 
 MVP_COMMANDS = (
     "init",
-    "inspect",
-    "plan",
+    "inspector",
+    "editor",
+    "planner",
     "verify",
     "lock",
     "unlock",
     "status",
-    "repair",
 )
 
 
@@ -58,18 +58,18 @@ def normalize_command(command: str, subcommand: str | None) -> str:
         if subcommand is not None and subcommand != "blueprint":
             raise ValueError("unlock only supports blueprint resource in MVP. Usage: bpfw unlock [blueprint]")
         return "unlock"
-    if command == "repair":
+    if command == "inspector":
         if subcommand is not None:
-            raise ValueError("repair does not accept subcommands")
-        return "repair"
-    if command == "inspect":
+            raise ValueError("inspector does not accept subcommands")
+        return "inspector"
+    if command == "editor":
         if subcommand is not None:
-            raise ValueError("inspect does not accept subcommands")
-        return "inspect"
-    if command == "plan":
+            raise ValueError("editor does not accept subcommands")
+        return "editor"
+    if command == "planner":
         if subcommand is not None:
-            raise ValueError("plan does not accept subcommands")
-        return "plan"
+            raise ValueError("planner does not accept subcommands")
+        return "planner"
     if command == "init":
         if subcommand is not None:
             raise ValueError("init does not accept subcommands")
@@ -159,10 +159,10 @@ def _print_human(payload: dict) -> None:
         print(f"  lifecycle: {details.get('lifecycle_state', 'unknown')}")
         return
 
-    if payload["command_name"] in {"inspect", "plan"} and not payload["message"]:
+    if payload["command_name"] in {"inspector", "editor", "planner"} and not payload["message"]:
         return
 
-    # lock, unlock, inspect, plan, repair: print message directly
+    # lock, unlock, inspector, editor, planner: print message directly
     if payload["message"]:
         print(payload["message"])
         return

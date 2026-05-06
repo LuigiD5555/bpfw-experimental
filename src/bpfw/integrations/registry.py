@@ -49,10 +49,9 @@ def build_default_integration_registry() -> IntegrationRegistry:
 
     registry = IntegrationRegistry()
     for module_name, class_name in (
-        ("bpfw.integrations.wizard", "WizardRouterIntegration"),
-        ("bpfw.integrations.inspect", "InspectIntegration"),
-        ("bpfw.integrations.plan", "PlanIntegration"),
-        ("bpfw.integrations.repair", "ProtectionRepairIntegration"),
+        ("bpfw.integrations.inspector", "InspectorIntegration"),
+        ("bpfw.integrations.editor", "EditorIntegration"),
+        ("bpfw.integrations.planner", "PlannerIntegration"),
     ):
         try:
             module = import_module(module_name)

@@ -1,5 +1,6 @@
-"""Shared inspect behavior for BPFW catalog completion."""
+"""Shared inspector behavior for BPFW catalog completion."""
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List
@@ -296,6 +297,74 @@ def suggest_domain(responsibility: Dict[str, Any]) -> str | None:
             if layer:
                 return layer
     return None
+
+
+def suggest_domains(responsibility: Dict[str, Any]) -> List[str]:
+    """Suggest up to three deterministic domains for one responsibility."""
+
+    candidates: List[str] = []
+
+    location = responsibility.get("location")
+    if isinstance(location, dict):
+        path = location.get("path")
+        if isinstance(path, str):
+            parts = [
+                part for part in path.replace("\\", "/").split("/")
+                if part and part not in {"src", "tests", "test"}
+            ]
+            candidates.extend(parts[:3])
+
+        module = location.get("module")
+        if isinstance(module, str):
+            candidates.extend(part for part in module.split(".") if part)
+
+        symbol = location.get("symbol")
+        if isinstance(symbol, str):
+            candidates.extend(_domain_candidates_from_symbol(symbol))
+
+    return _unique_domain_candidates(candidates)[:3]
+
+
+def _domain_candidates_from_symbol(symbol: str) -> List[str]:
+    """Extract domain candidates from a symbol name."""
+
+    words = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", symbol)
+    tokens = [token.lower() for token in re.findall(r"[A-Za-z][A-Za-z0-9]*", words)]
+
+    ignored = {
+        "service",
+        "manager",
+        "handler",
+        "helper",
+        "issuer",
+        "validator",
+        "loader",
+        "writer",
+        "reader",
+        "scanner",
+        "detector",
+        "builder",
+        "factory",
+    }
+
+    return [token for token in tokens if token not in ignored]
+
+
+def _unique_domain_candidates(candidates: List[str]) -> List[str]:
+    """Return normalized unique domain candidates."""
+
+    clean_candidates: List[str] = []
+    seen: set[str] = set()
+
+    for candidate in candidates:
+        normalized = candidate.strip().lower().replace("-", "_")
+        if not normalized or normalized in seen:
+            continue
+
+        seen.add(normalized)
+        clean_candidates.append(normalized)
+
+    return clean_candidates
 
 
 def suggest_lifecycle(_responsibility: Dict[str, Any]) -> str:
