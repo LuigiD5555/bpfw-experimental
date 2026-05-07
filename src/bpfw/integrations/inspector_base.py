@@ -7,6 +7,7 @@ from typing import Any, Dict, List
 import yaml
 
 from bpfw.catalog.access_control import ensure_blueprint_can_be_written
+from bpfw.catalog.domain_suggestions import BROAD_FOLDER_TOKENS
 from bpfw.catalog.domain_suggestions import suggest_domains as suggest_domain_objects
 from bpfw.catalog.loader import BlueprintLoader
 from bpfw.catalog.models import (
@@ -295,6 +296,7 @@ def suggest_domains(responsibility: Dict[str, Any]) -> List[str]:
     symbol_based = None
     module_based = None
     file_based = None
+    path_folders: List[str] = []
     if isinstance(location, dict):
         symbol = clean_string(location.get("symbol"))
         if symbol:
@@ -327,23 +329,35 @@ def suggest_domains(responsibility: Dict[str, Any]) -> List[str]:
         path = clean_string(location.get("path"))
         if path:
             normalized_path = path.replace("\\", "/")
-            file_name = normalized_path.split("/")[-1]
+            path_parts = normalized_path.split("/")
+            file_name = path_parts[-1]
             file_based = file_name.removesuffix(".py").lower()
             if file_based in {"src", "bpfw", "tests", "test", "__init__"}:
                 file_based = None
+            for part in path_parts[:-1]:
+                normalized = part.strip().lower()
+                if (
+                    normalized
+                    and normalized not in {"src", "bpfw", "tests", "test", "__init__"}
+                    and normalized not in BROAD_FOLDER_TOKENS
+                    and normalized not in path_folders
+                ):
+                    path_folders.append(normalized)
 
     blended_candidates = [suggestion.text for suggestion in suggest_domain_objects(responsibility)]
-    ordered = [symbol_based, module_based, file_based]
+    ordered: List[str] = []
+    for candidate in path_folders:
+        if candidate not in ordered:
+            ordered.append(candidate)
     for candidate in blended_candidates:
         if candidate not in ordered:
             ordered.append(candidate)
-        if len([item for item in ordered if item]) >= 4:
-            break
+    for candidate in [file_based, module_based, symbol_based]:
+        if candidate is not None and candidate not in ordered:
+            ordered.append(candidate)
 
     clean: List[str] = []
     for candidate in ordered:
-        if not candidate:
-            continue
         normalized = candidate.strip().lower().replace("-", "_")
         if not normalized or normalized in {"src", "bpfw", "tests", "test", "__init__"}:
             continue

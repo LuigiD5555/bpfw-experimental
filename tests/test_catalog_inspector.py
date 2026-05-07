@@ -200,21 +200,21 @@ def test_text_inspector_renders_expected_sections(tmp_path: Path) -> None:
     )
 
     rendered = "\n".join(output)
-    assert "BPFW Inspector" in rendered
-    assert "authority:" in rendered
-    assert "intent suggestions:" in rendered
-    assert "6  write custom intent" in rendered
-    assert "domain suggestions:" in rendered
-    assert "z  " in rendered
-    assert "x  " in rendered
-    assert "c  " in rendered
-    assert "v  " in rendered
-    assert "b  write custom domain" in rendered
-    assert "a  active" in rendered
-    assert "e  experimental" in rendered
-    assert "l  legacy" in rendered
-    assert "d  deprecated" in rendered
-    assert "Enter save+next" in rendered
+    assert "Blueprint Framework Inspector" in rendered
+    assert "Authority" in rendered
+    assert "Intent suggestions" in rendered
+    assert "[6] write custom intent" in rendered
+    assert "Domain suggestions" in rendered
+    assert " [a] " in rendered
+    assert " [s] " in rendered
+    assert " [d] " in rendered
+    assert " [f] " in rendered
+    assert "[g] write custom domain" in rendered
+    assert "[z] active" in rendered
+    assert "[x] experimental" in rendered
+    assert "[c] legacy" in rendered
+    assert "[v] deprecated" in rendered
+    assert "[Enter] save + next" in rendered
     assert "s save" not in rendered
     assert "l1" not in rendered
     assert "d1" not in rendered
@@ -496,8 +496,8 @@ def test_text_inspector_edits_fields_and_accepts(tmp_path: Path) -> None:
     answers = iter(
         [
             "6maintain example",
-            "bcatalog",
-            "e",
+            "gcatalog",
+            "x",
             "o reviewed",
             "",
         ]
@@ -577,7 +577,7 @@ def test_text_inspector_unknown_command_stays_on_current_item(tmp_path: Path) ->
     saved = blueprint_path.read_text(encoding="utf-8")
     assert exit_code == 0
     assert "Unknown command" in rendered
-    assert rendered.count("BPFW Inspector") >= 2
+    assert rendered.count("Blueprint Framework Inspector") >= 2
     assert "maintain example" in saved
 
 
@@ -648,7 +648,7 @@ def test_text_inspector_accepts_new_detected_code(tmp_path: Path) -> None:
     answers = iter(
         [
             "6maintain extra func",
-            "w demo",
+            "g demo",
             "",
         ]
     )
@@ -662,7 +662,7 @@ def test_text_inspector_accepts_new_detected_code(tmp_path: Path) -> None:
     rendered = "\n".join(output)
     saved = blueprint_path.read_text(encoding="utf-8")
     assert exit_code == 0
-    assert "BPFW Inspector" in rendered
+    assert "Blueprint Framework Inspector" in rendered
     assert "maintain extra func" in saved
     assert "extra_func" in saved
 
@@ -696,7 +696,7 @@ def test_text_inspector_back_returns_to_saved_previous_item(tmp_path: Path) -> N
         encoding="utf-8",
     )
     session = load_inspect_session(project_root=tmp_path)
-    answers = iter(["6first intent", "bfirst_domain", "", "b", "q"])
+    answers = iter(["6first intent", "gfirst_domain", "", "b", "q"])
     output: list[str] = []
 
     exit_code = run_text_inspector_session(
@@ -710,8 +710,8 @@ def test_text_inspector_back_returns_to_saved_previous_item(tmp_path: Path) -> N
     assert "1/2 draft" in rendered
     assert "2/2 draft" in rendered
     assert rendered.count("1/2 draft") >= 2
-    assert "intent:    first intent" in rendered
-    assert "domain:    first_domain" in rendered
+    assert "INTENT     first intent" in rendered
+    assert "DOMAIN     first_domain" in rendered
 
 
 def test_text_inspector_custom_intent_uses_slot_six_with_prompt(tmp_path: Path) -> None:
