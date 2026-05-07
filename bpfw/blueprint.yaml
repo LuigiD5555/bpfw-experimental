@@ -33,7 +33,7 @@ policy:
 responsibilities:
 - id: catalog_access_control_ensure_blueprint_can_be_written
   intent: maintain catalog ensure_blueprint_can_be_written
-  canonical_name: ensure_blueprint_can_be_written
+  name: ensure_blueprint_can_be_written
   domain: framework
   lifecycle: active
   location:
@@ -60,7 +60,7 @@ responsibilities:
   notes: null
 - id: catalog_drift_compare_declared_to_discovered
   intent: maintain catalog compare_declared_to_discovered
-  canonical_name: compare_declared_to_discovered
+  name: compare_declared_to_discovered
   domain: framework
   lifecycle: active
   location:
@@ -87,7 +87,7 @@ responsibilities:
   notes: null
 - id: catalog_lifecycle_count_lifecycles
   intent: maintain catalog count_lifecycles
-  canonical_name: count_lifecycles
+  name: count_lifecycles
   domain: framework
   lifecycle: active
   location:
@@ -114,7 +114,7 @@ responsibilities:
   notes: null
 - id: catalog_lifecycle_is_allowed_lifecycle
   intent: maintain catalog is_allowed_lifecycle
-  canonical_name: is_allowed_lifecycle
+  name: is_allowed_lifecycle
   domain: framework
   lifecycle: active
   location:
@@ -141,7 +141,7 @@ responsibilities:
   notes: null
 - id: catalog_loader_blueprint_loader
   intent: maintain catalog blueprint_loader
-  canonical_name: BlueprintLoader
+  name: BlueprintLoader
   domain: framework
   lifecycle: active
   location:
@@ -168,7 +168,7 @@ responsibilities:
   notes: null
 - id: catalog_loader_is_responsibility_complete
   intent: maintain catalog is_responsibility_complete
-  canonical_name: is_responsibility_complete
+  name: is_responsibility_complete
   domain: framework
   lifecycle: active
   location:
@@ -195,7 +195,7 @@ responsibilities:
   notes: null
 - id: catalog_models_blueprint_load_result
   intent: maintain catalog blueprint_load_result
-  canonical_name: BlueprintLoadResult
+  name: BlueprintLoadResult
   domain: framework
   lifecycle: active
   location:
@@ -222,7 +222,7 @@ responsibilities:
   notes: null
 - id: catalog_models_discovered_code_unit
   intent: maintain catalog discovered_code_unit
-  canonical_name: DiscoveredCodeUnit
+  name: DiscoveredCodeUnit
   domain: framework
   lifecycle: active
   location:
@@ -249,7 +249,7 @@ responsibilities:
   notes: null
 - id: catalog_models_scan_result
   intent: maintain catalog scan_result
-  canonical_name: ScanResult
+  name: ScanResult
   domain: framework
   lifecycle: active
   location:
@@ -276,7 +276,7 @@ responsibilities:
   notes: null
 - id: catalog_models_verification_report
   intent: maintain catalog verification_report
-  canonical_name: VerificationReport
+  name: VerificationReport
   domain: framework
   lifecycle: active
   location:
@@ -303,7 +303,7 @@ responsibilities:
   notes: null
 - id: catalog_paths_resolve_blueprint_path
   intent: maintain catalog resolve_blueprint_path
-  canonical_name: resolve_blueprint_path
+  name: resolve_blueprint_path
   domain: framework
   lifecycle: active
   location:
@@ -330,7 +330,7 @@ responsibilities:
   notes: null
 - id: catalog_paths_resolve_project_root
   intent: maintain catalog resolve_project_root
-  canonical_name: resolve_project_root
+  name: resolve_project_root
   domain: framework
   lifecycle: active
   location:
@@ -357,7 +357,7 @@ responsibilities:
   notes: null
 - id: catalog_scanner_scan_python_project
   intent: maintain catalog scan_python_project
-  canonical_name: scan_python_project
+  name: scan_python_project
   domain: framework
   lifecycle: active
   location:
@@ -384,7 +384,7 @@ responsibilities:
   notes: null
 - id: catalog_validation_validate_blueprint_structure
   intent: maintain catalog validate_blueprint_structure
-  canonical_name: validate_blueprint_structure
+  name: validate_blueprint_structure
   domain: framework
   lifecycle: active
   location:
@@ -411,7 +411,7 @@ responsibilities:
   notes: null
 - id: catalog_verify_run_verify
   intent: maintain catalog run_verify
-  canonical_name: run_verify
+  name: run_verify
   domain: framework
   lifecycle: active
   location:
@@ -438,7 +438,7 @@ responsibilities:
   notes: null
 - id: catalog_writer_build_initial_blueprint
   intent: maintain catalog build_initial_blueprint
-  canonical_name: build_initial_blueprint
+  name: build_initial_blueprint
   domain: framework
   lifecycle: active
   location:
@@ -465,7 +465,7 @@ responsibilities:
   notes: null
 - id: catalog_writer_run_init
   intent: maintain catalog run_init
-  canonical_name: run_init
+  name: run_init
   domain: framework
   lifecycle: active
   location:
@@ -492,7 +492,7 @@ responsibilities:
   notes: null
 - id: catalog_writer_to_snake_case
   intent: maintain catalog to_snake_case
-  canonical_name: to_snake_case
+  name: to_snake_case
   domain: framework
   lifecycle: active
   location:
@@ -519,7 +519,7 @@ responsibilities:
   notes: null
 - id: catalog_writer_write_blueprint
   intent: maintain catalog write_blueprint
-  canonical_name: write_blueprint
+  name: write_blueprint
   domain: framework
   lifecycle: active
   location:
@@ -546,7 +546,7 @@ responsibilities:
   notes: null
 - id: cli_py_cli_build_parser
   intent: maintain cli.py build_parser
-  canonical_name: build_parser
+  name: build_parser
   domain: framework
   lifecycle: active
   location:
@@ -573,7 +573,7 @@ responsibilities:
   notes: null
 - id: cli_py_cli_main
   intent: maintain cli.py main
-  canonical_name: main
+  name: main
   domain: framework
   lifecycle: active
   location:
@@ -600,7 +600,7 @@ responsibilities:
   notes: null
 - id: cli_py_cli_normalize_command
   intent: maintain cli.py normalize_command
-  canonical_name: normalize_command
+  name: normalize_command
   domain: framework
   lifecycle: active
   location:
@@ -627,7 +627,7 @@ responsibilities:
   notes: null
 - id: core_context_engine_command
   intent: maintain core engine_command
-  canonical_name: EngineCommand
+  name: EngineCommand
   domain: framework
   lifecycle: active
   location:
@@ -654,7 +654,7 @@ responsibilities:
   notes: null
 - id: core_context_project_context
   intent: maintain core project_context
-  canonical_name: ProjectContext
+  name: ProjectContext
   domain: framework
   lifecycle: active
   location:
@@ -681,7 +681,7 @@ responsibilities:
   notes: null
 - id: core_context_build_project_context
   intent: maintain core build_project_context
-  canonical_name: build_project_context
+  name: build_project_context
   domain: framework
   lifecycle: active
   location:
@@ -708,7 +708,7 @@ responsibilities:
   notes: null
 - id: core_engine_blueprint_engine
   intent: maintain core blueprint_engine
-  canonical_name: BlueprintEngine
+  name: BlueprintEngine
   domain: framework
   lifecycle: active
   location:
@@ -735,7 +735,7 @@ responsibilities:
   notes: null
 - id: core_engine_build_command
   intent: maintain core build_command
-  canonical_name: build_command
+  name: build_command
   domain: framework
   lifecycle: active
   location:
@@ -762,7 +762,7 @@ responsibilities:
   notes: null
 - id: core_errors_blueprint_locked_error
   intent: maintain core blueprint_locked_error
-  canonical_name: BlueprintLockedError
+  name: BlueprintLockedError
   domain: framework
   lifecycle: active
   location:
@@ -789,7 +789,7 @@ responsibilities:
   notes: null
 - id: core_errors_blueprint_missing_error
   intent: maintain core blueprint_missing_error
-  canonical_name: BlueprintMissingError
+  name: BlueprintMissingError
   domain: framework
   lifecycle: active
   location:
@@ -816,7 +816,7 @@ responsibilities:
   notes: null
 - id: core_errors_bpfw_error
   intent: maintain core bpfw_error
-  canonical_name: BpfwError
+  name: BpfwError
   domain: framework
   lifecycle: active
   location:
@@ -843,7 +843,7 @@ responsibilities:
   notes: null
 - id: core_pipeline_pipeline
   intent: maintain core pipeline
-  canonical_name: Pipeline
+  name: Pipeline
   domain: framework
   lifecycle: active
   location:
@@ -870,7 +870,7 @@ responsibilities:
   notes: null
 - id: core_pipeline_pipeline_step
   intent: maintain core pipeline_step
-  canonical_name: PipelineStep
+  name: PipelineStep
   domain: framework
   lifecycle: active
   location:
@@ -897,7 +897,7 @@ responsibilities:
   notes: null
 - id: core_pipeline_execute_pipeline
   intent: maintain core execute_pipeline
-  canonical_name: execute_pipeline
+  name: execute_pipeline
   domain: framework
   lifecycle: active
   location:
@@ -924,7 +924,7 @@ responsibilities:
   notes: null
 - id: core_registry_authority_lock_step
   intent: maintain core authority_lock_step
-  canonical_name: AuthorityLockStep
+  name: AuthorityLockStep
   domain: framework
   lifecycle: active
   location:
@@ -951,7 +951,7 @@ responsibilities:
   notes: null
 - id: core_registry_authority_status_step
   intent: maintain core authority_status_step
-  canonical_name: AuthorityStatusStep
+  name: AuthorityStatusStep
   domain: framework
   lifecycle: active
   location:
@@ -978,7 +978,7 @@ responsibilities:
   notes: null
 - id: core_registry_authority_unlock_step
   intent: maintain core authority_unlock_step
-  canonical_name: AuthorityUnlockStep
+  name: AuthorityUnlockStep
   domain: framework
   lifecycle: active
   location:
@@ -1005,7 +1005,7 @@ responsibilities:
   notes: null
 - id: core_registry_init_project_step
   intent: maintain core init_project_step
-  canonical_name: InitProjectStep
+  name: InitProjectStep
   domain: framework
   lifecycle: active
   location:
@@ -1032,7 +1032,7 @@ responsibilities:
   notes: null
 - id: core_registry_verify_blueprint_step
   intent: maintain core verify_blueprint_step
-  canonical_name: VerifyBlueprintStep
+  name: VerifyBlueprintStep
   domain: framework
   lifecycle: active
   location:
@@ -1059,7 +1059,7 @@ responsibilities:
   notes: null
 - id: core_registry_build_default_registry
   intent: maintain core build_default_registry
-  canonical_name: build_default_registry
+  name: build_default_registry
   domain: framework
   lifecycle: active
   location:
@@ -1086,7 +1086,7 @@ responsibilities:
   notes: null
 - id: core_result_engine_result
   intent: maintain core engine_result
-  canonical_name: EngineResult
+  name: EngineResult
   domain: framework
   lifecycle: active
   location:
@@ -1113,7 +1113,7 @@ responsibilities:
   notes: null
 - id: core_result_result_status
   intent: maintain core result_status
-  canonical_name: ResultStatus
+  name: ResultStatus
   domain: framework
   lifecycle: active
   location:
@@ -1140,7 +1140,7 @@ responsibilities:
   notes: null
 - id: core_result_step_result
   intent: maintain core step_result
-  canonical_name: StepResult
+  name: StepResult
   domain: framework
   lifecycle: active
   location:
@@ -1167,7 +1167,7 @@ responsibilities:
   notes: null
 - id: core_result_aggregate_status
   intent: maintain core aggregate_status
-  canonical_name: aggregate_status
+  name: aggregate_status
   domain: framework
   lifecycle: active
   location:
@@ -1194,7 +1194,7 @@ responsibilities:
   notes: null
 - id: integrations_base_external_tool_adapter
   intent: maintain integrations external_tool_adapter
-  canonical_name: ExternalToolAdapter
+  name: ExternalToolAdapter
   domain: framework
   lifecycle: active
   location:
@@ -1221,7 +1221,7 @@ responsibilities:
   notes: null
 - id: integrations_registry_integration_registry
   intent: maintain integrations integration_registry
-  canonical_name: IntegrationRegistry
+  name: IntegrationRegistry
   domain: framework
   lifecycle: active
   location:
@@ -1248,7 +1248,7 @@ responsibilities:
   notes: null
 - id: integrations_result_external_tool_finding
   intent: maintain integrations external_tool_finding
-  canonical_name: ExternalToolFinding
+  name: ExternalToolFinding
   domain: framework
   lifecycle: active
   location:
@@ -1275,7 +1275,7 @@ responsibilities:
   notes: null
 - id: protection_authority_get_blueprint_lock_state
   intent: maintain protection get_blueprint_lock_state
-  canonical_name: get_blueprint_lock_state
+  name: get_blueprint_lock_state
   domain: framework
   lifecycle: active
   location:
@@ -1302,7 +1302,7 @@ responsibilities:
   notes: null
 - id: protection_authority_lock_blueprint
   intent: maintain protection lock_blueprint
-  canonical_name: lock_blueprint
+  name: lock_blueprint
   domain: framework
   lifecycle: active
   location:
@@ -1329,7 +1329,7 @@ responsibilities:
   notes: null
 - id: protection_authority_unlock_blueprint
   intent: maintain protection unlock_blueprint
-  canonical_name: unlock_blueprint
+  name: unlock_blueprint
   domain: framework
   lifecycle: active
   location:
@@ -1356,7 +1356,7 @@ responsibilities:
   notes: null
 - id: protection_os_lock_get_file_lock_state
   intent: maintain protection get_file_lock_state
-  canonical_name: get_file_lock_state
+  name: get_file_lock_state
   domain: framework
   lifecycle: active
   location:
@@ -1383,7 +1383,7 @@ responsibilities:
   notes: null
 - id: protection_os_lock_lock_file
   intent: maintain protection lock_file
-  canonical_name: lock_file
+  name: lock_file
   domain: framework
   lifecycle: active
   location:
@@ -1410,7 +1410,7 @@ responsibilities:
   notes: null
 - id: protection_os_lock_unlock_file
   intent: maintain protection unlock_file
-  canonical_name: unlock_file
+  name: unlock_file
   domain: framework
   lifecycle: active
   location:
@@ -1437,7 +1437,7 @@ responsibilities:
   notes: null
 - id: reports_finding_finding
   intent: maintain reports finding
-  canonical_name: Finding
+  name: Finding
   domain: framework
   lifecycle: active
   location:
@@ -1464,7 +1464,7 @@ responsibilities:
   notes: null
 - id: reports_status_report_render_status_report
   intent: maintain reports render_status_report
-  canonical_name: render_status_report
+  name: render_status_report
   domain: framework
   lifecycle: active
   location:
@@ -1491,7 +1491,7 @@ responsibilities:
   notes: null
 - id: reports_status_report_run_status
   intent: maintain reports run_status
-  canonical_name: run_status
+  name: run_status
   domain: framework
   lifecycle: active
   location:
@@ -1518,7 +1518,7 @@ responsibilities:
   notes: null
 - id: reports_verify_report_render_verify_report
   intent: maintain reports render_verify_report
-  canonical_name: render_verify_report
+  name: render_verify_report
   domain: framework
   lifecycle: active
   location:
@@ -1545,7 +1545,7 @@ responsibilities:
   notes: null
 - id: contains_secret_keyword
   intent: check_if_secret_keyword
-  canonical_name: contains_secret_keyword
+  name: contains_secret_keyword
   domain: data_security
   lifecycle: active
   location:
@@ -1572,7 +1572,7 @@ responsibilities:
   notes: null
 - id: is_allowed_security_policy_path
   intent: security_policy_checker
-  canonical_name: is_allowed_security_policy_path
+  name: is_allowed_security_policy_path
   domain: data_security
   lifecycle: active
   location:
@@ -1613,7 +1613,7 @@ responsibilities:
   notes: null
 - id: looks_like_absolute_path
   intent: To check if is absolute path
-  canonical_name: looks_like_absolute_path
+  name: looks_like_absolute_path
   domain: System tools
   lifecycle: active
   location:
@@ -1654,7 +1654,7 @@ responsibilities:
   notes: This should work on multi OS terminal (command prompt)
 - id: intent_suggestion
   intent: Suggest intent
-  canonical_name: IntentSuggestion
+  name: IntentSuggestion
   domain: inspector
   lifecycle: active
   location:
