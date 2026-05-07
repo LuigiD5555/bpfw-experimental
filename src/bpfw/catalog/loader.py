@@ -171,7 +171,7 @@ def is_responsibility_complete(responsibility: Dict[str, Any]) -> bool:
     Required fields:
     - id
     - intent
-    - canonical_name
+    - name
     - domain
     - lifecycle
     - location.path
@@ -184,7 +184,7 @@ def is_responsibility_complete(responsibility: Dict[str, Any]) -> bool:
     Returns:
         True if all required fields are present and non-empty, False otherwise.
     """
-    required_top_level = ["id", "intent", "canonical_name", "domain", "lifecycle"]
+    required_top_level = ["id", "intent", "name", "domain", "lifecycle"]
 
     for key in required_top_level:
         value = responsibility.get(key)

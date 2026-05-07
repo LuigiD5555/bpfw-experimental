@@ -443,7 +443,7 @@ def _collect_evidence(responsibility: dict[str, Any]) -> list[_EvidenceItem]:
                 for value in values:
                     _append_evidence(evidence, source=source, value=value, weight=weight)
 
-    for source in ("canonical_name", "name"):
+    for source in ("name", "name"):
         _append_evidence(
             evidence,
             source=source,

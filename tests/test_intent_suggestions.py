@@ -9,7 +9,7 @@ def test_suggests_token_creation_from_issuer_symbol() -> None:
     """Suggest token creation from an issuer-style class name."""
 
     responsibility = {
-        "canonical_name": "TokenIssuer",
+        "name": "TokenIssuer",
         "location": {
             "path": "src/auth/token.py",
             "symbol": "TokenIssuer",
@@ -31,7 +31,7 @@ def test_suggests_blueprint_validation_from_verify_symbol() -> None:
     """Suggest blueprint validation from verify-style evidence."""
 
     responsibility = {
-        "canonical_name": "verify_blueprint",
+        "name": "verify_blueprint",
         "location": {
             "path": "src/bpfw/catalog/verify.py",
             "symbol": "verify_blueprint",
@@ -484,7 +484,7 @@ def _responsibility(
         detected["docstring"] = docstring
 
     return {
-        "canonical_name": symbol,
+        "name": symbol,
         "location": {
             "path": path,
             "module": path.removesuffix(".py").replace("/", "."),

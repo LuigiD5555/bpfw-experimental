@@ -26,7 +26,7 @@ def _responsibility(
     return {
         "id": responsibility_id,
         "intent": intent,
-        "canonical_name": symbol,
+        "name": symbol,
         "domain": None,
         "lifecycle": lifecycle,
         "location": {
@@ -479,7 +479,7 @@ def test_text_inspector_edits_fields_and_accepts(tmp_path: Path) -> None:
         "version: 1\n"
         "responsibilities:\n"
         "  - id: example\n"
-        "    canonical_name: ExampleService\n"
+        "    name: ExampleService\n"
         "    domain: ''\n"
         "    lifecycle: ''\n"
         "    intent: ''\n"
@@ -524,7 +524,7 @@ def test_text_inspector_save_next_persists_partial_fields(tmp_path: Path) -> Non
         "version: 1\n"
         "responsibilities:\n"
         "  - id: example\n"
-        "    canonical_name: ExampleService\n"
+        "    name: ExampleService\n"
         "    domain: catalog\n"
         "    lifecycle: active\n"
         "    intent: ''\n",
@@ -553,7 +553,7 @@ def test_text_inspector_unknown_command_stays_on_current_item(tmp_path: Path) ->
         "version: 1\n"
         "responsibilities:\n"
         "  - id: example\n"
-        "    canonical_name: ExampleService\n"
+        "    name: ExampleService\n"
         "    domain: ''\n"
         "    lifecycle: active\n"
         "    intent: ''\n"
@@ -588,7 +588,7 @@ def test_text_inspector_blocks_when_input_is_unavailable(tmp_path: Path) -> None
         "version: 1\n"
         "responsibilities:\n"
         "  - id: example\n"
-        "    canonical_name: ExampleService\n"
+        "    name: ExampleService\n"
         "    lifecycle: ''\n"
         "    intent: ''\n",
         encoding="utf-8",
@@ -634,7 +634,7 @@ def test_text_inspector_accepts_new_detected_code(tmp_path: Path) -> None:
         "responsibilities:\n"
         "  - id: declared_func\n"
         "    intent: maintain declared func\n"
-        "    canonical_name: declared_func\n"
+        "    name: declared_func\n"
         "    domain: demo\n"
         "    lifecycle: active\n"
         "    location:\n"
@@ -674,7 +674,7 @@ def test_text_inspector_back_returns_to_saved_previous_item(tmp_path: Path) -> N
         "version: 1\n"
         "responsibilities:\n"
         "  - id: first\n"
-        "    canonical_name: FirstService\n"
+        "    name: FirstService\n"
         "    domain: ''\n"
         "    lifecycle: ''\n"
         "    intent: ''\n"
@@ -684,7 +684,7 @@ def test_text_inspector_back_returns_to_saved_previous_item(tmp_path: Path) -> N
         "      symbol: FirstService\n"
         "      symbol_type: class\n"
         "  - id: second\n"
-        "    canonical_name: SecondService\n"
+        "    name: SecondService\n"
         "    domain: ''\n"
         "    lifecycle: ''\n"
         "    intent: ''\n"
@@ -721,7 +721,7 @@ def test_text_inspector_custom_intent_uses_slot_six_with_prompt(tmp_path: Path) 
         "version: 1\n"
         "responsibilities:\n"
         "  - id: example\n"
-        "    canonical_name: ExampleService\n"
+        "    name: ExampleService\n"
         "    domain: catalog\n"
         "    lifecycle: active\n"
         "    intent: ''\n"

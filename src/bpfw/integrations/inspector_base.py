@@ -22,7 +22,7 @@ from bpfw.core.errors import BlueprintLockedError
 from bpfw.reports.finding import Finding
 
 ALLOWED_LIFECYCLES = ("active", "experimental", "legacy", "deprecated")
-REQUIRED_HUMAN_FIELDS = ("intent", "canonical_name", "domain", "lifecycle")
+REQUIRED_HUMAN_FIELDS = ("intent", "name", "domain", "lifecycle")
 ISSUE_DRAFT = "draft"
 ISSUE_NEW_DETECTED = "new_detected"
 
@@ -159,7 +159,7 @@ def build_new_detected_responsibility(unit: DiscoveredCodeUnit) -> Dict[str, Any
     return {
         "id": to_snake_case(unit.symbol),
         "intent": None,
-        "canonical_name": unit.symbol,
+        "name": unit.symbol,
         "domain": None,
         "lifecycle": "active",
         "location": {
@@ -546,7 +546,7 @@ def build_authority_lines(responsibility: Dict[str, Any]) -> list[str]:
     return [
         f"  id              {display_value(responsibility.get('id'))}",
         f"  intent          {display_value(responsibility.get('intent'))}",
-        f"  name            {display_value(responsibility.get('canonical_name'))}",
+        f"  name            {display_value(responsibility.get('name'))}",
         f"  domain          {display_value(responsibility.get('domain'))}",
         f"  lifecycle       {display_value(responsibility.get('lifecycle'))}",
         f"  observations    {display_value(responsibility.get('notes'))}",

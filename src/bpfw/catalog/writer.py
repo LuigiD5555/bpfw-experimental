@@ -58,7 +58,7 @@ def build_initial_blueprint(
         responsibility = {
             "id": to_snake_case(unit.symbol),
             "intent": None,
-            "canonical_name": unit.symbol,
+            "name": unit.symbol,
             "domain": None,
             "lifecycle": None,
             "location": {

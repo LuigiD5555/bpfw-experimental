@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from pathlib import Path
 import shutil
+import textwrap
 from typing import Any, Dict, List
 import unicodedata
 
@@ -26,7 +27,7 @@ from bpfw.integrations.inspector_base import (
 InputFunc = Callable[[str], str]
 PrintFunc = Callable[[str], None]
 
-REQUIRED_SAVE_FIELDS = ("intent", "canonical_name", "domain", "lifecycle")
+REQUIRED_SAVE_FIELDS = ("intent", "name", "domain", "lifecycle")
 MIN_TOTAL_WIDTH = 72
 HORIZONTAL_PADDING = 1
 COLUMN_GAP_WIDTH = 1
@@ -94,6 +95,18 @@ def _centered_title_bar(title: str, width: int, fill: str = "─") -> str:
     left_fill = remaining // 2
     right_fill = remaining - left_fill
     return (fill * left_fill) + label + (fill * right_fill)
+
+
+def _center_text(text: str, width: int) -> str:
+    """Center plain text inside fixed width."""
+
+    text_width = display_width(text)
+    if text_width >= width:
+        return fit_text(text, width)
+    remaining = width - text_width
+    left_padding = remaining // 2
+    right_padding = remaining - left_padding
+    return (" " * left_padding) + text + (" " * right_padding)
 
 
 def render_box(title: str, lines: list[str], width: int) -> list[str]:
@@ -177,7 +190,9 @@ def render_authority_lifecycle_box(
 def _build_header(title: str, meta: str, width: int) -> List[str]:
     """Build the inspector title header."""
 
-    if display_width(meta) >= width:
+    if not meta.strip():
+        header_line = _center_text(title, width)
+    elif display_width(meta) >= width:
         header_line = fit_text(meta, width)
     else:
         left_width = width - display_width(meta) - 1
@@ -202,21 +217,63 @@ def _render_notification_block(title: str, lines: List[str], print_func: PrintFu
 def _render_help_block(print_func: PrintFunc, width: int) -> None:
     """Render inspector help for field meaning and command options."""
 
+    help_lines = [
+        "",
+        "  Authority fields",
+        "  ────────────────",
+        "  intent        What this snippet is supposed to do.",
+        "  domain        The project area to which this code snippet is related.",
+        "  name          Simple name for this snippet.",
+        "  observations  Optional notes for this snippet.",
+        "",
+        "  lifecycle     Current status of this code snippet.",
+        "                active        In use now.",
+        "                experimental  Still being tested.",
+        "                legacy        Old, but still kept.",
+        "                deprecated    Should be replaced or removed later.",
+        "",
+        "  Selection",
+        "  ─────────",
+        "  [1-5]      Choose suggested intent",
+        "  [6]        Write custom intent",
+        "  [a|s|d|f]  Choose suggested domain",
+        "  [g]        Write custom domain",
+        "  [z|x|c|v]  Set lifecycle",
+        "",
+        "  Editing",
+        "  ───────",
+        "  [n]        Edit name",
+        "  [o]        Edit observations",
+        "",
+        "  Flow",
+        "  ────",
+        "  [Enter]    Save and continue",
+        "  [b]        Back",
+        "  [h]        Toggle help",
+        "  [q]        Quit",
+        "",
+    ]
     _render_notification_block(
         title="Inspector help",
-        lines=[
-            "intent: human-readable responsibility purpose for this code unit.",
-            "domain: subsystem or bounded context label for grouping responsibilities.",
-            "lifecycle: status of responsibility maturity (active/experimental/legacy/deprecated).",
-            "1-5: choose one suggested intent option.",
-            "6: write custom intent (inline as 6<text> or prompted as 6 then Enter).",
-            "a/s/d/f: choose suggested domain options 1-4. g: custom domain.",
-            "z/x/c/v: set lifecycle. n <name>: set canonical name. o <text>: set observations.",
-            "Enter: save and continue. b: back. h: help. q: quit.",
-        ],
+        lines=help_lines,
         print_func=print_func,
         width=width,
     )
+
+
+def _compute_help_width() -> int:
+    """Compute compact dynamic width for the help panel."""
+
+    sample_lines = [
+        "  domain        The project area to which this code snippet is related.",
+        "                deprecated    Should be replaced or removed later.",
+        "  [a|s|d|f]  Choose suggested domain",
+        "  [Enter]    Save and continue",
+    ]
+    required_width = max(measure_lines(sample_lines), display_width("Inspector help") + 2) + (HORIZONTAL_PADDING * 2)
+    terminal_width = shutil.get_terminal_size(fallback=(100, 30)).columns
+    total_width = min(max(required_width + 2, MIN_TOTAL_WIDTH), terminal_width)
+    return max(20, total_width - 2)
 
 
 def _compute_layout_width(
@@ -224,6 +281,7 @@ def _compute_layout_width(
     code_lines: list[str],
     authority_lines: list[str],
     lifecycle_lines: list[str],
+    observation_preview_lines: list[str],
     domain_lines: list[str],
     intent_lines: list[str],
     command_lines: list[str],
@@ -232,6 +290,7 @@ def _compute_layout_width(
 
     header_required = display_width("BPFW Inspector") + 1 + display_width(header_meta)
     code_required = measure_lines(code_lines)
+    observations_required = measure_lines(observation_preview_lines)
     commands_required = measure_lines(command_lines)
     authority_required = max(
         display_width("Authority") + 3,
@@ -254,6 +313,7 @@ def _compute_layout_width(
     required_width = max(
         header_required,
         code_required,
+        observations_required,
         commands_required,
         two_col_required_authority,
         two_col_required_suggestions,
@@ -272,6 +332,52 @@ def _compute_notification_width() -> int:
     return max(20, total_width - 2)
 
 
+def _build_observation_panel_lines(
+    responsibility: Dict[str, Any],
+    content_width: int,
+    max_lines: int = 3,
+) -> list[str]:
+    """Build compact observation lines with empty state and truncation."""
+
+    observation_value = clean_string(responsibility.get("notes"))
+    if observation_value is None:
+        return [" No observations registered · Press [o] to add an observation."]
+
+    note_count_label = "1 note"
+    prefix = f"{note_count_label} · "
+    wrapped = textwrap.wrap(
+        observation_value,
+        width=max(8, content_width),
+        break_long_words=True,
+        break_on_hyphens=False,
+    )
+    if not wrapped:
+        return [" No observations registered · Press [o] to add an observation."]
+
+    lines: list[str] = [f"{prefix}{wrapped[0]}"]
+    for extra_line in wrapped[1:max_lines]:
+        lines.append(extra_line)
+    if len(wrapped) > max_lines:
+        lines[-1] = fit_text(lines[-1], max(1, content_width))
+    return lines
+
+
+def _compose_left_right_line(left: str, right: str, width: int) -> str:
+    """Compose one line with left and right text within fixed width."""
+
+    if width <= 0:
+        return ""
+    if not right.strip():
+        return fit_text(left, width)
+    right_width = display_width(right)
+    if right_width >= width:
+        return fit_text(right, width)
+    left_budget = max(0, width - right_width - 1)
+    left_text = fit_text(left, left_budget)
+    padding = " " * max(1, width - display_width(left_text) - right_width)
+    return left_text + padding + right
+
+
 def render_text_inspector_screen(
     project_root: Path,
     issue_type: str,
@@ -285,18 +391,19 @@ def render_text_inspector_screen(
     """Render the direct MVP inspector screen."""
 
     print_func("")
-    header_meta = f"{index + 1}/{total} {issue_type}"
+    header_meta = f"{index + 1}/{total} {issue_type} "
     file_path = (responsibility.get("location") or {}).get("path", "")
+    snippet_lines = build_code_lines(project_root, responsibility)[:26]
     code_lines: List[str] = []
     if file_path:
         code_lines.append(file_path)
-    code_lines.extend(build_code_lines(project_root, responsibility)[:26])
+    code_lines.extend(snippet_lines)
 
     authority_lines = [
         "",
         f"  INTENT     {display_value(responsibility.get('intent'))}",
         f"  DOMAIN     {display_value(responsibility.get('domain'))}",
-        f"  NAME       {display_value(responsibility.get('canonical_name'))}",
+        f"  NAME       {display_value(responsibility.get('name'))}",
         f"  LIFECYCLE  {display_value(responsibility.get('lifecycle'))}",
         "",
     ]
@@ -304,22 +411,21 @@ def render_text_inspector_screen(
     current_lifecycle = clean_string(responsibility.get("lifecycle")) or ""
     lifecycle_lines = []
     for lifecycle_value, lifecycle_label in (
-        ("active", "z  active"),
-        ("experimental", "x  experimental"),
-        ("legacy", "c  legacy"),
-        ("deprecated", "v  deprecated"),
+        ("active", " [z] active"),
+        ("experimental", " [x] experimental"),
+        ("legacy", " [c] legacy"),
+        ("deprecated", " [v] deprecated"),
     ):
         marker = " *" if lifecycle_value == current_lifecycle else ""
         lifecycle_lines.append(f"{lifecycle_label}{marker}")
-    lifecycle_lines.append(f"current: {display_value(responsibility.get('lifecycle'))}")
 
     intent_lines: List[str] = []
     for suggestion_index in range(1, 6):
         suggestion_text = "-"
         if suggestion_index - 1 < len(intent_suggestions):
             suggestion_text = intent_suggestions[suggestion_index - 1].text
-        intent_lines.append(f" {suggestion_index}  {suggestion_text}")
-    intent_lines.append(" 6  write custom intent")
+        intent_lines.append(f" [{suggestion_index}] {suggestion_text}")
+    intent_lines.append(" [6] write custom intent")
 
     domain_lines: List[str] = []
     domain_labels = ("a", "s", "d", "f")
@@ -327,38 +433,63 @@ def render_text_inspector_screen(
         domain_text = "-"
         if domain_index < len(domain_suggestions):
             domain_text = domain_suggestions[domain_index]
-        domain_lines.append(f" {domain_label}  {domain_text}")
-    domain_lines.append(" g  write custom domain")
+        domain_lines.append(f" [{domain_label}] {domain_text}")
+    domain_lines.append(" [g] write custom domain")
     command_lines = [
         "[1-5] intent suggestion   [6] custom intent",
-        "[a s d f] domain          [g] custom domain",
-        "[z x c v] lifecycle       [n] name        [o] observations",
-        "[Enter] save + next       [b] back        [h] help      [q] quit",
+        "[a|s|d|f] domain          [g] custom domain",
+        "[z|x|c|v] lifecycle       [n] name        [h] help",
+        "[Enter] save + next       [b] back        [q] quit",
     ]
+    observation_preview_lines = _build_observation_panel_lines(
+        responsibility=responsibility,
+        content_width=120,
+        max_lines=3,
+    )
     global_inner_width = _compute_layout_width(
         header_meta=header_meta,
         code_lines=code_lines,
         authority_lines=authority_lines,
         lifecycle_lines=lifecycle_lines,
+        observation_preview_lines=observation_preview_lines,
         domain_lines=domain_lines,
         intent_lines=intent_lines,
         command_lines=command_lines,
     )
 
     for header_line in _build_header(
-        title="BPFW Inspector",
-        meta=header_meta,
+        title="Blueprint Framework Inspector",
+        meta="",
         width=global_inner_width,
     ):
         print_func(header_line)
 
-    for line in render_box(title="Code evidence", lines=code_lines, width=global_inner_width):
+    code_panel_lines = list(code_lines)
+    if file_path:
+        code_panel_lines = [
+            _compose_left_right_line(left=f" {file_path}", right=header_meta, width=global_inner_width),
+            "─" * global_inner_width,
+            *snippet_lines,
+        ]
+    for line in render_box(title="Code evidence", lines=code_panel_lines, width=global_inner_width):
         print_func(line)
 
     for line in render_authority_lifecycle_box(
         authority_lines=authority_lines,
         lifecycle_lines=lifecycle_lines,
         total_width=global_inner_width,
+    ):
+        print_func(line)
+
+    observation_lines = _build_observation_panel_lines(
+        responsibility=responsibility,
+        content_width=global_inner_width,
+        max_lines=3,
+    )
+    for line in render_box(
+        title="Observations",
+        lines=observation_lines,
+        width=global_inner_width,
     ):
         print_func(line)
 
@@ -435,10 +566,10 @@ def apply_inspector_command(
     if stripped_command.startswith("n"):
         value = stripped_command[1:].strip()
         if not value:
-            current_name = issue.responsibility.get("canonical_name", "")
+            current_name = issue.responsibility.get("name", "")
             value = input_func(f"name [{current_name}]: ").strip()
         if value:
-            issue.responsibility["canonical_name"] = value
+            issue.responsibility["name"] = value
         return "stay"
 
     if stripped_command.startswith("o"):
@@ -639,7 +770,7 @@ def run_text_inspector_session(
             return 0
 
         if action == "help":
-            _render_help_block(print_func=print_func, width=_compute_notification_width())
+            _render_help_block(print_func=print_func, width=_compute_help_width())
             try:
                 input_func("Press any key then Enter to continue...")
             except EOFError:

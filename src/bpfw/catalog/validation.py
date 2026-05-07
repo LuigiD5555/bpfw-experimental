@@ -12,7 +12,7 @@ from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, Finding
 
 _SOURCE = "bpfw"
 
-_RESPONSIBILITY_REQUIRED_FIELDS = ("id", "intent", "canonical_name", "domain", "lifecycle")
+_RESPONSIBILITY_REQUIRED_FIELDS = ("id", "intent", "name", "domain", "lifecycle")
 _LOCATION_REQUIRED_FIELDS = ("path", "symbol", "symbol_type")
 
 
