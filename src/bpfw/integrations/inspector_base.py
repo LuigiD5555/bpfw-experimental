@@ -1,6 +1,5 @@
 """Shared inspector behavior for BPFW catalog completion."""
-
-import re
+import ast
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List
@@ -8,6 +7,7 @@ from typing import Any, Dict, List
 import yaml
 
 from bpfw.catalog.access_control import ensure_blueprint_can_be_written
+from bpfw.catalog.domain_suggestions import suggest_domains as suggest_domain_objects
 from bpfw.catalog.loader import BlueprintLoader
 from bpfw.catalog.models import (
     AUTHORITY_STATE_INVALID,
@@ -280,91 +280,99 @@ def display_value(value: Any) -> str:
 
 
 def suggest_domain(responsibility: Dict[str, Any]) -> str | None:
-    """Suggest domain from the code path."""
+    """Suggest the strongest deterministic domain for one responsibility."""
 
-    location = responsibility.get("location", {})
-    if not isinstance(location, dict):
+    suggestions = suggest_domains(responsibility)
+    if not suggestions:
         return None
-
-    path = clean_string(location.get("path"))
-    if path is None:
-        return None
-
-    for marker in ("src/bpfw/", "bpfw/"):
-        if marker in path:
-            remainder = path.split(marker, 1)[1]
-            layer = remainder.split("/", 1)[0]
-            if layer:
-                return layer
-    return None
+    return suggestions[0]
 
 
 def suggest_domains(responsibility: Dict[str, Any]) -> List[str]:
-    """Suggest up to three deterministic domains for one responsibility."""
-
-    candidates: List[str] = []
+    """Suggest deterministic domains in z/x/c/v source order."""
 
     location = responsibility.get("location")
+    symbol_based = None
+    module_based = None
+    file_based = None
     if isinstance(location, dict):
-        path = location.get("path")
-        if isinstance(path, str):
-            parts = [
-                part for part in path.replace("\\", "/").split("/")
-                if part and part not in {"src", "tests", "test"}
-            ]
-            candidates.extend(parts[:3])
+        symbol = clean_string(location.get("symbol"))
+        if symbol:
+            symbol_tokens = []
+            current = ""
+            for character in symbol:
+                if character == "_":
+                    if current:
+                        symbol_tokens.append(current.lower())
+                    current = ""
+                    continue
+                if character.isupper() and current:
+                    symbol_tokens.append(current.lower())
+                    current = character
+                else:
+                    current += character
+            if current:
+                symbol_tokens.append(current.lower())
+            filtered = [token for token in symbol_tokens if token not in {"service", "manager", "handler", "helper", "run", "session", "text"}]
+            if filtered:
+                symbol_based = filtered[0]
 
-        module = location.get("module")
-        if isinstance(module, str):
-            candidates.extend(part for part in module.split(".") if part)
+        module = clean_string(location.get("module"))
+        if module:
+            parts = [part.strip().lower() for part in module.split(".") if part.strip()]
+            parts = [part for part in parts if part not in {"src", "bpfw", "tests", "test", "__init__"}]
+            if parts:
+                module_based = parts[-1]
 
-        symbol = location.get("symbol")
-        if isinstance(symbol, str):
-            candidates.extend(_domain_candidates_from_symbol(symbol))
+        path = clean_string(location.get("path"))
+        if path:
+            normalized_path = path.replace("\\", "/")
+            file_name = normalized_path.split("/")[-1]
+            file_based = file_name.removesuffix(".py").lower()
+            if file_based in {"src", "bpfw", "tests", "test", "__init__"}:
+                file_based = None
 
-    return _unique_domain_candidates(candidates)[:3]
+    blended_candidates = [suggestion.text for suggestion in suggest_domain_objects(responsibility)]
+    ordered = [symbol_based, module_based, file_based]
+    for candidate in blended_candidates:
+        if candidate not in ordered:
+            ordered.append(candidate)
+        if len([item for item in ordered if item]) >= 4:
+            break
 
-
-def _domain_candidates_from_symbol(symbol: str) -> List[str]:
-    """Extract domain candidates from a symbol name."""
-
-    words = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", symbol)
-    tokens = [token.lower() for token in re.findall(r"[A-Za-z][A-Za-z0-9]*", words)]
-
-    ignored = {
-        "service",
-        "manager",
-        "handler",
-        "helper",
-        "issuer",
-        "validator",
-        "loader",
-        "writer",
-        "reader",
-        "scanner",
-        "detector",
-        "builder",
-        "factory",
-    }
-
-    return [token for token in tokens if token not in ignored]
-
-
-def _unique_domain_candidates(candidates: List[str]) -> List[str]:
-    """Return normalized unique domain candidates."""
-
-    clean_candidates: List[str] = []
-    seen: set[str] = set()
-
-    for candidate in candidates:
-        normalized = candidate.strip().lower().replace("-", "_")
-        if not normalized or normalized in seen:
+    clean: List[str] = []
+    for candidate in ordered:
+        if not candidate:
             continue
+        normalized = candidate.strip().lower().replace("-", "_")
+        if not normalized or normalized in {"src", "bpfw", "tests", "test", "__init__"}:
+            continue
+        if normalized not in clean:
+            clean.append(normalized)
+    if len(clean) < 4:
+        fallback_tokens = ("core", "general", "shared", "misc")
+        for token in fallback_tokens:
+            if token not in clean:
+                clean.append(token)
+            if len(clean) >= 4:
+                break
+    return clean[:4]
 
-        seen.add(normalized)
-        clean_candidates.append(normalized)
 
-    return clean_candidates
+def collect_existing_intents(blueprint_data: Dict[str, Any]) -> tuple[str, ...]:
+    """Collect existing declared intents from blueprint responsibilities."""
+
+    responsibilities = blueprint_data.get("responsibilities")
+    if not isinstance(responsibilities, list):
+        return ()
+    values: list[str] = []
+    for responsibility in responsibilities:
+        if not isinstance(responsibility, dict):
+            continue
+        intent_value = clean_string(responsibility.get("intent"))
+        if intent_value is not None and intent_value not in values:
+            values.append(intent_value)
+    return tuple(values)
 
 
 def suggest_lifecycle(_responsibility: Dict[str, Any]) -> str:
@@ -404,10 +412,16 @@ def build_code_lines(
     if not source_path.exists():
         return [f"  -  Source file not found: {relative_path}"]
 
-    source_lines = source_path.read_text(encoding="utf-8").splitlines()
+    source_text = source_path.read_text(encoding="utf-8")
+    source_lines = source_text.splitlines()
+    snippet_start_line = _resolve_snippet_start_line(
+        source_text=source_text,
+        location=location,
+        fallback_start_line=start_line,
+    )
     displayed_start_line = _find_display_start_line(
         source_lines=source_lines,
-        start_line=start_line,
+        start_line=snippet_start_line,
     )
     displayed_end_line = _find_display_end_line(
         source_lines=source_lines,
@@ -419,6 +433,84 @@ def build_code_lines(
         f"{line_number:>{line_number_width}}  {line}"
         for line_number, line in enumerate(selected_lines, start=displayed_start_line)
     ]
+
+
+def _resolve_snippet_start_line(
+    source_text: str,
+    location: dict[str, Any],
+    fallback_start_line: int,
+) -> int:
+    """Return decorator-aware snippet start line when source node can be resolved."""
+
+    symbol = clean_string(location.get("symbol"))
+    symbol_type = clean_string(location.get("symbol_type"))
+    if symbol is None or symbol_type is None:
+        return fallback_start_line
+
+    try:
+        module_ast = ast.parse(source_text)
+    except SyntaxError:
+        return fallback_start_line
+
+    target_name = symbol.split(".")[-1]
+    node_line = location.get("start_line")
+    matching_node = _find_matching_symbol_node(
+        module_ast=module_ast,
+        symbol_type=symbol_type,
+        target_name=target_name,
+        node_line=node_line if isinstance(node_line, int) else None,
+    )
+    if matching_node is None:
+        return fallback_start_line
+
+    decorators = getattr(matching_node, "decorator_list", None)
+    if decorators:
+        return min(decorator.lineno for decorator in decorators)
+    return fallback_start_line
+
+
+def _find_matching_symbol_node(
+    module_ast: ast.Module,
+    symbol_type: str,
+    target_name: str,
+    node_line: int | None,
+) -> ast.AST | None:
+    """Find class/function node matching the located symbol."""
+
+    normalized_type = symbol_type.lower()
+    function_nodes: tuple[type[ast.AST], ...]
+    if hasattr(ast, "AsyncFunctionDef"):
+        function_nodes = (ast.FunctionDef, ast.AsyncFunctionDef)
+    else:
+        function_nodes = (ast.FunctionDef,)
+
+    candidate_types: tuple[type[ast.AST], ...]
+    if normalized_type == "class":
+        candidate_types = (ast.ClassDef,)
+    elif normalized_type in {"function", "method"}:
+        candidate_types = function_nodes
+    else:
+        candidate_types = (ast.ClassDef, *function_nodes)
+
+    for node in ast.walk(module_ast):
+        if not isinstance(node, candidate_types):
+            continue
+        name = getattr(node, "name", None)
+        if name != target_name:
+            continue
+        if node_line is not None and getattr(node, "lineno", None) != node_line:
+            continue
+        return node
+
+    # Fallback when line numbers drift but symbol remains unique.
+    if node_line is None:
+        return None
+    for node in ast.walk(module_ast):
+        if not isinstance(node, candidate_types):
+            continue
+        if getattr(node, "name", None) == target_name:
+            return node
+    return None
 
 
 def _find_display_start_line(source_lines: list[str], start_line: int) -> int:

@@ -1652,3 +1652,40 @@ responsibilities:
     replaced_by: null
     reason: null
   notes: This should work on multi OS terminal (command prompt)
+- id: intent_suggestion
+  intent: Suggest intent
+  canonical_name: IntentSuggestion
+  domain: inspector
+  lifecycle: active
+  location:
+    path: src/bpfw/catalog/intent_suggestions.py
+    module: src.bpfw.catalog.intent_suggestions
+    symbol: IntentSuggestion
+    symbol_type: class
+    start_line: 9
+    end_line: 14
+  detected:
+    qualified_name: src.bpfw.catalog.intent_suggestions.IntentSuggestion
+    kind: class
+    methods: []
+    functions: []
+    imports:
+    - re
+    - dataclasses.dataclass
+    - typing.Any
+    decorators:
+    - dataclass
+    docstring: Represent one deterministic natural-language intent suggestion.
+    signature: null
+  entrypoints: []
+  related_code: []
+  duplicate_policy:
+    group: suggest_intent
+    allow_multiple_non_active: true
+    forbidden_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
