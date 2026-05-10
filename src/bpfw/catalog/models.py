@@ -36,6 +36,8 @@ class DiscoveredCodeUnit:
     decorators: List[str] = field(default_factory=list)
     docstring: Optional[str] = None
     signature: Optional[str] = None
+    interface_inputs: List[Dict[str, Any]] = field(default_factory=list)
+    interface_output: Optional[Dict[str, Any]] = None
 
 
 @dataclass(frozen=True)

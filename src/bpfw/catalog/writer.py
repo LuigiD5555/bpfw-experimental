@@ -90,6 +90,17 @@ def build_initial_blueprint(
             },
             "notes": None,
         }
+
+        # Add interface metadata if available
+        if unit.interface_inputs or unit.interface_output:
+            interface_data = {}
+            if unit.interface_inputs:
+                interface_data["inputs"] = unit.interface_inputs
+            if unit.interface_output:
+                interface_data["output"] = unit.interface_output
+            if interface_data:
+                responsibility["interface"] = interface_data
+
         responsibilities.append(responsibility)
     
     blueprint_data = {
