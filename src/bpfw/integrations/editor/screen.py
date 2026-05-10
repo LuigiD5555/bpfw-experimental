@@ -2,6 +2,9 @@
 
 import shutil
 
+from bpfw.integrations.shared.visual_boxes import render_box
+from bpfw.integrations.shared.visual_width import pad_text
+
 
 DEFAULT_INPUT_PROMPT = "> "
 
@@ -126,21 +129,45 @@ def read_multiline() -> list[str]:
 # Editor search-first UI rendering
 # ---------------------------------------------------------------------------
 
-BANNER_TOP = (
-    "\u2554" + "\u2550" * 68 + "\u2557"
-)
-BANNER_BOTTOM = (
-    "\u255a" + "\u2550" * 68 + "\u255d"
-)
-BANNER_TITLE = "\u2551 Blueprint Framework Editor" + " " * 38 + "\u2551"
+BANNER_TITLE = "Blueprint Framework Editor"
 
 
-def render_editor_banner() -> None:
+def _editor_block_width(ratio: float = 0.70) -> int:
+    """Return a consistent width for editor blocks."""
+
+    terminal_width = get_terminal_width()
+    return min(terminal_width, max(72, int(terminal_width * ratio)))
+
+
+def _results_block_ratio(results: list) -> float:
+    """Return dynamic width ratio (70%-95%) based on LOCATION content size."""
+
+    if not results:
+        return 0.70
+
+    max_location_length = max(len((record.location or "")) for record in results)
+    min_ratio = 0.70
+    max_ratio = 0.95
+    min_length = 24
+    max_length = 120
+
+    if max_location_length <= min_length:
+        return min_ratio
+    if max_location_length >= max_length:
+        return max_ratio
+
+    growth_fraction = (max_location_length - min_length) / (max_length - min_length)
+    return min_ratio + (max_ratio - min_ratio) * growth_fraction
+
+
+def render_editor_banner(ratio: float = 0.70) -> None:
     """Print the editor banner at the top of the screen."""
 
-    print(BANNER_TOP)
-    print(BANNER_TITLE)
-    print(BANNER_BOTTOM)
+    banner_width = _editor_block_width(ratio=ratio)
+    centered_title = BANNER_TITLE.center(banner_width)
+    print("\u2554" + "\u2550" * banner_width + "\u2557")
+    print(f"\u2551{pad_text(centered_title, banner_width)}\u2551")
+    print("\u255a" + "\u2550" * banner_width + "\u255d")
 
 
 def render_search_screen() -> None:
@@ -174,8 +201,9 @@ def render_results_table(
     filter_display_lines: display lines from FilterState
     """
 
+    block_ratio = _results_block_ratio(results)
     clear_screen()
-    render_editor_banner()
+    render_editor_banner(ratio=block_ratio)
     print()
     print(" Search:")
     print(f"   {query or 'all'}")
@@ -186,27 +214,32 @@ def render_results_table(
         print()
         _render_filter_display(filter_display_lines)
         print()
-        _render_empty_commands()
+        _render_empty_commands(ratio=block_ratio)
         return
 
-    _render_results_table_rows(results)
+    _render_results_table_rows(results, ratio=block_ratio)
     print()
     _render_filter_display(filter_display_lines)
     print()
-    _render_results_commands()
+    _render_results_commands(ratio=block_ratio)
 
 
-def _render_results_table_rows(results: list) -> None:
+def _render_results_table_rows(results: list, ratio: float = 0.70) -> None:
     """Render the actual table of search results."""
 
-    width = get_terminal_width()
+    width = _editor_block_width(ratio=ratio)
 
-    # Column widths: IDX(5) LIFECYCLE(12) DOMAIN(12) NAME(24) LOCATION(rest)
+    # Five columns need six vertical separators.
+    total_content_width = max(54, width - 6)
     idx_width = 5
-    lifecycle_width = 12
-    domain_width = 12
-    name_width = 24
-    location_width = max(width - idx_width - lifecycle_width - domain_width - name_width - 10, 16)
+    # Keep LOCATION narrower so the other columns can breathe.
+    location_width = max(18, min(36, total_content_width // 3))
+    remaining_width = total_content_width - idx_width - location_width
+
+    # Redistribute remaining width with NAME slightly wider.
+    lifecycle_width = max(10, int(remaining_width * 0.28))
+    domain_width = max(10, int(remaining_width * 0.28))
+    name_width = max(14, remaining_width - lifecycle_width - domain_width)
 
     # Header
     header = (
@@ -261,26 +294,33 @@ def _render_filter_display(filter_display_lines: list[str]) -> None:
         print(f"   {line}")
 
 
-def _render_results_commands() -> None:
+def _render_results_commands(ratio: float = 0.70) -> None:
     """Render command menu for results screen."""
 
-    print(" Commands:")
-    print("   [idx] inspect")
-    print("   /      search again")
-    print("   f      filter")
-    print("   c      clear filters")
-    print("   a      show all")
-    print("   q      quit")
+    lines = [
+        "[idx] inspect             [f] filter               [h] help",
+        "[/] search again          [c] clear filters        [q] quit",
+        "[a] show all",
+    ]
+    _render_editor_commands_box(lines, ratio=ratio)
 
 
-def _render_empty_commands() -> None:
+def _render_empty_commands(ratio: float = 0.70) -> None:
     """Render command menu when no results found."""
 
-    print(" Commands:")
-    print("   /      search again")
-    print("   c      clear filters")
-    print("   a      show all")
-    print("   q      quit")
+    lines = [
+        "[/] search again          [c] clear filters        [h] help",
+        "[a] show all              [q] quit",
+    ]
+    _render_editor_commands_box(lines, ratio=ratio)
+
+
+def _render_editor_commands_box(lines: list[str], ratio: float = 0.70) -> None:
+    """Render editor commands using inspector-style command box."""
+
+    width = _editor_block_width(ratio=ratio)
+    for line in render_box(title="Commands", lines=lines, width=width):
+        print(line)
 
 
 def render_filter_screen() -> None:
@@ -316,6 +356,7 @@ def render_invalid_selection() -> None:
     print("   f      filter")
     print("   c      clear filters")
     print("   a      show all")
+    print("   h      help")
     print("   q      quit")
 
 
@@ -324,3 +365,66 @@ def render_filter_error(message: str) -> None:
 
     print()
     print(message)
+
+
+def render_editor_help_screen() -> None:
+    """Render the editor help screen."""
+
+    clear_screen()
+    print("╭───────────────────────────── Editor help ──────────────────────────────╮")
+    print("│                                                                         │")
+    print("│  Search                                                                 │")
+    print("│  ──────                                                                 │")
+    print("│  Search across blueprint responsibilities using words related to:       │")
+    print("│                                                                         │")
+    print("│    id            Unique responsibility identifier.                      │")
+    print("│    name          Simple responsibility name.                            │")
+    print("│    domain        Project area related to this responsibility.           │")
+    print("│    intent        What this responsibility is supposed to do.            │")
+    print("│    lifecycle     Current responsibility status.                         │")
+    print("│    path          File location associated with this responsibility.     │")
+    print("│    symbol        Related code symbol or snippet name.                   │")
+    print("│                                                                         │")
+    print("│  Results                                                                │")
+    print("│  ───────                                                                │")
+    print("│  Search results are displayed as a table.                               │")
+    print("│                                                                         │")
+    print("│    IDX           Row identifier used to inspect a result.               │")
+    print("│    LIFECYCLE     Current snippet status.                                │")
+    print("│    DOMAIN        Related project area.                                  │")
+    print("│    NAME          Responsibility name.                                   │")
+    print("│    LOCATION      Related file path.                                     │")
+    print("│                                                                         │")
+    print("│  Filters                                                                │")
+    print("│  ───────                                                                │")
+    print("│  Filters restrict visible search results.                               │")
+    print("│                                                                         │")
+    print("│    lifecycle     Filter by snippet status.                              │")
+    print("│    domain        Filter by project area.                                │")
+    print("│    name          Filter by responsibility name.                         │")
+    print("│    path          Filter by file path.                                   │")
+    print("│                                                                         │")
+    print("│  Examples                                                               │")
+    print("│  ────────                                                               │")
+    print("│    lifecycle=active                                                     │")
+    print("│    domain=catalog                                                       │")
+    print("│    name=loader                                                          │")
+    print("│    path=editor                                                          │")
+    print("│                                                                         │")
+    print("│  Commands                                                               │")
+    print("│  ────────                                                               │")
+    print("│  [idx]      Open selected result in Inspector                           │")
+    print("│  [/]        Search again                                                │")
+    print("│  [f]        Add filter                                                  │")
+    print("│  [c]        Clear all filters                                           │")
+    print("│  [a]        Show all responsibilities                                   │")
+    print("│  [h]        Toggle help                                                 │")
+    print("│  [q]        Quit                                                        │")
+    print("│                                                                         │")
+    print("│  Flow                                                                   │")
+    print("│  ────                                                                   │")
+    print("│  Editor is a search-first launcher for Inspector.                       │")
+    print("│                                                                         │")
+    print("│  Search → Filter → Select IDX → Inspect → Save → Return to Search       │")
+    print("│                                                                         │")
+    print("╰─────────────────────────────────────────────────────────────────────────╯")

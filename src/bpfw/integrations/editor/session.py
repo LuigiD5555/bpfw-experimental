@@ -11,6 +11,7 @@ from bpfw.catalog.loader import BlueprintLoader
 from bpfw.integrations.editor.filters import FilterState, apply_filters, parse_filter_input
 from bpfw.integrations.editor.screen import (
     read_input,
+    render_editor_help_screen,
     render_filter_error,
     render_filter_screen,
     render_invalid_selection,
@@ -87,6 +88,9 @@ class EditorSession:
             if raw_input == "q":
                 print("Editor closed.")
                 return 0
+            if raw_input == "h":
+                self._show_help()
+                continue
 
             # Empty input means show all
             if raw_input == "" or raw_input == "a":
@@ -113,6 +117,10 @@ class EditorSession:
                 if command == "q":
                     print("Editor closed.")
                     return 0
+
+                if command == "h":
+                    self._show_help()
+                    continue
 
                 if command == "/":
                     # Search again — keep filters
@@ -232,3 +240,12 @@ class EditorSession:
             return None
 
         return build_search_records(load_result.data)
+
+
+    def _show_help(self) -> None:
+        """Render editor help and wait for user confirmation."""
+
+        render_editor_help_screen()
+        print("")
+        print("Press any key then Enter to continue...")
+        read_input("> ")
