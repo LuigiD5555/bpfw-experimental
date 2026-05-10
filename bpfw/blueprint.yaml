@@ -788,9 +788,9 @@ responsibilities:
     reason: null
   notes: null
 - id: core_errors_blueprint_missing_error
-  intent: maintain core blueprint_missing_error
+  intent: Define a BlueprintMissingError object
   name: BlueprintMissingError
-  domain: framework
+  domain: errors
   lifecycle: active
   location:
     path: src/bpfw/core/errors.py
