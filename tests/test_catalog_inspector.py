@@ -1,3 +1,4 @@
+"""Tests for the catalog inspector module."""
 from pathlib import Path
 
 from bpfw.catalog.intent_suggestions import suggest_intents
