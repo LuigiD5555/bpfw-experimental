@@ -1,0 +1,127 @@
+"""Search index for BPFW Editor — build records, match queries, format rows."""
+
+from dataclasses import dataclass
+from typing import Any
+
+
+@dataclass(slots=True)
+class SearchRecord:
+    """Flat searchable record for one blueprint responsibility."""
+
+    responsibility_id: str
+    lifecycle: str
+    domain: str
+    name: str
+    path: str
+    symbol: str
+    location: str
+    intent: str
+    searchable_text: str
+
+
+def build_search_records(blueprint_data: dict[str, Any]) -> list[SearchRecord]:
+    """Build searchable records from blueprint responsibilities."""
+
+    responsibilities = blueprint_data.get("responsibilities", [])
+    if not isinstance(responsibilities, list):
+        return []
+
+    records: list[SearchRecord] = []
+    for responsibility in responsibilities:
+        if not isinstance(responsibility, dict):
+            continue
+
+        record = _build_single_record(responsibility)
+        records.append(record)
+
+    return records
+
+
+def _build_single_record(responsibility: dict[str, Any]) -> SearchRecord:
+    """Build one search record from a responsibility dict."""
+
+    responsibility_id = _str_or_empty(responsibility.get("id"))
+    lifecycle = _str_or_empty(responsibility.get("lifecycle"))
+    domain = _str_or_empty(responsibility.get("domain"))
+    name = _str_or_empty(responsibility.get("canonical_name"))
+    intent = _str_or_empty(responsibility.get("intent"))
+
+    location_data = responsibility.get("location")
+    if isinstance(location_data, dict):
+        raw_path = _str_or_empty(location_data.get("path"))
+        symbol = _str_or_empty(location_data.get("symbol"))
+    else:
+        raw_path = ""
+        symbol = ""
+
+    # Short location for display: strip src/bpfw/ prefix
+    location = _short_location(raw_path)
+
+    # Build searchable text blob for substring matching
+    detected = responsibility.get("detected")
+    qualified_name = ""
+    if isinstance(detected, dict):
+        qualified_name = _str_or_empty(detected.get("qualified_name"))
+
+    notes = _str_or_empty(responsibility.get("notes"))
+
+    searchable_parts = [
+        responsibility_id,
+        lifecycle,
+        domain,
+        name,
+        raw_path,
+        symbol,
+        qualified_name,
+        intent,
+        notes,
+    ]
+    searchable_text = " ".join(searchable_parts).lower()
+
+    return SearchRecord(
+        responsibility_id=responsibility_id,
+        lifecycle=lifecycle,
+        domain=domain,
+        name=name,
+        path=raw_path,
+        symbol=symbol,
+        location=location,
+        intent=intent,
+        searchable_text=searchable_text,
+    )
+
+
+def search_records(
+    records: list[SearchRecord],
+    query: str,
+) -> list[SearchRecord]:
+    """Filter records by search query using case-insensitive substring match."""
+
+    if not query.strip():
+        return list(records)
+
+    query_lower = query.strip().lower()
+
+    return [
+        record
+        for record in records
+        if query_lower in record.searchable_text
+    ]
+
+
+def _str_or_empty(value: Any) -> str:
+    """Convert a value to string, returning empty string for None."""
+
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _short_location(raw_path: str) -> str:
+    """Strip common prefixes for a compact location display."""
+
+    for prefix in ("src/bpfw/", "bpfw/"):
+        if raw_path.startswith(prefix):
+            return raw_path[len(prefix):]
+
+    return raw_path

@@ -23,6 +23,7 @@ from bpfw.integrations.shared.visual_boxes import (
 PrintFunc = Callable[[str], None]
 MIN_TOTAL_WIDTH = 72
 HORIZONTAL_PADDING = 1
+DEFAULT_INSPECTOR_HEADER_TITLE = "Blueprint Framework Inspector"
 
 
 def render_inspector_screen(
@@ -33,6 +34,7 @@ def render_inspector_screen(
     total: int,
     intent_suggestions: List[IntentSuggestion],
     domain_suggestions: List[str],
+    header_title: str = DEFAULT_INSPECTOR_HEADER_TITLE,
     print_func: PrintFunc = print,
 ) -> None:
     """Render the direct MVP inspector screen."""
@@ -105,7 +107,7 @@ def render_inspector_screen(
     )
 
     for header_line in _build_header(
-        title="Blueprint Framework Inspector",
+        title=header_title,
         meta="",
         width=global_inner_width,
     ):

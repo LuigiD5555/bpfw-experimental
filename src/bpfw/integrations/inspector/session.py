@@ -19,7 +19,10 @@ from bpfw.integrations.inspector_base import (
 )
 from bpfw.integrations.inspector.commands import apply_inspector_command
 from bpfw.integrations.inspector.validation import validate_required_fields
-from bpfw.integrations.inspector.screen import render_inspector_screen
+from bpfw.integrations.inspector.screen import (
+    DEFAULT_INSPECTOR_HEADER_TITLE,
+    render_inspector_screen,
+)
 
 InputFunc = Callable[[str], str]
 PrintFunc = Callable[[str], None]
@@ -27,6 +30,7 @@ PrintFunc = Callable[[str], None]
 
 def run_text_inspector(
     project_root: Path,
+    header_title: str = DEFAULT_INSPECTOR_HEADER_TITLE,
     input_func: InputFunc = input,
     print_func: PrintFunc = print,
 ) -> int:
@@ -59,6 +63,7 @@ def run_text_inspector(
 
     return run_text_inspector_session(
         session=session,
+        header_title=header_title,
         input_func=input_func,
         print_func=print_func,
     )
@@ -66,6 +71,7 @@ def run_text_inspector(
 
 def run_text_inspector_session(
     session: InspectLoadResult,
+    header_title: str = DEFAULT_INSPECTOR_HEADER_TITLE,
     input_func: InputFunc = input,
     print_func: PrintFunc = print,
 ) -> int:
@@ -94,6 +100,7 @@ def run_text_inspector_session(
             total=total,
             intent_suggestions=intent_suggestions,
             domain_suggestions=domain_suggestions,
+            header_title=header_title,
             print_func=print_func,
         )
         try:
