@@ -1,15 +1,15 @@
 from pathlib import Path
 
 from bpfw.catalog.intent_suggestions import suggest_intents
-from bpfw.integrations.inspector_base import (
+from bpfw.integrations.inspector.base import (
     apply_automatic_authority_fields,
     build_code_lines,
     get_incomplete_responsibilities,
     suggest_domain,
     suggest_domains,
 )
-from bpfw.integrations.inspector_base import load_inspect_session
-from bpfw.integrations.inspector_text import (
+from bpfw.integrations.inspector.base import load_inspect_session
+from bpfw.integrations.inspector.text import (
     render_text_inspector_screen,
     run_text_inspector,
     run_text_inspector_session,

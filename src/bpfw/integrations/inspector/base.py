@@ -157,7 +157,7 @@ def _discovered_key(unit: DiscoveredCodeUnit) -> tuple[str, str, str]:
 def build_new_detected_responsibility(unit: DiscoveredCodeUnit) -> Dict[str, Any]:
     """Build a pending responsibility from one newly detected code unit."""
 
-    return {
+    responsibility = {
         "id": to_snake_case(unit.symbol),
         "intent": None,
         "name": unit.symbol,
@@ -196,6 +196,18 @@ def build_new_detected_responsibility(unit: DiscoveredCodeUnit) -> Dict[str, Any
         },
         "notes": None,
     }
+
+    # Add interface metadata if available
+    if unit.interface_inputs or unit.interface_output:
+        interface_data = {}
+        if unit.interface_inputs:
+            interface_data["inputs"] = unit.interface_inputs
+        if unit.interface_output:
+            interface_data["output"] = unit.interface_output
+        if interface_data:
+            responsibility["interface"] = interface_data
+
+    return responsibility
 
 
 def build_inspect_issues(

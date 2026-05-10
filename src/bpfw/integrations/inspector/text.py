@@ -8,7 +8,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from bpfw.integrations.inspector_base import InspectIssue, clean_string, load_inspect_session
+from bpfw.integrations.inspector.base import InspectIssue, clean_string, load_inspect_session
 from bpfw.integrations.inspector.screen import render_inspector_screen
 from bpfw.integrations.inspector.session import (
     run_text_inspector,

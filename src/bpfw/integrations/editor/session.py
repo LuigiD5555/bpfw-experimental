@@ -213,7 +213,7 @@ class EditorSession:
     def _open_inspector(self, record: SearchRecord) -> str:
         """Open the inspector in target mode for a given record."""
 
-        from bpfw.integrations.inspector_text import run_inspector_target
+        from bpfw.integrations.inspector.text import run_inspector_target
 
         result = run_inspector_target(
             project_root=self.project_root,

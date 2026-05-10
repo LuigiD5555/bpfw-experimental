@@ -7,7 +7,7 @@ from typing import Any, Dict, List
 from bpfw.catalog.intent_suggestions import IntentSuggestion, suggest_intents
 from bpfw.catalog.learning import record_domain_value, record_intent_phrase
 from bpfw.catalog.models import AUTHORITY_STATE_EMPTY
-from bpfw.integrations.inspector_base import (
+from bpfw.integrations.inspector.base import (
     ISSUE_NEW_DETECTED,
     InspectIssue,
     InspectLoadResult,
@@ -17,7 +17,10 @@ from bpfw.integrations.inspector_base import (
     save_blueprint,
     suggest_domains,
 )
-from bpfw.integrations.inspector.commands import apply_inspector_command
+from bpfw.integrations.inspector.commands import (
+    apply_inspector_command,
+    run_interface_edit_submode,
+)
 from bpfw.integrations.inspector.validation import validate_required_fields
 from bpfw.integrations.inspector.screen import (
     DEFAULT_INSPECTOR_HEADER_TITLE,
@@ -163,6 +166,14 @@ def run_text_inspector_session(
             for line in _render_unknown_command_notification():
                 print_func(line)
 
+        if action == "interface_edit":
+            run_interface_edit_submode(
+                responsibility=responsibility,
+                input_func=input_func,
+                print_func=print_func,
+            )
+            continue
+
     print_func("")
     print_func("Inspector completed.")
     print_func("")
@@ -259,6 +270,7 @@ def _render_help_block() -> list[str]:
         "  domain        The project area to which this code snippet is related.",
         "  name          Simple name for this snippet.",
         "  observations  Optional notes for this snippet.",
+        "  interface     Input and output type definitions.",
         "",
         "  lifecycle     Current status of this code snippet.",
         "                active        In use now.",
@@ -278,6 +290,7 @@ def _render_help_block() -> list[str]:
         "  ───────",
         "  [n]        Edit name",
         "  [o]        Edit observations",
+        "  [i]        Edit interface",
         "",
         "  Flow",
         "  ────",
