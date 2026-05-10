@@ -31,6 +31,17 @@ IGNORED_TOKENS = frozenset(
         "false",
     }
 )
+COMPOUND_ERROR_SUFFIXES = ("error", "exception")
+COMPOUND_ERROR_QUALIFIERS = (
+    "missing",
+    "invalid",
+    "locked",
+    "protected",
+    "duplicate",
+    "unknown",
+    "unauthorized",
+    "forbidden",
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -214,4 +225,31 @@ def _normalize_domain(text: str) -> str:
 def _tokenize_simple(text: str) -> list[str]:
     """Tokenize text into lowercase alphanumeric words."""
 
-    return [token.lower() for token in re.findall(r"[A-Za-z][A-Za-z0-9]*", text)]
+    tokens: list[str] = []
+    for raw_token in re.findall(r"[A-Za-z][A-Za-z0-9]*", text):
+        normalized_token = raw_token.lower()
+        tokens.extend(_expand_compound_token(normalized_token))
+    return tokens
+
+
+def _expand_compound_token(token: str) -> list[str]:
+    """Expand glued tokens such as blueprintmissingerror into useful pieces."""
+
+    for suffix in COMPOUND_ERROR_SUFFIXES:
+        if token.endswith(suffix) and len(token) > len(suffix):
+            root = token[: -len(suffix)]
+            expanded_root = _split_known_qualifier(root)
+            return expanded_root + [suffix]
+    return [token]
+
+
+def _split_known_qualifier(root: str) -> list[str]:
+    """Split known error qualifiers from root tokens when present."""
+
+    for qualifier in COMPOUND_ERROR_QUALIFIERS:
+        if root.endswith(qualifier) and len(root) > len(qualifier):
+            head = root[: -len(qualifier)]
+            if len(head) >= MIN_TOKEN_LENGTH:
+                return [head, qualifier]
+            return [qualifier]
+    return [root]

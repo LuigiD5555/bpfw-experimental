@@ -1,7 +1,9 @@
 """Deterministic natural-language intent suggestions for catalog responsibilities."""
 
+import ast
 import re
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from bpfw.catalog.learning import (
@@ -144,6 +146,8 @@ ACTION_WORDS = {
     "execute": "Run",
     "extract": "Extract",
     "suggest": "Suggest",
+    "raise": "Raise",
+    "raised": "Raise",
 }
 
 ROLE_TO_ACTION = {
@@ -235,6 +239,51 @@ COMPACTION_REPLACEMENTS = (
     ("Compose candidate suggestions", "Compose suggestions"),
     ("Compose intent sentence candidates", "Build intent candidates"),
 )
+DOCSTRING_OBJECT_STOPWORDS = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "or",
+        "the",
+        "when",
+        "if",
+        "while",
+        "with",
+        "without",
+        "for",
+        "to",
+        "from",
+        "of",
+        "on",
+        "in",
+        "by",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "this",
+        "that",
+        "these",
+        "those",
+        "operation",
+        "attempt",
+        "attempted",
+        "require",
+        "requires",
+        "required",
+        "occur",
+        "occurs",
+        "occurred",
+        "raised",
+        "raise",
+        "raises",
+    }
+)
+ERROR_TOKENS = frozenset({"error", "exception"})
 
 
 def suggest_intents(
@@ -363,11 +412,22 @@ def normalize_duplicate_slots(
 ) -> list[IntentSuggestion]:
     """Replace repeated suggestion text with placeholders while preserving slot order."""
 
-    seen: set[str] = set()
+    seen_index_by_key: dict[str, int] = {}
     normalized: list[IntentSuggestion] = []
-    for suggestion in suggestions:
+    for suggestion_index, suggestion in enumerate(suggestions):
         key = " ".join(tokenize_evidence(suggestion.text))
-        if suggestion.text != "-" and key in seen:
+        if suggestion.text != "-" and key in seen_index_by_key:
+            previous_index = seen_index_by_key[key]
+            previous_suggestion = normalized[previous_index]
+            if _is_more_informative(suggestion.text, previous_suggestion.text):
+                normalized[previous_index] = IntentSuggestion(
+                    text="-",
+                    source=previous_suggestion.source,
+                    evidence=previous_suggestion.evidence + ("duplicate: hidden",),
+                )
+                seen_index_by_key[key] = suggestion_index
+                normalized.append(suggestion)
+                continue
             normalized.append(
                 IntentSuggestion(
                     text="-",
@@ -377,9 +437,25 @@ def normalize_duplicate_slots(
             )
             continue
         if suggestion.text != "-":
-            seen.add(key)
+            seen_index_by_key[key] = suggestion_index
         normalized.append(suggestion)
     return normalized
+
+
+def _is_more_informative(candidate: str, baseline: str) -> bool:
+    """Return True when candidate carries more meaningful object detail."""
+
+    candidate_tokens = [
+        token
+        for token in tokenize_evidence(candidate)
+        if token not in NOISE_TOKENS and token not in DOCSTRING_OBJECT_STOPWORDS
+    ]
+    baseline_tokens = [
+        token
+        for token in tokenize_evidence(baseline)
+        if token not in NOISE_TOKENS and token not in DOCSTRING_OBJECT_STOPWORDS
+    ]
+    return len(candidate_tokens) > len(baseline_tokens)
 
 
 def _collect_evidence(responsibility: dict[str, Any]) -> list[_EvidenceItem]:
@@ -387,8 +463,10 @@ def _collect_evidence(responsibility: dict[str, Any]) -> list[_EvidenceItem]:
 
     evidence: list[_EvidenceItem] = []
 
-    location = responsibility.get("location")
-    if isinstance(location, dict):
+    location: dict[str, Any] = {}
+    location_value = responsibility.get("location")
+    if isinstance(location_value, dict):
+        location = location_value
         _append_evidence(evidence, source="path", value=location.get("path"), weight=10)
         _append_evidence(evidence, source="module", value=location.get("module"), weight=10)
         _append_evidence(evidence, source="symbol", value=location.get("symbol"), weight=50)
@@ -398,6 +476,10 @@ def _collect_evidence(responsibility: dict[str, Any]) -> list[_EvidenceItem]:
             value=location.get("symbol_type"),
             weight=15,
         )
+
+    detected_docstring = None
+    if isinstance(location, dict):
+        detected_docstring = None
 
     detected = responsibility.get("detected")
     if isinstance(detected, dict):
@@ -419,10 +501,11 @@ def _collect_evidence(responsibility: dict[str, Any]) -> list[_EvidenceItem]:
                 weight=15,
             )
 
+        detected_docstring = detected.get("docstring")
         _append_evidence(
             evidence,
             source="docstring",
-            value=detected.get("docstring"),
+            value=detected_docstring,
             weight=25,
         )
         _append_evidence(
@@ -443,6 +526,15 @@ def _collect_evidence(responsibility: dict[str, Any]) -> list[_EvidenceItem]:
                 for value in values:
                     _append_evidence(evidence, source=source, value=value, weight=weight)
 
+    if not isinstance(detected_docstring, str) or not detected_docstring.strip():
+        source_docstring = _extract_docstring_from_source(location=location)
+        _append_evidence(
+            evidence,
+            source="docstring",
+            value=source_docstring,
+            weight=25,
+        )
+
     for source in ("name", "name"):
         _append_evidence(
             evidence,
@@ -452,6 +544,39 @@ def _collect_evidence(responsibility: dict[str, Any]) -> list[_EvidenceItem]:
         )
 
     return evidence
+
+
+def _extract_docstring_from_source(location: dict[str, Any]) -> str:
+    """Extract symbol docstring from source when scanner-provided docstring is missing."""
+
+    path_value = location.get("path")
+    symbol_value = location.get("symbol")
+    symbol_type_value = location.get("symbol_type")
+    if not isinstance(path_value, str) or not path_value.strip():
+        return ""
+    if not isinstance(symbol_value, str) or not symbol_value.strip():
+        return ""
+    if not isinstance(symbol_type_value, str) or not symbol_type_value.strip():
+        return ""
+
+    source_path = Path(path_value.strip())
+    if not source_path.exists():
+        return ""
+
+    try:
+        module_ast = ast.parse(source_path.read_text(encoding="utf-8"))
+    except (SyntaxError, OSError, UnicodeDecodeError):
+        return ""
+
+    target_name = symbol_value.strip().split(".")[-1]
+    symbol_type = symbol_type_value.strip().lower()
+    for node in module_ast.body:
+        if symbol_type == "class" and isinstance(node, ast.ClassDef) and node.name == target_name:
+            return ast.get_docstring(node) or ""
+        if symbol_type in {"function", "method"} and isinstance(node, ast.FunctionDef) and node.name == target_name:
+            return ast.get_docstring(node) or ""
+
+    return ""
 
 
 def _append_evidence(
@@ -624,6 +749,10 @@ def detect_action(facts: _NormalizedFacts) -> _DetectedAction | None:
     if docstring_action is not None:
         candidates.append(docstring_action)
 
+    error_action = _detect_error_action(facts)
+    if error_action is not None:
+        candidates.append(error_action)
+
     function_action = _detect_action_in_tokens(
         tokens=facts.function_tokens,
         score=25,
@@ -645,6 +774,81 @@ def detect_action(facts: _NormalizedFacts) -> _DetectedAction | None:
         candidates.append(path_action)
 
     return _highest_scored(candidates)
+
+
+def _detect_error_action(facts: _NormalizedFacts) -> _DetectedAction | None:
+    """Detect error/exception symbols as raise behavior for intent generation."""
+
+    symbol_tokens = set(facts.symbol_tokens)
+    docstring_tokens = set(facts.docstring_tokens)
+    if "error" in symbol_tokens or "exception" in symbol_tokens:
+        return _DetectedAction(
+            verb="Raise",
+            score=30,
+            evidence=("symbol: error/exception",),
+            matched_token="error" if "error" in symbol_tokens else "exception",
+        )
+    if "raised" in docstring_tokens or "raise" in docstring_tokens:
+        return _DetectedAction(
+            verb="Raise",
+            score=25,
+            evidence=("docstring: raised/raise",),
+            matched_token="raised" if "raised" in docstring_tokens else "raise",
+        )
+    return None
+
+
+def _is_error_symbol(symbol_tokens: tuple[str, ...]) -> bool:
+    """Return True when the symbol clearly represents an error/exception type."""
+
+    return bool(ERROR_TOKENS & set(symbol_tokens))
+
+
+def _extract_error_object_from_docstring(facts: _NormalizedFacts) -> str:
+    """Extract a concise error object phrase from docstring evidence."""
+
+    cleaned_tokens = [
+        token
+        for token in facts.docstring_tokens
+        if token not in NOISE_TOKENS and token not in DOCSTRING_OBJECT_STOPWORDS
+    ]
+    if not cleaned_tokens:
+        return ""
+
+    candidate_tokens: list[str] = []
+    for token in cleaned_tokens:
+        if token in ERROR_TOKENS:
+            continue
+        if token in {"missing", "invalid", "unknown", "locked", "protected"}:
+            candidate_tokens.append(token)
+            continue
+        if token in {"blueprint", "file", "path", "permission", "state", "token", "input"}:
+            candidate_tokens.append(token)
+            continue
+    if not candidate_tokens:
+        candidate_tokens = cleaned_tokens[:3]
+    candidate_tokens = _dedupe_tokens(candidate_tokens)
+    candidate_text = _humanize_object_tokens(candidate_tokens[:4])
+    if not candidate_text:
+        return ""
+    return f"{candidate_text} error"
+
+
+def _fallback_error_object_from_symbol(facts: _NormalizedFacts) -> str:
+    """Build an error object fallback from symbol tokens when docstring is weak."""
+
+    symbol_tokens = [
+        token
+        for token in facts.symbol_tokens
+        if token not in NOISE_TOKENS and token not in DOCSTRING_OBJECT_STOPWORDS
+    ]
+    symbol_tokens = [token for token in symbol_tokens if token not in ERROR_TOKENS]
+    if not symbol_tokens:
+        return "error"
+    symbol_text = _humanize_object_tokens(_dedupe_tokens(symbol_tokens)[:4])
+    if not symbol_text:
+        return "error"
+    return f"{symbol_text} error"
 
 
 def _detect_action_in_tokens(
@@ -770,6 +974,15 @@ def detect_object(
             text="intent",
             score=35,
             evidence=("symbol: intent",),
+        )
+
+    if action.verb == "Raise" and _is_error_symbol(facts.symbol_tokens):
+        docstring_error_object = _extract_error_object_from_docstring(facts)
+        object_text = docstring_error_object or _fallback_error_object_from_symbol(facts)
+        return _DetectedObject(
+            text=object_text,
+            score=30,
+            evidence=("error: fallback object",),
         )
 
     return None
@@ -963,7 +1176,7 @@ def detect_context(
             evidence=("calls: compare/source",),
         )
 
-    if "drift" in tokens or "missing" in tokens or "undeclared" in tokens:
+    if action.verb != "Raise" and ("drift" in tokens or "missing" in tokens or "undeclared" in tokens):
         return _DetectedContext(
             text="when blueprint drift is detected",
             score=20,
@@ -1296,6 +1509,9 @@ def _compose_name_based_candidate(
     facts: _NormalizedFacts,
     action: _DetectedAction,
 ) -> str:
+    if action.verb == "Raise" and _is_error_symbol(facts.symbol_tokens):
+        return f"Raise {_fallback_error_object_from_symbol(facts)}"
+
     symbol_tokens = [token for token in facts.symbol_tokens if token not in NOISE_TOKENS]
     symbol_tokens = [token for token in symbol_tokens if ACTION_WORDS.get(token) != action.verb]
     if not symbol_tokens:
@@ -1307,10 +1523,20 @@ def _compose_docstring_based_candidate(
     facts: _NormalizedFacts,
     action: _DetectedAction,
 ) -> str:
+    if action.verb == "Raise":
+        docstring_error_object = _extract_error_object_from_docstring(facts)
+        if docstring_error_object:
+            return f"Raise {docstring_error_object}"
+        if _is_error_symbol(facts.symbol_tokens):
+            return f"Raise {_fallback_error_object_from_symbol(facts)}"
+
     doc_tokens = [
         token
         for token in facts.docstring_tokens
-        if token not in NOISE_TOKENS and token not in LOW_WEIGHT_ROLES and token != action.matched_token
+        if token not in NOISE_TOKENS
+        and token not in LOW_WEIGHT_ROLES
+        and token not in DOCSTRING_OBJECT_STOPWORDS
+        and token != action.matched_token
     ]
     if not doc_tokens:
         return ""

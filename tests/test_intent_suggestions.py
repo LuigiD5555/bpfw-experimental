@@ -459,6 +459,97 @@ def test_missing_intent_sources_render_as_placeholders() -> None:
     assert suggestions[-1].source == "custom_intent"
 
 
+def test_error_docstring_generates_raise_object_error_intent() -> None:
+    """Error docstrings should produce a clean raise intent with object detail."""
+
+    responsibility = _responsibility(
+        symbol="BlueprintMissingError",
+        path="src/bpfw/core/errors.py",
+        symbol_type="class",
+        docstring="Raised when an operation requires a missing blueprint file.",
+    )
+
+    suggestions = suggest_intents(responsibility)
+
+    assert suggestions[3].text == "Raise missing blueprint file error"
+
+
+def test_error_docstring_avoids_noisy_raised_when_prefix() -> None:
+    """Docstring-based error intent should not contain noisy filler tokens."""
+
+    responsibility = _responsibility(
+        symbol="BlueprintLockedError",
+        path="src/bpfw/core/errors.py",
+        symbol_type="class",
+        docstring="Raised when a protected blueprint write is attempted while locked.",
+    )
+
+    suggestions = suggest_intents(responsibility)
+
+    assert "raised when" not in suggestions[3].text.lower()
+    assert "operation" not in suggestions[3].text.lower()
+    assert suggestions[3].text.startswith("Raise ")
+
+
+def test_error_symbol_fallback_works_with_poor_docstring() -> None:
+    """Error class name should provide fallback intent when docstring is weak."""
+
+    responsibility = _responsibility(
+        symbol="AuthTokenError",
+        path="src/auth/errors.py",
+        symbol_type="class",
+        docstring="Raised.",
+    )
+
+    suggestions = suggest_intents(responsibility)
+
+    assert any(suggestion.text == "Raise auth token error" for suggestion in suggestions)
+
+
+def test_non_error_docstring_path_keeps_existing_behavior() -> None:
+    """Non-error snippets should not be forced into raise-style fallback."""
+
+    responsibility = _responsibility(
+        symbol="tokenize_evidence",
+        path="src/bpfw/catalog/intent_suggestions.py",
+        signature="tokenize_evidence(text: str) -> list[str]",
+        docstring="Convert technical names and text evidence into normalized tokens.",
+    )
+
+    suggestions = suggest_intents(responsibility)
+
+    assert suggestions[4].text == "Normalize technical evidence tokens"
+
+
+def test_docstring_slot_reads_source_when_detected_docstring_missing() -> None:
+    """Docstring slot should backfill from source file when detected docstring is absent."""
+
+    responsibility = {
+        "name": "BlueprintMissingError",
+        "location": {
+            "path": "src/bpfw/core/errors.py",
+            "module": "src.bpfw.core.errors",
+            "symbol": "BlueprintMissingError",
+            "symbol_type": "class",
+        },
+        "detected": {
+            "qualified_name": "BlueprintMissingError",
+            "kind": "class",
+            "methods": [],
+            "functions": [],
+            "imports": [],
+            "decorators": [],
+        },
+    }
+
+    suggestions = suggest_intents(
+        responsibility,
+        existing_intents=("Define a BlueprintMissingError object",),
+    )
+
+    assert suggestions[3].text == "Raise missing blueprint file error"
+
+
 def _responsibility(
     symbol: str,
     path: str,

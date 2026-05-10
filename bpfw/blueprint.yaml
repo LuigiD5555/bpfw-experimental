@@ -788,7 +788,7 @@ responsibilities:
     reason: null
   notes: null
 - id: core_errors_blueprint_missing_error
-  intent: Define a BlueprintMissingError object
+  intent: Define Blueprintmissingerror Object
   name: BlueprintMissingError
   domain: errors
   lifecycle: active
