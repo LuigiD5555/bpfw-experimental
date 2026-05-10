@@ -176,17 +176,23 @@ def render_search_screen() -> None:
     clear_screen()
     render_editor_banner()
     print()
-    print(" Search responsibility to inspect")
+    _render_search_scope_box(
+        title="Search responsibility to inspect",
+        lines=[
+            " Search by:",
+            "   id, name, domain, intent, lifecycle, path or symbol",
+        ],
+    )
     print()
-    print(" Search by:")
-    print("   id, name, domain, intent, lifecycle, path or symbol")
-    print()
-    print(" Examples:")
-    print("   loader")
-    print("   catalog")
-    print("   active")
-    print("   deprecated")
-    print("   blueprint validation")
+    _render_examples_box(
+        [
+            " loader",
+            " catalog",
+            " active",
+            " deprecated",
+            " blueprint validation",
+        ],
+    )
     print()
 
 
@@ -337,12 +343,31 @@ def render_filter_screen() -> None:
     print("   name")
     print("   path")
     print()
-    print(" Examples:")
-    print("   lifecycle=active")
-    print("   domain=catalog")
-    print("   name=loader")
-    print("   path=editor")
+    _render_examples_box(
+        [
+            " lifecycle=active",
+            " domain=catalog",
+            " name=loader",
+            " path=editor",
+        ],
+    )
     print()
+
+
+def _render_examples_box(example_lines: list[str], ratio: float = 0.70) -> None:
+    """Render examples in a boxed multiline section."""
+
+    width = _editor_block_width(ratio=ratio)
+    for line in render_box(title="Examples", lines=example_lines, width=width):
+        print(line)
+
+
+def _render_search_scope_box(title: str, lines: list[str], ratio: float = 0.70) -> None:
+    """Render search scope details in a boxed section."""
+
+    width = _editor_block_width(ratio=ratio)
+    for line in render_box(title=title, lines=lines, width=width):
+        print(line)
 
 
 def render_invalid_selection() -> None:
