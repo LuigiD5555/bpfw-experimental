@@ -34,6 +34,7 @@ class PlannerController:
         self.project_root = project_root
         self.state = BlueprintStateLoader.load(project_root)
         self.validator = PlanValidator()
+        self.should_exit = False
         
         # Modal state
         self.modal_data = {}  # Store temporary data for modals
@@ -72,8 +73,12 @@ class PlannerController:
                     self._handle_connect_feedback_key(key)
                 elif self.state.screen == "edit_block":
                     self._handle_edit_block_key(key)
+                elif self.state.screen == "edit_field":
+                    self._handle_edit_field_key(key)
                 elif self.state.screen == "edit_inputs":
                     self._handle_edit_inputs_key(key)
+                elif self.state.screen == "edit_input":
+                    self._handle_edit_input_key(key)
                 elif self.state.screen == "edit_output":
                     self._handle_edit_output_key(key)
                 elif self.state.screen == "project_settings":
@@ -103,8 +108,8 @@ class PlannerController:
                 elif self.state.screen == "cannot_save_empty":
                     self._handle_cannot_save_empty_key(key)
                 
-                # Check for quit
-                if key == 'q' and self.state.screen == "welcome":
+                # Check for quit request from handlers
+                if self.should_exit:
                     return 0
                     
         except KeyboardInterrupt:
@@ -125,7 +130,7 @@ class PlannerController:
         if key == 'enter':
             self.state.screen = "workspace"
         elif key == 'q':
-            pass  # Will exit in main loop
+            self.should_exit = True
     
     # ---------------------------------------------------------------------------
     # Workspace Handler
@@ -159,7 +164,7 @@ class PlannerController:
             # Connect blocks
             if len(self.state.boxes) < 2:
                 # No other blocks to connect
-                pass  # Renderer will show message
+                pass
             else:
                 self.state.screen = "connect_target"
                 self.modal_data = {}
@@ -192,7 +197,7 @@ class PlannerController:
             if self.state.dirty:
                 self.state.screen = "unsaved_changes"
             else:
-                pass  # Will exit in main loop
+                self.should_exit = True
     
     def _navigate_up(self) -> None:
         """Navigate to previous box."""
@@ -274,9 +279,8 @@ class PlannerController:
                 self.state.dirty = True
                 self.state.screen = "workspace"
                 self.modal_data = {}
-            except ValueError as e:
-                # Validation error, show in modal (TODO: error display)
-                pass
+            except ValueError as error:
+                self.modal_data['error_message'] = str(error)
         else:
             # Input character for fields
             self._handle_modal_input(key, ['name', 'domain', 'intent', 'kind'])
@@ -552,7 +556,8 @@ class PlannerController:
                 'description': '',
                 'required': True,
             }
-        # TODO: Implement edit/delete for existing inputs
+        elif key == 'e' or key == 'd':
+            self.modal_data['status_message'] = "Edit/delete inputs not implemented yet."
     
     # ---------------------------------------------------------------------------
     # Edit Single Input Handler
@@ -654,7 +659,8 @@ class PlannerController:
         if key == 'escape' or key == 'enter':
             self.state.screen = "workspace"
             self.modal_data = {}
-        # TODO: Implement editing of project settings
+        elif key.isdigit():
+            self.modal_data['status_message'] = "Project settings editing not implemented yet."
     
     # ---------------------------------------------------------------------------
     # Review Modal Handler
@@ -686,7 +692,7 @@ class PlannerController:
         validation = self.validator.validate(self.state)
         
         if not validation.allowed:
-            # Show errors (TODO: error display)
+            self.modal_data['validation_errors'] = [finding.message for finding in validation.errors]
             return
         
         # Assemble and write
@@ -709,8 +715,7 @@ class PlannerController:
         if key == 'escape' or key == 'enter':
             self.state.screen = "review"
         elif key == 'f':
-            # Full YAML (TODO: implement)
-            pass
+            return
     
     # ---------------------------------------------------------------------------
     # Saved Modal Handler
@@ -725,7 +730,7 @@ class PlannerController:
         if key == 'enter':
             self.state.screen = "workspace"
         elif key == 'q':
-            pass  # Will exit in main loop
+            self.should_exit = True
     
     # ---------------------------------------------------------------------------
     # Graph Overview Handler
@@ -861,7 +866,7 @@ class PlannerController:
         elif key == 'q':
             # Quit without saving
             self.state.dirty = False  # Skip unsaved check
-            pass  # Will exit in main loop
+            self.should_exit = True
     
     # ---------------------------------------------------------------------------
     # Broken Connections Modal Handler
@@ -882,7 +887,7 @@ class PlannerController:
             self.state.screen = "workspace"
         elif key == 'q':
             # Quit
-            pass  # Will exit in main loop
+            self.should_exit = True
     
     # ---------------------------------------------------------------------------
     # Helper Methods

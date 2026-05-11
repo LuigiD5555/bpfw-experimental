@@ -13,12 +13,38 @@ from bpfw.integrations.shared.visual_boxes import render_box
 from bpfw.integrations.shared.visual_theme import (
     DEFAULT_THEME,
     compute_panel_width,
+    render_commands_box,
     render_header,
 )
 from bpfw.integrations.editor.screen import get_terminal_width, clear_screen
 
 
 PLANNER_TITLE = "Blueprint Planner"
+
+
+def _resolve_uniform_width(terminal_width: int, panels: List[tuple[str, List[str]]]) -> int:
+    """Compute one shared panel width for a screen.
+
+    Width is based on the longest title/content among given panels and
+    constrained by theme limits (50% min, 95% max of terminal width).
+    """
+    panel_widths = [
+        compute_panel_width(
+            content_lines=lines,
+            title=title,
+            terminal_width=terminal_width,
+            theme=DEFAULT_THEME,
+        )
+        for title, lines in panels
+    ]
+    if not panel_widths:
+        return compute_panel_width(
+            content_lines=[],
+            title="",
+            terminal_width=terminal_width,
+            theme=DEFAULT_THEME,
+        )
+    return max(panel_widths)
 
 
 def render_planner(state: PlannerState) -> None:
@@ -66,29 +92,23 @@ def render_planner(state: PlannerState) -> None:
     elif state.screen == "no_blocks_to_connect":
         render_no_blocks_to_connect_modal(state)
     elif state.screen == "duplicate_connection":
-        # Requires connection data from modal_data
-        pass  # Will be handled with extra data
+        render_workspace(state)
     elif state.screen == "self_connection":
         render_self_connection_modal(state)
     elif state.screen == "cannot_save_empty":
         render_cannot_save_empty_modal(state)
     elif state.screen == "duplicate_name":
-        # Requires box and suggestions from modal_data
-        pass  # Will be handled with extra data
+        render_workspace(state)
     elif state.screen == "active_intent_conflict":
-        # Requires box and intent from modal_data
-        pass  # Will be handled with extra data
+        render_workspace(state)
     elif state.screen == "path_already_used":
-        # Requires path and box from modal_data
-        pass  # Will be handled with extra data
+        render_workspace(state)
     elif state.screen == "domain_changed":
-        # Requires old/new domain and paths from modal_data
-        pass  # Will be handled with extra data
+        render_workspace(state)
     elif state.screen == "no_connections_warning":
         render_no_connections_warning_modal(state)
     elif state.screen == "experimental_to_active_warning":
-        # Requires experimental and active boxes from modal_data
-        pass  # Will be handled with extra data
+        render_workspace(state)
     else:
         render_workspace(state)
 
@@ -105,12 +125,6 @@ def render_welcome(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(72, int(terminal_width * 0.85)), terminal_width - 2)
-
-    # Render header
-    for line in render_header(title=PLANNER_TITLE, width=width, theme=DEFAULT_THEME):
-        print(line)
-    print()
 
     if state.source_mode == "new_plan":
         # No blueprint.yaml found
@@ -123,7 +137,8 @@ def render_welcome(state: PlannerState) -> None:
             f"Project detected: {state.project_config.project_name}",
             f"Language: {state.project_config.language}",
             f"Source root: {', '.join(state.project_config.source_roots)}",
-            "",
+        ]
+        command_lines = [
             "[enter] Start planning",
             "[q] Quit",
         ]
@@ -138,12 +153,23 @@ def render_welcome(state: PlannerState) -> None:
             "",
             "Continue assembling new planned blocks into the same",
             "blueprint.",
-            "",
+        ]
+        command_lines = [
             "[enter] Continue",
             "[q] Quit",
         ]
 
+    width = _resolve_uniform_width(
+        terminal_width=terminal_width,
+        panels=[(PLANNER_TITLE, []), ("", lines), ("Commands", command_lines)],
+    )
+    for line in render_header(title=PLANNER_TITLE, width=width, theme=DEFAULT_THEME):
+        print(line)
+    print()
     for line in render_box(title="", lines=lines, width=width):
+        print(line)
+    print()
+    for line in render_commands_box(lines=command_lines, width=width, theme=DEFAULT_THEME):
         print(line)
 
 
@@ -159,12 +185,8 @@ def render_workspace(state: PlannerState) -> None:
     """
     clear_screen()
     
-    # Render three panels side by side
-    # Pieces: 30%, Assembly: 40%, Details: 30%
+    # Render stacked panels in a single column
     terminal_width = get_terminal_width()
-    pieces_width = max(30, int(terminal_width * 0.30))
-    assembly_width = max(35, int(terminal_width * 0.40))
-    details_width = max(30, int(terminal_width * 0.30))
     
     # Get selected box
     selected_box = None
@@ -187,27 +209,46 @@ def render_workspace(state: PlannerState) -> None:
                 if target_box:
                     outgoing.append((target_box, conn))
     
-    # Render panels
+    # Render panel content
     pieces_lines = render_pieces_panel_internal(state.boxes, state.selected_box_id)
     assembly_lines = render_assembly_panel_internal(selected_box, incoming, outgoing)
     details_lines = render_details_panel_internal(selected_box)
-    
-    # Combine panels horizontally
-    pieces_panel = list(render_box(title="Pieces: system blocks", lines=pieces_lines, width=pieces_width))
-    assembly_panel = list(render_box(title=f"Assembly: {selected_box.name if selected_box else 'select a block'}", lines=assembly_lines, width=assembly_width))
-    details_panel = list(render_box(title="Details", lines=details_lines, width=details_width))
-    
-    # Print row by row
-    max_height = max(len(pieces_panel), len(assembly_panel), len(details_panel))
-    for i in range(max_height):
-        pieces_line = pieces_panel[i] if i < len(pieces_panel) else " " * pieces_width
-        assembly_line = assembly_panel[i] if i < len(assembly_panel) else " " * assembly_width
-        details_line = details_panel[i] if i < len(details_panel) else " " * details_width
-        print(f"{pieces_line} {assembly_line} {details_line}")
-    
-    # Print footer commands
+    panel_width = _resolve_uniform_width(
+        terminal_width=terminal_width,
+        panels=[
+            ("Pieces: system blocks", pieces_lines),
+            (f"Assembly: {selected_box.name if selected_box else 'select a block'}", assembly_lines),
+            ("Details", details_lines),
+            ("Commands", ["↑↓ Move   [a] Add block   [space] Connect   [x] Disconnect   [tab] Edit   [s] Save   [p] Project   [q] Quit"]),
+        ],
+    )
+
+    pieces_panel = list(render_box(title="Pieces: system blocks", lines=pieces_lines, width=panel_width))
+    assembly_panel = list(
+        render_box(
+            title=f"Assembly: {selected_box.name if selected_box else 'select a block'}",
+            lines=assembly_lines,
+            width=panel_width,
+        )
+    )
+    details_panel = list(render_box(title="Details", lines=details_lines, width=panel_width))
+
+    for line in pieces_panel:
+        print(line)
     print()
-    print("↑↓ Move   [a] Add block   [space] Connect   [x] Disconnect   [tab] Edit   [s] Save   [p] Project   [q] Quit")
+    for line in assembly_panel:
+        print(line)
+    print()
+    for line in details_panel:
+        print(line)
+    print()
+    command_lines = [
+        "↑↓ Move   [a] Add block   [space] Connect",
+        "[x] Disconnect   [tab] Edit   [s] Save",
+        "[p] Project   [q] Quit",
+    ]
+    for line in render_commands_box(lines=command_lines, width=panel_width, theme=DEFAULT_THEME):
+        print(line)
 
 
 def render_pieces_panel_internal(boxes: List[PlannerBox], selected_id: Optional[str]) -> List[str]:
@@ -379,10 +420,7 @@ def render_add_block_modal(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(72, int(terminal_width * 0.85)), terminal_width - 2)
 
-    # In a real implementation, this would show form fields with cursor
-    # For now, this is a placeholder
     lines = [
         "A block is one responsibility your system needs.",
         "",
@@ -401,6 +439,7 @@ def render_add_block_modal(state: PlannerState) -> None:
         "[enter] Create block",
         "[esc] Cancel",
     ]
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Add Block", lines)])
 
     for line in render_box(title="Add Block", lines=lines, width=width):
         print(line)
@@ -414,7 +453,6 @@ def render_connect_target_modal(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(72, int(terminal_width * 0.85)), terminal_width - 2)
 
     selected_box = next((b for b in state.boxes if b.id == state.selected_box_id), None)
     
@@ -439,6 +477,7 @@ def render_connect_target_modal(state: PlannerState) -> None:
         "",
         "↑↓ Move   [enter] Select target   [esc] Cancel",
     ])
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Connect Block", lines)])
 
     for line in render_box(title="Connect Block", lines=lines, width=width):
         print(line)
@@ -452,10 +491,7 @@ def render_connect_meaning_modal(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(72, int(terminal_width * 0.85)), terminal_width - 2)
 
-    # In a real implementation, this would show the two boxes
-    # and let user select the relationship meaning
     lines = [
         "What does this connection mean?",
         "",
@@ -470,6 +506,7 @@ def render_connect_meaning_modal(state: PlannerState) -> None:
         "",
         "[enter] Accept   [esc] Cancel",
     ]
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Connection Meaning", lines)])
 
     for line in render_box(title="Connection Meaning", lines=lines, width=width):
         print(line)
@@ -483,7 +520,6 @@ def render_connect_feedback_modal(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(72, int(terminal_width * 0.85)), terminal_width - 2)
 
     lines = [
         "PdfReader",
@@ -493,6 +529,7 @@ def render_connect_feedback_modal(state: PlannerState) -> None:
         "",
         "[enter] Continue",
     ]
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Connected", lines)])
 
     for line in render_box(title="Connected", lines=lines, width=width):
         print(line)
@@ -506,7 +543,6 @@ def render_edit_block_modal(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(80, int(terminal_width * 0.90)), terminal_width - 2)
 
     selected_box = next((b for b in state.boxes if b.id == state.selected_box_id), None)
     
@@ -531,8 +567,10 @@ def render_edit_block_modal(state: PlannerState) -> None:
         "",
         "[number] Edit field   [enter] Accept   [esc] Cancel",
     ]
+    edit_block_title = f"Edit Block: {selected_box.name}"
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[(edit_block_title, lines)])
 
-    for line in render_box(title=f"Edit Block: {selected_box.name}", lines=lines, width=width):
+    for line in render_box(title=edit_block_title, lines=lines, width=width):
         print(line)
 
 
@@ -544,7 +582,6 @@ def render_edit_inputs_modal(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(72, int(terminal_width * 0.85)), terminal_width - 2)
 
     selected_box = next((b for b in state.boxes if b.id == state.selected_box_id), None)
     
@@ -571,8 +608,10 @@ def render_edit_inputs_modal(state: PlannerState) -> None:
         "",
         "[a] Add input   [e] Edit selected   [d] Delete   [enter] Back",
     ])
+    inputs_title = f"Inputs: {selected_box.name}"
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[(inputs_title, lines)])
 
-    for line in render_box(title=f"Inputs: {selected_box.name}", lines=lines, width=width):
+    for line in render_box(title=inputs_title, lines=lines, width=width):
         print(line)
 
 
@@ -584,7 +623,6 @@ def render_edit_output_modal(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(72, int(terminal_width * 0.85)), terminal_width - 2)
 
     selected_box = next((b for b in state.boxes if b.id == state.selected_box_id), None)
     
@@ -605,8 +643,10 @@ def render_edit_output_modal(state: PlannerState) -> None:
         "",
         "[enter] Save output   [esc] Cancel",
     ]
+    output_title = f"Output: {selected_box.name}"
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[(output_title, lines)])
 
-    for line in render_box(title=f"Output: {selected_box.name}", lines=lines, width=width):
+    for line in render_box(title=output_title, lines=lines, width=width):
         print(line)
 
 
@@ -618,7 +658,6 @@ def render_project_settings_modal(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(90, int(terminal_width * 0.95)), terminal_width - 2)
 
     config = state.project_config
     
@@ -642,6 +681,7 @@ def render_project_settings_modal(state: PlannerState) -> None:
         "",
         "[number] Edit   [r] Reset defaults   [enter] Accept   [esc] Cancel",
     ]
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Project Settings", lines)])
 
     for line in render_box(title="Project Settings", lines=lines, width=width):
         print(line)
@@ -655,7 +695,6 @@ def render_review_modal(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(80, int(terminal_width * 0.90)), terminal_width - 2)
 
     domains = len(set(b.domain for b in state.boxes))
     boxes_with_interface = sum(1 for b in state.boxes if b.interface)
@@ -684,6 +723,7 @@ def render_review_modal(state: PlannerState) -> None:
         "[y] Preview YAML",
         "[esc] Back",
     ])
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Plan Review", lines)])
 
     for line in render_box(title="Plan Review", lines=lines, width=width):
         print(line)
@@ -697,7 +737,6 @@ def render_yaml_preview_modal(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(80, int(terminal_width * 0.90)), terminal_width - 2)
 
     lines = [
         f"version: 1",
@@ -728,6 +767,7 @@ def render_yaml_preview_modal(state: PlannerState) -> None:
         "",
         "[f] Full YAML   [enter] Back",
     ])
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("YAML Preview", lines)])
 
     for line in render_box(title="YAML Preview", lines=lines, width=width):
         print(line)
@@ -741,7 +781,6 @@ def render_saved_modal(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(72, int(terminal_width * 0.85)), terminal_width - 2)
 
     lines = [
         "blueprint.yaml saved.",
@@ -756,6 +795,7 @@ def render_saved_modal(state: PlannerState) -> None:
         "[enter] Back to planner",
         "[q] Quit",
     ]
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Saved", lines)])
 
     for line in render_box(title="Saved", lines=lines, width=width):
         print(line)
@@ -769,7 +809,6 @@ def render_graph_overview(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(80, int(terminal_width * 0.90)), terminal_width - 2)
 
     lines = []
     
@@ -784,6 +823,7 @@ def render_graph_overview(state: PlannerState) -> None:
             lines.append("")
     
     lines.append("[enter] Back")
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Assembly Overview", lines)])
 
     for line in render_box(title="Assembly Overview", lines=lines, width=width):
         print(line)
@@ -797,7 +837,6 @@ def render_disconnect_modal(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(80, int(terminal_width * 0.90)), terminal_width - 2)
 
     selected_box = next((b for b in state.boxes if b.id == state.selected_box_id), None)
     
@@ -845,6 +884,7 @@ def render_disconnect_modal(state: PlannerState) -> None:
         "",
         "[enter] Remove   [esc] Cancel",
     ])
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Remove Connection", lines)])
 
     for line in render_box(title="Remove Connection", lines=lines, width=width):
         print(line)
@@ -858,7 +898,6 @@ def render_delete_block_modal(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(72, int(terminal_width * 0.85)), terminal_width - 2)
 
     selected_box = next((b for b in state.boxes if b.id == state.selected_box_id), None)
     
@@ -901,6 +940,7 @@ def render_delete_block_modal(state: PlannerState) -> None:
         "[d] Delete block and connections",
         "[esc] Cancel",
     ])
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Delete Block", lines)])
 
     for line in render_box(title="Delete Block", lines=lines, width=width):
         print(line)
@@ -914,7 +954,6 @@ def render_unsaved_changes_modal(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(72, int(terminal_width * 0.85)), terminal_width - 2)
 
     # Build change summary
     change_lines = []
@@ -941,6 +980,7 @@ def render_unsaved_changes_modal(state: PlannerState) -> None:
         "[q] Quit without saving",
         "[esc] Back",
     ]
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Unsaved Changes", lines)])
 
     for line in render_box(title="Unsaved Changes", lines=lines, width=width):
         print(line)
@@ -954,7 +994,6 @@ def render_broken_connections_modal(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(80, int(terminal_width * 0.90)), terminal_width - 2)
 
     lines = [
         "Some connections point to blocks that",
@@ -978,6 +1017,7 @@ def render_broken_connections_modal(state: PlannerState) -> None:
         "[k] Keep and review later",
         "[q] Quit",
     ])
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Broken Assembly", lines)])
 
     for line in render_box(title="Broken Assembly", lines=lines, width=width):
         print(line)
@@ -991,7 +1031,6 @@ def render_no_blocks_to_connect_modal(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(72, int(terminal_width * 0.85)), terminal_width - 2)
 
     selected_box = next((b for b in state.boxes if b.id == state.selected_box_id), None)
     box_name = selected_box.name if selected_box else "This block"
@@ -1006,6 +1045,7 @@ def render_no_blocks_to_connect_modal(state: PlannerState) -> None:
         "[a] Add block",
         "[enter] Back",
     ]
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Connect Block", lines)])
 
     for line in render_box(title="Connect Block", lines=lines, width=width):
         print(line)
@@ -1020,7 +1060,6 @@ def render_duplicate_connection_modal(state: PlannerState, existing_conn: Planne
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(72, int(terminal_width * 0.85)), terminal_width - 2)
 
     source_box = next((b for b in state.boxes if b.id == existing_conn.source_box_id), None)
     target_box = next((b for b in state.boxes if b.id == existing_conn.target_box_id), None)
@@ -1039,6 +1078,7 @@ def render_duplicate_connection_modal(state: PlannerState, existing_conn: Planne
         "",
         "[enter] Back",
     ]
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Already Connected", lines)])
 
     for line in render_box(title="Already Connected", lines=lines, width=width):
         print(line)
@@ -1052,7 +1092,6 @@ def render_self_connection_modal(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(72, int(terminal_width * 0.85)), terminal_width - 2)
 
     lines = [
         "A block cannot connect to itself.",
@@ -1062,6 +1101,7 @@ def render_self_connection_modal(state: PlannerState) -> None:
         "[enter] Choose another target",
         "[esc] Cancel",
     ]
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Invalid Connection", lines)])
 
     for line in render_box(title="Invalid Connection", lines=lines, width=width):
         print(line)
@@ -1075,7 +1115,6 @@ def render_cannot_save_empty_modal(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(72, int(terminal_width * 0.85)), terminal_width - 2)
 
     lines = [
         "There are no blocks in this plan.",
@@ -1086,6 +1125,7 @@ def render_cannot_save_empty_modal(state: PlannerState) -> None:
         "[a] Add block",
         "[enter] Back",
     ]
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Nothing To Save", lines)])
 
     for line in render_box(title="Nothing To Save", lines=lines, width=width):
         print(line)
@@ -1101,7 +1141,6 @@ def render_duplicate_name_modal(state: PlannerState, existing_box: PlannerBox, s
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(72, int(terminal_width * 0.85)), terminal_width - 2)
 
     lines = [
         f"A block named {existing_box.name} already exists in {existing_box.domain}.",
@@ -1119,6 +1158,7 @@ def render_duplicate_name_modal(state: PlannerState, existing_box: PlannerBox, s
         "[e] Edit name",
         "[esc] Cancel",
     ])
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Duplicate Name", lines)])
 
     for line in render_box(title="Duplicate Name", lines=lines, width=width):
         print(line)
@@ -1134,7 +1174,6 @@ def render_active_intent_conflict_modal(state: PlannerState, existing_box: Plann
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(80, int(terminal_width * 0.90)), terminal_width - 2)
 
     lines = [
         "Another active block already has this purpose:",
@@ -1158,6 +1197,7 @@ def render_active_intent_conflict_modal(state: PlannerState, existing_box: Plann
         "[enter] Apply",
         "[esc] Cancel",
     ]
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Active Intent Conflict", lines)])
 
     for line in render_box(title="Active Intent Conflict", lines=lines, width=width):
         print(line)
@@ -1173,7 +1213,6 @@ def render_path_already_used_modal(state: PlannerState, path: str, existing_box:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(80, int(terminal_width * 0.90)), terminal_width - 2)
 
     # Generate suggested alternative path
     import re
@@ -1195,6 +1234,7 @@ def render_path_already_used_modal(state: PlannerState, path: str, existing_box:
         "[e] Edit path",
         "[esc] Cancel",
     ]
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Path Already Used", lines)])
 
     for line in render_box(title="Path Already Used", lines=lines, width=width):
         print(line)
@@ -1212,7 +1252,6 @@ def render_domain_changed_modal(state: PlannerState, old_domain: str, new_domain
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(80, int(terminal_width * 0.90)), terminal_width - 2)
 
     lines = [
         f"Domain changed: {old_domain} → {new_domain}",
@@ -1229,6 +1268,7 @@ def render_domain_changed_modal(state: PlannerState, old_domain: str, new_domain
         "[k] Keep current path",
         "[e] Edit manually",
     ]
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Domain Changed", lines)])
 
     for line in render_box(title="Domain Changed", lines=lines, width=width):
         print(line)
@@ -1242,7 +1282,6 @@ def render_no_connections_warning_modal(state: PlannerState) -> None:
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(80, int(terminal_width * 0.90)), terminal_width - 2)
 
     blocks_count = len(state.boxes)
 
@@ -1258,6 +1297,7 @@ def render_no_connections_warning_modal(state: PlannerState) -> None:
         "[s] Save anyway",
         "[esc] Back",
     ]
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Plan Review", lines)])
 
     for line in render_box(title="Plan Review", lines=lines, width=width):
         print(line)
@@ -1273,7 +1313,6 @@ def render_experimental_to_active_warning_modal(state: PlannerState, experimenta
     """
     clear_screen()
     terminal_width = get_terminal_width()
-    width = min(max(90, int(terminal_width * 0.95)), terminal_width - 2)
 
     lines = [
         "You are connecting an experimental block to an",
@@ -1291,6 +1330,7 @@ def render_experimental_to_active_warning_modal(state: PlannerState, experimenta
         "[enter] Continue",
         "[esc] Cancel",
     ]
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Lifecycle Warning", lines)])
 
     for line in render_box(title="Lifecycle Warning", lines=lines, width=width):
         print(line)

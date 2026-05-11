@@ -24,7 +24,7 @@ class AddBoxModal:
     
     def __init__(self) -> None:
         """Initialize the modal."""
-        pass
+        self._initialized = True
     
     def collect(self) -> Optional[AddBoxInput]:
         """Collect box data from user.

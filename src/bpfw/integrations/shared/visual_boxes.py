@@ -15,6 +15,8 @@ COLUMN_GAP_WIDTH = 1
 def _centered_title_bar(title: str, width: int, fill: str = "─") -> str:
     """Build a centered title bar segment with symmetric fill."""
 
+    if not title.strip():
+        return fill * width
     label = f" {title} "
     label_width = display_width(label)
     if label_width >= width:
