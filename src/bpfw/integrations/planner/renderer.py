@@ -3,7 +3,7 @@
 from typing import List, Optional
 
 from bpfw.integrations.editor.screen import clear_screen, get_terminal_width
-from bpfw.integrations.planner_impl.models import PlannerBox, PlannerConnection, PlannerState
+from bpfw.integrations.planner.models import PlannerBox, PlannerConnection, PlannerState
 from bpfw.integrations.shared.visual_theme import (
     DEFAULT_THEME,
     compute_panel_width,

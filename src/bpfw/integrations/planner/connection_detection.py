@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
-from bpfw.integrations.planner_impl.models import PlannerBox
+from bpfw.integrations.planner.models import PlannerBox
 
 
 @dataclass(frozen=True)

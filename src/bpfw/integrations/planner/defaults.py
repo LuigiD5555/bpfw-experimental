@@ -3,13 +3,13 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from bpfw.integrations.planner_impl.models import (
+from bpfw.integrations.planner.models import (
     PlannerBox,
     PlannerInterface,
     PlannerProjectConfig,
     PlannerState,
 )
-from bpfw.integrations.planner_impl.utils import (
+from bpfw.integrations.planner.utils import (
     generate_box_path,
     generate_box_symbol,
     get_project_defaults,

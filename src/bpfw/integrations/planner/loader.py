@@ -4,9 +4,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from bpfw.catalog.paths import resolve_blueprint_path
-from bpfw.integrations.planner_impl.connection_detection import detect_connections
-from bpfw.integrations.planner_impl.connection_merge import merge_connections
-from bpfw.integrations.planner_impl.models import (
+from bpfw.integrations.planner.connection_detection import detect_connections
+from bpfw.integrations.planner.connection_merge import merge_connections
+from bpfw.integrations.planner.models import (
     PlannerBox,
     PlannerConnection,
     PlannerInterface,
@@ -16,7 +16,7 @@ from bpfw.integrations.planner_impl.models import (
     PlannerSecurityConfig,
     PlannerState,
 )
-from bpfw.integrations.planner_impl.utils import get_project_defaults, to_snake_case
+from bpfw.integrations.planner.utils import get_project_defaults, to_snake_case
 
 
 class BlueprintStateLoader:

@@ -4,12 +4,12 @@ from pathlib import Path
 from typing import Optional
 
 from bpfw.integrations.editor.screen import clear_screen, read_input
-from bpfw.integrations.planner_impl.assembler import BlueprintAssembler, BlueprintYamlWriter
-from bpfw.integrations.planner_impl.defaults import AddBoxInput, BoxFactory
-from bpfw.integrations.planner_impl.loader import BlueprintStateLoader
-from bpfw.integrations.planner_impl.modals import AddBoxModal, ConnectionInput, ConnectionModal
-from bpfw.integrations.planner_impl.renderer import WorkspaceRenderer
-from bpfw.integrations.planner_impl.validator import PlanValidator
+from bpfw.integrations.planner.assembler import BlueprintAssembler, BlueprintYamlWriter
+from bpfw.integrations.planner.defaults import AddBoxInput, BoxFactory
+from bpfw.integrations.planner.loader import BlueprintStateLoader
+from bpfw.integrations.planner.modals import AddBoxModal, ConnectionInput, ConnectionModal
+from bpfw.integrations.planner.renderer import WorkspaceRenderer
+from bpfw.integrations.planner.validator import PlanValidator
 
 
 class PlannerController:
@@ -156,7 +156,7 @@ class PlannerController:
                     return
             
             # Add connection
-            from bpfw.integrations.planner_impl.models import PlannerConnection
+            from bpfw.integrations.planner.models import PlannerConnection
             connection = PlannerConnection(
                 source_box_id=input_data.source_box_id,
                 target_box_id=input_data.target_box_id,

@@ -2,8 +2,8 @@
 
 from typing import Dict, List, Tuple
 
-from bpfw.integrations.planner_impl.connection_detection import InferredConnection
-from bpfw.integrations.planner_impl.models import PlannerConnection
+from bpfw.integrations.planner.connection_detection import InferredConnection
+from bpfw.integrations.planner.models import PlannerConnection
 
 
 def merge_connections(

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from bpfw.integrations.editor.screen import read_input, read_line
-from bpfw.integrations.planner_impl.defaults import AddBoxInput
+from bpfw.integrations.planner.defaults import AddBoxInput
 
 
 @dataclass

@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from bpfw.integrations.planner_impl.models import PlannerState
+from bpfw.integrations.planner.models import PlannerState
 
 
 @dataclass

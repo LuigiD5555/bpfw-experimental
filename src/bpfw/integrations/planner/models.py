@@ -87,7 +87,7 @@ class PlannerBox:
     
     def __post_init__(self) -> None:
         """Compute derived fields after initialization."""
-        from bpfw.integrations.planner_impl.utils import (
+        from bpfw.integrations.planner.utils import (
             generate_box_id,
             generate_module_from_path,
             generate_qualified_name,

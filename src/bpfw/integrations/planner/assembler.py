@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 
 from bpfw.catalog.access_control import ensure_blueprint_can_be_written
 from bpfw.catalog.paths import resolve_blueprint_path
-from bpfw.integrations.planner_impl.models import PlannerBox, PlannerConnection, PlannerState
+from bpfw.integrations.planner.models import PlannerBox, PlannerConnection, PlannerState
 
 
 class BlueprintAssembler:
