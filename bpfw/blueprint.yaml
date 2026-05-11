@@ -41,8 +41,8 @@ responsibilities:
     module: src.bpfw.catalog.access_control
     symbol: ensure_blueprint_can_be_written
     symbol_type: function
-    start_line: 9
-    end_line: 13
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.access_control.ensure_blueprint_can_be_written
     kind: function
@@ -68,8 +68,8 @@ responsibilities:
     module: src.bpfw.catalog.drift
     symbol: compare_declared_to_discovered
     symbol_type: function
-    start_line: 135
-    end_line: 181
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.drift.compare_declared_to_discovered
     kind: function
@@ -95,8 +95,8 @@ responsibilities:
     module: src.bpfw.catalog.lifecycle
     symbol: count_lifecycles
     symbol_type: function
-    start_line: 24
-    end_line: 39
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.lifecycle.count_lifecycles
     kind: function
@@ -122,8 +122,8 @@ responsibilities:
     module: src.bpfw.catalog.lifecycle
     symbol: is_allowed_lifecycle
     symbol_type: function
-    start_line: 18
-    end_line: 21
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.lifecycle.is_allowed_lifecycle
     kind: function
@@ -149,8 +149,8 @@ responsibilities:
     module: src.bpfw.catalog.loader
     symbol: BlueprintLoader
     symbol_type: class
-    start_line: 18
-    end_line: 165
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.loader.BlueprintLoader
     kind: class
@@ -176,8 +176,8 @@ responsibilities:
     module: src.bpfw.catalog.loader
     symbol: is_responsibility_complete
     symbol_type: function
-    start_line: 168
-    end_line: 204
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.loader.is_responsibility_complete
     kind: function
@@ -203,8 +203,8 @@ responsibilities:
     module: src.bpfw.catalog.models
     symbol: BlueprintLoadResult
     symbol_type: class
-    start_line: 42
-    end_line: 48
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.models.BlueprintLoadResult
     kind: class
@@ -230,8 +230,8 @@ responsibilities:
     module: src.bpfw.catalog.models
     symbol: DiscoveredCodeUnit
     symbol_type: class
-    start_line: 23
-    end_line: 38
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.models.DiscoveredCodeUnit
     kind: class
@@ -257,8 +257,8 @@ responsibilities:
     module: src.bpfw.catalog.models
     symbol: ScanResult
     symbol_type: class
-    start_line: 52
-    end_line: 56
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.models.ScanResult
     kind: class
@@ -284,8 +284,8 @@ responsibilities:
     module: src.bpfw.catalog.models
     symbol: VerificationReport
     symbol_type: class
-    start_line: 60
-    end_line: 72
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.models.VerificationReport
     kind: class
@@ -311,8 +311,8 @@ responsibilities:
     module: src.bpfw.catalog.paths
     symbol: resolve_blueprint_path
     symbol_type: function
-    start_line: 23
-    end_line: 32
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.paths.resolve_blueprint_path
     kind: function
@@ -338,8 +338,8 @@ responsibilities:
     module: src.bpfw.catalog.paths
     symbol: resolve_project_root
     symbol_type: function
-    start_line: 9
-    end_line: 20
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.paths.resolve_project_root
     kind: function
@@ -365,8 +365,8 @@ responsibilities:
     module: src.bpfw.catalog.scanner
     symbol: scan_python_project
     symbol_type: function
-    start_line: 11
-    end_line: 65
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.scanner.scan_python_project
     kind: function
@@ -392,8 +392,8 @@ responsibilities:
     module: src.bpfw.catalog.validation
     symbol: validate_blueprint_structure
     symbol_type: function
-    start_line: 178
-    end_line: 239
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.validation.validate_blueprint_structure
     kind: function
@@ -419,8 +419,8 @@ responsibilities:
     module: src.bpfw.catalog.verify
     symbol: run_verify
     symbol_type: function
-    start_line: 94
-    end_line: 182
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.verify.run_verify
     kind: function
@@ -446,8 +446,8 @@ responsibilities:
     module: src.bpfw.catalog.writer
     symbol: build_initial_blueprint
     symbol_type: function
-    start_line: 35
-    end_line: 120
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.writer.build_initial_blueprint
     kind: function
@@ -473,8 +473,8 @@ responsibilities:
     module: src.bpfw.catalog.writer
     symbol: run_init
     symbol_type: function
-    start_line: 145
-    end_line: 230
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.writer.run_init
     kind: function
@@ -500,8 +500,8 @@ responsibilities:
     module: src.bpfw.catalog.writer
     symbol: to_snake_case
     symbol_type: function
-    start_line: 12
-    end_line: 32
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.writer.to_snake_case
     kind: function
@@ -527,8 +527,8 @@ responsibilities:
     module: src.bpfw.catalog.writer
     symbol: write_blueprint
     symbol_type: function
-    start_line: 123
-    end_line: 139
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.writer.write_blueprint
     kind: function
@@ -554,8 +554,8 @@ responsibilities:
     module: src.bpfw.cli
     symbol: build_parser
     symbol_type: function
-    start_line: 25
-    end_line: 36
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.cli.build_parser
     kind: function
@@ -581,8 +581,8 @@ responsibilities:
     module: src.bpfw.cli
     symbol: main
     symbol_type: function
-    start_line: 142
-    end_line: 200
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.cli.main
     kind: function
@@ -608,8 +608,8 @@ responsibilities:
     module: src.bpfw.cli
     symbol: normalize_command
     symbol_type: function
-    start_line: 40
-    end_line: 68
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.cli.normalize_command
     kind: function
@@ -635,8 +635,8 @@ responsibilities:
     module: src.bpfw.core.context
     symbol: EngineCommand
     symbol_type: class
-    start_line: 10
-    end_line: 15
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.context.EngineCommand
     kind: class
@@ -662,8 +662,8 @@ responsibilities:
     module: src.bpfw.core.context
     symbol: ProjectContext
     symbol_type: class
-    start_line: 19
-    end_line: 24
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.context.ProjectContext
     kind: class
@@ -689,8 +689,8 @@ responsibilities:
     module: src.bpfw.core.context
     symbol: build_project_context
     symbol_type: function
-    start_line: 27
-    end_line: 34
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.context.build_project_context
     kind: function
@@ -716,8 +716,8 @@ responsibilities:
     module: src.bpfw.core.engine
     symbol: BlueprintEngine
     symbol_type: class
-    start_line: 11
-    end_line: 44
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.engine.BlueprintEngine
     kind: class
@@ -743,8 +743,8 @@ responsibilities:
     module: src.bpfw.core.engine
     symbol: build_command
     symbol_type: function
-    start_line: 47
-    end_line: 50
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.engine.build_command
     kind: function
@@ -770,8 +770,8 @@ responsibilities:
     module: src.bpfw.core.errors
     symbol: BlueprintLockedError
     symbol_type: class
-    start_line: 8
-    end_line: 9
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.errors.BlueprintLockedError
     kind: class
@@ -797,8 +797,8 @@ responsibilities:
     module: src.bpfw.core.errors
     symbol: BlueprintMissingError
     symbol_type: class
-    start_line: 12
-    end_line: 13
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.errors.BlueprintMissingError
     kind: class
@@ -824,8 +824,8 @@ responsibilities:
     module: src.bpfw.core.errors
     symbol: BpfwError
     symbol_type: class
-    start_line: 4
-    end_line: 5
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.errors.BpfwError
     kind: class
@@ -851,8 +851,8 @@ responsibilities:
     module: src.bpfw.core.pipeline
     symbol: Pipeline
     symbol_type: class
-    start_line: 20
-    end_line: 24
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.pipeline.Pipeline
     kind: class
@@ -878,8 +878,8 @@ responsibilities:
     module: src.bpfw.core.pipeline
     symbol: PipelineStep
     symbol_type: class
-    start_line: 10
-    end_line: 16
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.pipeline.PipelineStep
     kind: class
@@ -905,8 +905,8 @@ responsibilities:
     module: src.bpfw.core.pipeline
     symbol: execute_pipeline
     symbol_type: function
-    start_line: 28
-    end_line: 31
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.pipeline.execute_pipeline
     kind: function
@@ -932,8 +932,8 @@ responsibilities:
     module: src.bpfw.core.registry
     symbol: AuthorityLockStep
     symbol_type: class
-    start_line: 95
-    end_line: 115
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.registry.AuthorityLockStep
     kind: class
@@ -959,8 +959,8 @@ responsibilities:
     module: src.bpfw.core.registry
     symbol: AuthorityStatusStep
     symbol_type: class
-    start_line: 143
-    end_line: 166
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.registry.AuthorityStatusStep
     kind: class
@@ -986,8 +986,8 @@ responsibilities:
     module: src.bpfw.core.registry
     symbol: AuthorityUnlockStep
     symbol_type: class
-    start_line: 119
-    end_line: 139
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.registry.AuthorityUnlockStep
     kind: class
@@ -1013,8 +1013,8 @@ responsibilities:
     module: src.bpfw.core.registry
     symbol: InitProjectStep
     symbol_type: class
-    start_line: 15
-    end_line: 27
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.registry.InitProjectStep
     kind: class
@@ -1040,8 +1040,8 @@ responsibilities:
     module: src.bpfw.core.registry
     symbol: VerifyBlueprintStep
     symbol_type: class
-    start_line: 56
-    end_line: 91
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.registry.VerifyBlueprintStep
     kind: class
@@ -1067,8 +1067,8 @@ responsibilities:
     module: src.bpfw.core.registry
     symbol: build_default_registry
     symbol_type: function
-    start_line: 169
-    end_line: 179
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.registry.build_default_registry
     kind: function
@@ -1094,8 +1094,8 @@ responsibilities:
     module: src.bpfw.core.result
     symbol: EngineResult
     symbol_type: class
-    start_line: 30
-    end_line: 35
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.result.EngineResult
     kind: class
@@ -1121,8 +1121,8 @@ responsibilities:
     module: src.bpfw.core.result
     symbol: ResultStatus
     symbol_type: class
-    start_line: 7
-    end_line: 14
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.result.ResultStatus
     kind: class
@@ -1148,8 +1148,8 @@ responsibilities:
     module: src.bpfw.core.result
     symbol: StepResult
     symbol_type: class
-    start_line: 18
-    end_line: 26
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.result.StepResult
     kind: class
@@ -1175,8 +1175,8 @@ responsibilities:
     module: src.bpfw.core.result
     symbol: aggregate_status
     symbol_type: function
-    start_line: 48
-    end_line: 53
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.core.result.aggregate_status
     kind: function
@@ -1202,8 +1202,8 @@ responsibilities:
     module: src.bpfw.integrations.base
     symbol: ExternalToolAdapter
     symbol_type: class
-    start_line: 9
-    end_line: 20
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.integrations.base.ExternalToolAdapter
     kind: class
@@ -1229,8 +1229,8 @@ responsibilities:
     module: src.bpfw.integrations.registry
     symbol: IntegrationRegistry
     symbol_type: class
-    start_line: 9
-    end_line: 32
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.integrations.registry.IntegrationRegistry
     kind: class
@@ -1256,8 +1256,8 @@ responsibilities:
     module: src.bpfw.integrations.result
     symbol: ExternalToolFinding
     symbol_type: class
-    start_line: 8
-    end_line: 18
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.integrations.result.ExternalToolFinding
     kind: class
@@ -1283,8 +1283,8 @@ responsibilities:
     module: src.bpfw.protection.authority
     symbol: get_blueprint_lock_state
     symbol_type: function
-    start_line: 21
-    end_line: 24
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.protection.authority.get_blueprint_lock_state
     kind: function
@@ -1310,8 +1310,8 @@ responsibilities:
     module: src.bpfw.protection.authority
     symbol: lock_blueprint
     symbol_type: function
-    start_line: 9
-    end_line: 12
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.protection.authority.lock_blueprint
     kind: function
@@ -1337,8 +1337,8 @@ responsibilities:
     module: src.bpfw.protection.authority
     symbol: unlock_blueprint
     symbol_type: function
-    start_line: 15
-    end_line: 18
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.protection.authority.unlock_blueprint
     kind: function
@@ -1364,8 +1364,8 @@ responsibilities:
     module: src.bpfw.protection.os_lock
     symbol: get_file_lock_state
     symbol_type: function
-    start_line: 45
-    end_line: 60
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.protection.os_lock.get_file_lock_state
     kind: function
@@ -1391,8 +1391,8 @@ responsibilities:
     module: src.bpfw.protection.os_lock
     symbol: lock_file
     symbol_type: function
-    start_line: 19
-    end_line: 29
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.protection.os_lock.lock_file
     kind: function
@@ -1418,8 +1418,8 @@ responsibilities:
     module: src.bpfw.protection.os_lock
     symbol: unlock_file
     symbol_type: function
-    start_line: 32
-    end_line: 42
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.protection.os_lock.unlock_file
     kind: function
@@ -1445,8 +1445,8 @@ responsibilities:
     module: src.bpfw.reports.finding
     symbol: Finding
     symbol_type: class
-    start_line: 13
-    end_line: 22
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.reports.finding.Finding
     kind: class
@@ -1472,8 +1472,8 @@ responsibilities:
     module: src.bpfw.reports.status_report
     symbol: render_status_report
     symbol_type: function
-    start_line: 128
-    end_line: 200
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.reports.status_report.render_status_report
     kind: function
@@ -1499,8 +1499,8 @@ responsibilities:
     module: src.bpfw.reports.status_report
     symbol: run_status
     symbol_type: function
-    start_line: 31
-    end_line: 125
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.reports.status_report.run_status
     kind: function
@@ -1526,8 +1526,8 @@ responsibilities:
     module: src.bpfw.reports.verify_report
     symbol: render_verify_report
     symbol_type: function
-    start_line: 59
-    end_line: 125
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.reports.verify_report.render_verify_report
     kind: function
@@ -1553,8 +1553,8 @@ responsibilities:
     module: src.bpfw.catalog.security
     symbol: contains_secret_keyword
     symbol_type: function
-    start_line: 118
-    end_line: 128
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.security.contains_secret_keyword
     kind: function
@@ -1580,25 +1580,11 @@ responsibilities:
     module: src.bpfw.catalog.security
     symbol: is_allowed_security_policy_path
     symbol_type: function
-    start_line: 166
-    end_line: 181
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.security.is_allowed_security_policy_path
     kind: function
-    methods: []
-    functions: []
-    imports:
-    - re
-    - pathlib.PurePosixPath
-    - pathlib.PureWindowsPath
-    - typing.Any
-    - bpfw.reports.finding.FINDING_SEVERITY_BLOCK
-    - bpfw.reports.finding.Finding
-    decorators: []
-    docstring: "Return whether a path belongs to allowed security policy metadata.\n\
-      \nArgs:\n    path: Logical YAML path.\n\nReturns:\n    True when the path is\
-      \ allowed to mention security keywords."
-    signature: is_allowed_security_policy_path(path) -> bool
   entrypoints: []
   related_code: []
   duplicate_policy:
@@ -1621,25 +1607,11 @@ responsibilities:
     module: src.bpfw.catalog.security
     symbol: looks_like_absolute_path
     symbol_type: function
-    start_line: 149
-    end_line: 163
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.security.looks_like_absolute_path
     kind: function
-    methods: []
-    functions: []
-    imports:
-    - re
-    - pathlib.PurePosixPath
-    - pathlib.PureWindowsPath
-    - typing.Any
-    - bpfw.reports.finding.FINDING_SEVERITY_BLOCK
-    - bpfw.reports.finding.Finding
-    decorators: []
-    docstring: "Return whether a value looks like an absolute filesystem path.\n\n\
-      Args:\n    value: String value to inspect.\n\nReturns:\n    True when the value\
-      \ looks like a POSIX or Windows absolute path."
-    signature: looks_like_absolute_path(value) -> bool
   entrypoints: []
   related_code: []
   duplicate_policy:
@@ -1662,21 +1634,11 @@ responsibilities:
     module: src.bpfw.catalog.intent_suggestions
     symbol: IntentSuggestion
     symbol_type: class
-    start_line: 9
-    end_line: 14
+    start_line: null
+    end_line: null
   detected:
     qualified_name: src.bpfw.catalog.intent_suggestions.IntentSuggestion
     kind: class
-    methods: []
-    functions: []
-    imports:
-    - re
-    - dataclasses.dataclass
-    - typing.Any
-    decorators:
-    - dataclass
-    docstring: Represent one deterministic natural-language intent suggestion.
-    signature: null
   entrypoints: []
   related_code: []
   duplicate_policy:
