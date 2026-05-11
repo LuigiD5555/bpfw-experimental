@@ -65,13 +65,14 @@ def scan_python_project(
     )
 
 
-def _discovered_unit_sort_key(unit: DiscoveredCodeUnit) -> tuple[str, int, int, int, str]:
-    """Return a stable child-before-parent order for inspect traversal."""
+def _discovered_unit_sort_key(unit: DiscoveredCodeUnit) -> tuple[str, int, int, int, int, str]:
+    """Return a stable contained-first order for inspect traversal."""
 
     end_line = unit.end_line or unit.start_line or 0
     start_line = unit.start_line or 0
+    span_size = max(0, end_line - start_line)
     nesting_depth = unit.symbol.count(".")
-    return unit.path, end_line, -nesting_depth, start_line, unit.symbol
+    return unit.path, end_line, span_size, -nesting_depth, start_line, unit.symbol
 
 
 def _is_path_ignored(file_path: Path, ignored_paths: List[str]) -> bool:

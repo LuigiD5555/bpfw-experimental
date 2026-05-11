@@ -211,6 +211,10 @@ def test_text_inspector_renders_expected_sections(tmp_path: Path) -> None:
     assert " [d] " in rendered
     assert " [f] " in rendered
     assert "[g] write custom domain" in rendered
+    assert "Hierarchy" in rendered
+    assert "children:" in rendered
+    assert "ExampleService.run" in rendered
+    assert "Parent preview is collapsed" in rendered
     assert "[z] active" in rendered
     assert "[x] experimental" in rendered
     assert "[c] legacy" in rendered

@@ -608,6 +608,45 @@ def build_nested_snippet_lines(responsibility: Dict[str, Any]) -> list[str]:
     return [f"  {symbol}" for symbol in nested_symbols]
 
 
+def build_hierarchy_lines(responsibility: Dict[str, Any]) -> list[str]:
+    """Build contained-to-container hierarchy lines for inspector display."""
+
+    location = responsibility.get("location")
+    if not isinstance(location, dict):
+        return ["  -  No hierarchy detected."]
+
+    path_value = clean_string(location.get("path"))
+    module_value = clean_string(location.get("module"))
+    symbol_value = clean_string(location.get("symbol"))
+    symbol_type_value = clean_string(location.get("symbol_type")) or "symbol"
+
+    hierarchy_lines: list[str] = []
+
+    if symbol_value:
+        symbol_parts = symbol_value.split(".")
+        hierarchy_lines.append(f"  leaf: {symbol_parts[-1]} ({symbol_type_value})")
+        for symbol_name in reversed(symbol_parts[:-1]):
+            hierarchy_lines.append(f"  parent symbol: {symbol_name}")
+
+    if module_value:
+        hierarchy_lines.append(f"  module: {module_value}")
+    if path_value:
+        hierarchy_lines.append(f"  file: {path_value}")
+        path_parts = [part for part in path_value.replace('\\', '/').split('/') if part]
+        folder_parts = path_parts[:-1]
+        for folder_name in reversed(folder_parts):
+            hierarchy_lines.append(f"  folder: {folder_name}")
+
+    nested_lines = build_nested_snippet_lines(responsibility)
+    if nested_lines:
+        hierarchy_lines.append("  children:")
+        hierarchy_lines.extend(nested_lines)
+
+    if not hierarchy_lines:
+        return ["  -  No hierarchy detected."]
+    return hierarchy_lines
+
+
 def apply_automatic_authority_fields(blueprint_data: Dict[str, Any]) -> None:
     """Derive authority fields that do not require interactive review."""
 

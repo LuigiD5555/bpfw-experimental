@@ -8,6 +8,8 @@ import textwrap
 
 from bpfw.catalog.intent_suggestions import IntentSuggestion
 from bpfw.integrations.inspector.base import (
+    build_hierarchy_lines,
+    build_nested_snippet_lines,
     build_code_lines,
     clean_string,
     display_value,
@@ -48,10 +50,16 @@ def render_inspector_screen(
     header_meta = f"{index + 1}/{total} {issue_type} "
     file_path = (responsibility.get("location") or {}).get("path", "")
     snippet_lines = build_code_lines(project_root, responsibility)[:26]
+    nested_lines = build_nested_snippet_lines(responsibility)
+    hierarchy_lines = build_hierarchy_lines(responsibility)
     code_lines: List[str] = []
     if file_path:
         code_lines.append(file_path)
-    code_lines.extend(snippet_lines)
+    if nested_lines:
+        code_lines.append("Children detected. Parent preview is collapsed.")
+        code_lines.extend(hierarchy_lines)
+    else:
+        code_lines.extend(snippet_lines)
 
     authority_lines = [
         "",
@@ -109,6 +117,7 @@ def render_inspector_screen(
     global_inner_width = _compute_layout_width(
         header_meta=header_meta,
         code_lines=code_lines,
+        hierarchy_lines=hierarchy_lines,
         authority_lines=authority_lines,
         lifecycle_lines=lifecycle_lines,
         observation_preview_lines=observation_preview_lines,
@@ -129,6 +138,13 @@ def render_inspector_screen(
             *snippet_lines,
         ]
     for line in render_box(title="Code evidence", lines=code_panel_lines, width=global_inner_width):
+        print_func(line)
+
+    for line in render_box(
+        title="Hierarchy",
+        lines=hierarchy_lines,
+        width=global_inner_width,
+    ):
         print_func(line)
 
     for line in render_split_box(
@@ -316,6 +332,7 @@ def _compose_left_right_line(left: str, right: str, width: int) -> str:
 def _compute_layout_width(
     header_meta: str,
     code_lines: list[str],
+    hierarchy_lines: list[str],
     authority_lines: list[str],
     lifecycle_lines: list[str],
     observation_preview_lines: list[str],
@@ -328,6 +345,7 @@ def _compute_layout_width(
 
     header_required = display_width("BPFW Inspector") + 1 + display_width(header_meta)
     code_required = measure_lines(code_lines)
+    hierarchy_required = measure_lines(hierarchy_lines)
     observations_required = measure_lines(observation_preview_lines)
     interface_required = measure_lines(interface_preview_lines)
     commands_required = measure_lines(command_lines)
@@ -352,6 +370,7 @@ def _compute_layout_width(
     required_width = max(
         header_required,
         code_required,
+        hierarchy_required,
         observations_required,
         interface_required,
         commands_required,
