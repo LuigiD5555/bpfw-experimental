@@ -1,432 +1,692 @@
-"""Main controller for Planner integration."""
+"""Main controller for Planner integration using state machine pattern."""
 
 from pathlib import Path
 from typing import Optional
 
-from bpfw.integrations.editor.screen import clear_screen, read_input
+from bpfw.integrations.editor.screen import read_key, read_input, read_line
 from bpfw.integrations.planner.assembler import BlueprintAssembler, BlueprintYamlWriter
 from bpfw.integrations.planner.defaults import AddBoxInput, BoxFactory
 from bpfw.integrations.planner.loader import BlueprintStateLoader
-from bpfw.integrations.planner.modals import AddBoxModal, ConnectionInput, ConnectionModal
-from bpfw.integrations.planner.renderer import WorkspaceRenderer
+from bpfw.integrations.planner.models import (
+    PlannerBox,
+    PlannerConnection,
+    PlannerInterface,
+    PlannerInterfaceInput,
+    PlannerInterfaceOutput,
+    PlannerState,
+    RELATIONSHIP_LABELS,
+    RELATIONSHIP_FROM_LABEL,
+    VALID_RELATIONSHIPS,
+)
+from bpfw.integrations.planner.renderer import render_planner
 from bpfw.integrations.planner.validator import PlanValidator
 
 
 class PlannerController:
-    """Orchestrate the complete planner session."""
+    """Orchestrate complete planner session using state machine pattern."""
     
     def __init__(self, project_root: Path) -> None:
-        """Initialize the planner controller.
+        """Initialize planner controller.
         
         Args:
-            project_root: Root directory of the project.
+            project_root: Root directory of project.
         """
         self.project_root = project_root
         self.state = BlueprintStateLoader.load(project_root)
-        self.renderer = WorkspaceRenderer()
         self.validator = PlanValidator()
-        self.active_panel = 0  # 0=Structure, 1=Flow, 2=Config
-    
+        
+        # Modal state
+        self.modal_data = {}  # Store temporary data for modals
+        self.modal_cursor = 0  # For selection within modals
+        
+        # Check for broken connections on load
+        if self.state.broken_connections:
+            self.state.screen = "broken_connections"
+        
     def run(self) -> int:
-        """Run the interactive planner session.
+        """Run interactive planner session.
         
         Returns:
             Exit code (0 for success, 1 for error).
         """
-        # Show initial message
-        self._show_welcome_message()
+        try:
+            while True:
+                # Render current screen based on state.screen
+                render_planner(self.state)
+                
+                # Read single key
+                key = read_key()
+                
+                # Handle key based on current screen
+                if self.state.screen == "welcome":
+                    self._handle_welcome_key(key)
+                elif self.state.screen == "workspace":
+                    self._handle_workspace_key(key)
+                elif self.state.screen == "add_block":
+                    self._handle_add_block_key(key)
+                elif self.state.screen == "connect_target":
+                    self._handle_connect_target_key(key)
+                elif self.state.screen == "connect_meaning":
+                    self._handle_connect_meaning_key(key)
+                elif self.state.screen == "connect_feedback":
+                    self._handle_connect_feedback_key(key)
+                elif self.state.screen == "edit_block":
+                    self._handle_edit_block_key(key)
+                elif self.state.screen == "edit_inputs":
+                    self._handle_edit_inputs_key(key)
+                elif self.state.screen == "edit_output":
+                    self._handle_edit_output_key(key)
+                elif self.state.screen == "project_settings":
+                    self._handle_project_settings_key(key)
+                elif self.state.screen == "review":
+                    self._handle_review_key(key)
+                elif self.state.screen == "yaml_preview":
+                    self._handle_yaml_preview_key(key)
+                elif self.state.screen == "saved":
+                    self._handle_saved_key(key)
+                elif self.state.screen == "graph_overview":
+                    self._handle_graph_overview_key(key)
+                elif self.state.screen == "disconnect":
+                    self._handle_disconnect_key(key)
+                elif self.state.screen == "delete_block":
+                    self._handle_delete_block_key(key)
+                elif self.state.screen == "unsaved_changes":
+                    self._handle_unsaved_changes_key(key)
+                elif self.state.screen == "broken_connections":
+                    self._handle_broken_connections_key(key)
+                elif self.state.screen == "no_blocks_to_connect":
+                    self._handle_no_blocks_to_connect_key(key)
+                elif self.state.screen == "duplicate_connection":
+                    self._handle_duplicate_connection_key(key)
+                elif self.state.screen == "self_connection":
+                    self._handle_self_connection_key(key)
+                elif self.state.screen == "cannot_save_empty":
+                    self._handle_cannot_save_empty_key(key)
+                
+                # Check for quit
+                if key == 'q' and self.state.screen == "welcome":
+                    return 0
+                    
+        except KeyboardInterrupt:
+            return 0
+        except EOFError:
+            return 0
+    
+    # ---------------------------------------------------------------------------
+    # Welcome Screen Handler
+    # ---------------------------------------------------------------------------
+    
+    def _handle_welcome_key(self, key: str) -> None:
+        """Handle key input on welcome screen.
         
-        # Main loop
-        while True:
-            # Render workspace and print it
-            rendered = self.renderer.render(self.state)
-            print(rendered)
-            
-            # Read command
-            command = read_input("Command> ").strip().lower()
-            
-            # Handle navigation first
-            if command == "j" or command == "down":
-                self._navigate_down()
-            elif command == "k" or command == "up":
-                self._navigate_up()
-            elif command == "tab":
-                self._cycle_panels()
-            # Handle other commands
-            elif command == "q" or command == "quit":
-                if self.state.dirty:
-                    choice = read_input("You have unsaved changes. Save before quitting? [y/N] ").strip().lower()
-                    if choice == "y":
-                        self._handle_save()
-                return 0
-            elif command == "a" or command == "add":
-                self._handle_add_box()
-            elif command == "c" or command == "connect":
-                self._handle_connect_boxes()
-            elif command == "f":
-                self._cycle_source_filter()
-            elif command == "g":
-                self._cycle_confidence_filter()
-            elif command == "x":
-                self._accept_suggested_connection()
-            elif command == "z":
-                self._reject_suggested_connection()
-            elif command == "e" or command == "edit" or command == "enter":
-                self._handle_configure_box()
-            elif command == "p" or command == "project":
-                self._handle_project_config()
-            elif command == "r" or command == "review":
-                self._handle_review()
-            elif command == "y" or command == "yaml":
-                self._handle_yaml_preview()
-            elif command == "s" or command == "save":
-                self._handle_save()
-            elif command == "h" or command == "help":
-                self._show_help()
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'enter':
+            self.state.screen = "workspace"
+        elif key == 'q':
+            pass  # Will exit in main loop
+    
+    # ---------------------------------------------------------------------------
+    # Workspace Handler
+    # ---------------------------------------------------------------------------
+    
+    def _handle_workspace_key(self, key: str) -> None:
+        """Handle key input on workspace screen.
+        
+        Args:
+            key: Key pressed by user.
+        """
+        # Navigation
+        if key == 'up':
+            self._navigate_up()
+        elif key == 'down':
+            self._navigate_down()
+        
+        # Actions
+        elif key == 'a':
+            # Add block
+            self.state.screen = "add_block"
+            self.modal_data = {
+                'name': '',
+                'domain': '',
+                'intent': '',
+                'kind': 'class',
+                'field_index': 0,
+            }
+            self.modal_cursor = 0
+        elif key == 'space' and self.state.selected_box_id:
+            # Connect blocks
+            if len(self.state.boxes) < 2:
+                # No other blocks to connect
+                pass  # Renderer will show message
             else:
-                # Check for numeric selection (select box by index)
-                if command.isdigit():
-                    self._select_box_by_index(int(command) - 1)
-                else:
-                    print(f"Unknown command: {command}")
-                    read_input("Press Enter to continue...")
+                self.state.screen = "connect_target"
+                self.modal_data = {}
+                self.modal_cursor = 0
+        elif key == 'tab' and self.state.selected_box_id:
+            # Edit block
+            self.state.screen = "edit_block"
+            self.modal_data = {}
+            self.modal_cursor = 0
+        elif key == 's':
+            # Save
+            self.state.screen = "review"
+        elif key == 'p':
+            # Project settings
+            self.state.screen = "project_settings"
+            self.modal_data = {}
+            self.modal_cursor = 0
+        elif key == 'x' and self.state.selected_box_id:
+            # Disconnect
+            self._check_disconnect_available()
+        elif key == 'd' and self.state.selected_box_id:
+            # Delete block
+            self.state.screen = "delete_block"
+            self.modal_data = {}
+        elif key == 'g':
+            # Graph overview
+            self.state.screen = "graph_overview"
+        elif key == 'q':
+            # Quit with unsaved check
+            if self.state.dirty:
+                self.state.screen = "unsaved_changes"
+            else:
+                pass  # Will exit in main loop
     
-    def _show_welcome_message(self) -> None:
-        """Show welcome message based on source mode."""
-        clear_screen()
+    def _navigate_up(self) -> None:
+        """Navigate to previous box."""
+        if not self.state.boxes:
+            return
         
-        if self.state.source_mode == "new_plan":
-            print("No blueprint.yaml found.")
-            print("Starting new system plan...")
-            print()
-        else:
-            count = len(self.state.boxes)
-            domains = len({box.domain for box in self.state.boxes})
-            experimental = sum(1 for box in self.state.boxes if box.lifecycle == "experimental")
-            
-            print("Loaded blueprint:")
-            print(f"  - {count} responsibilities")
-            print(f"  - {domains} domains")
-            if experimental > 0:
-                print(f"  - {experimental} experimental")
-            print()
+        if not self.state.selected_box_id:
+            self.state.selected_box_id = self.state.boxes[0].id
+            return
         
-        read_input("Press Enter to continue...")
+        # Find current index and select previous
+        for idx, box in enumerate(self.state.boxes):
+            if box.id == self.state.selected_box_id:
+                if idx > 0:
+                    self.state.selected_box_id = self.state.boxes[idx - 1].id
+                break
     
-    def _handle_add_box(self) -> None:
-        """Handle adding a new box."""
-        modal = AddBoxModal()
-        input_data = modal.collect()
+    def _navigate_down(self) -> None:
+        """Navigate to next box."""
+        if not self.state.boxes:
+            return
         
-        if input_data:
+        if not self.state.selected_box_id:
+            self.state.selected_box_id = self.state.boxes[0].id
+            return
+        
+        # Find current index and select next
+        for idx, box in enumerate(self.state.boxes):
+            if box.id == self.state.selected_box_id:
+                if idx < len(self.state.boxes) - 1:
+                    self.state.selected_box_id = self.state.boxes[idx + 1].id
+                break
+    
+    def _check_disconnect_available(self) -> None:
+        """Check if there are connections to disconnect."""
+        if not self.state.selected_box_id:
+            return
+        
+        # Count connections for selected box
+        connections_count = sum(
+            1 for conn in self.state.connections
+            if conn.source_box_id == self.state.selected_box_id or 
+               conn.target_box_id == self.state.selected_box_id
+        )
+        
+        if connections_count > 0:
+            self.state.screen = "disconnect"
+            self.modal_data = {}
+            self.modal_cursor = 0
+    
+    # ---------------------------------------------------------------------------
+    # Add Block Modal Handler
+    # ---------------------------------------------------------------------------
+    
+    def _handle_add_block_key(self, key: str) -> None:
+        """Handle key input on add block modal.
+        
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'escape':
+            self.state.screen = "workspace"
+            self.modal_data = {}
+        elif key == 'enter':
+            # Try to create block
             try:
+                input_data = AddBoxInput(
+                    name=self.modal_data.get('name', ''),
+                    domain=self.modal_data.get('domain', ''),
+                    intent=self.modal_data.get('intent', ''),
+                    symbol_type=self.modal_data.get('kind', 'class'),
+                    lifecycle=None,
+                )
+                
                 box = BoxFactory.create_box(input_data, self.state)
                 self.state.boxes.append(box)
                 self.state.selected_box_id = box.id
+                self.state.boxes_added += 1
                 self.state.dirty = True
-                print(f"\nCreated box: {box.name} ({box.id})")
+                self.state.screen = "workspace"
+                self.modal_data = {}
             except ValueError as e:
-                print(f"\nError creating box: {e}")
-                read_input("Press Enter to continue...")
+                # Validation error, show in modal (TODO: error display)
+                pass
+        else:
+            # Input character for fields
+            self._handle_modal_input(key, ['name', 'domain', 'intent', 'kind'])
     
-    def _handle_connect_boxes(self) -> None:
-        """Handle connecting boxes."""
-        if len(self.state.boxes) < 2:
-            print("\nNeed at least 2 boxes to connect.")
-            read_input("Press Enter to continue...")
-            return
+    def _handle_modal_input(self, key: str, fields: list) -> None:
+        """Handle input for modal fields.
         
-        modal = ConnectionModal(self.state.boxes)
-        input_data = modal.collect()
-        
-        if input_data:
-            # Validate connection
-            if input_data.source_box_id == input_data.target_box_id:
-                print("\nCannot connect a box to itself.")
-                read_input("Press Enter to continue...")
-                return
-            
-            # Check for duplicate connection
-            for conn in self.state.connections:
-                if (conn.source_box_id == input_data.source_box_id and
-                    conn.target_box_id == input_data.target_box_id and
-                    conn.relationship == input_data.relationship):
-                    print("\nConnection already exists.")
-                    read_input("Press Enter to continue...")
-                    return
-            
-            # Add connection
-            from bpfw.integrations.planner.models import PlannerConnection
-            connection = PlannerConnection(
-                source_box_id=input_data.source_box_id,
-                target_box_id=input_data.target_box_id,
-                relationship=input_data.relationship,
-                source_kind="blueprint",
-                confidence="high",
-                evidence=["manual:connect"],
-                status="accepted",
-                notes=input_data.notes,
-            )
-            self.state.connections.append(connection)
-            self.state.dirty = True
-            print("\nConnection created successfully.")
-            read_input("Press Enter to continue...")
-
-    def _cycle_source_filter(self) -> None:
-        """Cycle flow source filter."""
-        options = ["all", "blueprint", "inferred"]
-        current_index = options.index(self.state.flow_source_filter)
-        next_index = (current_index + 1) % len(options)
-        self.state.flow_source_filter = options[next_index]
-
-    def _cycle_confidence_filter(self) -> None:
-        """Cycle flow confidence filter."""
-        options = ["all", "high", "medium", "low"]
-        current_index = options.index(self.state.flow_confidence_filter)
-        next_index = (current_index + 1) % len(options)
-        self.state.flow_confidence_filter = options[next_index]
-
-    def _accept_suggested_connection(self) -> None:
-        """Accept one suggested connection."""
-        candidate_index = self._find_suggested_connection_index()
-        if candidate_index is None:
-            print("\nNo suggested connection available.")
-            read_input("Press Enter to continue...")
-            return
-        connection = self.state.connections[candidate_index]
-        connection.status = "accepted"
-        self.state.selected_connection_id = candidate_index
-        self.state.dirty = True
-        print("\nSuggested connection accepted.")
-        read_input("Press Enter to continue...")
-
-    def _reject_suggested_connection(self) -> None:
-        """Reject one suggested connection by removing it from state."""
-        candidate_index = self._find_suggested_connection_index()
-        if candidate_index is None:
-            print("\nNo suggested connection available.")
-            read_input("Press Enter to continue...")
-            return
-        del self.state.connections[candidate_index]
-        self.state.selected_connection_id = None
-        self.state.dirty = True
-        print("\nSuggested connection rejected.")
-        read_input("Press Enter to continue...")
-
-    def _find_suggested_connection_index(self) -> Optional[int]:
-        """Find a suggested connection index, prioritizing current selection."""
-        selected_index = self.state.selected_connection_id
-        if selected_index is not None and 0 <= selected_index < len(self.state.connections):
-            selected = self.state.connections[selected_index]
-            if selected.status == "suggested":
-                return selected_index
-        for index, connection in enumerate(self.state.connections):
-            if connection.status == "suggested":
-                return index
-        return None
+        Args:
+            key: Key pressed by user.
+            fields: List of field names in order.
+        """
+        if key == 'backspace':
+            # Remove last character from current field
+            field_index = self.modal_data.get('field_index', 0)
+            if isinstance(field_index, int) and 0 <= field_index < len(fields):
+                field = fields[field_index]
+                current = self.modal_data.get(field, '')
+                self.modal_data[field] = current[:-1]
+        elif len(key) == 1 and (key.isalnum() or key in ['-', '_', ' ']):
+            # Add character to current field
+            field_index = self.modal_data.get('field_index', 0)
+            if isinstance(field_index, int) and 0 <= field_index < len(fields):
+                field = fields[field_index]
+                current = self.modal_data.get(field, '')
+                self.modal_data[field] = current + key
+        elif key == 'tab':
+            # Move to next field
+            current = self.modal_data.get('field_index', 0)
+            if isinstance(current, int):
+                self.modal_data['field_index'] = (current + 1) % len(fields)
     
-    def _handle_configure_box(self) -> None:
-        """Handle configuring selected box."""
+    # ---------------------------------------------------------------------------
+    # Connect Target Modal Handler
+    # ---------------------------------------------------------------------------
+    
+    def _handle_connect_target_key(self, key: str) -> None:
+        """Handle key input on connect target modal.
+        
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'escape':
+            self.state.screen = "workspace"
+            self.modal_data = {}
+        elif key == 'enter':
+            # Go to meaning selection
+            if self.modal_data.get('target_id'):
+                self.state.screen = "connect_meaning"
+                self.modal_data['relationship_index'] = 0
+        elif key == 'up':
+            # Move up in target list
+            targets = self._get_connect_targets()
+            if self.modal_cursor > 0:
+                self.modal_cursor -= 1
+        elif key == 'down':
+            # Move down in target list
+            targets = self._get_connect_targets()
+            if self.modal_cursor < len(targets) - 1:
+                self.modal_cursor += 1
+                # Store selected target
+                if targets:
+                    self.modal_data['target_id'] = targets[self.modal_cursor].id
+    
+    def _get_connect_targets(self) -> list:
+        """Get list of valid target boxes for connection.
+        
+        Returns:
+            List of boxes that can be targets.
+        """
         if not self.state.selected_box_id:
-            print("\nNo box selected. Use j/k to select a box.")
-            read_input("Press Enter to continue...")
+            return []
+        
+        return [b for b in self.state.boxes if b.id != self.state.selected_box_id]
+    
+    # ---------------------------------------------------------------------------
+    # Connect Meaning Modal Handler
+    # ---------------------------------------------------------------------------
+    
+    def _handle_connect_meaning_key(self, key: str) -> None:
+        """Handle key input on connect meaning modal.
+        
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'escape':
+            self.state.screen = "connect_target"
+        elif key == 'enter':
+            # Create connection
+            self._create_connection()
+        elif key == 'up':
+            # Move up in relationship list
+            if self.modal_cursor > 0:
+                self.modal_cursor -= 1
+        elif key == 'down':
+            # Move down in relationship list
+            if self.modal_cursor < len(VALID_RELATIONSHIPS) - 1:
+                self.modal_cursor += 1
+                self.modal_data['relationship_index'] = self.modal_cursor
+    
+    def _create_connection(self) -> None:
+        """Create a connection based on modal data."""
+        source_id = self.state.selected_box_id
+        target_id = self.modal_data.get('target_id')
+        rel_index = self.modal_data.get('relationship_index', 0)
+        
+        if not source_id or not target_id:
             return
         
-        selected_box = None
-        for box in self.state.boxes:
-            if box.id == self.state.selected_box_id:
-                selected_box = box
-                break
-        
-        if not selected_box:
-            print("\nSelected box not found.")
-            read_input("Press Enter to continue...")
+        if not isinstance(rel_index, int):
             return
         
-        # Show configuration menu
-        while True:
-            clear_screen()
-            print(f"╭──────────── Configure: {selected_box.name} ─────────────╮")
-            print(f"│ id: {selected_box.id:<50}│")
-            print(f"│ name: {selected_box.name:<47}│")
-            print(f"│ intent: {selected_box.intent[:47]:<47}│")
-            print(f"│ domain: {selected_box.domain:<46}│")
-            print(f"│ lifecycle: {selected_box.lifecycle:<44}│")
-            print(f"│ path: {selected_box.path or '(not set)':<48}│")
-            print(f"│ symbol: {selected_box.symbol or '(not set)':<46}│")
-            print(f"│ symbol_type: {selected_box.symbol_type:<42}│")
-            print("│                                                       │")
-            print("│ [1] Edit name          [2] Edit domain                 │")
-            print("│ [3] Edit intent         [4] Edit lifecycle              │")
-            print("│ [5] Edit path          [6] Edit symbol                 │")
-            print("│ [7] Edit symbol_type   [8] Edit notes                 │")
-            print("│                                                       │")
-            print("│ [esc] Back                                           │")
-            print("╰───────────────────────────────────────────────────────╯")
+        relationship = VALID_RELATIONSHIPS[rel_index]
+        
+        # Validate
+        if source_id == target_id:
+            return  # Can't connect to self
+        
+        # Check for duplicate
+        for conn in self.state.connections:
+            if (conn.source_box_id == source_id and 
+                conn.target_box_id == target_id and 
+                conn.relationship == relationship):
+                return  # Already exists
+        
+        # Create connection
+        connection = PlannerConnection(
+            source_box_id=source_id,
+            target_box_id=target_id,
+            relationship=relationship,
+            source_kind="blueprint",
+            confidence="high",
+            evidence=["manual:connect"],
+            status="accepted",
+        )
+        
+        self.state.connections.append(connection)
+        self.state.connections_added += 1
+        self.state.dirty = True
+        
+        # Show feedback
+        self.state.screen = "connect_feedback"
+        self.modal_data = {
+            'source_id': source_id,
+            'target_id': target_id,
+            'relationship': relationship,
+        }
+    
+    # ---------------------------------------------------------------------------
+    # Connect Feedback Handler
+    # ---------------------------------------------------------------------------
+    
+    def _handle_connect_feedback_key(self, key: str) -> None:
+        """Handle key input on connect feedback modal.
+        
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'enter' or key == 'escape':
+            self.state.screen = "workspace"
+            self.modal_data = {}
+    
+    # ---------------------------------------------------------------------------
+    # Edit Block Modal Handler
+    # ---------------------------------------------------------------------------
+    
+    def _handle_edit_block_key(self, key: str) -> None:
+        """Handle key input on edit block modal.
+        
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'escape':
+            self.state.screen = "workspace"
+            self.modal_data = {}
+        elif key == 'enter':
+            # Accept changes (nothing edited yet, so just go back)
+            self.state.screen = "workspace"
+        elif key.isdigit():
+            # Edit specific field
+            field_num = int(key)
+            selected_box = self._get_selected_box()
             
-            choice = read_input("Choice> ").strip().lower()
+            if selected_box and 1 <= field_num <= 8:
+                if field_num == 1:  # Purpose
+                    self.state.screen = "edit_field"
+                    self.modal_data = {'field': 'intent', 'value': selected_box.intent or ''}
+                elif field_num == 2:  # Domain
+                    self.state.screen = "edit_field"
+                    self.modal_data = {'field': 'domain', 'value': selected_box.domain}
+                elif field_num == 3:  # Status
+                    self.state.screen = "edit_field"
+                    self.modal_data = {'field': 'lifecycle', 'value': selected_box.lifecycle}
+                elif field_num == 4:  # Path
+                    self.state.screen = "edit_field"
+                    self.modal_data = {'field': 'path', 'value': selected_box.path or ''}
+                elif field_num == 5:  # Symbol
+                    self.state.screen = "edit_field"
+                    self.modal_data = {'field': 'symbol', 'value': selected_box.symbol or ''}
+                elif field_num == 6:  # Kind
+                    self.state.screen = "edit_field"
+                    self.modal_data = {'field': 'symbol_type', 'value': selected_box.symbol_type}
+                elif field_num == 7:  # Inputs
+                    self.state.screen = "edit_inputs"
+                    self.modal_data = {}
+                    self.modal_cursor = 0
+                elif field_num == 8:  # Output
+                    self.state.screen = "edit_output"
+                    self.modal_data = {}
+                    self.modal_cursor = 0
+    
+    # ---------------------------------------------------------------------------
+    # Edit Field Handler (for text fields)
+    # ---------------------------------------------------------------------------
+    
+    def _handle_edit_field_key(self, key: str) -> None:
+        """Handle key input when editing a text field.
+        
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'escape':
+            self.state.screen = "edit_block"
+        elif key == 'enter':
+            # Save field value
+            field = self.modal_data.get('field')
+            value = self.modal_data.get('value', '').strip()
             
-            if choice in ["q", "esc", "back"]:
-                break
-            
-            updates = {}
-            
-            if choice == "1":
-                new_value = read_input("New name> ").strip()
-                if new_value:
-                    updates["name"] = new_value
-            elif choice == "2":
-                new_value = read_input("New domain> ").strip()
-                if new_value:
-                    updates["domain"] = new_value
-            elif choice == "3":
-                new_value = read_input("New intent> ").strip()
-                if new_value:
-                    updates["intent"] = new_value
-            elif choice == "4":
-                print("Available lifecycles:", ", ".join(self.state.project_config.allowed_lifecycles))
-                new_value = read_input("New lifecycle> ").strip()
-                if new_value:
-                    updates["lifecycle"] = new_value
-            elif choice == "5":
-                new_value = read_input("New path> ").strip()
-                updates["path"] = new_value if new_value else None
-            elif choice == "6":
-                new_value = read_input("New symbol> ").strip()
-                updates["symbol"] = new_value if new_value else None
-            elif choice == "7":
-                print("Available types: class, function, module")
-                new_value = read_input("New symbol_type> ").strip()
-                if new_value:
-                    updates["symbol_type"] = new_value
-            elif choice == "8":
-                new_value = read_input("New notes (empty to clear)> ").strip()
-                updates["notes"] = new_value if new_value else None
-            
-            if updates:
+            selected_box = self._get_selected_box()
+            if selected_box and value:
+                updates = {field: value}
                 updated_box = BoxFactory.update_box(selected_box, updates)
                 
                 # Replace box in list
                 for idx, box in enumerate(self.state.boxes):
                     if box.id == selected_box.id:
                         self.state.boxes[idx] = updated_box
-                        selected_box = updated_box
                         self.state.selected_box_id = updated_box.id
                         break
                 
+                self.state.boxes_edited += 1
                 self.state.dirty = True
-                print("\nBox updated successfully.")
-                read_input("Press Enter to continue...")
+            
+            self.state.screen = "edit_block"
+            self.modal_data = {}
+        elif key == 'backspace':
+            # Remove last character
+            current = self.modal_data.get('value', '')
+            self.modal_data['value'] = current[:-1]
+        elif len(key) == 1 and (key.isalnum() or key in ['-', '_', ' ']):
+            # Add character
+            current = self.modal_data.get('value', '')
+            self.modal_data['value'] = current + key
     
-    def _handle_project_config(self) -> None:
-        """Handle project configuration."""
-        config = self.state.project_config
-        
-        clear_screen()
-        print("╭──────────── Project Config ─────────────╮")
-        print(f"│ Project                                    │")
-        print(f"│ id: {config.project_id:<38}│")
-        print(f"│ name: {config.project_name:<36}│")
-        print(f"│ root: {config.root:<38}│")
-        print(f"│ language: {config.language:<34}│")
-        print(f"│ source_roots: {', '.join(config.source_roots):<29}│")
-        print(f"│ ignored_paths: {', '.join(config.ignored_paths[:3]):<27}│")
-        print("│                                            │")
-        print("│ Policy                                     │")
-        print(f"│ mode: {config.policy_mode:<40}│")
-        print(f"│ single_active_per_intent: {str(config.single_active_per_intent):<28}│")
-        print("│                                            │")
-        print("│ [esc] Back                                 │")
-        print("╰────────────────────────────────────────────────╯")
-        print("\nProject configuration is read-only in this version.")
-        read_input("Press Enter to continue...")
+    # ---------------------------------------------------------------------------
+    # Edit Inputs Modal Handler
+    # ---------------------------------------------------------------------------
     
-    def _handle_review(self) -> None:
-        """Handle plan review."""
-        # Validate the plan
-        validation = self.validator.validate(self.state)
+    def _handle_edit_inputs_key(self, key: str) -> None:
+        """Handle key input on edit inputs modal.
         
-        clear_screen()
-        print("╭──────────── Plan Review ─────────────╮")
-        print(f"│ Project: {self.state.project_config.project_name:<33}│")
-        print(f"│ Boxes: {len(self.state.boxes):<37}│")
-        print(f"│ Domains: {len({box.domain for box in self.state.boxes}):<33}│")
-        print(f"│ Connections: {len(self.state.connections):<31}│")
-        print("│                                          │")
-        print(f"│ Status: {validation.summary:<35}│")
-        print("│                                          │")
-        
-        if validation.has_errors:
-            print("│ Errors:                                   │")
-            for error in validation.errors[:5]:  # Show first 5 errors
-                print(f"│   - {error.message:<33}│")
-            if len(validation.errors) > 5:
-                print(f"│   ... and {len(validation.errors) - 5} more{' ' * 28}│")
-            print("│                                          │")
-        
-        if validation.has_warnings:
-            print("│ Warnings:                                 │")
-            for warning in validation.warnings[:5]:  # Show first 5 warnings
-                print(f"│   - {warning.message:<33}│")
-            if len(validation.warnings) > 5:
-                print(f"│   ... and {len(validation.warnings) - 5} more{' ' * 28}│")
-            print("│                                          │")
-        
-        if validation.allowed:
-            print("│ The plan is ready to generate blueprint.yaml.│")
-            print("│                                          │")
-            print("│ After save, bpfw verify will block until   │")
-            print("│ the planned code exists.                   │")
-            print("│                                          │")
-            print("│ [s] Save blueprint.yaml  [esc] Back      │")
-        else:
-            print("│ The plan has errors. Fix them before saving.│")
-            print("│                                          │")
-            print("│ [esc] Back                               │")
-        
-        print("╰────────────────────────────────────────────────╯")
-        
-        if validation.allowed:
-            choice = read_input("Choice> ").strip().lower()
-            if choice == "s":
-                self._handle_save()
-        else:
-            read_input("Press Enter to continue...")
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'escape' or key == 'enter':
+            self.state.screen = "edit_block"
+            self.modal_data = {}
+        elif key == 'a':
+            # Add new input
+            self.state.screen = "edit_input"
+            self.modal_data = {
+                'name': '',
+                'type': '',
+                'description': '',
+                'required': True,
+            }
+        # TODO: Implement edit/delete for existing inputs
     
-    def _handle_yaml_preview(self) -> None:
-        """Handle YAML preview."""
-        blueprint_data = BlueprintAssembler.assemble(self.state)
+    # ---------------------------------------------------------------------------
+    # Edit Single Input Handler
+    # ---------------------------------------------------------------------------
+    
+    def _handle_edit_input_key(self, key: str) -> None:
+        """Handle key input when editing a single input.
         
-        try:
-            import yaml
-        except ImportError:
-            print("\nPyYAML is required for YAML preview.")
-            read_input("Press Enter to continue...")
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'escape':
+            self.state.screen = "edit_inputs"
+        elif key == 'enter':
+            # Save input
+            selected_box = self._get_selected_box()
+            if selected_box:
+                # Create interface if doesn't exist
+                if not selected_box.interface:
+                    selected_box.interface = PlannerInterface()
+                
+                # Add input
+                required = self.modal_data.get('required', True)
+                if isinstance(required, bool):
+                    required_value = required
+                else:
+                    required_value = str(required).lower() in ['true', 'yes', '1']
+                
+                new_input = PlannerInterfaceInput(
+                    name=self.modal_data.get('name', ''),
+                    type=self.modal_data.get('type', ''),
+                    description=self.modal_data.get('description', ''),
+                    required=required_value,
+                )
+                selected_box.interface.inputs.append(new_input)
+                
+                self.state.boxes_edited += 1
+                self.state.dirty = True
+            
+            self.state.screen = "edit_inputs"
+            self.modal_data = {}
+        elif key == 'backspace':
+            current = self.modal_data.get('value', '')
+            self.modal_data['value'] = current[:-1]
+        elif len(key) == 1 and (key.isalnum() or key in ['-', '_', ' ']):
+            # Add character
+            current = self.modal_data.get('value', '')
+            self.modal_data['value'] = current + key
+    
+    # ---------------------------------------------------------------------------
+    # Edit Output Modal Handler
+    # ---------------------------------------------------------------------------
+    
+    def _handle_edit_output_key(self, key: str) -> None:
+        """Handle key input on edit output modal.
+        
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'escape':
+            self.state.screen = "edit_block"
+        elif key == 'enter':
+            # Save output
+            selected_box = self._get_selected_box()
+            if selected_box:
+                # Create interface if doesn't exist
+                if not selected_box.interface:
+                    selected_box.interface = PlannerInterface()
+                
+                # Set output
+                selected_box.interface.output = PlannerInterfaceOutput(
+                    type=self.modal_data.get('type', ''),
+                    description=self.modal_data.get('description', ''),
+                )
+                
+                self.state.boxes_edited += 1
+                self.state.dirty = True
+            
+            self.state.screen = "edit_block"
+            self.modal_data = {}
+        elif key == 'backspace':
+            current = self.modal_data.get('value', '')
+            self.modal_data['value'] = current[:-1]
+        elif len(key) == 1 and (key.isalnum() or key in ['-', '_', ' ']):
+            # Add character
+            current = self.modal_data.get('value', '')
+            self.modal_data['value'] = current + key
+    
+    # ---------------------------------------------------------------------------
+    # Project Settings Modal Handler
+    # ---------------------------------------------------------------------------
+    
+    def _handle_project_settings_key(self, key: str) -> None:
+        """Handle key input on project settings modal.
+        
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'escape' or key == 'enter':
+            self.state.screen = "workspace"
+            self.modal_data = {}
+        # TODO: Implement editing of project settings
+    
+    # ---------------------------------------------------------------------------
+    # Review Modal Handler
+    # ---------------------------------------------------------------------------
+    
+    def _handle_review_key(self, key: str) -> None:
+        """Handle key input on review modal.
+        
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'escape':
+            self.state.screen = "workspace"
+        elif key == 's':
+            # Save blueprint
+            self._save_blueprint()
+        elif key == 'y':
+            # YAML preview
+            self.state.screen = "yaml_preview"
+    
+    def _save_blueprint(self) -> None:
+        """Save blueprint to file."""
+        # Check for empty plan
+        if not self.state.boxes:
+            self.state.screen = "cannot_save_empty"
             return
         
-        clear_screen()
-        print("╭──────────── YAML Preview ─────────────╮")
-        print("│                                    │")
-        print("│ (Press q to exit preview)          │")
-        print("│                                    │")
-        print("╰────────────────────────────────────────╯")
-        
-        # Show YAML content
-        yaml_str = yaml.dump(blueprint_data, sort_keys=False, allow_unicode=True)
-        print(yaml_str)
-        print("\n--- End of YAML preview ---")
-        read_input("Press Enter to continue...")
-    
-    def _handle_save(self) -> None:
-        """Handle saving the blueprint."""
-        # Validate before saving
+        # Validate first
         validation = self.validator.validate(self.state)
         
         if not validation.allowed:
-            print(f"\nCannot save: {validation.summary}")
-            for error in validation.errors:
-                print(f"  - {error.message}")
-            read_input("Press Enter to continue...")
+            # Show errors (TODO: error display)
             return
         
         # Assemble and write
@@ -434,88 +694,275 @@ class PlannerController:
         BlueprintYamlWriter.write(self.state.blueprint_path, blueprint_data)
         
         self.state.dirty = False
-        
-        print(f"\nSaved blueprint to: {self.state.blueprint_path}")
-        print("\nNext:")
-        print("  1. Ask AI to implement the declared responsibilities.")
-        print("  2. Run bpfw verify.")
-        print("  3. Fix missing code until blueprint and reality match.")
-        read_input("Press Enter to continue...")
+        self.state.screen = "saved"
     
-    def _navigate_down(self) -> None:
-        """Navigate to next box using j or down."""
-        if not self.state.boxes:
-            return
+    # ---------------------------------------------------------------------------
+    # YAML Preview Modal Handler
+    # ---------------------------------------------------------------------------
+    
+    def _handle_yaml_preview_key(self, key: str) -> None:
+        """Handle key input on YAML preview modal.
         
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'escape' or key == 'enter':
+            self.state.screen = "review"
+        elif key == 'f':
+            # Full YAML (TODO: implement)
+            pass
+    
+    # ---------------------------------------------------------------------------
+    # Saved Modal Handler
+    # ---------------------------------------------------------------------------
+    
+    def _handle_saved_key(self, key: str) -> None:
+        """Handle key input on saved modal.
+        
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'enter':
+            self.state.screen = "workspace"
+        elif key == 'q':
+            pass  # Will exit in main loop
+    
+    # ---------------------------------------------------------------------------
+    # Graph Overview Handler
+    # ---------------------------------------------------------------------------
+    
+    def _handle_graph_overview_key(self, key: str) -> None:
+        """Handle key input on graph overview modal.
+        
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'escape' or key == 'enter':
+            self.state.screen = "workspace"
+    
+    # ---------------------------------------------------------------------------
+    # Disconnect Modal Handler
+    # ---------------------------------------------------------------------------
+    
+    def _handle_disconnect_key(self, key: str) -> None:
+        """Handle key input on disconnect modal.
+        
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'escape':
+            self.state.screen = "workspace"
+            self.modal_data = {}
+        elif key == 'enter':
+            # Remove selected connection
+            self._remove_connection()
+        elif key == 'up':
+            # Move up in connection list
+            connections = self._get_box_connections()
+            if self.modal_cursor > 0:
+                self.modal_cursor -= 1
+        elif key == 'down':
+            # Move down in connection list
+            connections = self._get_box_connections()
+            if self.modal_cursor < len(connections) - 1:
+                self.modal_cursor += 1
+    
+    def _get_box_connections(self) -> list:
+        """Get connections for selected box.
+        
+        Returns:
+            List of connections.
+        """
         if not self.state.selected_box_id:
-            # Select first box
-            self.state.selected_box_id = self.state.boxes[0].id
+            return []
+        
+        return [
+            conn for conn in self.state.connections
+            if conn.source_box_id == self.state.selected_box_id or
+               conn.target_box_id == self.state.selected_box_id
+        ]
+    
+    def _remove_connection(self) -> None:
+        """Remove selected connection."""
+        connections = self._get_box_connections()
+        
+        if self.modal_cursor < len(connections):
+            conn = connections[self.modal_cursor]
+            
+            # Remove from state
+            self.state.connections.remove(conn)
+            self.state.connections_removed += 1
+            self.state.dirty = True
+        
+        self.state.screen = "workspace"
+        self.modal_data = {}
+    
+    # ---------------------------------------------------------------------------
+    # Delete Block Modal Handler
+    # ---------------------------------------------------------------------------
+    
+    def _handle_delete_block_key(self, key: str) -> None:
+        """Handle key input on delete block modal.
+        
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'escape':
+            self.state.screen = "workspace"
+            self.modal_data = {}
+        elif key == 'd':
+            # Delete block and its connections
+            self._delete_selected_block()
+    
+    def _delete_selected_block(self) -> None:
+        """Delete selected block and its connections."""
+        if not self.state.selected_box_id:
             return
         
-        # Find current index and select next
-        current_idx = None
+        # Remove connections
+        connections_to_remove = [
+            conn for conn in self.state.connections
+            if conn.source_box_id == self.state.selected_box_id or
+               conn.target_box_id == self.state.selected_box_id
+        ]
+        
+        for conn in connections_to_remove:
+            self.state.connections.remove(conn)
+            self.state.connections_removed += 1
+        
+        # Remove box
         for idx, box in enumerate(self.state.boxes):
             if box.id == self.state.selected_box_id:
-                current_idx = idx
+                self.state.boxes.pop(idx)
+                self.state.boxes_deleted += 1
                 break
         
-        if current_idx is not None and current_idx < len(self.state.boxes) - 1:
-            self.state.selected_box_id = self.state.boxes[current_idx + 1].id
+        self.state.dirty = True
+        self.state.selected_box_id = None
+        self.state.screen = "workspace"
+        self.modal_data = {}
     
-    def _navigate_up(self) -> None:
-        """Navigate to previous box using k or up."""
-        if not self.state.boxes:
-            return
+    # ---------------------------------------------------------------------------
+    # Unsaved Changes Modal Handler
+    # ---------------------------------------------------------------------------
+    
+    def _handle_unsaved_changes_key(self, key: str) -> None:
+        """Handle key input on unsaved changes modal.
         
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'escape':
+            self.state.screen = "workspace"
+        elif key == 's':
+            # Save and quit
+            self._save_blueprint()
+            # After saving, will exit on next q
+        elif key == 'q':
+            # Quit without saving
+            self.state.dirty = False  # Skip unsaved check
+            pass  # Will exit in main loop
+    
+    # ---------------------------------------------------------------------------
+    # Broken Connections Modal Handler
+    # ---------------------------------------------------------------------------
+    
+    def _handle_broken_connections_key(self, key: str) -> None:
+        """Handle key input on broken connections modal.
+        
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'r':
+            # Remove broken connections
+            self.state.broken_connections.clear()
+            self.state.screen = "workspace"
+        elif key == 'k':
+            # Keep and continue
+            self.state.screen = "workspace"
+        elif key == 'q':
+            # Quit
+            pass  # Will exit in main loop
+    
+    # ---------------------------------------------------------------------------
+    # Helper Methods
+    # ---------------------------------------------------------------------------
+    
+    def _get_selected_box(self) -> Optional[PlannerBox]:
+        """Get currently selected box.
+        
+        Returns:
+            Selected box or None if not selected.
+        """
         if not self.state.selected_box_id:
-            # Select first box
-            self.state.selected_box_id = self.state.boxes[0].id
-            return
+            return None
         
-        # Find current index and select previous
-        current_idx = None
-        for idx, box in enumerate(self.state.boxes):
+        for box in self.state.boxes:
             if box.id == self.state.selected_box_id:
-                current_idx = idx
-                break
+                return box
+        return None
+    
+    # ---------------------------------------------------------------------------
+    # Edge Case Handlers
+    # ---------------------------------------------------------------------------
+    
+    def _handle_no_blocks_to_connect_key(self, key: str) -> None:
+        """Handle key input when no blocks to connect.
         
-        if current_idx is not None and current_idx > 0:
-            self.state.selected_box_id = self.state.boxes[current_idx - 1].id
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'a':
+            # Add block
+            self.state.screen = "add_block"
+            self.modal_data = {
+                'name': '',
+                'domain': '',
+                'intent': '',
+                'kind': 'class',
+                'field_index': 0,
+            }
+            self.modal_cursor = 0
+        elif key == 'enter' or key == 'escape':
+            self.state.screen = "workspace"
     
-    def _cycle_panels(self) -> None:
-        """Cycle through panels using TAB: Structure -> Flow -> Config."""
-        self.active_panel = (self.active_panel + 1) % 3
+    def _handle_duplicate_connection_key(self, key: str) -> None:
+        """Handle key input for duplicate connection modal.
+        
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'enter' or key == 'escape':
+            self.state.screen = "workspace"
     
-    def _select_box_by_index(self, index: int) -> None:
-        """Select a box by its index in the list."""
-        if 0 <= index < len(self.state.boxes):
-            self.state.selected_box_id = self.state.boxes[index].id
-        else:
-            print(f"\nInvalid box index: {index + 1}")
-            read_input("Press Enter to continue...")
+    def _handle_self_connection_key(self, key: str) -> None:
+        """Handle key input for self-connection modal.
+        
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'enter':
+            # Go back to target selection
+            self.state.screen = "connect_target"
+        elif key == 'escape':
+            self.state.screen = "workspace"
     
-    def _show_help(self) -> None:
-        """Show help information."""
-        clear_screen()
-        print("╭──────────── Help ─────────────╮")
-        print("│                               │")
-        print("│ Commands:                     │")
-        print("│   [a]     Add box           │")
-        print("│   [c]     Connect boxes     │")
-        print("│   [e]     Configure box     │")
-        print("│   [tab]   Cycle panels     │")
-        print("│   [p]     Project config    │")
-        print("│   [r]     Review plan       │")
-        print("│   [y]     YAML preview      │")
-        print("│   [s]     Save blueprint    │")
-        print("│   [q]     Quit             │")
-        print("│   [h]     Help             │")
-        print("│                               │")
-        print("│ Navigation:                   │")
-        print("│   [j/k]   Up/Down boxes     │")
-        print("│   [1-9]   Select by index   │")
-        print("│   [tab]   Structure->Flow   │")
-        print("│           ->Config            │")
-        print("│                               │")
-        print("╰───────────────────────────────╯")
-        read_input("Press Enter to continue...")
+    def _handle_cannot_save_empty_key(self, key: str) -> None:
+        """Handle key input when trying to save empty plan.
+        
+        Args:
+            key: Key pressed by user.
+        """
+        if key == 'a':
+            # Add block
+            self.state.screen = "add_block"
+            self.modal_data = {
+                'name': '',
+                'domain': '',
+                'intent': '',
+                'kind': 'class',
+                'field_index': 0,
+            }
+            self.modal_cursor = 0
+        elif key == 'enter' or key == 'escape':
+            self.state.screen = "workspace"

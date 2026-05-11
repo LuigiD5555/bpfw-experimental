@@ -4,6 +4,24 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+# Human-readable labels for relationship types
+RELATIONSHIP_LABELS = {
+    "produces_input_for": "sends output to",
+    "calls": "uses",
+    "validates": "validates",
+    "transforms": "transforms",
+    "exports": "exports to",
+    "replaces": "replaces",
+    "uses": "uses",
+    "depends_on": "depends on",
+}
+
+# Reverse mapping from label to internal relationship
+RELATIONSHIP_FROM_LABEL = {v: k for k, v in RELATIONSHIP_LABELS.items()}
+
+# List of valid relationship types (internal names)
+VALID_RELATIONSHIPS = list(RELATIONSHIP_LABELS.keys())
+
 
 @dataclass
 class PlannerSecurityConfig:
@@ -137,3 +155,16 @@ class PlannerState:
     dirty: bool = False
     blueprint_path: Path = field(default_factory=lambda: Path("bpfw/blueprint.yaml"))
     source_mode: str = "new_plan"
+    
+    # Screen state for UI navigation
+    screen: str = "welcome"
+    
+    # Change tracking for unsaved changes dialog
+    boxes_added: int = 0
+    boxes_edited: int = 0
+    boxes_deleted: int = 0
+    connections_added: int = 0
+    connections_removed: int = 0
+    
+    # Broken connections (orphan references in YAML)
+    broken_connections: List[PlannerConnection] = field(default_factory=list)

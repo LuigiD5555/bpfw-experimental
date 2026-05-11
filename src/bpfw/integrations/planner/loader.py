@@ -16,7 +16,7 @@ from bpfw.integrations.planner.models import (
     PlannerSecurityConfig,
     PlannerState,
 )
-from bpfw.integrations.planner.utils import get_project_defaults, to_snake_case
+from bpfw.integrations.planner.utils import get_project_defaults
 
 
 class BlueprintStateLoader:
@@ -75,14 +75,31 @@ class BlueprintStateLoader:
         
         Returns:
             PlannerState loaded from existing blueprint.
+        
+        Raises:
+            ValueError: If YAML is invalid.
         """
         try:
             import yaml
         except ImportError:
             raise ImportError("PyYAML is required but not installed")
         
-        with open(blueprint_path, "r", encoding="utf-8") as f:
-            blueprint_data = yaml.safe_load(f)
+        # Check if file is empty
+        if blueprint_path.stat().st_size == 0:
+            return BlueprintStateLoader._create_new_state(project_root, blueprint_path)
+        
+        try:
+            with open(blueprint_path, "r", encoding="utf-8") as f:
+                blueprint_data = yaml.safe_load(f)
+        except yaml.YAMLError as e:
+            raise ValueError(
+                f"Invalid YAML in {blueprint_path}: {e}\n"
+                f"Planner cannot overwrite invalid YAML. Fix the file or restore a valid blueprint first."
+            )
+        
+        # Check if blueprint_data is None (empty file with comments only)
+        if blueprint_data is None:
+            return BlueprintStateLoader._create_new_state(project_root, blueprint_path)
         
         # Load project configuration
         project_config = BlueprintStateLoader._load_project_config(blueprint_data)
@@ -90,25 +107,28 @@ class BlueprintStateLoader:
         # Load boxes from responsibilities
         boxes = BlueprintStateLoader._load_boxes(blueprint_data)
         
-        # Load connections from related_code
-        blueprint_connections = BlueprintStateLoader._load_connections(blueprint_data, boxes)
+        # Load connections from related_code (and detect broken ones)
+        connections, broken_connections = BlueprintStateLoader._load_connections(blueprint_data, boxes)
+        
+        # Merge with inferred connections
         inferred_connections = detect_connections(
             boxes=boxes,
             project_root=project_root,
             source_roots=project_config.source_roots,
             ignored_paths=project_config.ignored_paths,
         )
-        connections = merge_connections(
-            blueprint_connections=blueprint_connections,
+        all_connections = merge_connections(
+            blueprint_connections=connections,
             inferred_connections=inferred_connections,
         )
         
         return PlannerState(
             project_config=project_config,
             boxes=boxes,
-            connections=connections,
+            connections=all_connections,
             blueprint_path=blueprint_path,
             source_mode="existing_blueprint",
+            broken_connections=broken_connections,
         )
     
     @staticmethod
@@ -223,7 +243,7 @@ class BlueprintStateLoader:
         return boxes
     
     @staticmethod
-    def _load_connections(blueprint_data: Dict[str, Any], boxes: List[PlannerBox]) -> List[PlannerConnection]:
+    def _load_connections(blueprint_data: Dict[str, Any], boxes: List[PlannerBox]) -> tuple[List[PlannerConnection], List[PlannerConnection]]:
         """Load connections from related_code sections.
         
         Args:
@@ -231,10 +251,11 @@ class BlueprintStateLoader:
             boxes: List of loaded boxes for ID mapping.
         
         Returns:
-            List of PlannerConnection instances.
+            Tuple of (valid_connections, broken_connections).
         """
         responsibilities = blueprint_data.get("responsibilities", [])
         connections = []
+        broken_connections = []
         
         box_ids = {box.id for box in boxes}
 
@@ -246,13 +267,23 @@ class BlueprintStateLoader:
                 target_id = rel.get("target")
                 relationship = rel.get("relationship")
                 
-                if (
-                    resp_id
-                    and target_id
-                    and relationship
-                    and resp_id in box_ids
-                    and target_id in box_ids
-                ):
+                if not resp_id or not target_id or not relationship:
+                    continue
+                
+                # Check if both source and target exist
+                if resp_id not in box_ids or target_id not in box_ids:
+                    # This is a broken connection (orphan reference)
+                    broken_connections.append(PlannerConnection(
+                        source_box_id=resp_id,
+                        target_box_id=target_id,
+                        relationship=relationship,
+                        source_kind="blueprint",
+                        confidence="high",
+                        evidence=["declared:related_code"],
+                        status="broken",
+                        notes=rel.get("notes"),
+                    ))
+                else:
                     connections.append(PlannerConnection(
                         source_box_id=resp_id,
                         target_box_id=target_id,
@@ -264,4 +295,4 @@ class BlueprintStateLoader:
                         notes=rel.get("notes"),
                     ))
         
-        return connections
+        return connections, broken_connections

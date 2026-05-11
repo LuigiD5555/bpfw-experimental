@@ -128,9 +128,9 @@ class PlanValidator:
                 ))
             
             if not box.intent or not box.intent.strip():
-                warnings.append(PlanFinding(
-                    level="warning",
-                    message=f"Box has no intent",
+                errors.append(PlanFinding(
+                    level="error",
+                    message=f"Box has no intent/purpose",
                     box_id=box.id,
                 ))
             
@@ -168,6 +168,16 @@ class PlanValidator:
                 warnings.append(PlanFinding(
                     level="warning",
                     message=f"Box has no symbol_type",
+                    box_id=box.id,
+                ))
+            
+            # Validate interface (warning only, not required)
+            if not box.interface or (
+                not box.interface.inputs and not box.interface.output
+            ):
+                warnings.append(PlanFinding(
+                    level="warning",
+                    message=f"Box has no interface configured",
                     box_id=box.id,
                 ))
         
