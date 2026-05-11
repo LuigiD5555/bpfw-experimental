@@ -1,6 +1,9 @@
 """Terminal screen control and input helpers for BPFW Editor."""
 
 import shutil
+import sys
+import termios
+import tty
 
 from bpfw.integrations.shared.visual_boxes import render_box
 from bpfw.integrations.shared.visual_theme import (
@@ -128,6 +131,85 @@ def read_multiline() -> list[str]:
         pass
 
     return lines
+
+
+def read_key() -> str:
+    """Read a single keystroke from stdin.
+
+    Returns:
+        Single character or special key name.
+
+    Special keys:
+        - 'up', 'down', 'left', 'right' for arrow keys
+        - 'enter' for Enter/Return key
+        - 'escape' for Esc key
+        - 'space' for Space key
+        - 'tab' for Tab key
+    """
+    try:
+        # Save terminal settings
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+
+        # Set terminal to raw mode for single key input
+        try:
+            tty.setraw(fd)
+            ch = sys.stdin.read(1)
+
+            # Handle special keys (arrow keys, etc.)
+            if ch == '\x1b':  # ESC sequence
+                ch2 = sys.stdin.read(1) if sys.stdin.read(1) else ''
+                if ch2 == '[':
+                    ch3 = sys.stdin.read(1) if sys.stdin.read(1) else ''
+                    if ch3 == 'A':
+                        return 'up'
+                    elif ch3 == 'B':
+                        return 'down'
+                    elif ch3 == 'C':
+                        return 'right'
+                    elif ch3 == 'D':
+                        return 'left'
+                    elif ch3 == 'Z':  # Shift+Tab
+                        return 'shift_tab'
+                elif ch2 == '\x1b':  # Double ESC - actual ESC key
+                    return 'escape'
+                return 'escape'
+            elif ch == '\r' or ch == '\n':
+                return 'enter'
+            elif ch == ' ':
+                return 'space'
+            elif ch == '\t':
+                return 'tab'
+            elif ch == '\x7f' or ch == '\x08':  # Backspace/Delete
+                return 'backspace'
+            elif ch == '\x03':  # Ctrl+C
+                raise KeyboardInterrupt
+            elif ch == '\x04':  # Ctrl+D
+                raise EOFError
+            else:
+                return ch.lower()  # Return lowercase version
+        finally:
+            # Restore terminal settings
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    except (termios.error, OSError, AttributeError):
+        # Fallback for non-Unix systems or when terminal control fails
+        # Read line and return first character
+        try:
+            line = input()
+            if line:
+                first_char = line[0].lower()
+                if first_char == '\r' or first_char == '\n':
+                    return 'enter'
+                elif first_char == ' ':
+                    return 'space'
+                elif first_char == '\t':
+                    return 'tab'
+                return first_char
+            return 'enter'
+        except (EOFError, KeyboardInterrupt):
+            if isinstance(sys.last_type, KeyboardInterrupt):
+                raise
+            return 'q'
 
 
 # ---------------------------------------------------------------------------
