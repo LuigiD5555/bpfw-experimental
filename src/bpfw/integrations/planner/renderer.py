@@ -83,6 +83,8 @@ def render_planner(state: PlannerState) -> None:
         render_graph_overview(state)
     elif state.screen == "disconnect":
         render_disconnect_modal(state)
+    elif state.screen == "removed_connection":
+        render_removed_connection_modal(state)
     elif state.screen == "delete_block":
         render_delete_block_modal(state)
     elif state.screen == "unsaved_changes":
@@ -92,19 +94,39 @@ def render_planner(state: PlannerState) -> None:
     elif state.screen == "no_blocks_to_connect":
         render_no_blocks_to_connect_modal(state)
     elif state.screen == "duplicate_connection":
-        render_workspace(state)
+        existing_connection = state.modal_data.get("existing_connection")
+        if isinstance(existing_connection, PlannerConnection):
+            render_duplicate_connection_modal(state, existing_connection)
+        else:
+            render_workspace(state)
     elif state.screen == "self_connection":
         render_self_connection_modal(state)
     elif state.screen == "cannot_save_empty":
         render_cannot_save_empty_modal(state)
+    elif state.screen == "blueprint_locked":
+        render_blueprint_locked_modal(state)
+    elif state.screen == "invalid_blueprint":
+        render_invalid_blueprint_modal(state)
     elif state.screen == "duplicate_name":
         render_workspace(state)
     elif state.screen == "active_intent_conflict":
         render_workspace(state)
     elif state.screen == "path_already_used":
-        render_workspace(state)
+        path = str(state.modal_data.get("path") or "")
+        existing_box = state.modal_data.get("existing_box")
+        if path and isinstance(existing_box, PlannerBox):
+            render_path_already_used_modal(state, path, existing_box)
+        else:
+            render_workspace(state)
     elif state.screen == "domain_changed":
-        render_workspace(state)
+        old_domain = str(state.modal_data.get("old_domain") or "")
+        new_domain = str(state.modal_data.get("new_domain") or "")
+        current_path = str(state.modal_data.get("current_path") or "")
+        suggested_path = str(state.modal_data.get("suggested_path") or "")
+        if old_domain and new_domain and current_path and suggested_path:
+            render_domain_changed_modal(state, old_domain, new_domain, current_path, suggested_path)
+        else:
+            render_workspace(state)
     elif state.screen == "no_connections_warning":
         render_no_connections_warning_modal(state)
     elif state.screen == "experimental_to_active_warning":
@@ -140,6 +162,20 @@ def render_welcome(state: PlannerState) -> None:
         ]
         command_lines = [
             "[enter] Start planning",
+            "[q] Quit",
+        ]
+    elif state.source_mode == "empty_blueprint":
+        lines = [
+            "bpfw/blueprint.yaml exists but has no responsibilities.",
+            "",
+            "Planner will start a new system plan using this file.",
+            "",
+            f"Project detected: {state.project_config.project_name}",
+            f"Language: {state.project_config.language}",
+            f"Source root: {', '.join(state.project_config.source_roots)}",
+        ]
+        command_lines = [
+            "[enter] Continue",
             "[q] Quit",
         ]
     else:
@@ -210,7 +246,12 @@ def render_workspace(state: PlannerState) -> None:
                     outgoing.append((target_box, conn))
     
     # Render panel content
-    pieces_lines = render_pieces_panel_internal(state.boxes, state.selected_box_id)
+    pieces_lines = render_pieces_panel_internal(
+        state.boxes,
+        state.selected_box_id,
+        filter_text=state.pieces_filter,
+        filter_mode=state.pieces_filter_mode,
+    )
     assembly_lines = render_assembly_panel_internal(selected_box, incoming, outgoing)
     details_lines = render_details_panel_internal(selected_box)
     panel_width = _resolve_uniform_width(
@@ -243,7 +284,7 @@ def render_workspace(state: PlannerState) -> None:
         print(line)
     print()
     command_lines = [
-        "↑↓ Move   [a] Add block   [space] Connect",
+        "↑↓ Move   [a] Add block   [space] Connect   [/] Filter",
         "[x] Disconnect   [tab] Edit   [s] Save",
         "[p] Project   [q] Quit",
     ]
@@ -251,7 +292,12 @@ def render_workspace(state: PlannerState) -> None:
         print(line)
 
 
-def render_pieces_panel_internal(boxes: List[PlannerBox], selected_id: Optional[str]) -> List[str]:
+def render_pieces_panel_internal(
+    boxes: List[PlannerBox],
+    selected_id: Optional[str],
+    filter_text: str = "",
+    filter_mode: bool = False,
+) -> List[str]:
     """Render pieces panel content.
 
     Args:
@@ -272,22 +318,62 @@ def render_pieces_panel_internal(boxes: List[PlannerBox], selected_id: Optional[
             "first block.",
         ]
     
-    # Group boxes by domain
-    domains: Dict[str, List[PlannerBox]] = {}
-    for box in boxes:
-        if box.domain not in domains:
-            domains[box.domain] = []
-        domains[box.domain].append(box)
+    filtered_boxes = boxes
+    normalized_filter = filter_text.strip().lower()
+    if normalized_filter:
+        filtered_boxes = [
+            box for box in boxes
+            if normalized_filter in box.name.lower()
+            or normalized_filter in box.domain.lower()
+            or normalized_filter in box.intent.lower()
+        ]
+
+    if not filtered_boxes:
+        filter_prompt = filter_text if filter_text else "_"
+        if filter_mode:
+            filter_prompt = f"{filter_prompt} (typing)"
+        return [
+            f"Filter: {filter_prompt}",
+            "",
+            "No matching blocks.",
+            "",
+            "Press [/] to edit filter",
+            "or [esc] to clear it.",
+        ]
+
+    ordered_boxes = sorted(filtered_boxes, key=lambda box: (box.domain, box.name))
     
-    lines = ["Select a block with ↑ ↓"]
+    filter_prompt = filter_text if filter_text else "_"
+    if filter_mode:
+        filter_prompt = f"{filter_prompt} (typing)"
+
+    lines = [f"Filter: {filter_prompt}", "Select a block with ↑ ↓"]
     lines.append("")
-    
-    for domain in sorted(domains.keys()):
-        lines.append(domain)
-        for box in sorted(domains[domain], key=lambda b: b.name):
-            marker = ">" if box.id == selected_id else " "
-            lines.append(f"{marker} {box.name}")
-    
+
+    max_visible_blocks = 16
+    selected_index = next((index for index, box in enumerate(ordered_boxes) if box.id == selected_id), 0)
+    start_index = max(0, selected_index - (max_visible_blocks // 2))
+    end_index = min(len(ordered_boxes), start_index + max_visible_blocks)
+    if end_index - start_index < max_visible_blocks:
+        start_index = max(0, end_index - max_visible_blocks)
+
+    visible_boxes = ordered_boxes[start_index:end_index]
+
+    last_domain = None
+    for box in visible_boxes:
+        if box.domain != last_domain:
+            lines.append(box.domain)
+            last_domain = box.domain
+        marker = ">" if box.id == selected_id else " "
+        lines.append(f"{marker} {box.name}")
+
+    hidden_before = start_index
+    hidden_after = len(ordered_boxes) - end_index
+    if hidden_before > 0 or hidden_after > 0:
+        lines.append("")
+        lines.append(f"Showing {start_index + 1}-{end_index} of {len(ordered_boxes)}")
+        lines.append("Use ↑↓ to scroll, [/] to narrow list.")
+
     return lines
 
 
@@ -459,8 +545,8 @@ def render_connect_target_modal(state: PlannerState) -> None:
     if not selected_box:
         return
     
-    # Get available targets (all boxes except selected)
-    targets = [b for b in state.boxes if b.id != state.selected_box_id]
+    # Get available targets (all boxes except selected), stable ordering.
+    targets = sorted([b for b in state.boxes if b.id != state.selected_box_id], key=lambda box: box.name)
     
     lines = [
         "From",
@@ -470,8 +556,10 @@ def render_connect_target_modal(state: PlannerState) -> None:
         "",
     ]
     
-    for i, target in enumerate(sorted(targets, key=lambda b: b.name)):
-        lines.append(f"  {target.name}")
+    selected_target_id = state.modal_data.get("target_id")
+    for target in targets:
+        marker = ">" if target.id == selected_target_id else " "
+        lines.append(f"{marker} {target.name}")
     
     lines.extend([
         "",
@@ -492,7 +580,18 @@ def render_connect_meaning_modal(state: PlannerState) -> None:
     clear_screen()
     terminal_width = get_terminal_width()
 
+    source_id = state.selected_box_id
+    target_id = state.modal_data.get("target_id")
+    source_box = next((box for box in state.boxes if box.id == source_id), None)
+    target_box = next((box for box in state.boxes if box.id == target_id), None)
+
+    summary_line = ""
+    if source_box and target_box:
+        summary_line = f"{source_box.name}  →  {target_box.name}"
+
     lines = [
+        summary_line,
+        "",
         "What does this connection mean?",
         "",
         "> sends output to",
@@ -521,11 +620,22 @@ def render_connect_feedback_modal(state: PlannerState) -> None:
     clear_screen()
     terminal_width = get_terminal_width()
 
+    source_id = state.modal_data.get("source_id")
+    target_id = state.modal_data.get("target_id")
+    relationship = state.modal_data.get("relationship")
+
+    source_box = next((box for box in state.boxes if box.id == source_id), None)
+    target_box = next((box for box in state.boxes if box.id == target_id), None)
+    relationship_label = RELATIONSHIP_LABELS.get(relationship, str(relationship or "connected to"))
+
+    source_name = source_box.name if source_box else str(source_id or "source")
+    target_name = target_box.name if target_box else str(target_id or "target")
+
     lines = [
-        "PdfReader",
-        "   │ sends output to",
+        source_name,
+        f"   │ {relationship_label}",
         "   v",
-        "OcrExtractor",
+        target_name,
         "",
         "[enter] Continue",
     ]
@@ -877,10 +987,11 @@ def render_disconnect_modal(state: PlannerState) -> None:
             label = RELATIONSHIP_LABELS.get(conn.relationship, conn.relationship)
             lines.append(f"[{i}] {selected_box.name} {label} {target_box.name}")
     
+    selected_index = state.modal_cursor + 1
     lines.extend([
         "",
         "Choose connection to remove:",
-        "> _",
+        f"> {selected_index}",
         "",
         "[enter] Remove   [esc] Cancel",
     ])
@@ -960,7 +1071,7 @@ def render_unsaved_changes_modal(state: PlannerState) -> None:
     if state.boxes_added > 0:
         change_lines.append(f"Blocks added: {state.boxes_added}")
     if state.boxes_edited > 0:
-        change_lines.append(f"Blocks edited: {state.boxes_edited}")
+        change_lines.append(f"Details changed: {state.boxes_edited}")
     if state.boxes_deleted > 0:
         change_lines.append(f"Blocks deleted: {state.boxes_deleted}")
     if state.connections_added > 0:
@@ -983,6 +1094,26 @@ def render_unsaved_changes_modal(state: PlannerState) -> None:
     width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Unsaved Changes", lines)])
 
     for line in render_box(title="Unsaved Changes", lines=lines, width=width):
+        print(line)
+
+
+def render_removed_connection_modal(state: PlannerState) -> None:
+    """Render confirmation after removing a connection."""
+    clear_screen()
+    terminal_width = get_terminal_width()
+
+    source_name = str(state.modal_data.get("source_name") or "source")
+    target_name = str(state.modal_data.get("target_name") or "target")
+
+    lines = [
+        "Removed connection:",
+        f"{source_name} → {target_name}",
+        "",
+        "[enter] Continue",
+    ]
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Removed", lines)])
+
+    for line in render_box(title="Removed", lines=lines, width=width):
         print(line)
 
 
@@ -1333,4 +1464,53 @@ def render_experimental_to_active_warning_modal(state: PlannerState, experimenta
     width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Lifecycle Warning", lines)])
 
     for line in render_box(title="Lifecycle Warning", lines=lines, width=width):
+        print(line)
+
+
+def render_blueprint_locked_modal(state: PlannerState) -> None:
+    """Render modal when blueprint is locked and cannot be saved."""
+    clear_screen()
+    terminal_width = get_terminal_width()
+
+    lines = [
+        "blueprint.yaml is locked.",
+        "",
+        "Planner can continue editing the draft,",
+        "but it cannot write the file until you",
+        "unlock authority.",
+        "",
+        "Run:",
+        "  bpfw unlock",
+        "",
+        "[enter] Keep editing",
+        "[q] Quit",
+    ]
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Blueprint Locked", lines)])
+
+    for line in render_box(title="Blueprint Locked", lines=lines, width=width):
+        print(line)
+
+
+def render_invalid_blueprint_modal(state: PlannerState) -> None:
+    """Render modal when blueprint.yaml cannot be parsed."""
+    clear_screen()
+    terminal_width = get_terminal_width()
+
+    reason = str(state.modal_data.get("invalid_reason") or "invalid YAML")
+    compact_reason = reason.splitlines()[0]
+
+    lines = [
+        "Planner could not load blueprint.yaml.",
+        "",
+        f"Reason: {compact_reason}",
+        "",
+        "Planner will not overwrite this file.",
+        "Fix the YAML or restore a valid",
+        "blueprint first.",
+        "",
+        "[enter] Exit",
+    ]
+    width = _resolve_uniform_width(terminal_width=terminal_width, panels=[("Invalid blueprint.yaml", lines)])
+
+    for line in render_box(title="Invalid blueprint.yaml", lines=lines, width=width):
         print(line)

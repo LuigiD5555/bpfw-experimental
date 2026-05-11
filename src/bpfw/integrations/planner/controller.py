@@ -19,7 +19,9 @@ from bpfw.integrations.planner.models import (
     VALID_RELATIONSHIPS,
 )
 from bpfw.integrations.planner.renderer import render_planner
+from bpfw.integrations.planner.utils import generate_box_path
 from bpfw.integrations.planner.validator import PlanValidator
+from bpfw.core.errors import BlueprintLockedError
 
 
 class PlannerController:
@@ -32,7 +34,7 @@ class PlannerController:
             project_root: Root directory of project.
         """
         self.project_root = project_root
-        self.state = BlueprintStateLoader.load(project_root)
+        self.state = self._load_state_with_fallback(project_root)
         self.validator = PlanValidator()
         self.should_exit = False
         
@@ -43,6 +45,22 @@ class PlannerController:
         # Check for broken connections on load
         if self.state.broken_connections:
             self.state.screen = "broken_connections"
+
+    def _load_state_with_fallback(self, project_root: Path) -> PlannerState:
+        """Load state and fall back to user-facing invalid YAML screen on failure."""
+        try:
+            return BlueprintStateLoader.load(project_root)
+        except ValueError as error:
+            from bpfw.integrations.planner.defaults import PlannerDefaultsBuilder
+
+            config = PlannerDefaultsBuilder.build_project_defaults(project_root)
+            return PlannerState(
+                project_config=config,
+                blueprint_path=project_root / "bpfw" / "blueprint.yaml",
+                source_mode="invalid_blueprint",
+                screen="invalid_blueprint",
+                modal_data={"invalid_reason": str(error)},
+            )
         
     def run(self) -> int:
         """Run interactive planner session.
@@ -52,6 +70,8 @@ class PlannerController:
         """
         try:
             while True:
+                self.state.modal_data = self.modal_data
+                self.state.modal_cursor = self.modal_cursor
                 # Render current screen based on state.screen
                 render_planner(self.state)
                 
@@ -93,6 +113,8 @@ class PlannerController:
                     self._handle_graph_overview_key(key)
                 elif self.state.screen == "disconnect":
                     self._handle_disconnect_key(key)
+                elif self.state.screen == "removed_connection":
+                    self._handle_removed_connection_key(key)
                 elif self.state.screen == "delete_block":
                     self._handle_delete_block_key(key)
                 elif self.state.screen == "unsaved_changes":
@@ -107,6 +129,14 @@ class PlannerController:
                     self._handle_self_connection_key(key)
                 elif self.state.screen == "cannot_save_empty":
                     self._handle_cannot_save_empty_key(key)
+                elif self.state.screen == "path_already_used":
+                    self._handle_path_already_used_key(key)
+                elif self.state.screen == "domain_changed":
+                    self._handle_domain_changed_key(key)
+                elif self.state.screen == "blueprint_locked":
+                    self._handle_blueprint_locked_key(key)
+                elif self.state.screen == "invalid_blueprint":
+                    self._handle_invalid_blueprint_key(key)
                 
                 # Check for quit request from handlers
                 if self.should_exit:
@@ -142,6 +172,10 @@ class PlannerController:
         Args:
             key: Key pressed by user.
         """
+        if self.state.pieces_filter_mode:
+            self._handle_pieces_filter_input(key)
+            return
+
         # Navigation
         if key == 'up':
             self._navigate_up()
@@ -164,10 +198,17 @@ class PlannerController:
             # Connect blocks
             if len(self.state.boxes) < 2:
                 # No other blocks to connect
-                pass
+                self.state.screen = "no_blocks_to_connect"
             else:
+                targets = self._get_connect_targets()
+                if not targets:
+                    self.state.screen = "no_blocks_to_connect"
+                    return
                 self.state.screen = "connect_target"
-                self.modal_data = {}
+                self.modal_data = {
+                    "target_id": targets[0].id,
+                    "relationship_index": 0,
+                }
                 self.modal_cursor = 0
         elif key == 'tab' and self.state.selected_box_id:
             # Edit block
@@ -198,37 +239,59 @@ class PlannerController:
                 self.state.screen = "unsaved_changes"
             else:
                 self.should_exit = True
+        elif key == '/':
+            self.state.pieces_filter_mode = True
+
+    def _handle_pieces_filter_input(self, key: str) -> None:
+        """Handle filter input while workspace filter mode is active."""
+        if key == "escape":
+            self.state.pieces_filter_mode = False
+            self.state.pieces_filter = ""
+            return
+        if key == "enter":
+            self.state.pieces_filter_mode = False
+            return
+        if key == "backspace":
+            self.state.pieces_filter = self.state.pieces_filter[:-1]
+        elif len(key) == 1 and (key.isalnum() or key in ["-", "_", " "]):
+            self.state.pieces_filter += key
+
+        visible_boxes = self._get_visible_boxes()
+        if visible_boxes and self.state.selected_box_id not in {box.id for box in visible_boxes}:
+            self.state.selected_box_id = visible_boxes[0].id
     
     def _navigate_up(self) -> None:
         """Navigate to previous box."""
-        if not self.state.boxes:
+        visible_boxes = self._get_visible_boxes()
+        if not visible_boxes:
             return
         
         if not self.state.selected_box_id:
-            self.state.selected_box_id = self.state.boxes[0].id
+            self.state.selected_box_id = visible_boxes[0].id
             return
         
         # Find current index and select previous
-        for idx, box in enumerate(self.state.boxes):
+        for idx, box in enumerate(visible_boxes):
             if box.id == self.state.selected_box_id:
                 if idx > 0:
-                    self.state.selected_box_id = self.state.boxes[idx - 1].id
+                    self.state.selected_box_id = visible_boxes[idx - 1].id
                 break
     
     def _navigate_down(self) -> None:
         """Navigate to next box."""
-        if not self.state.boxes:
+        visible_boxes = self._get_visible_boxes()
+        if not visible_boxes:
             return
         
         if not self.state.selected_box_id:
-            self.state.selected_box_id = self.state.boxes[0].id
+            self.state.selected_box_id = visible_boxes[0].id
             return
         
         # Find current index and select next
-        for idx, box in enumerate(self.state.boxes):
+        for idx, box in enumerate(visible_boxes):
             if box.id == self.state.selected_box_id:
-                if idx < len(self.state.boxes) - 1:
-                    self.state.selected_box_id = self.state.boxes[idx + 1].id
+                if idx < len(visible_boxes) - 1:
+                    self.state.selected_box_id = visible_boxes[idx + 1].id
                 break
     
     def _check_disconnect_available(self) -> None:
@@ -335,14 +398,13 @@ class PlannerController:
             targets = self._get_connect_targets()
             if self.modal_cursor > 0:
                 self.modal_cursor -= 1
+                self.modal_data['target_id'] = targets[self.modal_cursor].id
         elif key == 'down':
             # Move down in target list
             targets = self._get_connect_targets()
             if self.modal_cursor < len(targets) - 1:
                 self.modal_cursor += 1
-                # Store selected target
-                if targets:
-                    self.modal_data['target_id'] = targets[self.modal_cursor].id
+                self.modal_data['target_id'] = targets[self.modal_cursor].id
     
     def _get_connect_targets(self) -> list:
         """Get list of valid target boxes for connection.
@@ -353,7 +415,8 @@ class PlannerController:
         if not self.state.selected_box_id:
             return []
         
-        return [b for b in self.state.boxes if b.id != self.state.selected_box_id]
+        targets = [b for b in self.state.boxes if b.id != self.state.selected_box_id]
+        return sorted(targets, key=lambda box: box.name)
     
     # ---------------------------------------------------------------------------
     # Connect Meaning Modal Handler
@@ -396,14 +459,17 @@ class PlannerController:
         
         # Validate
         if source_id == target_id:
-            return  # Can't connect to self
+            self.state.screen = "self_connection"
+            return
         
         # Check for duplicate
         for conn in self.state.connections:
             if (conn.source_box_id == source_id and 
                 conn.target_box_id == target_id and 
                 conn.relationship == relationship):
-                return  # Already exists
+                self.state.screen = "duplicate_connection"
+                self.modal_data = {"existing_connection": conn}
+                return
         
         # Create connection
         connection = PlannerConnection(
@@ -510,19 +576,37 @@ class PlannerController:
             
             selected_box = self._get_selected_box()
             if selected_box and value:
+                if field == "domain" and value != selected_box.domain:
+                    current_path = selected_box.path or ""
+                    source_root = self.state.project_config.source_roots[0] if self.state.project_config.source_roots else "src"
+                    suggested_path = generate_box_path(source_root, value, selected_box.name)
+                    if current_path and current_path != suggested_path:
+                        self.state.screen = "domain_changed"
+                        self.modal_data = {
+                            "pending_field": field,
+                            "pending_value": value,
+                            "old_domain": selected_box.domain,
+                            "new_domain": value,
+                            "current_path": current_path,
+                            "suggested_path": suggested_path,
+                        }
+                        return
+
+                if field == "path":
+                    existing_box = self._find_box_by_path(value, exclude_box_id=selected_box.id)
+                    if existing_box is not None:
+                        self.state.screen = "path_already_used"
+                        self.modal_data = {
+                            "pending_field": field,
+                            "pending_value": value,
+                            "path": value,
+                            "existing_box": existing_box,
+                        }
+                        return
+
                 updates = {field: value}
-                updated_box = BoxFactory.update_box(selected_box, updates)
-                
-                # Replace box in list
-                for idx, box in enumerate(self.state.boxes):
-                    if box.id == selected_box.id:
-                        self.state.boxes[idx] = updated_box
-                        self.state.selected_box_id = updated_box.id
-                        break
-                
-                self.state.boxes_edited += 1
-                self.state.dirty = True
-            
+                self._apply_box_updates(selected_box, updates)
+
             self.state.screen = "edit_block"
             self.modal_data = {}
         elif key == 'backspace':
@@ -697,7 +781,11 @@ class PlannerController:
         
         # Assemble and write
         blueprint_data = BlueprintAssembler.assemble(self.state)
-        BlueprintYamlWriter.write(self.state.blueprint_path, blueprint_data)
+        try:
+            BlueprintYamlWriter.write(self.state.blueprint_path, blueprint_data)
+        except BlueprintLockedError:
+            self.state.screen = "blueprint_locked"
+            return
         
         self.state.dirty = False
         self.state.screen = "saved"
@@ -771,6 +859,12 @@ class PlannerController:
             connections = self._get_box_connections()
             if self.modal_cursor < len(connections) - 1:
                 self.modal_cursor += 1
+
+    def _handle_removed_connection_key(self, key: str) -> None:
+        """Handle key input on removed connection confirmation modal."""
+        if key == "enter" or key == "escape":
+            self.state.screen = "workspace"
+            self.modal_data = {}
     
     def _get_box_connections(self) -> list:
         """Get connections for selected box.
@@ -793,12 +887,20 @@ class PlannerController:
         
         if self.modal_cursor < len(connections):
             conn = connections[self.modal_cursor]
+            source_box = next((box for box in self.state.boxes if box.id == conn.source_box_id), None)
+            target_box = next((box for box in self.state.boxes if box.id == conn.target_box_id), None)
             
             # Remove from state
             self.state.connections.remove(conn)
             self.state.connections_removed += 1
             self.state.dirty = True
-        
+            self.state.screen = "removed_connection"
+            self.modal_data = {
+                "source_name": source_box.name if source_box else conn.source_box_id,
+                "target_name": target_box.name if target_box else conn.target_box_id,
+            }
+            return
+
         self.state.screen = "workspace"
         self.modal_data = {}
     
@@ -906,6 +1008,36 @@ class PlannerController:
             if box.id == self.state.selected_box_id:
                 return box
         return None
+
+    def _get_visible_boxes(self) -> list[PlannerBox]:
+        """Return visible boxes according to active Pieces filter."""
+        filter_text = self.state.pieces_filter.strip().lower()
+        if not filter_text:
+            return list(self.state.boxes)
+        return [
+            box for box in self.state.boxes
+            if filter_text in box.name.lower() or filter_text in box.domain.lower() or filter_text in box.intent.lower()
+        ]
+
+    def _apply_box_updates(self, selected_box: PlannerBox, updates: dict) -> None:
+        """Apply updates to selected box and track edit counters."""
+        updated_box = BoxFactory.update_box(selected_box, updates)
+
+        for idx, box in enumerate(self.state.boxes):
+            if box.id == selected_box.id:
+                self.state.boxes[idx] = updated_box
+                self.state.selected_box_id = updated_box.id
+                break
+
+        self.state.boxes_edited += 1
+        self.state.dirty = True
+
+    def _find_box_by_path(self, path: str, exclude_box_id: str) -> Optional[PlannerBox]:
+        """Find an existing box using the same path, excluding one box id."""
+        for box in self.state.boxes:
+            if box.id != exclude_box_id and box.path == path:
+                return box
+        return None
     
     # ---------------------------------------------------------------------------
     # Edge Case Handlers
@@ -971,3 +1103,84 @@ class PlannerController:
             self.modal_cursor = 0
         elif key == 'enter' or key == 'escape':
             self.state.screen = "workspace"
+
+    def _handle_path_already_used_key(self, key: str) -> None:
+        """Handle key input for path already used modal."""
+        selected_box = self._get_selected_box()
+        if selected_box is None:
+            self.state.screen = "workspace"
+            self.modal_data = {}
+            return
+
+        if key == "enter":
+            suggested_path = self.modal_data.get("suggested_path")
+            if not suggested_path:
+                current_path = str(self.modal_data.get("path") or "")
+                base_path = Path(current_path)
+                suggested_path = str(base_path.parent / f"{base_path.stem}_v2{base_path.suffix}")
+            updates = {"path": str(suggested_path)}
+            pending_domain = self.modal_data.get("pending_domain")
+            if isinstance(pending_domain, str) and pending_domain:
+                updates["domain"] = pending_domain
+            self._apply_box_updates(selected_box, updates)
+            self.state.screen = "edit_block"
+            self.modal_data = {}
+        elif key == "e":
+            current_path = str(self.modal_data.get("path") or "")
+            self.state.screen = "edit_field"
+            self.modal_data = {"field": "path", "value": current_path}
+        elif key == "escape":
+            self.state.screen = "edit_block"
+            self.modal_data = {}
+
+    def _handle_domain_changed_key(self, key: str) -> None:
+        """Handle key input for domain changed modal."""
+        selected_box = self._get_selected_box()
+        if selected_box is None:
+            self.state.screen = "workspace"
+            self.modal_data = {}
+            return
+
+        pending_domain = str(self.modal_data.get("pending_value") or selected_box.domain)
+        suggested_path = str(self.modal_data.get("suggested_path") or selected_box.path or "")
+
+        if key == "enter":
+            existing_box = self._find_box_by_path(suggested_path, exclude_box_id=selected_box.id)
+            if existing_box is not None:
+                self.state.screen = "path_already_used"
+                self.modal_data = {
+                    "pending_field": "path",
+                    "pending_value": suggested_path,
+                    "path": suggested_path,
+                    "existing_box": existing_box,
+                    "suggested_path": str(Path(suggested_path).with_name(f"{Path(suggested_path).stem}_v2{Path(suggested_path).suffix}")),
+                    "pending_domain": pending_domain,
+                }
+                return
+
+            self._apply_box_updates(selected_box, {"domain": pending_domain, "path": suggested_path})
+            self.state.screen = "edit_block"
+            self.modal_data = {}
+        elif key == "k":
+            self._apply_box_updates(selected_box, {"domain": pending_domain})
+            self.state.screen = "edit_block"
+            self.modal_data = {}
+        elif key == "e":
+            self._apply_box_updates(selected_box, {"domain": pending_domain})
+            self.state.screen = "edit_field"
+            self.modal_data = {"field": "path", "value": suggested_path}
+        elif key == "escape":
+            self.state.screen = "edit_block"
+            self.modal_data = {}
+
+    def _handle_blueprint_locked_key(self, key: str) -> None:
+        """Handle key input for blueprint locked modal."""
+        if key == "enter":
+            self.state.screen = "workspace"
+        elif key == "q":
+            self.should_exit = True
+
+    def _handle_invalid_blueprint_key(self, key: str) -> None:
+        """Handle key input for invalid blueprint modal."""
+        if key == "enter" or key == "q" or key == "escape":
+            self.should_exit = True

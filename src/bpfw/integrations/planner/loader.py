@@ -86,7 +86,9 @@ class BlueprintStateLoader:
         
         # Check if file is empty
         if blueprint_path.stat().st_size == 0:
-            return BlueprintStateLoader._create_new_state(project_root, blueprint_path)
+            state = BlueprintStateLoader._create_new_state(project_root, blueprint_path)
+            state.source_mode = "empty_blueprint"
+            return state
         
         try:
             with open(blueprint_path, "r", encoding="utf-8") as f:
@@ -99,7 +101,9 @@ class BlueprintStateLoader:
         
         # Check if blueprint_data is None (empty file with comments only)
         if blueprint_data is None:
-            return BlueprintStateLoader._create_new_state(project_root, blueprint_path)
+            state = BlueprintStateLoader._create_new_state(project_root, blueprint_path)
+            state.source_mode = "empty_blueprint"
+            return state
         
         # Load project configuration
         project_config = BlueprintStateLoader._load_project_config(blueprint_data)
@@ -122,12 +126,16 @@ class BlueprintStateLoader:
             inferred_connections=inferred_connections,
         )
         
+        source_mode = "existing_blueprint"
+        if not boxes:
+            source_mode = "empty_blueprint"
+
         return PlannerState(
             project_config=project_config,
             boxes=boxes,
             connections=all_connections,
             blueprint_path=blueprint_path,
-            source_mode="existing_blueprint",
+            source_mode=source_mode,
             broken_connections=broken_connections,
         )
     

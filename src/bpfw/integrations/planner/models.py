@@ -168,3 +168,7 @@ class PlannerState:
     
     # Broken connections (orphan references in YAML)
     broken_connections: List[PlannerConnection] = field(default_factory=list)
+    modal_data: Dict[str, Any] = field(default_factory=dict)
+    modal_cursor: int = 0
+    pieces_filter: str = ""
+    pieces_filter_mode: bool = False
