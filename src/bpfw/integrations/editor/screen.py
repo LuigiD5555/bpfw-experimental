@@ -3,7 +3,12 @@
 import shutil
 
 from bpfw.integrations.shared.visual_boxes import render_box
-from bpfw.integrations.shared.visual_width import pad_text
+from bpfw.integrations.shared.visual_theme import (
+    DEFAULT_THEME,
+    compute_panel_width,
+    render_commands_box,
+    render_header,
+)
 
 
 DEFAULT_INPUT_PROMPT = "> "
@@ -136,7 +141,10 @@ def _editor_block_width(ratio: float = 0.70) -> int:
     """Return a consistent width for editor blocks."""
 
     terminal_width = get_terminal_width()
-    return min(terminal_width, max(72, int(terminal_width * ratio)))
+    preferred_width = max(20, int(terminal_width * ratio) - 2)
+    minimum_width = max(20, int(terminal_width * DEFAULT_THEME.min_ratio) - 2)
+    maximum_width = max(minimum_width, int(terminal_width * DEFAULT_THEME.max_ratio) - 2)
+    return max(minimum_width, min(maximum_width, preferred_width))
 
 
 def _results_block_ratio(results: list) -> float:
@@ -164,10 +172,8 @@ def render_editor_banner(ratio: float = 0.70) -> None:
     """Print the editor banner at the top of the screen."""
 
     banner_width = _editor_block_width(ratio=ratio)
-    centered_title = BANNER_TITLE.center(banner_width)
-    print("\u2554" + "\u2550" * banner_width + "\u2557")
-    print(f"\u2551{pad_text(centered_title, banner_width)}\u2551")
-    print("\u255a" + "\u2550" * banner_width + "\u255d")
+    for line in render_header(title=BANNER_TITLE, width=banner_width, theme=DEFAULT_THEME, centered=True):
+        print(line)
 
 
 def render_search_screen() -> None:
@@ -325,7 +331,7 @@ def _render_editor_commands_box(lines: list[str], ratio: float = 0.70) -> None:
     """Render editor commands using inspector-style command box."""
 
     width = _editor_block_width(ratio=ratio)
-    for line in render_box(title="Commands", lines=lines, width=width):
+    for line in render_commands_box(lines=lines, width=width, theme=DEFAULT_THEME, wrap_mode="safe_wrap"):
         print(line)
 
 
@@ -357,7 +363,12 @@ def render_filter_screen() -> None:
 def _render_examples_box(example_lines: list[str], ratio: float = 0.70) -> None:
     """Render examples in a boxed multiline section."""
 
-    width = _editor_block_width(ratio=ratio)
+    width = compute_panel_width(
+        content_lines=example_lines,
+        title="Examples",
+        terminal_width=get_terminal_width(),
+        theme=DEFAULT_THEME,
+    )
     for line in render_box(title="Examples", lines=example_lines, width=width):
         print(line)
 
@@ -365,7 +376,12 @@ def _render_examples_box(example_lines: list[str], ratio: float = 0.70) -> None:
 def _render_search_scope_box(title: str, lines: list[str], ratio: float = 0.70) -> None:
     """Render search scope details in a boxed section."""
 
-    width = _editor_block_width(ratio=ratio)
+    width = compute_panel_width(
+        content_lines=lines,
+        title=title,
+        terminal_width=get_terminal_width(),
+        theme=DEFAULT_THEME,
+    )
     for line in render_box(title=title, lines=lines, width=width):
         print(line)
 

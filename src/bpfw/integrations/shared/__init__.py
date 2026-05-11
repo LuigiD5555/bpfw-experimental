@@ -12,6 +12,15 @@ from bpfw.integrations.shared.visual_boxes import (
     render_split_box,
 )
 from bpfw.integrations.shared.visual_notifications import render_notification_block
+from bpfw.integrations.shared.visual_theme import (
+    ThemeConfig,
+    DEFAULT_THEME,
+    compute_panel_width,
+    render_header,
+    render_panel,
+    render_commands_box,
+    render_stacked_sections,
+)
 from bpfw.integrations.shared.navigation import NavigationAction
 
 __all__ = [
@@ -26,6 +35,14 @@ __all__ = [
     "render_split_box",
     # visual_notifications
     "render_notification_block",
+    # visual_theme
+    "ThemeConfig",
+    "DEFAULT_THEME",
+    "compute_panel_width",
+    "render_header",
+    "render_panel",
+    "render_commands_box",
+    "render_stacked_sections",
     # navigation
     "NavigationAction",
 ]

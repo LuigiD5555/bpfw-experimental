@@ -14,10 +14,15 @@ from bpfw.integrations.inspector.base import (
 )
 from bpfw.integrations.shared.visual_width import display_width, fit_text, measure_lines, pad_text
 from bpfw.integrations.shared.visual_boxes import (
-    _center_text,
     render_box,
     render_two_column_box,
     render_split_box,
+)
+from bpfw.integrations.shared.visual_theme import (
+    DEFAULT_THEME,
+    compute_panel_width,
+    render_commands_box,
+    render_header,
 )
 
 PrintFunc = Callable[[str], None]
@@ -113,11 +118,7 @@ def render_inspector_screen(
         command_lines=command_lines,
     )
 
-    for header_line in _build_header(
-        title=header_title,
-        meta="",
-        width=global_inner_width,
-    ):
+    for header_line in _build_header(title=header_title, meta="", width=global_inner_width):
         print_func(header_line)
 
     code_panel_lines = list(code_lines)
@@ -176,10 +177,11 @@ def render_inspector_screen(
     ):
         print_func(line)
 
-    for line in render_box(
-        title="Commands",
+    for line in render_commands_box(
         lines=command_lines,
         width=global_inner_width,
+        theme=DEFAULT_THEME,
+        wrap_mode="safe_wrap",
     ):
         print_func(line)
     print_func("")
@@ -189,17 +191,13 @@ def _build_header(title: str, meta: str, width: int) -> List[str]:
     """Build the inspector title header."""
 
     if not meta.strip():
-        header_line = _center_text(title, width)
-    elif display_width(meta) >= width:
+        return render_header(title=title, width=width, theme=DEFAULT_THEME, centered=True)
+    if display_width(meta) >= width:
         header_line = fit_text(meta, width)
     else:
         left_width = width - display_width(meta) - 1
         header_line = pad_text(title, left_width) + " " + meta
-    return [
-        "╔" + "═" * width + "╗",
-        f"║{pad_text(header_line, width)}║",
-        "╚" + "═" * width + "╝",
-    ]
+    return render_header(title=header_line, width=width, theme=DEFAULT_THEME, centered=False)
 
 
 def _build_observation_panel_lines(
@@ -362,5 +360,10 @@ def _compute_layout_width(
     ) + (HORIZONTAL_PADDING * 2)
 
     terminal_width = shutil.get_terminal_size(fallback=(100, 30)).columns
-    total_width = min(max(required_width + 2, MIN_TOTAL_WIDTH), terminal_width)
-    return max(20, total_width - 2)
+    computed = compute_panel_width(
+        content_lines=[" " * max(0, required_width)],
+        title=DEFAULT_INSPECTOR_HEADER_TITLE,
+        terminal_width=terminal_width,
+        theme=DEFAULT_THEME,
+    )
+    return max(20, max(MIN_TOTAL_WIDTH - 2, computed))
