@@ -12,34 +12,34 @@ _SUGGESTED_ACTIONS: Dict[str, str] = {
         "Run bpfw init when you are ready to create project authority."
     ),
     "EMPTY_AUTHORITY": (
-        "Add responsibilities with bpfw init or bpfw inspector "
+        "Add blocks with bpfw planner or bpfw inspector "
         "when you are ready to enforce authority."
     ),
     "INVALID_BLUEPRINT": (
         "Fix bpfw/blueprint.yaml so it can be parsed and loaded."
     ),
-    "INCOMPLETE_RESPONSIBILITY": (
-        "Complete intent, name, domain, lifecycle, "
-        "location.path, location.symbol, and location.symbol_type."
+    "INCOMPLETE_BLOCK": (
+        "Complete purpose, name, domain, status, "
+        "code.path, code.symbol, and code.kind."
     ),
-    "INVALID_LIFECYCLE": (
+    "INVALID_STATUS": (
         f"Use {', '.join(ALLOWED_LIFECYCLES)}."
     ),
-    "DUPLICATE_RESPONSIBILITY_ID": (
-        "Give every responsibility a unique id."
+    "DUPLICATE_BLOCK_ID": (
+        "Give every block a unique id."
     ),
-    "DUPLICATE_ACTIVE_INTENT": (
-        "Keep one responsibility active and mark the others "
+    "DUPLICATE_ACTIVE_PURPOSE": (
+        "Keep one block active and mark the others "
         "experimental, legacy, or deprecated."
     ),
     "MISSING_DECLARED_CODE": (
         "Restore the declared code unit or update the blueprint "
-        "location intentionally."
+        "code location intentionally."
     ),
     "UNDECLARED_CODE": (
-        "Add it to the blueprint with lifecycle experimental, "
+        "Add it to the blueprint with status experimental, "
         "legacy, deprecated, or active. If it duplicates an "
-        "existing intent, do not mark both as active."
+        "existing purpose, do not mark both as active."
     ),
     "PYTHON_PARSE_ERROR": (
         "Fix the Python syntax error before running verification again."
@@ -109,16 +109,16 @@ def render_verify_report(report: VerificationReport) -> str:
 
         # Code alignment
         sections.append("Code alignment:")
-        sections.append(f"  declared responsibilities: {report.declared_count}")
+        sections.append(f"  declared blocks: {report.declared_count}")
         sections.append(f"  discovered code units: {report.discovered_count}")
         sections.append(f"  missing declared code: {report.missing_declared_count}")
         sections.append(f"  undeclared code: {report.undeclared_count}")
         sections.append("")
 
-        # Lifecycle
-        sections.append("Lifecycle:")
-        sections.append(f"  invalid lifecycles: {report.invalid_lifecycle_count}")
-        sections.append(f"  duplicate active intents: {report.duplicate_active_intent_count}")
+        # Status
+        sections.append("Status:")
+        sections.append(f"  invalid statuses: {report.invalid_lifecycle_count}")
+        sections.append(f"  duplicate active purposes: {report.duplicate_active_intent_count}")
         sections.append("")
 
         # Execution

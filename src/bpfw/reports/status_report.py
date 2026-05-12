@@ -66,7 +66,7 @@ def run_status(project_root: Path) -> Tuple[str, int]:
         authority_state=authority_state,
     )
 
-    # Lifecycle counts from loaded responsibilities
+    # Status counts from loaded blocks
     lifecycle_counts = count_lifecycles(load_result.data)
 
     # Step 5: Missing — no scan, execution allowed
@@ -143,7 +143,7 @@ def render_status_report(
         Lock status string: locked, degraded, unlocked, unsupported, or unknown.
     lifecycle_counts:
         Dict with keys ``active``, ``experimental``, ``legacy``, ``deprecated``
-        mapping to their respective counts from loaded responsibilities.
+        mapping to their respective counts from loaded blocks.
 
     Returns
     -------
@@ -162,8 +162,8 @@ def render_status_report(
     lines.append(f"  lock: {lock_state}")
     lines.append("")
 
-    # Responsibilities section
-    lines.append("Responsibilities:")
+    # Blocks section
+    lines.append("Blocks:")
     lines.append(f"  declared: {report.declared_count}")
     lines.append(f"  incomplete: {report.incomplete_responsibility_count}")
     lines.append("")
@@ -175,13 +175,13 @@ def render_status_report(
     lines.append(f"  missing declared: {report.missing_declared_count}")
     lines.append("")
 
-    # Lifecycle section
-    lines.append("Lifecycle:")
+    # Status section
+    lines.append("Status:")
     lines.append(f"  active: {lifecycle_counts.get('active', 0)}")
     lines.append(f"  experimental: {lifecycle_counts.get('experimental', 0)}")
     lines.append(f"  legacy: {lifecycle_counts.get('legacy', 0)}")
     lines.append(f"  deprecated: {lifecycle_counts.get('deprecated', 0)}")
-    lines.append(f"  duplicate active intents: {report.duplicate_active_intent_count}")
+    lines.append(f"  duplicate active purposes: {report.duplicate_active_intent_count}")
     lines.append("")
 
     # Execution section

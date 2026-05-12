@@ -12,6 +12,7 @@ from bpfw.catalog.models import (
     BlueprintLoadResult,
 )
 from bpfw.catalog.paths import resolve_blueprint_path
+from bpfw.catalog.schema import get_blocks, get_code, get_kind, get_purpose, get_status, normalize_blueprint
 from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, FINDING_SEVERITY_INFO, FINDING_SEVERITY_WARNING, Finding
 
 
@@ -113,14 +114,15 @@ class BlueprintLoader:
                 findings=[finding],
             )
 
-        responsibilities = data.get("responsibilities")
+        data = normalize_blueprint(data)
+        blocks = get_blocks(data)
 
-        if not responsibilities:
+        if not blocks:
             finding = Finding(
                 source="bpfw",
                 code="EMPTY_AUTHORITY",
                 severity=FINDING_SEVERITY_WARNING,
-                message="Blueprint exists but contains no responsibilities.",
+                message="Blueprint exists but contains no blocks.",
             )
             return BlueprintLoadResult(
                 state=AUTHORITY_STATE_EMPTY,
@@ -129,12 +131,12 @@ class BlueprintLoader:
                 findings=[finding],
             )
 
-        if not isinstance(responsibilities, list):
+        if not isinstance(blocks, list):
             finding = Finding(
                 source="bpfw",
                 code="INVALID_BLUEPRINT",
                 severity=FINDING_SEVERITY_BLOCK,
-                message="Responsibilities must be a list.",
+                message="Blocks must be a list.",
             )
             return BlueprintLoadResult(
                 state=AUTHORITY_STATE_INVALID,
@@ -144,8 +146,8 @@ class BlueprintLoader:
             )
 
         has_incomplete = False
-        for responsibility in responsibilities:
-            if not is_responsibility_complete(responsibility):
+        for block in blocks:
+            if not is_block_complete(block):
                 has_incomplete = True
                 break
 
@@ -165,40 +167,47 @@ class BlueprintLoader:
         )
 
 
-def is_responsibility_complete(responsibility: Dict[str, Any]) -> bool:
-    """Check if a responsibility has all required fields.
-    
+def is_block_complete(block: Dict[str, Any]) -> bool:
+    """Check if a block has all required authority fields.
+
     Required fields:
     - id
-    - intent
+    - purpose
     - name
     - domain
-    - lifecycle
-    - location.path
-    - location.symbol
-    - location.symbol_type
-    
-    Args:
-        responsibility: The responsibility dictionary to check.
-    
-    Returns:
-        True if all required fields are present and non-empty, False otherwise.
-    """
-    required_top_level = ["id", "intent", "name", "domain", "lifecycle"]
+    - status
+    - code.path
+    - code.symbol
+    - code.kind
 
-    for key in required_top_level:
-        value = responsibility.get(key)
+    Legacy aliases are accepted while loading old blueprints.
+    """
+    for key in ("id", "name", "domain"):
+        value = block.get(key)
         if value is None or value == "":
             return False
 
-    location = responsibility.get("location")
-    if not isinstance(location, dict):
+    if get_purpose(block) in (None, ""):
+        return False
+    if get_status(block) in (None, ""):
         return False
 
-    required_location = ["path", "symbol", "symbol_type"]
-    for key in required_location:
-        value = location.get(key)
+    code = get_code(block)
+    if not isinstance(code, dict):
+        return False
+
+    for key in ("path", "symbol"):
+        value = code.get(key)
         if value is None or value == "":
             return False
 
+    kind = get_kind(code)
+    if kind is None or kind == "":
+        return False
+
     return True
+
+
+def is_responsibility_complete(block: Dict[str, Any]) -> bool:
+    """Legacy alias for old callers; use is_block_complete instead."""
+    return is_block_complete(block)

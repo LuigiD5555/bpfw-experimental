@@ -1,10 +1,11 @@
-"""Deterministic domain suggestions for catalog responsibilities."""
+"""Deterministic domain suggestions for catalog blocks."""
 
 from dataclasses import dataclass
 import re
 from typing import Any
 
 from bpfw.catalog.learning import load_learning_scores
+from bpfw.catalog.schema import get_code
 
 PACKAGE_ROOT_STOPWORDS = frozenset(
     {"src", "bpfw", "tests", "test", "__init__", "py", "init"}
@@ -51,7 +52,7 @@ DOCSTRING_STOPWORDS = frozenset(
         "one",
         "deterministic",
         "represent",
-        "responsibility",
+        "block",
     }
 )
 BROAD_FOLDER_TOKENS = frozenset({"integrations"})
@@ -68,7 +69,7 @@ class DomainSuggestion:
 
 @dataclass(frozen=True, slots=True)
 class _DomainEvidence:
-    """Raw domain evidence collected from one responsibility."""
+    """Raw domain evidence collected from one block."""
 
     path_parts: tuple[str, ...]
     module_parts: tuple[str, ...]
@@ -77,17 +78,17 @@ class _DomainEvidence:
     docstring_tokens: tuple[str, ...]
 
 
-def suggest_domains(responsibility: dict[str, Any]) -> list[DomainSuggestion]:
-    """Suggest deterministic functional domains from responsibility metadata."""
+def suggest_domains(block: dict[str, Any]) -> list[DomainSuggestion]:
+    """Suggest deterministic functional domains from block metadata."""
 
-    evidence = collect_domain_evidence(responsibility)
+    evidence = collect_domain_evidence(block)
     return rank_domain_suggestions(compose_domain_candidates(evidence))
 
 
-def collect_domain_evidence(responsibility: dict[str, Any]) -> _DomainEvidence:
+def collect_domain_evidence(block: dict[str, Any]) -> _DomainEvidence:
     """Collect deterministic evidence used to suggest functional domains."""
 
-    location = responsibility.get("location")
+    location = get_code(block)
     path = ""
     module = ""
     symbol = ""
@@ -99,7 +100,7 @@ def collect_domain_evidence(responsibility: dict[str, Any]) -> _DomainEvidence:
         module = module_value.strip() if isinstance(module_value, str) else ""
         symbol = symbol_value.strip() if isinstance(symbol_value, str) else ""
 
-    detected = responsibility.get("detected")
+    detected = block.get("detected")
     docstring = ""
     if isinstance(detected, dict):
         docstring_value = detected.get("docstring")
@@ -123,7 +124,7 @@ def collect_domain_evidence(responsibility: dict[str, Any]) -> _DomainEvidence:
 
 
 def compose_domain_candidates(evidence: _DomainEvidence) -> list[DomainSuggestion]:
-    """Compose domain candidates from normalized responsibility evidence."""
+    """Compose domain candidates from normalized block evidence."""
 
     candidates: list[DomainSuggestion] = []
 

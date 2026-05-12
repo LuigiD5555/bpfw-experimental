@@ -7,6 +7,7 @@ from bpfw.catalog.access_control import ensure_blueprint_can_be_written
 from bpfw.catalog.lifecycle import ALLOWED_LIFECYCLES
 from bpfw.catalog.models import DiscoveredCodeUnit
 from bpfw.catalog.paths import resolve_blueprint_path
+from bpfw.catalog.symbol_types import normalize_symbol_type
 from bpfw.protection.setup import format_init_setup_summary, run_protection_setup
 
 
@@ -53,34 +54,35 @@ def build_initial_blueprint(
     project_directory_name = project_root.name
     project_id = to_snake_case(project_directory_name)
     
-    responsibilities = []
+    blocks = []
     for unit in discovered_units:
-        responsibility = {
+        normalized_symbol_type = normalize_symbol_type(unit.symbol_type)
+        block = {
             "id": to_snake_case(unit.symbol),
-            "intent": None,
+            "purpose": None,
             "name": unit.symbol,
             "domain": None,
-            "lifecycle": None,
-            "location": {
+            "status": None,
+            "code": {
                 "path": unit.path,
                 "module": unit.module,
                 "symbol": unit.symbol,
-                "symbol_type": unit.symbol_type,
+                "kind": normalized_symbol_type,
                 "start_line": unit.start_line,
                 "end_line": unit.end_line,
             },
             "detected": {
                 "qualified_name": unit.qualified_name,
-                "kind": unit.symbol_type,
+                "kind": normalized_symbol_type,
                 "methods": unit.methods,
                 "functions": unit.functions,
             },
             "entrypoints": [],
-            "related_code": [],
-            "duplicate_policy": {
+            "connections": [],
+            "uniqueness": {
                 "group": None,
                 "allow_multiple_non_active": True,
-                "forbidden_active_duplicates": True,
+                "forbid_active_duplicates": True,
                 "suspected_duplicates": [],
             },
             "replacement": {
@@ -99,9 +101,9 @@ def build_initial_blueprint(
             if unit.interface_output:
                 interface_data["output"] = unit.interface_output
             if interface_data:
-                responsibility["interface"] = interface_data
+                block["interface"] = interface_data
 
-        responsibilities.append(responsibility)
+        blocks.append(block)
     
     blueprint_data = {
         "version": 1,
@@ -117,8 +119,8 @@ def build_initial_blueprint(
             "mode": "catalog",
             "empty_blueprint_allows_execution": True,
             "defined_blueprint_blocks_on_drift": True,
-            "allowed_lifecycles": list(ALLOWED_LIFECYCLES),
-            "single_active_per_intent": True,
+            "allowed_statuses": list(ALLOWED_LIFECYCLES),
+            "one_active_block_per_purpose": True,
             "undeclared_code_blocks": True,
             "missing_declared_code_blocks": True,
             "security": {
@@ -127,7 +129,7 @@ def build_initial_blueprint(
                 "detected_detail_level": "minimal",
             },
         },
-        "responsibilities": responsibilities,
+        "blocks": blocks,
     }
     
     return blueprint_data
@@ -235,8 +237,8 @@ Detected code units:
   total: {total_units}
 
 Pending fields:
-  intent: {pending_intent}
-  lifecycle: {pending_lifecycle}
+  purpose: {pending_intent}
+  status: {pending_lifecycle}
   domain: {pending_domain}
 
 Next:

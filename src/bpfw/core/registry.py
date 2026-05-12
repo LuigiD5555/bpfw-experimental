@@ -83,9 +83,9 @@ class VerifyBlueprintStep(PipelineStep):
             "discovered_count": str(report.discovered_count),
             "missing_declared_code": str(report.missing_declared_count),
             "undeclared_code": str(report.undeclared_count),
-            "duplicate_active_intents": str(report.duplicate_active_intent_count),
-            "invalid_lifecycles": str(report.invalid_lifecycle_count),
-            "incomplete_responsibilities": str(report.incomplete_responsibility_count),
+            "duplicate_active_purposes": str(report.duplicate_active_intent_count),
+            "invalid_statuses": str(report.invalid_lifecycle_count),
+            "incomplete_blocks": str(report.incomplete_responsibility_count),
         }
 
         if exit_code != 0:
@@ -222,7 +222,7 @@ class AuthorityStatusStep(PipelineStep):
         report, _exit_code = run_verify(project_root=context.project_root)
         lock_state = get_blueprint_lock_state(project_root=context.project_root)
         drift_state = "drift" if report.missing_declared_count or report.undeclared_count else "clean"
-        lifecycle_state = "invalid" if report.invalid_lifecycle_count else "valid"
+        status_state = "invalid" if report.invalid_lifecycle_count else "valid"
 
         return StepResult(
             status=ResultStatus.OK if report.allowed else ResultStatus.BLOCK,
@@ -232,7 +232,7 @@ class AuthorityStatusStep(PipelineStep):
                 "lock": lock_state,
                 "blueprint_state": report.authority_state,
                 "drift_state": drift_state,
-                "lifecycle_state": lifecycle_state,
+                "status_state": status_state,
                 "declared_count": str(report.declared_count),
                 "discovered_count": str(report.discovered_count),
             },

@@ -156,7 +156,7 @@ def _print_human(payload: dict) -> None:
         print(f"  lock: {details.get('lock', 'unknown')}")
         print(f"  blueprint: {details.get('blueprint_state', 'unknown')}")
         print(f"  drift: {details.get('drift_state', 'unknown')}")
-        print(f"  lifecycle: {details.get('lifecycle_state', 'unknown')}")
+        print(f"  status: {details.get('status_state', 'unknown')}")
         return
 
     if payload["command_name"] in {"inspector", "editor", "planner"} and not payload["message"]:

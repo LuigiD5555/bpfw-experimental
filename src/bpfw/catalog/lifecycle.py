@@ -1,4 +1,8 @@
-"""Lifecycle rules for BPFW MVP Catalog Mode."""
+"""Status rules for BPFW MVP Catalog Mode.
+
+The constants keep their historical names for compatibility, but user-facing
+terminology should call these values statuses.
+"""
 
 from typing import Any
 
@@ -16,24 +20,25 @@ ALLOWED_LIFECYCLES = (
 
 
 def is_allowed_lifecycle(lifecycle: str | None) -> bool:
-    """Return True when a lifecycle value is allowed in the MVP."""
+    """Return True when a status value is allowed in the MVP."""
 
     return lifecycle in ALLOWED_LIFECYCLES
 
 
 def count_lifecycles(blueprint_data: dict[str, Any]) -> dict[str, int]:
-    """Count allowed lifecycle values declared in a blueprint payload."""
+    """Count allowed status values declared in a blueprint payload."""
+    from bpfw.catalog.schema import get_blocks, get_status
 
-    counts = {lifecycle: 0 for lifecycle in ALLOWED_LIFECYCLES}
-    responsibilities = blueprint_data.get("responsibilities")
-    if not isinstance(responsibilities, list):
+    counts = {status: 0 for status in ALLOWED_LIFECYCLES}
+    blocks = get_blocks(blueprint_data)
+    if not isinstance(blocks, list):
         return counts
 
-    for responsibility in responsibilities:
-        if not isinstance(responsibility, dict):
+    for block in blocks:
+        if not isinstance(block, dict):
             continue
-        lifecycle = responsibility.get("lifecycle")
-        if isinstance(lifecycle, str) and lifecycle in counts:
-            counts[lifecycle] += 1
+        status = get_status(block)
+        if isinstance(status, str) and status in counts:
+            counts[status] += 1
 
     return counts

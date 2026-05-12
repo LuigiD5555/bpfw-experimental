@@ -14,14 +14,15 @@ from bpfw.catalog.models import (
 from bpfw.catalog.scanner import scan_python_project
 from bpfw.catalog.security import validate_no_blueprint_secrets
 from bpfw.catalog.validation import validate_blueprint_structure
+from bpfw.catalog.schema import get_blocks
 from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, Finding
 
 # Finding codes used for counting.
 CODE_MISSING_DECLARED = "MISSING_DECLARED_CODE"
 CODE_UNDECLARED = "UNDECLARED_CODE"
-CODE_DUPLICATE_ACTIVE_INTENT = "DUPLICATE_ACTIVE_INTENT"
-CODE_INVALID_LIFECYCLE = "INVALID_LIFECYCLE"
-CODE_INCOMPLETE_RESPONSIBILITY = "INCOMPLETE_RESPONSIBILITY"
+CODE_DUPLICATE_ACTIVE_INTENT = "DUPLICATE_ACTIVE_PURPOSE"
+CODE_INVALID_LIFECYCLE = "INVALID_STATUS"
+CODE_INCOMPLETE_RESPONSIBILITY = "INCOMPLETE_BLOCK"
 
 _DEFAULT_SOURCE_ROOTS = ["src", "app"]
 _DEFAULT_IGNORED_PATHS = [
@@ -169,9 +170,9 @@ def run_verify(project_root: Path) -> Tuple[VerificationReport, int]:
     all_findings.extend(security_findings)
     all_findings.extend(drift_findings)
 
-    # Count declared responsibilities
-    responsibilities = load_result.data.get("responsibilities")
-    declared_count = len(responsibilities) if isinstance(responsibilities, list) else 0
+    # Count declared blocks
+    blocks = get_blocks(load_result.data)
+    declared_count = len(blocks) if isinstance(blocks, list) else 0
 
     discovered_count = len(scan_result.discovered_units)
 

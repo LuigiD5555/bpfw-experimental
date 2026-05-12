@@ -1,4 +1,4 @@
-"""Tests for deterministic natural-language intent suggestions."""
+"""Tests for deterministic natural-language purpose suggestions."""
 
 from typing import Any
 
@@ -8,7 +8,7 @@ from bpfw.catalog.intent_suggestions import compact_intent_text, suggest_intents
 def test_suggests_token_creation_from_issuer_symbol() -> None:
     """Suggest token creation from an issuer-style class name."""
 
-    responsibility = {
+    block = {
         "name": "TokenIssuer",
         "location": {
             "path": "src/auth/token.py",
@@ -21,7 +21,7 @@ def test_suggests_token_creation_from_issuer_symbol() -> None:
         },
     }
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
 
     assert suggestions
     assert any("token" in suggestion.text.lower() for suggestion in suggestions)
@@ -30,7 +30,7 @@ def test_suggests_token_creation_from_issuer_symbol() -> None:
 def test_suggests_blueprint_validation_from_verify_symbol() -> None:
     """Suggest blueprint validation from verify-style evidence."""
 
-    responsibility = {
+    block = {
         "name": "verify_blueprint",
         "location": {
             "path": "src/bpfw/catalog/verify.py",
@@ -43,7 +43,7 @@ def test_suggests_blueprint_validation_from_verify_symbol() -> None:
         },
     }
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
 
     assert suggestions
     assert suggestions[4].text == "Validate blueprint declarations against detected"
@@ -52,13 +52,13 @@ def test_suggests_blueprint_validation_from_verify_symbol() -> None:
 def test_suggests_loading_blueprint_authority_from_disk() -> None:
     """Suggest loading blueprint authority from disk."""
 
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="load_blueprint",
         path="src/bpfw/catalog/loader.py",
         signature="load_blueprint(path: Path) -> Blueprint",
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
 
     assert suggestions[4].text == "Load blueprint authority from disk"
 
@@ -66,13 +66,13 @@ def test_suggests_loading_blueprint_authority_from_disk() -> None:
 def test_suggests_scanning_python_source_files() -> None:
     """Suggest scanning Python source files for declared code units."""
 
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="scan_python_files",
         path="src/bpfw/catalog/scanner.py",
         signature="scan_python_files(project_root: Path) -> list[CodeUnit]",
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
 
     assert suggestions[4].text == "Scan Python source files for"
 
@@ -80,14 +80,14 @@ def test_suggests_scanning_python_source_files() -> None:
 def test_suggests_project_verification_against_detected_source_code() -> None:
     """Suggest blueprint validation against detected source code."""
 
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="verify_project",
         path="src/bpfw/catalog/verify.py",
         signature="verify_project(project_root: Path) -> VerificationResult",
         functions=["load_blueprint", "scan_project", "compare_responsibilities"],
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
 
     assert suggestions[4].text == "Validate blueprint declarations against detected"
 
@@ -95,45 +95,45 @@ def test_suggests_project_verification_against_detected_source_code() -> None:
 def test_suggests_writing_blueprint_authority_changes_to_disk() -> None:
     """Suggest writing blueprint authority changes to disk."""
 
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="save_blueprint",
         path="src/bpfw/catalog/writer.py",
         signature="save_blueprint(blueprint: Blueprint, path: Path) -> None",
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
 
     assert suggestions[4].text == "Write blueprint authority changes to"
 
 
 def test_suggests_detecting_duplicate_active_responsibilities() -> None:
-    """Suggest detecting duplicate active responsibilities by intent."""
+    """Suggest detecting duplicate active blocks by purpose."""
 
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="find_duplicate_intents",
         path="src/bpfw/catalog/drift.py",
         signature=(
             "find_duplicate_intents("
-            "responsibilities: list[Responsibility]"
+            "blocks: list[Block]"
             ") -> list[DuplicateGroup]"
         ),
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
 
-    assert suggestions[4].text == "Detect duplicate active responsibilities by"
+    assert suggestions[4].text == "Detect duplicate active blocks by"
 
 
 def test_suggests_protecting_authority_files() -> None:
     """Suggest protecting authority files from direct modification."""
 
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="lock_authority_file",
         path="src/bpfw/protection/os_lock.py",
         signature="lock_authority_file(path: Path) -> LockResult",
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
 
     assert suggestions[4].text == "Protect authority files from direct"
 
@@ -141,58 +141,58 @@ def test_suggests_protecting_authority_files() -> None:
 def test_suggests_running_blueprint_verification_from_command_line() -> None:
     """Suggest running blueprint verification from the command line."""
 
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="handle_verify_command",
         path="src/bpfw/cli.py",
         signature="handle_verify_command(args: list[str]) -> int",
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
 
     assert suggestions[4].text == "Run blueprint verification from the"
 
 
 def test_suggests_intent_from_intent_suggestion_dataclass() -> None:
-    """Suggest intent suggestions from the dataclass evidence."""
+    """Suggest purpose suggestions from the dataclass evidence."""
 
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="IntentSuggestion",
         path="src/bpfw/catalog/intent_suggestions.py",
         symbol_type="class",
-        docstring="Represent one deterministic natural-language intent suggestion.",
+        docstring="Represent one deterministic natural-language purpose suggestion.",
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
 
-    assert suggestions[4].text == "Suggest intent"
+    assert suggestions[4].text == "Suggest purpose"
 
 
 def test_suggests_richer_intent_for_suggest_intents_function() -> None:
     """Suggest the public suggester behavior from function evidence."""
 
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="suggest_intents",
         path="src/bpfw/catalog/intent_suggestions.py",
-        signature="suggest_intents(responsibility: dict[str, Any]) -> list[IntentSuggestion]",
-        docstring="Suggest natural-language intents from deterministic responsibility evidence.",
+        signature="suggest_intents(block: dict[str, Any]) -> list[IntentSuggestion]",
+        docstring="Suggest natural-language purposes from deterministic block evidence.",
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
 
-    assert suggestions[4].text == "Suggest intents"
+    assert suggestions[4].text == "Suggest purposes"
 
 
 def test_suggests_collecting_responsibility_evidence() -> None:
     """Suggest evidence collection rather than scanning evidence text."""
 
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="collect_evidence_text",
         path="src/bpfw/catalog/intent_suggestions.py",
-        signature="collect_evidence_text(responsibility: dict[str, Any]) -> str",
-        docstring="Collect deterministic text evidence from one responsibility dictionary.",
+        signature="collect_evidence_text(block: dict[str, Any]) -> str",
+        docstring="Collect deterministic text evidence from one block dictionary.",
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
 
     assert suggestions[4].text == "Collect evidence text"
     assert all("Scan evidence text" != suggestion.text for suggestion in suggestions)
@@ -201,14 +201,14 @@ def test_suggests_collecting_responsibility_evidence() -> None:
 def test_suggests_normalizing_technical_evidence_tokens() -> None:
     """Suggest token normalization from tokenizer evidence."""
 
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="tokenize_evidence",
         path="src/bpfw/catalog/intent_suggestions.py",
         signature="tokenize_evidence(text: str) -> list[str]",
         docstring="Convert technical names and text evidence into normalized tokens.",
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
 
     assert suggestions[4].text == "Normalize technical evidence tokens"
 
@@ -216,32 +216,32 @@ def test_suggests_normalizing_technical_evidence_tokens() -> None:
 def test_suggests_composing_intent_sentence_candidates() -> None:
     """Suggest candidate composition from compose function evidence."""
 
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="compose_candidates",
         path="src/bpfw/catalog/intent_suggestions.py",
         signature="compose_candidates(...) -> list[_Candidate]",
-        docstring="Compose deterministic intent sentence candidates.",
+        docstring="Compose deterministic purpose sentence candidates.",
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
 
-    assert suggestions[4].text == "Build intent candidates"
+    assert suggestions[4].text == "Build purpose candidates"
 
 
 def test_returns_empty_slots_for_generic_low_evidence_symbol() -> None:
-    """Use placeholders for generic low-evidence snippets."""
+    """Use placeholders for generic low-evidence blocks."""
 
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="Helper",
         path="src/bpfw/catalog/helper.py",
         symbol_type="class",
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
 
     assert len(suggestions) == 6
     assert suggestions[0].text == "-"
-    assert suggestions[5].text == "Write custom intent..."
+    assert suggestions[5].text == "Write custom purpose..."
 
 
 def test_suggestions_do_not_duplicate_action_words() -> None:
@@ -265,7 +265,7 @@ def test_suggestions_do_not_duplicate_action_words() -> None:
         ),
     ]
 
-    texts = [suggest_intents(responsibility)[4].text for responsibility in cases]
+    texts = [suggest_intents(block)[4].text for block in cases]
 
     assert all("Load load" not in text for text in texts)
     assert all("Write save" not in text for text in texts)
@@ -273,82 +273,82 @@ def test_suggestions_do_not_duplicate_action_words() -> None:
 
 
 def test_suggest_intents_returns_fixed_slots_when_evidence_is_sufficient() -> None:
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="suggest_intents",
         path="src/bpfw/catalog/intent_suggestions.py",
-        signature="suggest_intents(responsibility: dict[str, Any]) -> list[IntentSuggestion]",
-        docstring="Suggest natural-language intents from deterministic responsibility evidence.",
+        signature="suggest_intents(block: dict[str, Any]) -> list[IntentSuggestion]",
+        docstring="Suggest natural-language purposes from deterministic block evidence.",
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
 
     assert len(suggestions) == 6
-    assert suggestions[4].text == "Suggest intents"
+    assert suggestions[4].text == "Suggest purposes"
 
 
 def test_suggest_intents_keeps_specific_template_as_first_option() -> None:
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="collect_evidence_text",
         path="src/bpfw/catalog/intent_suggestions.py",
-        signature="collect_evidence_text(responsibility: dict[str, Any]) -> str",
-        docstring="Collect deterministic text evidence from one responsibility dictionary.",
+        signature="collect_evidence_text(block: dict[str, Any]) -> str",
+        docstring="Collect deterministic text evidence from one block dictionary.",
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
     assert suggestions[4].text == "Collect evidence text"
 
 
 def test_suggest_intents_does_not_return_duplicate_variants() -> None:
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="suggest_intents",
         path="src/bpfw/catalog/intent_suggestions.py",
-        signature="suggest_intents(responsibility: dict[str, Any]) -> list[IntentSuggestion]",
-        docstring="Suggest natural-language intents from deterministic responsibility evidence.",
+        signature="suggest_intents(block: dict[str, Any]) -> list[IntentSuggestion]",
+        docstring="Suggest natural-language purposes from deterministic block evidence.",
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
     texts = [suggestion.text for suggestion in suggestions]
     assert len(texts) == len(set(texts))
 
 
 def test_compact_intent_text_removes_responsibility_evidence_context() -> None:
     assert (
-        compact_intent_text("Suggest natural-language intents from responsibility evidence")
-        == "Suggest intents"
+        compact_intent_text("Suggest natural-language purposes from block evidence")
+        == "Suggest purposes"
     )
 
 
 def test_compact_intent_text_converts_produce_ranked_to_rank() -> None:
     assert (
-        compact_intent_text("Produce ranked intent suggestions from responsibility evidence")
-        == "Rank intent suggestions"
+        compact_intent_text("Produce ranked purpose suggestions from block evidence")
+        == "Rank purpose suggestions"
     )
 
 
 def test_compact_intent_text_limits_word_count() -> None:
     result = compact_intent_text(
-        "Collect deterministic text evidence from one responsibility dictionary"
+        "Collect deterministic text evidence from one block dictionary"
     )
     assert len(result.split()) <= 5
     assert result == "Collect evidence text"
 
 
 def test_suggest_intents_returns_compact_options() -> None:
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="suggest_intents",
         path="src/bpfw/catalog/intent_suggestions.py",
-        signature="suggest_intents(responsibility: dict[str, Any]) -> list[IntentSuggestion]",
-        docstring="Suggest natural-language intents from deterministic responsibility evidence.",
+        signature="suggest_intents(block: dict[str, Any]) -> list[IntentSuggestion]",
+        docstring="Suggest natural-language purposes from deterministic block evidence.",
     )
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
     texts = [suggestion.text for suggestion in suggestions]
-    assert "Suggest intents" in texts
+    assert "Suggest purposes" in texts
     assert all(len(text.split()) <= 5 for text in texts)
-    assert all("responsibility evidence" not in text.lower() for text in texts)
+    assert all("block evidence" not in text.lower() for text in texts)
 
 
 def test_suggest_intents_returns_six_fixed_options() -> None:
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="verify_project",
         path="src/bpfw/catalog/verify.py",
         signature="verify_project(project_root: Path) -> VerificationResult",
@@ -356,36 +356,36 @@ def test_suggest_intents_returns_six_fixed_options() -> None:
         docstring="Validate blueprint declarations against detected source code.",
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
     assert len(suggestions) == 6
     assert all(len(suggestion.text.split()) <= 5 for suggestion in suggestions)
 
 
 def test_suggest_intents_generalizes_for_non_catalog_snippet() -> None:
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="issue_access_token",
         path="src/auth/jwt_tokens.py",
         signature="issue_access_token(user_id: str, ttl_seconds: int) -> str",
         docstring="Create and sign JWT access tokens.",
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
     texts = [suggestion.text.lower() for suggestion in suggestions]
     assert suggestions
-    assert all("intent candidates" not in text for text in texts)
+    assert all("purpose candidates" not in text for text in texts)
 
 
 def test_intent_suggestions_include_distinct_sources_when_evidence_is_sufficient() -> None:
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="suggest_intents",
         path="src/bpfw/catalog/intent_suggestions.py",
-        signature="suggest_intents(responsibility: dict[str, Any]) -> list[IntentSuggestion]",
+        signature="suggest_intents(block: dict[str, Any]) -> list[IntentSuggestion]",
         functions=["compose_fixed_intent_slots"],
-        docstring="Suggest natural-language intents from deterministic responsibility evidence.",
+        docstring="Suggest natural-language purposes from deterministic block evidence.",
     )
     suggestions = suggest_intents(
-        responsibility,
-        existing_intents=("Suggest intents", "Collect evidence text"),
+        block,
+        existing_intents=("Suggest purposes", "Collect evidence text"),
     )
     source_tags = {
         evidence_item
@@ -404,21 +404,21 @@ def test_intent_suggestions_include_distinct_sources_when_evidence_is_sufficient
 
 
 def test_existing_intent_based_candidate_appears_when_similar_intent_exists() -> None:
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="collect_evidence_text",
         path="src/bpfw/catalog/intent_suggestions.py",
-        signature="collect_evidence_text(responsibility: dict[str, Any]) -> str",
-        docstring="Collect deterministic text evidence from one responsibility dictionary.",
+        signature="collect_evidence_text(block: dict[str, Any]) -> str",
+        docstring="Collect deterministic text evidence from one block dictionary.",
     )
     existing = ("Collect evidence text", "Run project verification")
-    suggestions = suggest_intents(responsibility, existing_intents=existing)
+    suggestions = suggest_intents(block, existing_intents=existing)
     assert any(suggestion.text == "Collect evidence text" for suggestion in suggestions)
 
 
 def test_intent_suggestions_keep_fixed_slot_order() -> None:
-    """Intent suggestions must keep stable inspector slot order."""
+    """Purpose suggestions must keep stable inspector slot order."""
 
-    responsibility = {
+    block = {
         "location": {
             "path": "src/bpfw/protection/authority.py",
             "symbol": "AuthorityValidator",
@@ -430,7 +430,7 @@ def test_intent_suggestions_keep_fixed_slot_order() -> None:
         },
     }
     suggestions = suggest_intents(
-        responsibility,
+        block,
         existing_intents=("Validate blueprint authority",),
     )
     assert [item.source for item in suggestions] == [
@@ -444,47 +444,47 @@ def test_intent_suggestions_keep_fixed_slot_order() -> None:
 
 
 def test_missing_intent_sources_render_as_placeholders() -> None:
-    """Missing intent sources must render placeholders without changing slot order."""
+    """Missing purpose sources must render placeholders without changing slot order."""
 
-    responsibility = {
+    block = {
         "location": {
             "path": "src/example.py",
             "symbol": "Thing",
             "symbol_type": "class",
         }
     }
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
     assert len(suggestions) == 6
     assert suggestions[0].source == "existing_intent"
     assert suggestions[-1].source == "custom_intent"
 
 
 def test_error_docstring_generates_raise_object_error_intent() -> None:
-    """Error docstrings should produce a clean raise intent with object detail."""
+    """Error docstrings should produce a clean raise purpose with object detail."""
 
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="BlueprintMissingError",
         path="src/bpfw/core/errors.py",
         symbol_type="class",
         docstring="Raised when an operation requires a missing blueprint file.",
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
 
     assert suggestions[3].text == "Raise missing blueprint file error"
 
 
 def test_error_docstring_avoids_noisy_raised_when_prefix() -> None:
-    """Docstring-based error intent should not contain noisy filler tokens."""
+    """Docstring-based error purpose should not contain noisy filler tokens."""
 
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="BlueprintLockedError",
         path="src/bpfw/core/errors.py",
         symbol_type="class",
         docstring="Raised when a protected blueprint write is attempted while locked.",
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
 
     assert "raised when" not in suggestions[3].text.lower()
     assert "operation" not in suggestions[3].text.lower()
@@ -492,31 +492,31 @@ def test_error_docstring_avoids_noisy_raised_when_prefix() -> None:
 
 
 def test_error_symbol_fallback_works_with_poor_docstring() -> None:
-    """Error class name should provide fallback intent when docstring is weak."""
+    """Error class name should provide fallback purpose when docstring is weak."""
 
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="AuthTokenError",
         path="src/auth/errors.py",
         symbol_type="class",
         docstring="Raised.",
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
 
     assert any(suggestion.text == "Raise auth token error" for suggestion in suggestions)
 
 
 def test_non_error_docstring_path_keeps_existing_behavior() -> None:
-    """Non-error snippets should not be forced into raise-style fallback."""
+    """Non-error blocks should not be forced into raise-style fallback."""
 
-    responsibility = _responsibility(
+    block = _responsibility(
         symbol="tokenize_evidence",
         path="src/bpfw/catalog/intent_suggestions.py",
         signature="tokenize_evidence(text: str) -> list[str]",
         docstring="Convert technical names and text evidence into normalized tokens.",
     )
 
-    suggestions = suggest_intents(responsibility)
+    suggestions = suggest_intents(block)
 
     assert suggestions[4].text == "Normalize technical evidence tokens"
 
@@ -524,7 +524,7 @@ def test_non_error_docstring_path_keeps_existing_behavior() -> None:
 def test_docstring_slot_reads_source_when_detected_docstring_missing() -> None:
     """Docstring slot should backfill from source file when detected docstring is absent."""
 
-    responsibility = {
+    block = {
         "name": "BlueprintMissingError",
         "location": {
             "path": "src/bpfw/core/errors.py",
@@ -543,7 +543,7 @@ def test_docstring_slot_reads_source_when_detected_docstring_missing() -> None:
     }
 
     suggestions = suggest_intents(
-        responsibility,
+        block,
         existing_intents=("Define a BlueprintMissingError object",),
     )
 
@@ -559,7 +559,7 @@ def _responsibility(
     methods: list[str] | None = None,
     docstring: str | None = None,
 ) -> dict[str, Any]:
-    """Build a detected responsibility fixture."""
+    """Build a detected block fixture."""
 
     detected: dict[str, Any] = {
         "qualified_name": symbol,

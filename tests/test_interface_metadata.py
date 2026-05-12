@@ -333,16 +333,16 @@ def test_old_blueprint_no_interface(tmp_path: Path) -> None:
         "  allowed_lifecycles:\n"
         "  - active\n"
         "  - experimental\n"
-        "  single_active_per_intent: true\n"
+        "  single_active_per_purpose: true\n"
         "  undeclared_code_blocks: true\n"
         "  missing_declared_code_blocks: true\n"
         "  security:\n"
         "    no_secrets_in_blueprint: true\n"
         "    public_safe_mode: true\n"
         "    detected_detail_level: minimal\n"
-        "responsibilities:\n"
+        "blocks:\n"
         "- id: simple_function\n"
-        "  intent: test simple_function\n"
+        "  purpose: test simple_function\n"
         "  name: simple_function\n"
         "  domain: test\n"
         "  lifecycle: active\n"
@@ -376,11 +376,11 @@ def test_old_blueprint_no_interface(tmp_path: Path) -> None:
 
     # Should load successfully
     assert load_result.state == "defined"
-    assert len(load_result.data.get("responsibilities", [])) == 1
+    assert len(load_result.data.get("blocks", [])) == 1
 
-    responsibility = load_result.data["responsibilities"][0]
+    block = load_result.data["blocks"][0]
     # Interface should not be present (or should be None)
-    assert responsibility.get("interface") is None or responsibility.get("interface") == {}
+    assert block.get("interface") is None or block.get("interface") == {}
 
 
 def test_scan_python_project_includes_interface(tmp_path: Path) -> None:

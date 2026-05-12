@@ -1,4 +1,4 @@
-"""Deterministic natural-language intent suggestions for catalog responsibilities."""
+"""Deterministic natural-language purpose suggestions for catalog blocks."""
 
 import ast
 import re
@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from bpfw.catalog.schema import get_code, get_kind, get_purpose
 from bpfw.catalog.learning import (
     get_top_learned_intents,
     load_learning_scores,
@@ -14,7 +15,7 @@ from bpfw.catalog.learning import (
 
 @dataclass(frozen=True, slots=True)
 class IntentSuggestion:
-    """Represent one deterministic natural-language intent suggestion."""
+    """Represent one deterministic natural-language purpose suggestion."""
 
     text: str
     source: str
@@ -23,7 +24,7 @@ class IntentSuggestion:
 
 @dataclass(frozen=True, slots=True)
 class _EvidenceItem:
-    """Represent one weighted source of intent evidence."""
+    """Represent one weighted source of purpose evidence."""
 
     source: str
     text: str
@@ -91,7 +92,7 @@ class _DetectedBehavior:
 
 @dataclass(frozen=True, slots=True)
 class _Candidate:
-    """Represent an unranked intent sentence candidate."""
+    """Represent an unranked purpose sentence candidate."""
 
     text: str
     score: int
@@ -146,6 +147,9 @@ ACTION_WORDS = {
     "execute": "Run",
     "extract": "Extract",
     "suggest": "Suggest",
+    "edit": "Edit",
+    "inspect": "Inspect",
+    "plan": "Plan",
     "raise": "Raise",
     "raised": "Raise",
 }
@@ -174,6 +178,9 @@ ROLE_TO_ACTION = {
     "suggestor": "Suggest",
     "runner": "Run",
     "executor": "Run",
+    "editor": "Edit",
+    "inspector": "Inspect",
+    "planner": "Plan",
 }
 
 LOW_WEIGHT_ROLES = {
@@ -215,29 +222,38 @@ MINIMUM_SCORE = 55
 MAX_INTENT_WORDS = 5
 MAX_INTENT_CHARACTERS = 48
 LOW_VALUE_CONTEXT_PHRASES = (
-    "from deterministic responsibility evidence",
-    "from one responsibility dictionary",
-    "from responsibility evidence",
-    "from responsibility data",
+    "from deterministic block evidence",
+    "from deterministic block evidence",
+    "from one block dictionary",
+    "from one block dictionary",
+    "from block evidence",
+    "from block evidence",
+    "from block data",
+    "from block data",
     "from evidence",
-    "using responsibility evidence",
-    "based on responsibility evidence",
+    "using block evidence",
+    "using block evidence",
+    "based on block evidence",
+    "based on block evidence",
 )
 LOW_VALUE_ADJECTIVES = frozenset(
     {"natural-language", "natural", "language", "deterministic", "ranked", "one", "current", "specific"}
 )
 COMPACTION_REPLACEMENTS = (
-    ("Produce ranked intent suggestions", "Rank intent suggestions"),
-    ("Produce intent suggestions", "Suggest intents"),
-    ("Suggest natural-language intents", "Suggest intents"),
-    ("Suggest natural language intents", "Suggest intents"),
-    ("Suggest intent suggestions", "Suggest intents"),
+    ("Produce ranked purpose suggestions", "Rank purpose suggestions"),
+    ("Produce purpose suggestions", "Suggest purposes"),
+    ("Suggest natural-language purposes", "Suggest purposes"),
+    ("Suggest natural language purposes", "Suggest purposes"),
+    ("Suggest purpose suggestions", "Suggest purposes"),
+    ("Suggest purposes", "Suggest purposes"),
+    ("Suggest purpose", "Suggest purpose"),
+    ("Rank purpose suggestions", "Rank purpose suggestions"),
     ("Collect deterministic text evidence", "Collect evidence text"),
     ("Collect text evidence", "Collect evidence text"),
-    ("Collect responsibility evidence", "Collect evidence text"),
+    ("Collect block evidence", "Collect evidence text"),
     ("Build candidate suggestions", "Build suggestions"),
     ("Compose candidate suggestions", "Compose suggestions"),
-    ("Compose intent sentence candidates", "Build intent candidates"),
+    ("Compose purpose sentence candidates", "Build purpose candidates"),
 )
 DOCSTRING_OBJECT_STOPWORDS = frozenset(
     {
@@ -287,19 +303,19 @@ ERROR_TOKENS = frozenset({"error", "exception"})
 
 
 def suggest_intents(
-    responsibility: dict[str, Any],
+    block: dict[str, Any],
     existing_intents: tuple[str, ...] = (),
 ) -> list[IntentSuggestion]:
-    """Suggest intents using stable inspector slots.
+    """Suggest purposes using stable inspector slots.
 
     Slot meaning:
-    - existing_intent: reuse from current blueprint intents when similar.
-    - learned_based: reuse from previously accepted intents when context matches.
+    - existing_purpose: reuse from current blueprint purposes when similar.
+    - learned_based: reuse from previously accepted purposes when context matches.
     - name_based/docstring_based/blended_based: generated from current code evidence.
-    - custom_intent: manual user entry option.
+    - custom_purpose: manual user entry option.
     """
 
-    evidence = _collect_evidence(responsibility)
+    evidence = _collect_evidence(block)
     facts = _normalize_facts(evidence)
     action = detect_action(facts)
     if action is None:
@@ -323,7 +339,7 @@ def suggest_intents(
 
 
 def _empty_intent_slots() -> list[IntentSuggestion]:
-    """Return fixed empty intent slots when no intent can be inferred."""
+    """Return fixed empty purpose slots when no purpose can be inferred."""
 
     return [
         IntentSuggestion("-", "existing_intent", ("source: existing_intent",)),
@@ -331,7 +347,7 @@ def _empty_intent_slots() -> list[IntentSuggestion]:
         IntentSuggestion("-", "name_based", ("source: name_based",)),
         IntentSuggestion("-", "docstring_based", ("source: docstring_based",)),
         IntentSuggestion("-", "blended_based", ("source: blended_based",)),
-        IntentSuggestion("Write custom intent...", "custom_intent", ("source: custom_intent",)),
+        IntentSuggestion("Write custom purpose...", "custom_intent", ("source: custom_intent",)),
     ]
 
 
@@ -356,7 +372,7 @@ def compose_fixed_intent_slots(
     facts: _NormalizedFacts,
     existing_intents: tuple[str, ...],
 ) -> list[IntentSuggestion]:
-    """Compose intent suggestions in a fixed inspector slot order."""
+    """Compose purpose suggestions in a fixed inspector slot order."""
 
     return [
         _make_slot(
@@ -400,7 +416,7 @@ def compose_fixed_intent_slots(
             evidence=("source: blended_based",),
         ),
         IntentSuggestion(
-            text="Write custom intent...",
+            text="Write custom purpose...",
             source="custom_intent",
             evidence=("source: custom_intent",),
         ),
@@ -458,30 +474,26 @@ def _is_more_informative(candidate: str, baseline: str) -> bool:
     return len(candidate_tokens) > len(baseline_tokens)
 
 
-def _collect_evidence(responsibility: dict[str, Any]) -> list[_EvidenceItem]:
-    """Collect structured deterministic evidence from one responsibility."""
+def _collect_evidence(block: dict[str, Any]) -> list[_EvidenceItem]:
+    """Collect structured deterministic evidence from one block."""
 
     evidence: list[_EvidenceItem] = []
 
-    location: dict[str, Any] = {}
-    location_value = responsibility.get("location")
-    if isinstance(location_value, dict):
-        location = location_value
+    location = get_code(block)
+    if isinstance(location, dict) and location:
         _append_evidence(evidence, source="path", value=location.get("path"), weight=10)
         _append_evidence(evidence, source="module", value=location.get("module"), weight=10)
         _append_evidence(evidence, source="symbol", value=location.get("symbol"), weight=50)
         _append_evidence(
             evidence,
             source="symbol_type",
-            value=location.get("symbol_type"),
+            value=get_kind(location),
             weight=15,
         )
 
     detected_docstring = None
-    if isinstance(location, dict):
-        detected_docstring = None
 
-    detected = responsibility.get("detected")
+    detected = block.get("detected")
     if isinstance(detected, dict):
         if not any(item.source == "symbol" for item in evidence):
             qualified_name = detected.get("qualified_name")
@@ -535,13 +547,18 @@ def _collect_evidence(responsibility: dict[str, Any]) -> list[_EvidenceItem]:
             weight=25,
         )
 
-    for source in ("name", "name"):
-        _append_evidence(
-            evidence,
-            source=source,
-            value=responsibility.get(source),
-            weight=35,
-        )
+    _append_evidence(
+        evidence,
+        source="purpose",
+        value=get_purpose(block),
+        weight=35,
+    )
+    _append_evidence(
+        evidence,
+        source="name",
+        value=block.get("name"),
+        weight=35,
+    )
 
     return evidence
 
@@ -551,7 +568,7 @@ def _extract_docstring_from_source(location: dict[str, Any]) -> str:
 
     path_value = location.get("path")
     symbol_value = location.get("symbol")
-    symbol_type_value = location.get("symbol_type")
+    symbol_type_value = get_kind(location)
     if not isinstance(path_value, str) or not path_value.strip():
         return ""
     if not isinstance(symbol_value, str) or not symbol_value.strip():
@@ -591,10 +608,10 @@ def _append_evidence(
         evidence.append(_EvidenceItem(source=source, text=value.strip(), weight=weight))
 
 
-def collect_evidence_text(responsibility: dict[str, Any]) -> str:
-    """Collect deterministic text evidence from one responsibility dictionary."""
+def collect_evidence_text(block: dict[str, Any]) -> str:
+    """Collect deterministic text evidence from one block dictionary."""
 
-    return " ".join(item.text for item in _collect_evidence(responsibility))
+    return " ".join(item.text for item in _collect_evidence(block))
 
 
 def _normalize_facts(evidence: list[_EvidenceItem]) -> _NormalizedFacts:
@@ -777,7 +794,7 @@ def detect_action(facts: _NormalizedFacts) -> _DetectedAction | None:
 
 
 def _detect_error_action(facts: _NormalizedFacts) -> _DetectedAction | None:
-    """Detect error/exception symbols as raise behavior for intent generation."""
+    """Detect error/exception symbols as raise behavior for purpose generation."""
 
     symbol_tokens = set(facts.symbol_tokens)
     docstring_tokens = set(facts.docstring_tokens)
@@ -925,7 +942,7 @@ def detect_object(
     facts: _NormalizedFacts,
     action: _DetectedAction,
 ) -> _DetectedObject | None:
-    """Detect the object acted on by the snippet."""
+    """Detect the object acted on by the block."""
 
     all_tokens = facts.all_tokens
 
@@ -969,11 +986,11 @@ def detect_object(
     if path_object is not None:
         return path_object
 
-    if "intent" in all_tokens and action.verb == "Suggest":
+    if "purpose" in all_tokens and action.verb == "Suggest":
         return _DetectedObject(
-            text="intent",
+            text="purpose",
             score=35,
-            evidence=("symbol: intent",),
+            evidence=("symbol: purpose",),
         )
 
     if action.verb == "Raise" and _is_error_symbol(facts.symbol_tokens):
@@ -996,11 +1013,11 @@ def _detect_known_object(
 
     tokens = set(facts.all_tokens)
 
-    if {"duplicate", "intent"} <= tokens:
+    if {"duplicate", "purpose"} <= tokens:
         return _DetectedObject(
-            text="duplicate active responsibilities by intent",
+            text="duplicate active blocks by purpose",
             score=45,
-            evidence=("tokens: duplicate intent",),
+            evidence=("tokens: duplicate purpose",),
         )
 
     if "authority" in tokens and "file" in tokens:
@@ -1024,16 +1041,16 @@ def _detect_known_object(
             evidence=("tokens: blueprint authority",),
         )
 
-    if "responsibility" in tokens and (
+    if "block" in tokens and (
         "declaration" in tokens
         or "compare" in tokens
         or "declared" in tokens
         or "detected" in tokens
     ):
         return _DetectedObject(
-            text="responsibility declarations",
+            text="block declarations",
             score=40,
-            evidence=("tokens: responsibility declarations",),
+            evidence=("tokens: block declarations",),
         )
 
     if "python" in tokens and ("source" in tokens or "file" in tokens):
@@ -1057,16 +1074,16 @@ def _detect_known_object(
             evidence=("tokens: verify command",),
         )
 
-    if action.verb == "Suggest" and "intent" in tokens and "responsibility" in tokens:
+    if action.verb == "Suggest" and "purpose" in tokens and "block" in tokens:
         return _DetectedObject(
-            text="natural-language intents",
+            text="natural-language purposes",
             score=45,
-            evidence=("tokens: intent responsibility",),
+            evidence=("tokens: purpose block",),
         )
 
     if action.verb == "Collect" and "evidence" in tokens:
         return _DetectedObject(
-            text="responsibility evidence",
+            text="block evidence",
             score=40,
             evidence=("tokens: evidence",),
         )
@@ -1080,7 +1097,7 @@ def _detect_known_object(
 
     if action.verb == "Compose" and "candidate" in tokens:
         return _DetectedObject(
-            text="intent sentence candidates",
+            text="purpose sentence candidates",
             score=40,
             evidence=("tokens: candidate",),
         )
@@ -1151,7 +1168,7 @@ def detect_context(
     action: _DetectedAction,
     detected_object: _DetectedObject,
 ) -> _DetectedContext:
-    """Detect a useful context phrase for the intent sentence."""
+    """Detect a useful context phrase for the purpose sentence."""
 
     tokens = set(facts.all_tokens)
     raw_calls = " ".join(facts.raw_functions + facts.raw_methods)
@@ -1167,7 +1184,7 @@ def detect_context(
 
     if (
         "compare_responsibilities" in raw_calls
-        or {"compare", "responsibility"} <= tokens
+        or {"compare", "block"} <= tokens
         or {"source", "code"} <= tokens
     ):
         return _DetectedContext(
@@ -1215,11 +1232,11 @@ def detect_context(
             evidence=("tokens: lock",),
         )
 
-    if "responsibility" in tokens and "evidence" in tokens:
+    if "block" in tokens and "evidence" in tokens:
         return _DetectedContext(
-            text="from responsibility evidence",
+            text="from block evidence",
             score=20,
-            evidence=("tokens: responsibility evidence",),
+            evidence=("tokens: block evidence",),
         )
 
     return _DetectedContext(text="", score=0, evidence=())
@@ -1263,19 +1280,19 @@ def detect_behavior(
         )
 
     if "compare_responsibilities" in raw_calls or (
-        "compare" in tokens and "responsibility" in tokens
+        "compare" in tokens and "block" in tokens
     ):
         return _DetectedBehavior(
             text="compares declared and detected code",
             score=20,
-            evidence=("behavior: compare responsibilities",),
+            evidence=("behavior: compare blocks",),
         )
 
-    if {"duplicate", "intent"} <= tokens:
+    if {"duplicate", "purpose"} <= tokens:
         return _DetectedBehavior(
-            text="groups duplicate active responsibilities",
+            text="groups duplicate active blocks",
             score=20,
-            evidence=("behavior: duplicate intents",),
+            evidence=("behavior: duplicate purposes",),
         )
 
     if action.verb == "Block" or "block" in tokens or "deny" in tokens:
@@ -1292,16 +1309,16 @@ def detect_behavior(
             evidence=("behavior: protect authority",),
         )
 
-    if action.verb == "Suggest" and {"intent", "evidence"} <= tokens:
+    if action.verb == "Suggest" and {"purpose", "evidence"} <= tokens:
         return _DetectedBehavior(
-            text="produces ranked intent suggestions",
+            text="produces ranked purpose suggestions",
             score=20,
-            evidence=("behavior: suggest intents",),
+            evidence=("behavior: suggest purposes",),
         )
 
     if action.verb == "Collect" and "evidence" in tokens:
         return _DetectedBehavior(
-            text="collects responsibility evidence",
+            text="collects block evidence",
             score=15,
             evidence=("behavior: collect evidence",),
         )
@@ -1315,7 +1332,7 @@ def detect_behavior(
 
     if action.verb == "Compose" and "candidate" in tokens:
         return _DetectedBehavior(
-            text="composes intent candidates",
+            text="composes purpose candidates",
             score=15,
             evidence=("behavior: compose candidates",),
         )
@@ -1331,7 +1348,7 @@ def compose_candidates(
     facts: _NormalizedFacts,
     existing_intents: tuple[str, ...] = (),
 ) -> list[_Candidate]:
-    """Compose deterministic intent sentence candidates."""
+    """Compose deterministic purpose sentence candidates."""
 
     candidates: list[_Candidate] = []
     base_score = action.score + detected_object.score + context.score + behavior.score
@@ -1457,9 +1474,9 @@ def _append_compact_backfill_candidates(
         ]
     )
 
-    if "intent" in tokens and action.verb in {"Suggest", "Compose", "Normalize"}:
+    if "purpose" in tokens and action.verb in {"Suggest", "Compose", "Normalize"}:
         backfills.extend(
-            ["Suggest intent options", "Rank intent suggestions", "Build intent candidates"]
+            ["Suggest purpose options", "Rank purpose suggestions", "Build purpose candidates"]
         )
     if "evidence" in tokens and action.verb in {"Collect", "Normalize"}:
         backfills.extend(["Collect evidence text", "Normalize evidence facts"])
@@ -1544,7 +1561,7 @@ def _compose_docstring_based_candidate(
 
 
 def _compose_learned_based_candidate(facts: _NormalizedFacts) -> str:
-    """Return best historical learned intent that matches current context, if any."""
+    """Return best historical learned purpose that matches current context, if any."""
 
     context_text = " ".join(facts.all_tokens)
     learned = get_top_learned_intents(limit=15)
@@ -1563,7 +1580,7 @@ def _compose_existing_intent_based_candidate(
     facts: _NormalizedFacts,
     existing_intents: tuple[str, ...],
 ) -> str:
-    """Return best matching current-blueprint intent, if similarity is meaningful."""
+    """Return best matching current-blueprint purpose, if similarity is meaningful."""
 
     if not existing_intents:
         return ""
@@ -1575,8 +1592,8 @@ def _compose_existing_intent_based_candidate(
     }
     best_intent = ""
     best_overlap = 0
-    for intent in existing_intents:
-        tokens = set(tokenize_evidence(intent))
+    for purpose in existing_intents:
+        tokens = set(tokenize_evidence(purpose))
         strong_intent_tokens = {
             token
             for token in tokens
@@ -1585,8 +1602,8 @@ def _compose_existing_intent_based_candidate(
         overlap = len(strong_intent_tokens & strong_context_tokens)
         if overlap > best_overlap:
             best_overlap = overlap
-            best_intent = intent
-    # Require meaningful similarity before reusing an existing intent.
+            best_intent = purpose
+    # Require meaningful similarity before reusing an existing purpose.
     if best_overlap < 2:
         return ""
     return best_intent
@@ -1629,7 +1646,7 @@ def _compose_blended_based_candidate(
 
 
 def compact_intent_text(text: str) -> str:
-    """Compact an intent suggestion into a short inspector-friendly phrase."""
+    """Compact an purpose suggestion into a short inspector-friendly phrase."""
 
     compacted = " ".join(text.split()).strip()
     if not compacted:
@@ -1648,7 +1665,7 @@ def compact_intent_text(text: str) -> str:
 
 
 def remove_low_value_context(text: str) -> str:
-    """Remove low-value context phrases from an intent suggestion."""
+    """Remove low-value context phrases from an purpose suggestion."""
 
     for phrase in LOW_VALUE_CONTEXT_PHRASES:
         suffix = f" {phrase}"
@@ -1658,7 +1675,7 @@ def remove_low_value_context(text: str) -> str:
 
 
 def remove_low_value_adjectives(text: str) -> str:
-    """Remove weak adjectives that make intent suggestions noisy."""
+    """Remove weak adjectives that make purpose suggestions noisy."""
 
     words = text.split()
     filtered: list[str] = []
@@ -1671,7 +1688,7 @@ def remove_low_value_adjectives(text: str) -> str:
 
 
 def apply_intent_compaction_rules(text: str) -> str:
-    """Apply known phrase-level compaction rules to intent text."""
+    """Apply known phrase-level compaction rules to purpose text."""
 
     compacted = text
     for source, target in COMPACTION_REPLACEMENTS:
@@ -1681,7 +1698,7 @@ def apply_intent_compaction_rules(text: str) -> str:
 
 
 def limit_intent_words(text: str, max_words: int = MAX_INTENT_WORDS) -> str:
-    """Limit an intent suggestion to a maximum number of words."""
+    """Limit an purpose suggestion to a maximum number of words."""
 
     words = text.split()
     if len(words) <= max_words:
@@ -1700,8 +1717,8 @@ def _compose_behavior_candidate(
 
     if not behavior.text:
         return ""
-    if "intent suggestion" in behavior.text:
-        return "Produce ranked intent suggestions from responsibility evidence"
+    if "purpose suggestion" in behavior.text or "purpose suggestion" in behavior.text:
+        return "Produce ranked purpose suggestions from block evidence"
     if action.verb == "Write" and "authority" in detected_object.text:
         return "Persist blueprint authority changes to disk"
     if context.text:
@@ -1765,8 +1782,8 @@ def _compose_template(
     if action.verb == "Scan" and ("python" in tokens or "source" in tokens):
         return "Scan Python source files for declared code units"
 
-    if action.verb == "Detect" and {"duplicate", "intent"} <= tokens:
-        return "Detect duplicate active responsibilities by intent"
+    if action.verb == "Detect" and {"duplicate", "purpose"} <= tokens:
+        return "Detect duplicate active blocks by purpose"
 
     if action.verb == "Protect" and "authority" in tokens:
         return "Protect authority files from direct modification"
@@ -1776,20 +1793,20 @@ def _compose_template(
     ) and ("command" in tokens or "cli" in tokens or "arg" in tokens):
         return "Run blueprint verification from the command line"
 
-    if action.verb == "Suggest" and {"intent", "responsibility", "evidence"} <= tokens:
-        return "Suggest natural-language intents from responsibility evidence"
+    if action.verb == "Suggest" and {"purpose", "block", "evidence"} <= tokens:
+        return "Suggest natural-language purposes from block evidence"
 
-    if action.verb == "Suggest" and "intent" in tokens:
-        return "Suggest intent"
+    if action.verb == "Suggest" and "purpose" in tokens:
+        return "Suggest purpose"
 
     if action.verb == "Collect" and "evidence" in tokens:
-        return "Collect responsibility evidence"
+        return "Collect block evidence"
 
     if action.verb == "Normalize" and "evidence" in tokens:
         return "Normalize technical evidence tokens"
 
     if action.verb == "Compose" and "candidate" in tokens:
-        return "Compose intent sentence candidates"
+        return "Compose purpose sentence candidates"
 
     return ""
 
@@ -1960,7 +1977,7 @@ def _fill_missing_with_synthetic_blends(
 def deduplicate_suggestions(
     suggestions: list[IntentSuggestion],
 ) -> list[IntentSuggestion]:
-    """Remove duplicate intent suggestions while preserving first occurrence."""
+    """Remove duplicate purpose suggestions while preserving first occurrence."""
 
     by_text: dict[str, IntentSuggestion] = {}
 

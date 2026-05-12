@@ -67,19 +67,19 @@ def load_learning_scores() -> LearningScores:
         return LearningScores(intent_phrase_boost={}, domain_boost={})
 
     data = _read_learning_data()
-    intent = data.get("intent_phrase_counts", {})
+    purpose = data.get("intent_phrase_counts", {})
     domain = data.get("domain_counts", {})
-    if not isinstance(intent, dict) or not isinstance(domain, dict):
+    if not isinstance(purpose, dict) or not isinstance(domain, dict):
         return LearningScores(intent_phrase_boost={}, domain_boost={})
 
     return LearningScores(
-        intent_phrase_boost={key: _to_int(value) for key, value in intent.items()},
+        intent_phrase_boost={key: _to_int(value) for key, value in purpose.items()},
         domain_boost={key: _to_int(value) for key, value in domain.items()},
     )
 
 
 def record_intent_phrase(text: str, increment: int = 1) -> None:
-    """Record one accepted intent phrase."""
+    """Record one accepted purpose phrase."""
 
     normalized = _normalize_phrase(text)
     if not normalized or not learning_enabled():
@@ -97,7 +97,7 @@ def record_domain_value(text: str, increment: int = 1) -> None:
 
 
 def get_top_learned_intents(limit: int = 20) -> list[tuple[str, int]]:
-    """Return top learned intent phrases with counts."""
+    """Return top learned purpose phrases with counts."""
 
     if not learning_enabled():
         return []
@@ -114,7 +114,7 @@ def get_top_learned_intents(limit: int = 20) -> list[tuple[str, int]]:
 
 
 def score_phrase_context_match(phrase: str, context_text: str) -> int:
-    """Score token overlap between learned phrase and snippet context."""
+    """Score token overlap between learned phrase and block context."""
 
     phrase_tokens = set(_tokenize_simple(phrase))
     context_tokens = set(_tokenize_simple(context_text))
@@ -200,7 +200,7 @@ def _to_int(value: Any) -> int:
 
 
 def _normalize_phrase(text: str) -> str:
-    """Normalize intent phrase text for storage."""
+    """Normalize purpose phrase text for storage."""
 
     normalized = " ".join(str(text).strip().lower().split())
     tokens = [token for token in normalized.split() if len(token) >= MIN_TOKEN_LENGTH]

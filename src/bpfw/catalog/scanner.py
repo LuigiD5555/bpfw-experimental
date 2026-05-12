@@ -54,7 +54,7 @@ def scan_python_project(
             discovered_units.extend(file_units)
             findings.extend(file_findings)
 
-    # Sort discovered units so inspect reviews children before parent snippets.
+    # Sort discovered units so inspect reviews children before parent blocks.
     discovered_units.sort(
         key=_discovered_unit_sort_key
     )
@@ -264,7 +264,7 @@ def _should_discover_function(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
     parent_kind: str | None,
 ) -> bool:
-    """Return whether a function-like node should become a snippet."""
+    """Return whether a function-like node should become a block."""
 
     if parent_kind == "class" and node.name.startswith("__") and node.name.endswith("__"):
         return False
@@ -448,7 +448,7 @@ def _extract_function_unit(
 
 
 def _extract_direct_child_symbols(nodes: List[ast.stmt], parent_symbol: str) -> List[str]:
-    """Return direct nested snippet symbols for a code unit."""
+    """Return direct nested block symbols for a code unit."""
 
     child_symbols: List[str] = []
     child_symbols.extend(
