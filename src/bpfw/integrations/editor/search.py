@@ -3,10 +3,12 @@
 from dataclasses import dataclass
 from typing import Any
 
+from bpfw.catalog.schema import get_blocks, get_code, get_purpose, get_status
+
 
 @dataclass(slots=True)
 class SearchRecord:
-    """Flat searchable record for one blueprint responsibility."""
+    """Flat searchable record for one blueprint block."""
 
     responsibility_id: str
     lifecycle: str
@@ -15,78 +17,81 @@ class SearchRecord:
     path: str
     symbol: str
     location: str
-    intent: str
+    purpose: str
     searchable_text: str
 
+    @property
+    def block_id(self) -> str:
+        """Return the canonical block identifier."""
+        return self.responsibility_id
+
+    @property
+    def status(self) -> str:
+        """Return the canonical block status."""
+        return self.lifecycle
 
 def build_search_records(blueprint_data: dict[str, Any]) -> list[SearchRecord]:
-    """Build searchable records from blueprint responsibilities."""
+    """Build searchable records from blueprint blocks."""
 
-    responsibilities = blueprint_data.get("responsibilities", [])
-    if not isinstance(responsibilities, list):
+    blocks = get_blocks(blueprint_data)
+    if not isinstance(blocks, list):
         return []
 
     records: list[SearchRecord] = []
-    for responsibility in responsibilities:
-        if not isinstance(responsibility, dict):
+    for block in blocks:
+        if not isinstance(block, dict):
             continue
 
-        record = _build_single_record(responsibility)
+        record = _build_single_record(block)
         records.append(record)
 
     return records
 
 
-def _build_single_record(responsibility: dict[str, Any]) -> SearchRecord:
-    """Build one search record from a responsibility dict."""
+def _build_single_record(block: dict[str, Any]) -> SearchRecord:
+    """Build one search record from a block dict."""
 
-    responsibility_id = _str_or_empty(responsibility.get("id"))
-    lifecycle = _str_or_empty(responsibility.get("lifecycle"))
-    domain = _str_or_empty(responsibility.get("domain"))
-    name = _str_or_empty(responsibility.get("canonical_name"))
-    intent = _str_or_empty(responsibility.get("intent"))
+    block_id = _str_or_empty(block.get("id"))
+    status = _str_or_empty(get_status(block))
+    domain = _str_or_empty(block.get("domain"))
+    name = _str_or_empty(block.get("name") or block.get("canonical_name"))
+    purpose = _str_or_empty(get_purpose(block))
 
-    location_data = responsibility.get("location")
-    if isinstance(location_data, dict):
-        raw_path = _str_or_empty(location_data.get("path"))
-        symbol = _str_or_empty(location_data.get("symbol"))
-    else:
-        raw_path = ""
-        symbol = ""
+    code_data = get_code(block)
+    raw_path = _str_or_empty(code_data.get("path"))
+    symbol = _str_or_empty(code_data.get("symbol"))
 
-    # Short location for display: strip src/bpfw/ prefix
     location = _short_location(raw_path)
 
-    # Build searchable text blob for substring matching
-    detected = responsibility.get("detected")
+    detected = block.get("detected")
     qualified_name = ""
     if isinstance(detected, dict):
         qualified_name = _str_or_empty(detected.get("qualified_name"))
 
-    notes = _str_or_empty(responsibility.get("notes"))
+    notes = _str_or_empty(block.get("notes"))
 
     searchable_parts = [
-        responsibility_id,
-        lifecycle,
+        block_id,
+        status,
         domain,
         name,
         raw_path,
         symbol,
         qualified_name,
-        intent,
+        purpose,
         notes,
     ]
     searchable_text = " ".join(searchable_parts).lower()
 
     return SearchRecord(
-        responsibility_id=responsibility_id,
-        lifecycle=lifecycle,
+        responsibility_id=block_id,
+        lifecycle=status,
         domain=domain,
         name=name,
         path=raw_path,
         symbol=symbol,
         location=location,
-        intent=intent,
+        purpose=purpose,
         searchable_text=searchable_text,
     )
 
@@ -118,7 +123,7 @@ def _str_or_empty(value: Any) -> str:
 
 
 def _short_location(raw_path: str) -> str:
-    """Strip common prefixes for a compact location display."""
+    """Strip common prefixes for a compact code path display."""
 
     for prefix in ("src/bpfw/", "bpfw/"):
         if raw_path.startswith(prefix):

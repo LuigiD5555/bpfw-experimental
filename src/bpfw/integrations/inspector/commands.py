@@ -4,6 +4,7 @@ from collections.abc import Callable
 from typing import Any, Dict, List
 
 from bpfw.catalog.intent_suggestions import IntentSuggestion
+from bpfw.catalog.schema import get_purpose, get_status, set_purpose, set_status
 from bpfw.integrations.inspector.base import InspectIssue
 
 InputFunc = Callable[[str], str]
@@ -38,32 +39,32 @@ def apply_inspector_command(
     if stripped_command in {"1", "2", "3", "4", "5"}:
         suggestion_index = int(stripped_command) - 1
         if suggestion_index < len(intent_suggestions):
-            issue.responsibility["intent"] = intent_suggestions[suggestion_index].text
+            set_purpose(issue.block, intent_suggestions[suggestion_index].text)
         return InspectorAction.STAY
 
     if stripped_command.startswith("6"):
         value = stripped_command[1:].strip()
         if not value:
-            value = input_func("intent: ").strip()
+            value = input_func("purpose: ").strip()
         if value:
-            issue.responsibility["intent"] = value
+            set_purpose(issue.block, value)
         return InspectorAction.STAY
 
     # Check domain keys first (a, s, d, f)
     if stripped_command in {"a", "s", "d", "f"}:
         domain_index = {"a": 0, "s": 1, "d": 2, "f": 3}[stripped_command]
         if domain_index < len(domain_suggestions):
-            issue.responsibility["domain"] = domain_suggestions[domain_index]
+            issue.block["domain"] = domain_suggestions[domain_index]
         return InspectorAction.STAY
 
     # Then check lifecycle keys (z, x, c, v)
     if stripped_command in {"z", "x", "c", "v"}:
-        issue.responsibility["lifecycle"] = {
+        set_status(issue.block, {
             "z": "active",
             "x": "experimental",
             "c": "legacy",
             "v": "deprecated",
-        }[stripped_command]
+        }[stripped_command])
         return InspectorAction.STAY
 
     # Custom domain input (g prefix)
@@ -72,16 +73,16 @@ def apply_inspector_command(
         if not value:
             value = input_func("domain: ").strip()
         if value:
-            issue.responsibility["domain"] = value
+            issue.block["domain"] = value
         return InspectorAction.STAY
 
     if stripped_command.startswith("n"):
         value = stripped_command[1:].strip()
         if not value:
-            current_name = issue.responsibility.get("name", "")
+            current_name = issue.block.get("name", "")
             value = input_func(f"name [{current_name}]: ").strip()
         if value:
-            issue.responsibility["name"] = value
+            issue.block["name"] = value
         return InspectorAction.STAY
 
     if stripped_command.startswith("o"):
@@ -89,7 +90,7 @@ def apply_inspector_command(
         if not value:
             value = input_func("observations: ").strip()
         if value:
-            issue.responsibility["notes"] = value
+            issue.block["notes"] = value
         return InspectorAction.STAY
 
     # Interface editing (i prefix)
@@ -109,7 +110,7 @@ def apply_inspector_command(
 
 
 def run_interface_edit_submode(
-    responsibility: Dict[str, Any],
+    block: Dict[str, Any],
     input_func: InputFunc,
     print_func: Callable[[str], None],
 ) -> None:
@@ -123,18 +124,18 @@ def run_interface_edit_submode(
     - Return to main inspector (Enter)
 
     Args:
-        responsibility: The responsibility dict to modify.
+        block: The block dict to modify.
         input_func: Function for reading user input.
         print_func: Function for printing output.
     """
     # Ensure interface dict exists
-    if "interface" not in responsibility:
-        responsibility["interface"] = {}
+    if "interface" not in block:
+        block["interface"] = {}
 
-    interface = responsibility["interface"]
+    interface = block["interface"]
     if not isinstance(interface, dict):
-        responsibility["interface"] = {}
-        interface = responsibility["interface"]
+        block["interface"] = {}
+        interface = block["interface"]
 
     while True:
         print_func("")
@@ -310,5 +311,5 @@ def run_interface_edit_submode(
 
         # Clean up empty interface
         if not inputs and not output.get("type"):
-            if "interface" in responsibility:
-                del responsibility["interface"]
+            if "interface" in block:
+                del block["interface"]

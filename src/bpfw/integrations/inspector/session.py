@@ -7,6 +7,7 @@ from typing import Any, Dict, List
 from bpfw.catalog.intent_suggestions import IntentSuggestion, suggest_intents
 from bpfw.catalog.learning import record_domain_value, record_intent_phrase
 from bpfw.catalog.models import AUTHORITY_STATE_EMPTY
+from bpfw.catalog.schema import get_blocks, get_purpose, set_blocks
 from bpfw.integrations.inspector.base import (
     ISSUE_NEW_DETECTED,
     InspectIssue,
@@ -26,6 +27,7 @@ from bpfw.integrations.inspector.screen import (
     DEFAULT_INSPECTOR_HEADER_TITLE,
     render_inspector_screen,
 )
+from bpfw.integrations.shared.cli_runtime import normalize_command
 
 InputFunc = Callable[[str], str]
 PrintFunc = Callable[[str], None]
@@ -59,9 +61,9 @@ def run_text_inspector(
             print_func("  Run bpfw verify for the full drift list.")
             return 1
         if session.authority_state == AUTHORITY_STATE_EMPTY:
-            print_func("No responsibilities to complete.")
+            print_func("No blocks to complete.")
         else:
-            print_func("All responsibilities are already complete.")
+            print_func("All blocks are already complete.")
         return 0
 
     return run_text_inspector_session(
@@ -85,20 +87,20 @@ def run_text_inspector_session(
     existing_intents = collect_existing_intents(session.blueprint_data)
     while current_index < total:
         issue = session.issues[current_index]
-        responsibility = issue.responsibility
+        block = issue.block
         if issue.issue_type != ISSUE_NEW_DETECTED:
-            apply_suggestions(responsibility)
+            apply_suggestions(block)
 
         intent_suggestions = suggest_intents(
-            responsibility,
+            block,
             existing_intents=existing_intents,
         )
-        domain_suggestions = suggest_domains(responsibility)
+        domain_suggestions = suggest_domains(block)
 
         render_inspector_screen(
             project_root=session.project_root,
             issue_type=issue.issue_type,
-            responsibility=responsibility,
+            block=block,
             index=current_index,
             total=total,
             intent_suggestions=intent_suggestions,
@@ -116,7 +118,7 @@ def run_text_inspector_session(
             return 1
 
         action = apply_inspector_command(
-            command=raw_command,
+            command=normalize_command(raw_command),
             issue=issue,
             intent_suggestions=intent_suggestions,
             domain_suggestions=domain_suggestions,
@@ -124,7 +126,7 @@ def run_text_inspector_session(
         )
 
         if action == "save_next":
-            missing_fields = validate_required_fields(responsibility)
+            missing_fields = validate_required_fields(block)
             if missing_fields:
                 for line in _render_missing_fields_notification(missing_fields):
                     print_func(line)
@@ -168,7 +170,7 @@ def run_text_inspector_session(
 
         if action == "interface_edit":
             run_interface_edit_submode(
-                responsibility=responsibility,
+                block=block,
                 input_func=input_func,
                 print_func=print_func,
             )
@@ -190,11 +192,12 @@ def _save_issue(session: InspectLoadResult, issue: InspectIssue) -> bool:
         return False
 
     if issue.add_on_accept:
-        responsibilities = session.blueprint_data.setdefault("responsibilities", [])
-        if not isinstance(responsibilities, list):
+        blocks = get_blocks(session.blueprint_data)
+        if not isinstance(blocks, list):
             return False
-        if issue.responsibility not in responsibilities:
-            responsibilities.append(issue.responsibility)
+        if issue.block not in blocks:
+            blocks.append(issue.block)
+        set_blocks(session.blueprint_data, blocks)
         issue.add_on_accept = False
 
     save_blueprint(
@@ -209,9 +212,9 @@ def _record_learning_feedback(
     intent_suggestions: List[IntentSuggestion],
     domain_suggestions: List[str],
 ) -> None:
-    """Record accepted intent/domain values for incremental learning."""
+    """Record accepted purpose/domain values for incremental learning."""
 
-    intent_value = issue.responsibility.get("intent")
+    intent_value = get_purpose(issue.block)
     if isinstance(intent_value, str) and intent_value.strip():
         normalized_intent = " ".join(intent_value.strip().split()).lower()
         suggested_intents = {
@@ -221,7 +224,7 @@ def _record_learning_feedback(
         increment = 2 if normalized_intent in suggested_intents else 3
         record_intent_phrase(intent_value, increment=increment)
 
-    domain_value = issue.responsibility.get("domain")
+    domain_value = issue.block.get("domain")
     if isinstance(domain_value, str) and domain_value.strip():
         normalized_domain = domain_value.strip().lower().replace("-", "_")
         suggested_domains = {domain.strip().lower().replace("-", "_") for domain in domain_suggestions}
@@ -248,7 +251,7 @@ def _render_unknown_command_notification() -> list[str]:
     from bpfw.integrations.shared.visual_notifications import render_notification_block
 
     lines = [
-        "Use 1/2/3/4/5/6, a/s/d/f, g<domain>, z/x/c/v, n, o(observations), Enter, b, h, or q."
+        "Use 1/2/3/4/5/6, a/s/d/f, g<domain>, z/x/c/v, n, o(notes), Enter, b, h, or q."
     ]
     return render_notification_block(
         title="Unknown command",
@@ -266,13 +269,13 @@ def _render_help_block() -> list[str]:
         "",
         "  Authority fields",
         "  ────────────────",
-        "  intent        What this snippet is supposed to do.",
-        "  domain        The project area to which this code snippet is related.",
-        "  name          Simple name for this snippet.",
-        "  observations  Optional notes for this snippet.",
+        "  purpose       What this block is supposed to do.",
+        "  domain        Where this block belongs in the system.",
+        "  name          Simple block name.",
+        "  notes         Optional notes for this block.",
         "  interface     Input and output type definitions.",
         "",
-        "  lifecycle     Current status of this code snippet.",
+        "  status        Current block status.",
         "                active        In use now.",
         "                experimental  Still being tested.",
         "                legacy        Old, but still kept.",
@@ -280,16 +283,16 @@ def _render_help_block() -> list[str]:
         "",
         "  Selection",
         "  ─────────",
-        "  [1-5]      Choose suggested intent",
-        "  [6]        Write custom intent",
+        "  [1-5]      Choose suggested purpose",
+        "  [6]        Write custom purpose",
         "  [a|s|d|f]  Choose suggested domain",
         "  [g]        Write custom domain",
-        "  [z|x|c|v]  Set lifecycle",
+        "  [z|x|c|v]  Set status",
         "",
         "  Editing",
         "  ───────",
         "  [n]        Edit name",
-        "  [o]        Edit observations",
+        "  [o]        Edit notes",
         "  [i]        Edit interface",
         "",
         "  Flow",
@@ -314,7 +317,7 @@ def _compute_help_width() -> int:
     from bpfw.integrations.shared.visual_width import display_width, measure_lines
 
     sample_lines = [
-        "  domain        The project area to which this code snippet is related.",
+        "  domain        Where this block belongs in the system.",
         "                deprecated    Should be replaced or removed later.",
         "  [a|s|d|f]  Choose suggested domain",
         "  [Enter]    Save and continue",

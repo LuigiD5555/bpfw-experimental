@@ -16,6 +16,15 @@ from bpfw.catalog.models import (
     DiscoveredCodeUnit,
 )
 from bpfw.catalog.scanner import scan_python_project
+from bpfw.catalog.schema import (
+    get_blocks,
+    get_code,
+    get_kind,
+    get_purpose,
+    get_status,
+    get_uniqueness,
+    set_blocks,
+)
 from bpfw.catalog.verify import _read_ignored_paths, _read_source_roots
 from bpfw.catalog.verify import run_verify
 from bpfw.catalog.writer import to_snake_case
@@ -23,17 +32,17 @@ from bpfw.core.errors import BlueprintLockedError
 from bpfw.reports.finding import Finding
 
 ALLOWED_LIFECYCLES = ("active", "experimental", "legacy", "deprecated")
-REQUIRED_HUMAN_FIELDS = ("intent", "name", "domain", "lifecycle")
+REQUIRED_HUMAN_FIELDS = ("purpose", "name", "domain", "status")
 ISSUE_DRAFT = "draft"
 ISSUE_NEW_DETECTED = "new_detected"
 
 
 @dataclass(slots=True)
 class InspectIssue:
-    """One responsibility-level item to review in inspect."""
+    """One block-level item to review in inspector."""
 
     issue_type: str
-    responsibility: Dict[str, Any]
+    block: Dict[str, Any]
     add_on_accept: bool = False
 
 
@@ -133,41 +142,41 @@ def load_inspect_session(project_root: Path) -> InspectLoadResult:
     )
 
 
-def _responsibility_key(responsibility: Dict[str, Any]) -> tuple[str, str, str] | None:
-    """Return the path, symbol, and type key for a responsibility."""
+def _responsibility_key(block: Dict[str, Any]) -> tuple[str, str, str] | None:
+    """Return the path, symbol, and kind key for a block."""
 
-    location = responsibility.get("location")
+    location = get_code(block)
     if not isinstance(location, dict):
         return None
 
     path = clean_string(location.get("path"))
     symbol = clean_string(location.get("symbol"))
-    symbol_type = clean_string(location.get("symbol_type"))
+    symbol_type = clean_string(get_kind(location))
     if path is None or symbol is None or symbol_type is None:
         return None
     return path, symbol, symbol_type
 
 
 def _discovered_key(unit: DiscoveredCodeUnit) -> tuple[str, str, str]:
-    """Return the path, symbol, and type key for discovered code."""
+    """Return the path, symbol, and kind key for discovered code."""
 
     return unit.path, unit.symbol, unit.symbol_type
 
 
 def build_new_detected_responsibility(unit: DiscoveredCodeUnit) -> Dict[str, Any]:
-    """Build a pending responsibility from one newly detected code unit."""
+    """Build a pending block from one newly detected code unit."""
 
-    responsibility = {
+    block = {
         "id": to_snake_case(unit.symbol),
-        "intent": None,
+        "purpose": None,
         "name": unit.symbol,
         "domain": None,
-        "lifecycle": "active",
-        "location": {
+        "status": "active",
+        "code": {
             "path": unit.path,
             "module": unit.module,
             "symbol": unit.symbol,
-            "symbol_type": unit.symbol_type,
+            "kind": unit.symbol_type,
             "start_line": unit.start_line,
             "end_line": unit.end_line,
         },
@@ -182,11 +191,11 @@ def build_new_detected_responsibility(unit: DiscoveredCodeUnit) -> Dict[str, Any
             "signature": unit.signature,
         },
         "entrypoints": [],
-        "related_code": [],
-        "duplicate_policy": {
+        "connections": [],
+        "uniqueness": {
             "group": None,
             "allow_multiple_non_active": True,
-            "forbidden_active_duplicates": True,
+            "forbid_active_duplicates": True,
             "suspected_duplicates": [],
         },
         "replacement": {
@@ -205,9 +214,9 @@ def build_new_detected_responsibility(unit: DiscoveredCodeUnit) -> Dict[str, Any
         if unit.interface_output:
             interface_data["output"] = unit.interface_output
         if interface_data:
-            responsibility["interface"] = interface_data
+            block["interface"] = interface_data
 
-    return responsibility
+    return block
 
 
 def build_inspect_issues(
@@ -218,8 +227,8 @@ def build_inspect_issues(
     """Build ordered inspect issues from incomplete and newly detected code."""
 
     issues = [
-        InspectIssue(issue_type=ISSUE_DRAFT, responsibility=responsibility)
-        for responsibility in incomplete
+        InspectIssue(issue_type=ISSUE_DRAFT, block=block)
+        for block in incomplete
     ]
 
     source_roots = _read_source_roots(blueprint_data)
@@ -230,15 +239,15 @@ def build_inspect_issues(
         ignored_paths=ignored_paths,
     )
 
-    responsibilities = blueprint_data.get("responsibilities")
-    if not isinstance(responsibilities, list):
-        responsibilities = []
+    blocks = get_blocks(blueprint_data)
+    if not isinstance(blocks, list):
+        blocks = []
 
     declared_keys = {
         key
-        for responsibility in responsibilities
-        if isinstance(responsibility, dict)
-        for key in [_responsibility_key(responsibility)]
+        for block in blocks
+        if isinstance(block, dict)
+        for key in [_responsibility_key(block)]
         if key is not None
     }
 
@@ -248,7 +257,7 @@ def build_inspect_issues(
         issues.append(
             InspectIssue(
                 issue_type=ISSUE_NEW_DETECTED,
-                responsibility=build_new_detected_responsibility(unit),
+                block=build_new_detected_responsibility(unit),
                 add_on_accept=True,
             )
         )
@@ -259,20 +268,26 @@ def build_inspect_issues(
 def get_incomplete_responsibilities(
     blueprint_data: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
-    """Return responsibilities that are missing required human fields."""
+    """Return blocks that are missing required human fields."""
 
-    responsibilities = blueprint_data.get("responsibilities", [])
-    if not isinstance(responsibilities, list):
+    blocks = get_blocks(blueprint_data)
+    if not isinstance(blocks, list):
         return []
 
     incomplete: List[Dict[str, Any]] = []
-    for responsibility in responsibilities:
-        if not isinstance(responsibility, dict):
+    for block in blocks:
+        if not isinstance(block, dict):
             continue
+        values = {
+            "purpose": get_purpose(block),
+            "name": block.get("name"),
+            "domain": block.get("domain"),
+            "status": get_status(block),
+        }
         for field_name in REQUIRED_HUMAN_FIELDS:
-            value = responsibility.get(field_name)
+            value = values.get(field_name)
             if value is None or (isinstance(value, str) and not value.strip()):
-                incomplete.append(responsibility)
+                incomplete.append(block)
                 break
     return incomplete
 
@@ -292,19 +307,19 @@ def display_value(value: Any) -> str:
     return clean_string(value) or "-"
 
 
-def suggest_domain(responsibility: Dict[str, Any]) -> str | None:
-    """Suggest the strongest deterministic domain for one responsibility."""
+def suggest_domain(block: Dict[str, Any]) -> str | None:
+    """Suggest the strongest deterministic domain for one block."""
 
-    suggestions = suggest_domains(responsibility)
+    suggestions = suggest_domains(block)
     if not suggestions:
         return None
     return suggestions[0]
 
 
-def suggest_domains(responsibility: Dict[str, Any]) -> List[str]:
+def suggest_domains(block: Dict[str, Any]) -> List[str]:
     """Suggest deterministic domains in z/x/c/v source order."""
 
-    location = responsibility.get("location")
+    location = get_code(block)
     symbol_based = None
     module_based = None
     file_based = None
@@ -356,7 +371,7 @@ def suggest_domains(responsibility: Dict[str, Any]) -> List[str]:
                 ):
                     path_folders.append(normalized)
 
-    blended_candidates = [suggestion.text for suggestion in suggest_domain_objects(responsibility)]
+    blended_candidates = [suggestion.text for suggestion in suggest_domain_objects(block)]
     ordered: List[str] = []
     for candidate in path_folders:
         if candidate not in ordered:
@@ -386,45 +401,45 @@ def suggest_domains(responsibility: Dict[str, Any]) -> List[str]:
 
 
 def collect_existing_intents(blueprint_data: Dict[str, Any]) -> tuple[str, ...]:
-    """Collect existing declared intents from blueprint responsibilities."""
+    """Collect existing declared purposes from blueprint blocks."""
 
-    responsibilities = blueprint_data.get("responsibilities")
-    if not isinstance(responsibilities, list):
+    blocks = get_blocks(blueprint_data)
+    if not isinstance(blocks, list):
         return ()
     values: list[str] = []
-    for responsibility in responsibilities:
-        if not isinstance(responsibility, dict):
+    for block in blocks:
+        if not isinstance(block, dict):
             continue
-        intent_value = clean_string(responsibility.get("intent"))
-        if intent_value is not None and intent_value not in values:
-            values.append(intent_value)
+        purpose_value = clean_string(get_purpose(block))
+        if purpose_value is not None and purpose_value not in values:
+            values.append(purpose_value)
     return tuple(values)
 
 
 def suggest_lifecycle(_responsibility: Dict[str, Any]) -> str:
-    """Suggest the default lifecycle for catalog mode."""
+    """Suggest the default status for catalog mode."""
 
     return "active"
 
 
-def apply_suggestions(responsibility: Dict[str, Any]) -> None:
-    """Apply deterministic suggestions before rendering one responsibility."""
+def apply_suggestions(block: Dict[str, Any]) -> None:
+    """Apply deterministic suggestions before rendering one block."""
 
-    if clean_string(responsibility.get("domain")) is None:
-        domain = suggest_domain(responsibility)
+    if clean_string(block.get("domain")) is None:
+        domain = suggest_domain(block)
         if domain is not None:
-            responsibility["domain"] = domain
-    if clean_string(responsibility.get("lifecycle")) is None:
-        responsibility["lifecycle"] = suggest_lifecycle(responsibility)
+            block["domain"] = domain
+    if clean_string(get_status(block)) is None:
+        block["status"] = suggest_lifecycle(block)
 
 
 def build_code_lines(
     project_root: Path,
-    responsibility: Dict[str, Any],
+    block: Dict[str, Any],
 ) -> list[str]:
-    """Build numbered source lines for the responsibility location."""
+    """Build numbered source lines for the block code location."""
 
-    location = responsibility.get("location", {})
+    location = get_code(block)
     if not isinstance(location, dict):
         return ["  -  No source location detected."]
 
@@ -466,10 +481,10 @@ def _resolve_snippet_start_line(
     location: dict[str, Any],
     fallback_start_line: int,
 ) -> int:
-    """Return decorator-aware snippet start line when source node can be resolved."""
+    """Return decorator-aware block start line when source node can be resolved."""
 
     symbol = clean_string(location.get("symbol"))
-    symbol_type = clean_string(location.get("symbol_type"))
+    symbol_type = clean_string(get_kind(location))
     if symbol is None or symbol_type is None:
         return fallback_start_line
 
@@ -540,7 +555,7 @@ def _find_matching_symbol_node(
 
 
 def _find_display_start_line(source_lines: list[str], start_line: int) -> int:
-    """Include contiguous blank lines before the snippet."""
+    """Include contiguous blank lines before the block."""
 
     displayed_start_line = max(start_line, 1)
     while displayed_start_line > 1:
@@ -555,7 +570,7 @@ def _find_display_end_line(
     source_lines: list[str],
     end_line: int,
 ) -> int:
-    """Include contiguous blank lines after the snippet."""
+    """Include contiguous blank lines after the block."""
 
     displayed_end_line = min(end_line, len(source_lines))
     while displayed_end_line < len(source_lines):
@@ -566,32 +581,32 @@ def _find_display_end_line(
     return displayed_end_line
 
 
-def build_authority_lines(responsibility: Dict[str, Any]) -> list[str]:
+def build_authority_lines(block: Dict[str, Any]) -> list[str]:
     """Build authority field lines for display."""
 
     return [
-        f"  id              {display_value(responsibility.get('id'))}",
-        f"  intent          {display_value(responsibility.get('intent'))}",
-        f"  name            {display_value(responsibility.get('name'))}",
-        f"  domain          {display_value(responsibility.get('domain'))}",
-        f"  lifecycle       {display_value(responsibility.get('lifecycle'))}",
-        f"  observations    {display_value(responsibility.get('notes'))}",
+        f"  id              {display_value(block.get('id'))}",
+        f"  purpose         {display_value(get_purpose(block))}",
+        f"  name            {display_value(block.get('name'))}",
+        f"  domain          {display_value(block.get('domain'))}",
+        f"  status          {display_value(get_status(block))}",
+        f"  observations    {display_value(block.get('notes'))}",
     ]
 
 
-def build_suggestion_lines(responsibility: Dict[str, Any]) -> list[str]:
+def build_suggestion_lines(block: Dict[str, Any]) -> list[str]:
     """Build deterministic suggestion lines for display."""
 
     return [
-        f"  domain     {display_value(suggest_domain(responsibility))}",
-        f"  lifecycle  {suggest_lifecycle(responsibility)}",
+        f"  domain     {display_value(suggest_domain(block))}",
+        f"  status     {suggest_lifecycle(block)}",
     ]
 
 
-def build_nested_snippet_lines(responsibility: Dict[str, Any]) -> list[str]:
-    """Build direct nested snippet lines for display."""
+def build_nested_snippet_lines(block: Dict[str, Any]) -> list[str]:
+    """Build direct nested block lines for display."""
 
-    detected = responsibility.get("detected")
+    detected = block.get("detected")
     if not isinstance(detected, dict):
         return []
 
@@ -608,17 +623,17 @@ def build_nested_snippet_lines(responsibility: Dict[str, Any]) -> list[str]:
     return [f"  {symbol}" for symbol in nested_symbols]
 
 
-def build_hierarchy_lines(responsibility: Dict[str, Any]) -> list[str]:
+def build_hierarchy_lines(block: Dict[str, Any]) -> list[str]:
     """Build contained-to-container hierarchy lines for inspector display."""
 
-    location = responsibility.get("location")
+    location = get_code(block)
     if not isinstance(location, dict):
         return ["  -  No hierarchy detected."]
 
     path_value = clean_string(location.get("path"))
     module_value = clean_string(location.get("module"))
     symbol_value = clean_string(location.get("symbol"))
-    symbol_type_value = clean_string(location.get("symbol_type")) or "symbol"
+    symbol_type_value = clean_string(get_kind(location)) or "symbol"
 
     hierarchy_lines: list[str] = []
 
@@ -637,7 +652,7 @@ def build_hierarchy_lines(responsibility: Dict[str, Any]) -> list[str]:
         for folder_name in reversed(folder_parts):
             hierarchy_lines.append(f"  folder: {folder_name}")
 
-    nested_lines = build_nested_snippet_lines(responsibility)
+    nested_lines = build_nested_snippet_lines(block)
     if nested_lines:
         hierarchy_lines.append("  children:")
         hierarchy_lines.extend(nested_lines)
@@ -650,34 +665,39 @@ def build_hierarchy_lines(responsibility: Dict[str, Any]) -> list[str]:
 def apply_automatic_authority_fields(blueprint_data: Dict[str, Any]) -> None:
     """Derive authority fields that do not require interactive review."""
 
-    responsibilities = blueprint_data.get("responsibilities", [])
-    if not isinstance(responsibilities, list):
+    blocks = get_blocks(blueprint_data)
+    if not isinstance(blocks, list):
         return
 
-    grouped_responsibilities: dict[str, list[dict[str, Any]]] = {}
-    for responsibility in responsibilities:
-        if not isinstance(responsibility, dict):
+    grouped_blocks: dict[str, list[dict[str, Any]]] = {}
+    for block in blocks:
+        if not isinstance(block, dict):
             continue
-        intent = clean_string(responsibility.get("intent"))
-        if intent is None:
+        purpose = clean_string(get_purpose(block))
+        if purpose is None:
             continue
-        group = to_snake_case(intent)
-        duplicate_policy = responsibility.setdefault("duplicate_policy", {})
-        if duplicate_policy.get("group") is None:
-            duplicate_policy["group"] = group
-        grouped_responsibilities.setdefault(group, []).append(responsibility)
+        group = to_snake_case(purpose)
+        uniqueness = get_uniqueness(block)
+        if not uniqueness:
+            uniqueness = block.setdefault("uniqueness", {})
+        if uniqueness.get("group") is None:
+            uniqueness["group"] = group
+        grouped_blocks.setdefault(group, []).append(block)
 
-    for grouped in grouped_responsibilities.values():
-        active = [item for item in grouped if item.get("lifecycle") == "active"]
+    for grouped in grouped_blocks.values():
+        active = [item for item in grouped if get_status(item) == "active"]
         if len(active) > 1:
             active_ids = [str(item.get("id")) for item in active if item.get("id")]
             for item in active:
-                duplicate_policy = item.setdefault("duplicate_policy", {})
-                duplicates = duplicate_policy.setdefault("suspected_duplicates", [])
+                uniqueness = get_uniqueness(item)
+                if not uniqueness:
+                    uniqueness = item.setdefault("uniqueness", {})
+                duplicates = uniqueness.setdefault("suspected_duplicates", [])
                 for identifier in active_ids:
                     if identifier != str(item.get("id")) and identifier not in duplicates:
                         duplicates.append(identifier)
 
+    set_blocks(blueprint_data, [block for block in blocks if isinstance(block, dict)])
 
 def save_blueprint(
     blueprint_path: Path,

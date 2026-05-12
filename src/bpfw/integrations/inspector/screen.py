@@ -7,6 +7,7 @@ import shutil
 import textwrap
 
 from bpfw.catalog.intent_suggestions import IntentSuggestion
+from bpfw.catalog.schema import get_code, get_purpose, get_status
 from bpfw.integrations.inspector.base import (
     build_hierarchy_lines,
     build_nested_snippet_lines,
@@ -36,7 +37,7 @@ DEFAULT_INSPECTOR_HEADER_TITLE = "Blueprint Framework Inspector"
 def render_inspector_screen(
     project_root: Path,
     issue_type: str,
-    responsibility: Dict[str, Any],
+    block: Dict[str, Any],
     index: int,
     total: int,
     intent_suggestions: List[IntentSuggestion],
@@ -48,10 +49,10 @@ def render_inspector_screen(
 
     print_func("")
     header_meta = f"{index + 1}/{total} {issue_type} "
-    file_path = (responsibility.get("location") or {}).get("path", "")
-    snippet_lines = build_code_lines(project_root, responsibility)[:26]
-    nested_lines = build_nested_snippet_lines(responsibility)
-    hierarchy_lines = build_hierarchy_lines(responsibility)
+    file_path = get_code(block).get("path", "")
+    snippet_lines = build_code_lines(project_root, block)[:26]
+    nested_lines = build_nested_snippet_lines(block)
+    hierarchy_lines = build_hierarchy_lines(block)
     code_lines: List[str] = []
     if file_path:
         code_lines.append(file_path)
@@ -63,14 +64,14 @@ def render_inspector_screen(
 
     authority_lines = [
         "",
-        f"  INTENT     {display_value(responsibility.get('intent'))}",
-        f"  DOMAIN     {display_value(responsibility.get('domain'))}",
-        f"  NAME       {display_value(responsibility.get('name'))}",
-        f"  LIFECYCLE  {display_value(responsibility.get('lifecycle'))}",
+        f"  PURPOSE    {display_value(get_purpose(block))}",
+        f"  DOMAIN     {display_value(block.get('domain'))}",
+        f"  NAME       {display_value(block.get('name'))}",
+        f"  STATUS     {display_value(get_status(block))}",
         "",
     ]
 
-    current_lifecycle = clean_string(responsibility.get("lifecycle")) or ""
+    current_lifecycle = clean_string(get_status(block)) or ""
     lifecycle_lines = []
     for lifecycle_value, lifecycle_label in (
         ("active", " [z] active"),
@@ -87,7 +88,7 @@ def render_inspector_screen(
         if suggestion_index - 1 < len(intent_suggestions):
             suggestion_text = intent_suggestions[suggestion_index - 1].text
         intent_lines.append(f" [{suggestion_index}] {suggestion_text}")
-    intent_lines.append(" [6] write custom intent")
+    intent_lines.append(" [6] write custom purpose")
 
     domain_lines: List[str] = []
     domain_labels = ("a", "s", "d", "f")
@@ -98,19 +99,19 @@ def render_inspector_screen(
         domain_lines.append(f" [{domain_label}] {domain_text}")
     domain_lines.append(" [g] write custom domain")
     command_lines = [
-        "[1-5] intent suggestion   [6] custom intent",
+        "[1-5] purpose suggestion  [6] custom purpose",
         "[a|s|d|f] domain          [g] custom domain",
-        "[z|x|c|v] lifecycle       [n] name        [i] interface",
-        "[o] observations          [h] help        [q] quit",
+        "[z|x|c|v] status          [n] name        [i] interface",
+        "[o] notes                 [h] help        [q] quit",
         "[Enter] save + next       [b] back",
     ]
     observation_preview_lines = _build_observation_panel_lines(
-        responsibility=responsibility,
+        block=block,
         content_width=120,
         max_lines=3,
     )
     interface_preview_lines = _build_interface_panel_lines(
-        responsibility=responsibility,
+        block=block,
         content_width=120,
         max_lines=6,
     )
@@ -137,7 +138,7 @@ def render_inspector_screen(
             "─" * global_inner_width,
             *snippet_lines,
         ]
-    for line in render_box(title="Code evidence", lines=code_panel_lines, width=global_inner_width):
+    for line in render_box(title="Code Blockss", lines=code_panel_lines, width=global_inner_width):
         print_func(line)
 
     for line in render_box(
@@ -148,9 +149,9 @@ def render_inspector_screen(
         print_func(line)
 
     for line in render_split_box(
-        left_title="Authority",
+        left_title="Block authority",
         left_lines=authority_lines,
-        right_title="Lifecycle",
+        right_title="Status",
         right_lines=lifecycle_lines,
         total_width=global_inner_width,
         left_border_fill="═",
@@ -160,19 +161,19 @@ def render_inspector_screen(
         print_func(line)
 
     observation_lines = _build_observation_panel_lines(
-        responsibility=responsibility,
+        block=block,
         content_width=global_inner_width,
         max_lines=3,
     )
     for line in render_box(
-        title="Observations",
+        title="Notes",
         lines=observation_lines,
         width=global_inner_width,
     ):
         print_func(line)
 
     interface_lines = _build_interface_panel_lines(
-        responsibility=responsibility,
+        block=block,
         content_width=global_inner_width,
         max_lines=6,
     )
@@ -186,7 +187,7 @@ def render_inspector_screen(
     for line in render_two_column_box(
         left_title="Domain suggestions",
         left_lines=domain_lines,
-        right_title="Intent suggestions",
+        right_title="Purpose suggestions",
         right_lines=intent_lines,
         total_width=global_inner_width,
         preferred_left_ratio=0.45,
@@ -217,13 +218,13 @@ def _build_header(title: str, meta: str, width: int) -> List[str]:
 
 
 def _build_observation_panel_lines(
-    responsibility: Dict[str, Any],
+    block: Dict[str, Any],
     content_width: int,
     max_lines: int = 3,
 ) -> list[str]:
     """Build compact observation lines with empty state and truncation."""
 
-    observation_value = clean_string(responsibility.get("notes"))
+    observation_value = clean_string(block.get("notes"))
     if observation_value is None:
         return [" No observations registered · Press [o] to add an observation."]
 
@@ -247,13 +248,13 @@ def _build_observation_panel_lines(
 
 
 def _build_interface_panel_lines(
-    responsibility: Dict[str, Any],
+    block: Dict[str, Any],
     content_width: int,
     max_lines: int = 6,
 ) -> list[str]:
     """Build compact interface lines with empty state."""
 
-    interface = responsibility.get("interface")
+    interface = block.get("interface")
     if not isinstance(interface, dict):
         return [" No interface detected · Press [i] to add interface."]
 
@@ -350,11 +351,11 @@ def _compute_layout_width(
     interface_required = measure_lines(interface_preview_lines)
     commands_required = measure_lines(command_lines)
     authority_required = max(
-        display_width("Authority") + 3,
+        display_width("Block authority") + 3,
         measure_lines(authority_lines),
     )
     lifecycle_required = max(
-        display_width("Lifecycle") + 3,
+        display_width("Status") + 3,
         measure_lines(lifecycle_lines),
     )
     domain_required = max(
@@ -362,7 +363,7 @@ def _compute_layout_width(
         measure_lines(domain_lines),
     )
     intent_required = max(
-        display_width("Intent suggestions") + 3,
+        display_width("Purpose suggestions") + 3,
         measure_lines(intent_lines),
     )
     two_col_required_authority = authority_required + 1 + lifecycle_required

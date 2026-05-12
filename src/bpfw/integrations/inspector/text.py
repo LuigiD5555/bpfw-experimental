@@ -8,6 +8,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from bpfw.catalog.schema import get_blocks, get_code
 from bpfw.integrations.inspector.base import InspectIssue, clean_string, load_inspect_session
 from bpfw.integrations.inspector.screen import render_inspector_screen
 from bpfw.integrations.inspector.session import (
@@ -30,7 +31,7 @@ def run_inspector_target(
     input_func: InputFunc = input,
     print_func: PrintFunc = print,
 ) -> str:
-    """Open inspector focused on one responsibility in target mode."""
+    """Open inspector focused on one block in target mode."""
 
     session = load_inspect_session(project_root=project_root)
     if session.blocked:
@@ -40,14 +41,14 @@ def run_inspector_target(
     target_index = _find_issue_index(session.issues, responsibility_id)
 
     if target_index is None:
-        responsibility = _find_responsibility_in_blueprint(session.blueprint_data, responsibility_id)
-        if responsibility is None:
-            print_func(f"Responsibility not found: {responsibility_id}")
+        block = _find_responsibility_in_blueprint(session.blueprint_data, responsibility_id)
+        if block is None:
+            print_func(f"Block not found: {responsibility_id}")
             return "error"
 
         synthetic_issue = InspectIssue(
             issue_type="target",
-            responsibility=responsibility,
+            block=block,
             add_on_accept=False,
         )
         session.issues = [synthetic_issue]
@@ -59,12 +60,12 @@ def run_inspector_target(
     print_func("Opening in Inspector...")
     print_func("")
 
-    responsibility = session.issues[0].responsibility
-    location_data = responsibility.get("location", {})
+    block = session.issues[0].block
+    location_data = get_code(block)
     if isinstance(location_data, dict):
         location_path = clean_string(location_data.get("path")) or "unknown"
         location_symbol = clean_string(location_data.get("symbol")) or "unknown"
-        print_func(f"  {responsibility.get('canonical_name', 'unknown')}")
+        print_func(f"  {block.get('name', block.get('canonical_name', 'unknown'))}")
         print_func(f"  {location_path} :: {location_symbol}")
     print_func("")
 
@@ -78,10 +79,10 @@ def run_inspector_target(
 
 
 def _find_issue_index(issues: list[InspectIssue], responsibility_id: str) -> int | None:
-    """Find the index of an issue matching the responsibility ID."""
+    """Find the index of an issue matching the block ID."""
 
     for index, issue in enumerate(issues):
-        issue_id = issue.responsibility.get("id", "")
+        issue_id = issue.block.get("id", "")
         if issue_id == responsibility_id:
             return index
     return None
@@ -91,17 +92,15 @@ def _find_responsibility_in_blueprint(
     blueprint_data: dict[str, Any],
     responsibility_id: str,
 ) -> dict[str, Any] | None:
-    """Find a responsibility in blueprint data by ID."""
+    """Find a block in blueprint data by ID."""
 
-    responsibilities = blueprint_data.get("responsibilities", [])
-    if not isinstance(responsibilities, list):
-        return None
+    blocks = get_blocks(blueprint_data)
 
-    for responsibility in responsibilities:
-        if not isinstance(responsibility, dict):
+    for block in blocks:
+        if not isinstance(block, dict):
             continue
-        if responsibility.get("id") == responsibility_id:
-            return responsibility
+        if block.get("id") == responsibility_id:
+            return block
     return None
 
 __all__ = [

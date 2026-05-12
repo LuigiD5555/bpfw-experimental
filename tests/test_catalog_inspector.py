@@ -19,14 +19,14 @@ from bpfw.integrations.inspector.text import (
 
 def _responsibility(
     responsibility_id: str,
-    intent: str,
+    purpose: str,
     lifecycle: str,
     path: str = "src/bpfw/catalog/example.py",
     symbol: str = "ExampleService",
 ) -> dict:
     return {
         "id": responsibility_id,
-        "intent": intent,
+        "purpose": purpose,
         "name": symbol,
         "domain": None,
         "lifecycle": lifecycle,
@@ -53,94 +53,94 @@ def _responsibility(
 
 
 def test_suggest_domain_from_source_package_path() -> None:
-    responsibility = _responsibility(
+    block = _responsibility(
         responsibility_id="example",
-        intent="maintain example",
+        purpose="maintain example",
         lifecycle="active",
         path="src/bpfw/protection/authority.py",
     )
 
-    assert suggest_domain(responsibility) == "protection"
+    assert suggest_domain(block) == "protection"
 
 
 def test_suggest_domains_returns_list() -> None:
-    responsibility = _responsibility(
+    block = _responsibility(
         responsibility_id="example",
-        intent="maintain example",
+        purpose="maintain example",
         lifecycle="active",
         path="src/bpfw/protection/authority.py",
     )
 
-    domains = suggest_domains(responsibility)
+    domains = suggest_domains(block)
     assert isinstance(domains, list)
     assert "protection" in domains
 
 
 def test_suggest_domains_strips_python_extension() -> None:
-    responsibility = _responsibility(
+    block = _responsibility(
         responsibility_id="intent_suggestions",
-        intent="suggest intents",
+        purpose="suggest purposes",
         lifecycle="active",
         path="src/bpfw/catalog/intent_suggestions.py",
         symbol="IntentSuggestion",
     )
 
-    suggestions = suggest_domains(responsibility)
+    suggestions = suggest_domains(block)
     assert "intent_suggestions.py" not in suggestions
     assert "intent_suggestions" in suggestions
     assert suggestions[0] == "catalog"
 
 
 def test_suggest_domains_ignores_package_roots() -> None:
-    responsibility = _responsibility(
+    block = _responsibility(
         responsibility_id="intent_suggestions",
-        intent="suggest intents",
+        purpose="suggest purposes",
         lifecycle="active",
         path="src/bpfw/catalog/intent_suggestions.py",
         symbol="IntentSuggestion",
     )
 
-    suggestions = suggest_domains(responsibility)
+    suggestions = suggest_domains(block)
     assert "src" not in suggestions
     assert "bpfw" not in suggestions
 
 
 def test_suggest_domain_returns_first_domain_suggestion() -> None:
-    responsibility = _responsibility(
+    block = _responsibility(
         responsibility_id="intent_suggestions",
-        intent="suggest intents",
+        purpose="suggest purposes",
         lifecycle="active",
         path="src/bpfw/catalog/intent_suggestions.py",
         symbol="IntentSuggestion",
     )
 
-    assert suggest_domain(responsibility) == suggest_domains(responsibility)[0]
+    assert suggest_domain(block) == suggest_domains(block)[0]
 
 
 def test_suggest_domains_uses_symbol_tokens() -> None:
-    responsibility = _responsibility(
+    block = _responsibility(
         responsibility_id="intent_suggestion",
-        intent="suggest intents",
+        purpose="suggest purposes",
         lifecycle="active",
         path="src/bpfw/catalog/intent_suggestions.py",
         symbol="IntentSuggestion",
     )
 
-    suggestions = suggest_domains(responsibility)
-    assert "intent" in suggestions
+    suggestions = suggest_domains(block)
+    assert "purpose" in suggestions
 
 
 def test_suggest_domains_prioritizes_inspector_over_integrations() -> None:
-    responsibility = _responsibility(
+    block = _responsibility(
         responsibility_id="inspector_session",
-        intent="run inspector",
+        purpose="run inspector",
         lifecycle="active",
         path="src/bpfw/integrations/inspector_text.py",
         symbol="run_text_inspector_session",
     )
-    responsibility["location"]["module"] = "bpfw.integrations.inspector_text"
+    block["location"]["module"] = "bpfw.integrations.inspector_text"
 
-    suggestions = suggest_domains(responsibility)
+    suggestions = suggest_domains(block)
     assert suggestions[0] == "inspector"
 
 
@@ -149,7 +149,7 @@ def test_get_incomplete_responsibilities_detects_missing_fields() -> None:
     complete["domain"] = "example"
     incomplete = _responsibility("missing", "maintain example", "active")
     incomplete["domain"] = ""
-    blueprint_data = {"responsibilities": [complete, incomplete]}
+    blueprint_data = {"blocks": [complete, incomplete]}
 
     assert get_incomplete_responsibilities(blueprint_data) == [incomplete]
 
@@ -163,7 +163,7 @@ def test_apply_automatic_authority_fields_derives_groups() -> None:
         path="src/bpfw/catalog/accounts.py",
         symbol="AccountRegistration",
     )
-    blueprint_data = {"responsibilities": [active_one, active_two]}
+    blueprint_data = {"blocks": [active_one, active_two]}
 
     apply_automatic_authority_fields(blueprint_data)
 
@@ -175,24 +175,24 @@ def test_apply_automatic_authority_fields_derives_groups() -> None:
 
 
 def test_text_inspector_renders_expected_sections(tmp_path: Path) -> None:
-    responsibility = _responsibility(
+    block = _responsibility(
         responsibility_id="example",
-        intent="",
+        purpose="",
         lifecycle="active",
         path="src/bpfw/catalog/example.py",
     )
-    responsibility["detected"] = {
+    block["detected"] = {
         "methods": ["ExampleService.run"],
         "functions": ["ExampleService.Helper"],
     }
     output: list[str] = []
-    intent_suggestions = suggest_intents(responsibility)
-    domain_suggestions = suggest_domains(responsibility)
+    intent_suggestions = suggest_intents(block)
+    domain_suggestions = suggest_domains(block)
 
     render_text_inspector_screen(
         project_root=tmp_path,
         issue_type="draft",
-        responsibility=responsibility,
+        block=block,
         index=11,
         total=82,
         intent_suggestions=intent_suggestions,
@@ -203,8 +203,8 @@ def test_text_inspector_renders_expected_sections(tmp_path: Path) -> None:
     rendered = "\n".join(output)
     assert "Blueprint Framework Inspector" in rendered
     assert "Authority" in rendered
-    assert "Intent suggestions" in rendered
-    assert "[6] write custom intent" in rendered
+    assert "Purpose suggestions" in rendered
+    assert "[6] write custom purpose" in rendered
     assert "Domain suggestions" in rendered
     assert " [a] " in rendered
     assert " [s] " in rendered
@@ -238,21 +238,21 @@ def test_code_preview_includes_blank_lines_after_snippet(tmp_path: Path) -> None
         "    return path.startswith('blueprint.policy.security')\n",
         encoding="utf-8",
     )
-    responsibility = _responsibility(
+    block = _responsibility(
         responsibility_id="looks_like_absolute_path",
-        intent="absolute_path_checker",
+        purpose="absolute_path_checker",
         lifecycle="active",
         path="src/bpfw/catalog/security.py",
         symbol="looks_like_absolute_path",
     )
-    responsibility["location"]["symbol_type"] = "function"
-    responsibility["location"]["start_line"] = 1
-    responsibility["location"]["end_line"] = 3
+    block["location"]["symbol_type"] = "function"
+    block["location"]["start_line"] = 1
+    block["location"]["end_line"] = 3
 
     rendered = "\n".join(
         build_code_lines(
             project_root=tmp_path,
-            responsibility=responsibility,
+            block=block,
         )
     )
 
@@ -273,21 +273,21 @@ def test_code_preview_includes_blank_lines_before_snippet(tmp_path: Path) -> Non
         "    return value.startswith('/')\n",
         encoding="utf-8",
     )
-    responsibility = _responsibility(
+    block = _responsibility(
         responsibility_id="looks_like_absolute_path",
-        intent="absolute_path_checker",
+        purpose="absolute_path_checker",
         lifecycle="active",
         path="src/bpfw/catalog/security.py",
         symbol="looks_like_absolute_path",
     )
-    responsibility["location"]["symbol_type"] = "function"
-    responsibility["location"]["start_line"] = 4
-    responsibility["location"]["end_line"] = 5
+    block["location"]["symbol_type"] = "function"
+    block["location"]["start_line"] = 4
+    block["location"]["end_line"] = 5
 
     rendered = "\n".join(
         build_code_lines(
             project_root=tmp_path,
-            responsibility=responsibility,
+            block=block,
         )
     )
 
@@ -310,21 +310,21 @@ def test_code_preview_does_not_cross_into_next_top_level_snippet(tmp_path: Path)
         "    return path.startswith('blueprint.policy.security')\n",
         encoding="utf-8",
     )
-    responsibility = _responsibility(
+    block = _responsibility(
         responsibility_id="looks_like_absolute_path",
-        intent="absolute_path_checker",
+        purpose="absolute_path_checker",
         lifecycle="active",
         path="src/bpfw/catalog/security.py",
         symbol="looks_like_absolute_path",
     )
-    responsibility["location"]["symbol_type"] = "function"
-    responsibility["location"]["start_line"] = 1
-    responsibility["location"]["end_line"] = 3
+    block["location"]["symbol_type"] = "function"
+    block["location"]["start_line"] = 1
+    block["location"]["end_line"] = 3
 
     rendered = "\n".join(
         build_code_lines(
             project_root=tmp_path,
-            responsibility=responsibility,
+            block=block,
         )
     )
 
@@ -344,21 +344,21 @@ def test_code_preview_stops_at_next_same_indent_code(tmp_path: Path) -> None:
         "ABSOLUTE_PATH_POLICY = 'blocked'\n",
         encoding="utf-8",
     )
-    responsibility = _responsibility(
+    block = _responsibility(
         responsibility_id="looks_like_absolute_path",
-        intent="absolute_path_checker",
+        purpose="absolute_path_checker",
         lifecycle="active",
         path="src/bpfw/catalog/security.py",
         symbol="looks_like_absolute_path",
     )
-    responsibility["location"]["symbol_type"] = "function"
-    responsibility["location"]["start_line"] = 1
-    responsibility["location"]["end_line"] = 3
+    block["location"]["symbol_type"] = "function"
+    block["location"]["start_line"] = 1
+    block["location"]["end_line"] = 3
 
     rendered = "\n".join(
         build_code_lines(
             project_root=tmp_path,
-            responsibility=responsibility,
+            block=block,
         )
     )
 
@@ -377,21 +377,21 @@ def test_code_preview_includes_class_decorator_lines(tmp_path: Path) -> None:
         "    text: str\n",
         encoding="utf-8",
     )
-    responsibility = _responsibility(
+    block = _responsibility(
         responsibility_id="domain_suggestion",
-        intent="suggest domain",
+        purpose="suggest domain",
         lifecycle="active",
         path="src/bpfw/catalog/domain_suggestions.py",
         symbol="DomainSuggestion",
     )
-    responsibility["location"]["symbol_type"] = "class"
-    responsibility["location"]["start_line"] = 4
-    responsibility["location"]["end_line"] = 5
+    block["location"]["symbol_type"] = "class"
+    block["location"]["start_line"] = 4
+    block["location"]["end_line"] = 5
 
     rendered = "\n".join(
         build_code_lines(
             project_root=tmp_path,
-            responsibility=responsibility,
+            block=block,
         )
     )
 
@@ -411,21 +411,21 @@ def test_code_preview_includes_function_decorator_lines(tmp_path: Path) -> None:
         "    return value.strip()\n",
         encoding="utf-8",
     )
-    responsibility = _responsibility(
+    block = _responsibility(
         responsibility_id="normalize_name",
-        intent="normalize name",
+        purpose="normalize name",
         lifecycle="active",
         path="src/bpfw/catalog/helpers.py",
         symbol="normalize_name",
     )
-    responsibility["location"]["symbol_type"] = "function"
-    responsibility["location"]["start_line"] = 5
-    responsibility["location"]["end_line"] = 6
+    block["location"]["symbol_type"] = "function"
+    block["location"]["start_line"] = 5
+    block["location"]["end_line"] = 6
 
     rendered = "\n".join(
         build_code_lines(
             project_root=tmp_path,
-            responsibility=responsibility,
+            block=block,
         )
     )
 
@@ -451,21 +451,21 @@ def test_code_preview_includes_multiline_decorator_block(tmp_path: Path) -> None
         "    value: str\n",
         encoding="utf-8",
     )
-    responsibility = _responsibility(
+    block = _responsibility(
         responsibility_id="decorated_model",
-        intent="define model",
+        purpose="define model",
         lifecycle="active",
         path="src/bpfw/catalog/models.py",
         symbol="DecoratedModel",
     )
-    responsibility["location"]["symbol_type"] = "class"
-    responsibility["location"]["start_line"] = 11
-    responsibility["location"]["end_line"] = 12
+    block["location"]["symbol_type"] = "class"
+    block["location"]["start_line"] = 11
+    block["location"]["end_line"] = 12
 
     rendered = "\n".join(
         build_code_lines(
             project_root=tmp_path,
-            responsibility=responsibility,
+            block=block,
         )
     )
 
@@ -482,12 +482,12 @@ def test_text_inspector_edits_fields_and_accepts(tmp_path: Path) -> None:
     blueprint_path.parent.mkdir(parents=True)
     blueprint_path.write_text(
         "version: 1\n"
-        "responsibilities:\n"
+        "blocks:\n"
         "  - id: example\n"
         "    name: ExampleService\n"
         "    domain: ''\n"
         "    lifecycle: ''\n"
-        "    intent: ''\n"
+        "    purpose: ''\n"
         "    notes: ''\n"
         "    location:\n"
         "      path: src/bpfw/catalog/example.py\n"
@@ -527,12 +527,12 @@ def test_text_inspector_save_next_persists_partial_fields(tmp_path: Path) -> Non
     blueprint_path.parent.mkdir(parents=True)
     blueprint_path.write_text(
         "version: 1\n"
-        "responsibilities:\n"
+        "blocks:\n"
         "  - id: example\n"
         "    name: ExampleService\n"
         "    domain: catalog\n"
         "    lifecycle: active\n"
-        "    intent: ''\n",
+        "    purpose: ''\n",
         encoding="utf-8",
     )
     session = load_inspect_session(project_root=tmp_path)
@@ -556,12 +556,12 @@ def test_text_inspector_unknown_command_stays_on_current_item(tmp_path: Path) ->
     blueprint_path.parent.mkdir(parents=True)
     blueprint_path.write_text(
         "version: 1\n"
-        "responsibilities:\n"
+        "blocks:\n"
         "  - id: example\n"
         "    name: ExampleService\n"
         "    domain: ''\n"
         "    lifecycle: active\n"
-        "    intent: ''\n"
+        "    purpose: ''\n"
         "    location:\n"
         "      path: src/bpfw/catalog/example.py\n"
         "      symbol: ExampleService\n"
@@ -591,11 +591,11 @@ def test_text_inspector_blocks_when_input_is_unavailable(tmp_path: Path) -> None
     blueprint_path.parent.mkdir(parents=True)
     blueprint_path.write_text(
         "version: 1\n"
-        "responsibilities:\n"
+        "blocks:\n"
         "  - id: example\n"
         "    name: ExampleService\n"
         "    lifecycle: ''\n"
-        "    intent: ''\n",
+        "    purpose: ''\n",
         encoding="utf-8",
     )
     session = load_inspect_session(project_root=tmp_path)
@@ -636,9 +636,9 @@ def test_text_inspector_accepts_new_detected_code(tmp_path: Path) -> None:
         "    - src\n"
         "  ignored_paths:\n"
         "    - tests\n"
-        "responsibilities:\n"
+        "blocks:\n"
         "  - id: declared_func\n"
-        "    intent: maintain declared func\n"
+        "    purpose: maintain declared func\n"
         "    name: declared_func\n"
         "    domain: demo\n"
         "    lifecycle: active\n"
@@ -677,12 +677,12 @@ def test_text_inspector_back_returns_to_saved_previous_item(tmp_path: Path) -> N
     blueprint_path.parent.mkdir(parents=True)
     blueprint_path.write_text(
         "version: 1\n"
-        "responsibilities:\n"
+        "blocks:\n"
         "  - id: first\n"
         "    name: FirstService\n"
         "    domain: ''\n"
         "    lifecycle: ''\n"
-        "    intent: ''\n"
+        "    purpose: ''\n"
         "    location:\n"
         "      path: src/bpfw/catalog/first.py\n"
         "      module: src.bpfw.catalog.first\n"
@@ -692,7 +692,7 @@ def test_text_inspector_back_returns_to_saved_previous_item(tmp_path: Path) -> N
         "    name: SecondService\n"
         "    domain: ''\n"
         "    lifecycle: ''\n"
-        "    intent: ''\n"
+        "    purpose: ''\n"
         "    location:\n"
         "      path: src/bpfw/catalog/second.py\n"
         "      module: src.bpfw.catalog.second\n"
@@ -701,7 +701,7 @@ def test_text_inspector_back_returns_to_saved_previous_item(tmp_path: Path) -> N
         encoding="utf-8",
     )
     session = load_inspect_session(project_root=tmp_path)
-    answers = iter(["6first intent", "gfirst_domain", "", "b", "q"])
+    answers = iter(["6first purpose", "gfirst_domain", "", "b", "q"])
     output: list[str] = []
 
     exit_code = run_text_inspector_session(
@@ -715,21 +715,21 @@ def test_text_inspector_back_returns_to_saved_previous_item(tmp_path: Path) -> N
     assert "1/2 draft" in rendered
     assert "2/2 draft" in rendered
     assert rendered.count("1/2 draft") >= 2
-    assert "INTENT     first intent" in rendered
+    assert "INTENT     first purpose" in rendered
     assert "DOMAIN     first_domain" in rendered
 
 
-def test_text_inspector_custom_intent_uses_slot_six_with_prompt(tmp_path: Path) -> None:
+def test_text_inspector_custom_purpose_uses_slot_six_with_prompt(tmp_path: Path) -> None:
     blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
     blueprint_path.parent.mkdir(parents=True)
     blueprint_path.write_text(
         "version: 1\n"
-        "responsibilities:\n"
+        "blocks:\n"
         "  - id: example\n"
         "    name: ExampleService\n"
         "    domain: catalog\n"
         "    lifecycle: active\n"
-        "    intent: ''\n"
+        "    purpose: ''\n"
         "    location:\n"
         "      path: src/bpfw/catalog/example.py\n"
         "      symbol: ExampleService\n"
@@ -737,7 +737,7 @@ def test_text_inspector_custom_intent_uses_slot_six_with_prompt(tmp_path: Path) 
         encoding="utf-8",
     )
     session = load_inspect_session(project_root=tmp_path)
-    answers = iter(["6", "prompted custom intent", ""])
+    answers = iter(["6", "prompted custom purpose", ""])
     output: list[str] = []
 
     exit_code = run_text_inspector_session(
@@ -748,4 +748,4 @@ def test_text_inspector_custom_intent_uses_slot_six_with_prompt(tmp_path: Path) 
 
     saved = blueprint_path.read_text(encoding="utf-8")
     assert exit_code == 0
-    assert "prompted custom intent" in saved
+    assert "prompted custom purpose" in saved

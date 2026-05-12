@@ -1,13 +1,14 @@
-"""Editor session — search-first responsibility launcher for BPFW Editor.
+"""Editor session — search-first block launcher for BPFW Editor.
 
-The editor searches blueprint responsibilities and delegates editing to Inspector.
-It does not edit fields directly — it locates a responsibility and opens the
+The editor searches blueprint blocks and delegates editing to Inspector.
+It does not edit fields directly — it locates a block and opens the
 inspector in target mode.
 """
 
 from pathlib import Path
 
 from bpfw.catalog.loader import BlueprintLoader
+from bpfw.catalog.schema import get_blocks
 from bpfw.integrations.editor.filters import FilterState, apply_filters, parse_filter_input
 from bpfw.integrations.editor.screen import (
     read_input,
@@ -19,11 +20,12 @@ from bpfw.integrations.editor.screen import (
     render_search_screen,
 )
 from bpfw.integrations.editor.search import SearchRecord, build_search_records, search_records
+from bpfw.integrations.shared.cli_runtime import is_quit_command, normalize_command
 from bpfw.protection.authority import get_blueprint_lock_state
 
 
 class EditorSession:
-    """Search-first launcher that finds responsibilities and opens inspector."""
+    """Search-first launcher that finds blocks and opens inspector."""
 
     def __init__(self, project_root: Path) -> None:
         self.project_root = project_root
@@ -49,14 +51,14 @@ class EditorSession:
             print("Blueprint is locked.\n\nUnlock before using editor:\n\n  bpfw unlock")
             return 1
 
-        # Check has responsibilities
+        # Check has blocks
         blueprint_data = load_result.data
-        responsibilities = blueprint_data.get("responsibilities", [])
-        if not isinstance(responsibilities, list) or len(responsibilities) == 0:
+        blocks = get_blocks(blueprint_data)
+        if not isinstance(blocks, list) or len(blocks) == 0:
             print(
-                "Blueprint has no responsibilities.\n\n"
+                "Blueprint has no blocks.\n\n"
                 "Next:\n"
-                "  bpfw inspect"
+                "  bpfw inspector"
             )
             return 1
 
@@ -64,9 +66,9 @@ class EditorSession:
         records = build_search_records(blueprint_data)
         if not records:
             print(
-                "Blueprint has no searchable responsibilities.\n\n"
+                "Blueprint has no searchable blocks.\n\n"
                 "Next:\n"
-                "  bpfw inspect"
+                "  bpfw inspector"
             )
             return 1
 
@@ -84,16 +86,17 @@ class EditorSession:
             # Show search screen and get query
             render_search_screen()
             raw_input = read_input("search: ")
+            command = normalize_command(raw_input)
 
-            if raw_input == "q":
+            if is_quit_command(command):
                 print("Editor closed.")
                 return 0
-            if raw_input == "h":
+            if command == "h":
                 self._show_help()
                 continue
 
             # Empty input means show all
-            if raw_input == "" or raw_input == "a":
+            if command == "" or command == "a":
                 query = ""
                 filter_state.clear()
                 current_records = all_records
@@ -112,9 +115,10 @@ class EditorSession:
                     filter_display_lines=filter_state.display_lines(),
                 )
 
-                command = read_input("command: ")
+                raw_command = read_input("command: ")
+                command = normalize_command(raw_command)
 
-                if command == "q":
+                if is_quit_command(command):
                     print("Editor closed.")
                     return 0
 
@@ -193,8 +197,9 @@ class EditorSession:
 
         render_filter_screen()
         raw_input = read_input("filter: ")
+        command = normalize_command(raw_input)
 
-        if raw_input == "q":
+        if is_quit_command(command):
             return "quit"
 
         if not raw_input:

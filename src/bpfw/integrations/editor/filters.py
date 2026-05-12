@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 
 from bpfw.integrations.editor.search import SearchRecord
 
-ALLOWED_FILTER_COLUMNS = ("lifecycle", "domain", "name", "path", "symbol", "id")
+ALLOWED_FILTER_COLUMNS = ("status", "domain", "name", "path", "symbol", "id", "purpose")
 
 
 @dataclass
@@ -71,7 +71,7 @@ def parse_filter_input(raw_input: str) -> tuple[str, str] | str:
             "Use:\n"
             "  column=value\n\n"
             "Examples:\n"
-            "  lifecycle=active\n"
+            "  status=active\n"
             "  domain=catalog"
         )
 
@@ -85,7 +85,7 @@ def parse_filter_input(raw_input: str) -> tuple[str, str] | str:
             "Use:\n"
             "  column=value\n\n"
             "Examples:\n"
-            "  lifecycle=active\n"
+            "  status=active\n"
             "  domain=catalog"
         )
 
@@ -95,7 +95,7 @@ def parse_filter_input(raw_input: str) -> tuple[str, str] | str:
             "Use:\n"
             "  column=value\n\n"
             "Examples:\n"
-            "  lifecycle=active\n"
+            "  status=active\n"
             "  domain=catalog"
         )
 
@@ -153,7 +153,8 @@ def _get_record_column_value(record: SearchRecord, column: str) -> str:
     """Get the string value of a record for a filter column."""
 
     column_map = {
-        "lifecycle": record.lifecycle,
+        "status": record.status,
+        "purpose": record.purpose,
         "domain": record.domain,
         "name": record.name,
         "path": record.path,
