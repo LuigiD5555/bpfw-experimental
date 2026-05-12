@@ -9,7 +9,6 @@ from typing import Any
 from bpfw.catalog.schema import get_code, get_kind, get_purpose
 from bpfw.catalog.learning import (
     get_top_learned_intents,
-    load_learning_scores,
     score_phrase_context_match,
 )
 
@@ -101,6 +100,7 @@ class _Candidate:
 
 
 ACTION_WORDS = {
+    "ensure": "Ensure",
     "verify": "Validate",
     "check": "Validate",
     "validate": "Validate",
@@ -138,6 +138,8 @@ ACTION_WORDS = {
     "render": "Render",
     "format": "Render",
     "display": "Render",
+    "apply": "Apply",
+    "update": "Update",
     "delete": "Remove",
     "remove": "Remove",
     "lock": "Protect",
@@ -301,6 +303,25 @@ DOCSTRING_OBJECT_STOPWORDS = frozenset(
 )
 ERROR_TOKENS = frozenset({"error", "exception"})
 
+INCOMPLETE_END_WORDS = frozenset(
+    {
+        "can",
+        "be",
+        "to",
+        "for",
+        "with",
+        "from",
+        "by",
+        "of",
+        "in",
+        "and",
+        "or",
+        "the",
+        "a",
+        "an",
+    }
+)
+
 
 def suggest_intents(
     block: dict[str, Any],
@@ -335,7 +356,8 @@ def suggest_intents(
         facts=facts,
         existing_intents=existing_intents,
     )
-    return normalize_duplicate_slots(slots)
+    deduplicated = normalize_duplicate_slots(slots)
+    return deduplicated
 
 
 def _empty_intent_slots() -> list[IntentSuggestion]:
@@ -1013,10 +1035,11 @@ def _detect_known_object(
 
     tokens = set(facts.all_tokens)
 
-    if {"duplicate", "purpose"} <= tokens:
+    # Handle both old "purpose" and new "purpose" terminology in symbols
+    if "duplicate" in tokens and ("purpose" in tokens or "intent" in tokens):
         return _DetectedObject(
             text="duplicate active blocks by purpose",
-            score=45,
+            score=40,
             evidence=("tokens: duplicate purpose",),
         )
 
@@ -1933,7 +1956,9 @@ def _fill_missing_with_synthetic_blends(
         tokens = [
             token
             for token in tokenize_evidence(text)
-            if token not in NOISE_TOKENS and token not in LOW_WEIGHT_ROLES and token not in {"suggest", "create", "build", "define", "maintain"}
+            if token not in NOISE_TOKENS
+            and token not in LOW_WEIGHT_ROLES
+            and token not in {"suggest", "create", "build", "define", "maintain"}
         ]
         for token in tokens:
             if token not in token_pool:
@@ -1988,3 +2013,75 @@ def deduplicate_suggestions(
             by_text[normalized_text] = suggestion
 
     return list(by_text.values())
+
+
+def _apply_quality_filters(
+    suggestions: list[IntentSuggestion],
+    facts: _NormalizedFacts,
+) -> list[IntentSuggestion]:
+    """Filter out low-quality suggestions, preserving the fixed slot count.
+
+    Bad suggestions are replaced with "-" placeholders rather than removed,
+    so the caller always receives the same number of slots.
+    """
+
+    is_error_block = _is_error_symbol(facts.symbol_tokens)
+    symbol_lower = facts.symbol.lower()
+    is_raise_function = (
+        symbol_lower.startswith("raise_")
+        or symbol_lower.startswith("raise")
+    )
+    allow_raise = is_error_block or is_raise_function
+
+    filtered: list[IntentSuggestion] = []
+    seen_normalized: set[str] = set()
+
+    for suggestion in suggestions:
+        text = suggestion.text
+        if text == "-" or text.startswith("Write custom"):
+            filtered.append(suggestion)
+            continue
+
+        words = text.split()
+        if len(words) < 3:
+            filtered.append(IntentSuggestion(
+                text="-", source=suggestion.source,
+                evidence=suggestion.evidence + ("filtered: too short",),
+            ))
+            continue
+
+        last_word = words[-1].lower().rstrip(".,;:")
+        if last_word in INCOMPLETE_END_WORDS:
+            filtered.append(IntentSuggestion(
+                text="-", source=suggestion.source,
+                evidence=suggestion.evidence + ("filtered: incomplete end",),
+            ))
+            continue
+
+        if text.startswith("Raise") and not allow_raise:
+            filtered.append(IntentSuggestion(
+                text="-", source=suggestion.source,
+                evidence=suggestion.evidence + ("filtered: raise not allowed",),
+            ))
+            continue
+
+        has_duplicates = len(words) != len(set(word.lower() for word in words))
+        if has_duplicates:
+            filtered.append(IntentSuggestion(
+                text="-", source=suggestion.source,
+                evidence=suggestion.evidence + ("filtered: duplicate words",),
+            ))
+            continue
+
+        normalized = " ".join(tokenize_evidence(text))
+        if normalized in seen_normalized:
+            filtered.append(IntentSuggestion(
+                text="-", source=suggestion.source,
+                evidence=suggestion.evidence + ("filtered: near duplicate",),
+            ))
+            continue
+        seen_normalized.add(normalized)
+
+        filtered.append(suggestion)
+
+    return filtered
