@@ -145,7 +145,7 @@ class PlanValidator:
             if box.lifecycle not in state.project_config.allowed_lifecycles:
                 errors.append(PlanFinding(
                     level="error",
-                    message=f"Invalid status '{box.lifecycle}'. Must be one of: {state.project_config.allowed_lifecycles}",
+                    message=f"Invalid lifecycle '{box.lifecycle}'. Must be one of: {state.project_config.allowed_lifecycles}",
                     box_id=box.id,
                 ))
             

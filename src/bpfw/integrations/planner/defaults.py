@@ -127,7 +127,7 @@ class BoxFactory:
         if input_data.lifecycle:
             allowed_lifecycles = state.project_config.allowed_lifecycles
             if input_data.lifecycle not in allowed_lifecycles:
-                raise ValueError(f"Invalid status: {input_data.lifecycle}. Must be one of: {allowed_lifecycles}")
+                raise ValueError(f"Invalid lifecycle: {input_data.lifecycle}. Must be one of: {allowed_lifecycles}")
         
         # Generate defaults
         box = PlannerDefaultsBuilder.build_box_defaults(input_data, state)

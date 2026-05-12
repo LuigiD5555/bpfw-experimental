@@ -427,7 +427,7 @@ def render_details_panel_internal(selected_box: Optional[PlannerBox]) -> List[st
             "",
             "Details will show purpose,",
             "path, interface and",
-            "status for the",
+            "lifecycle for the",
             "selected block.",
         ]
     
@@ -435,7 +435,7 @@ def render_details_panel_internal(selected_box: Optional[PlannerBox]) -> List[st
     
     # Purpose
     lines.append(f"Purpose   {selected_box.purpose}")
-    lines.append(f"Status    {selected_box.lifecycle}")
+    lines.append(f"Lifecycle {selected_box.lifecycle}")
     lines.append(f"Path      {selected_box.path or 'not set'}")
     
     if selected_box.symbol:
@@ -596,7 +596,7 @@ def render_edit_block_modal(state: PlannerState) -> None:
         "Choose a block to edit.",
         "",
         "Then choose field:",
-        "[1] Purpose   [2] Domain   [3] Status   [4] Path",
+        "[1] Purpose   [2] Domain   [3] Lifecycle   [4] Path",
         "[5] Symbol    [6] Kind     [7] Inputs   [8] Output",
         "",
     ]
@@ -1456,9 +1456,9 @@ def render_experimental_to_active_warning_modal(state: PlannerState, experimenta
         "[enter] Continue",
         "[b] Cancel",
     ]
-    width = resolve_uniform_width(terminal_width=terminal_width, panels=[("Status Warning", lines)])
+    width = resolve_uniform_width(terminal_width=terminal_width, panels=[("Lifecycle Warning", lines)])
 
-    for line in render_box(title="Status Warning", lines=lines, width=width):
+    for line in render_box(title="Lifecycle Warning", lines=lines, width=width):
         print(line)
 
 

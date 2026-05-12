@@ -27,6 +27,7 @@ from bpfw.integrations.shared.visual_theme import (
     render_commands_box,
     render_header,
 )
+from bpfw.integrations.shared.screen_control import refresh_screen
 
 PrintFunc = Callable[[str], None]
 MIN_TOTAL_WIDTH = 72
@@ -47,6 +48,7 @@ def render_inspector_screen(
 ) -> None:
     """Render the direct MVP inspector screen."""
 
+    refresh_screen()
     print_func("")
     header_meta = f"{index + 1}/{total} {issue_type} "
     file_path = get_code(block).get("path", "")
@@ -67,7 +69,7 @@ def render_inspector_screen(
         f"  PURPOSE    {display_value(get_purpose(block))}",
         f"  DOMAIN     {display_value(block.get('domain'))}",
         f"  NAME       {display_value(block.get('name'))}",
-        f"  STATUS     {display_value(get_status(block))}",
+        f"  LIFECYCLE  {display_value(get_status(block))}",
         "",
     ]
 
@@ -101,7 +103,7 @@ def render_inspector_screen(
     command_lines = [
         "[1-5] purpose suggestion  [6] custom purpose",
         "[a|s|d|f] domain          [g] custom domain",
-        "[z|x|c|v] status          [n] name        [i] interface",
+        "[z|x|c|v] lifecycle       [n] name        [i] interface",
         "[o] notes                 [h] help        [q] quit",
         "[Enter] save + next       [b] back",
     ]
@@ -138,36 +140,12 @@ def render_inspector_screen(
             "─" * global_inner_width,
             *snippet_lines,
         ]
-    for line in render_box(title="Code Blockss", lines=code_panel_lines, width=global_inner_width):
+    for line in render_box(title="Code Block", lines=code_panel_lines, width=global_inner_width):
         print_func(line)
 
     for line in render_box(
         title="Hierarchy",
         lines=hierarchy_lines,
-        width=global_inner_width,
-    ):
-        print_func(line)
-
-    for line in render_split_box(
-        left_title="Block authority",
-        left_lines=authority_lines,
-        right_title="Status",
-        right_lines=lifecycle_lines,
-        total_width=global_inner_width,
-        left_border_fill="═",
-        right_border_fill="─",
-        preferred_left_ratio=0.6,
-    ):
-        print_func(line)
-
-    observation_lines = _build_observation_panel_lines(
-        block=block,
-        content_width=global_inner_width,
-        max_lines=3,
-    )
-    for line in render_box(
-        title="Notes",
-        lines=observation_lines,
         width=global_inner_width,
     ):
         print_func(line)
@@ -184,6 +162,18 @@ def render_inspector_screen(
     ):
         print_func(line)
 
+    for line in render_split_box(
+        left_title="Block Status",
+        left_lines=authority_lines,
+        right_title="Lifecycle",
+        right_lines=lifecycle_lines,
+        total_width=global_inner_width,
+        left_border_fill="═",
+        right_border_fill="─",
+        preferred_left_ratio=0.6,
+    ):
+        print_func(line)
+
     for line in render_two_column_box(
         left_title="Domain suggestions",
         left_lines=domain_lines,
@@ -191,6 +181,18 @@ def render_inspector_screen(
         right_lines=intent_lines,
         total_width=global_inner_width,
         preferred_left_ratio=0.45,
+    ):
+        print_func(line)
+
+    observation_lines = _build_observation_panel_lines(
+        block=block,
+        content_width=global_inner_width,
+        max_lines=3,
+    )
+    for line in render_box(
+        title="Notes",
+        lines=observation_lines,
+        width=global_inner_width,
     ):
         print_func(line)
 
@@ -351,11 +353,11 @@ def _compute_layout_width(
     interface_required = measure_lines(interface_preview_lines)
     commands_required = measure_lines(command_lines)
     authority_required = max(
-        display_width("Block authority") + 3,
+        display_width("Block Status") + 3,
         measure_lines(authority_lines),
     )
     lifecycle_required = max(
-        display_width("Status") + 3,
+        display_width("Lifecycle") + 3,
         measure_lines(lifecycle_lines),
     )
     domain_required = max(

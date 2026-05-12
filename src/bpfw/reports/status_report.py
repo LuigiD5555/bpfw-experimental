@@ -175,8 +175,8 @@ def render_status_report(
     lines.append(f"  missing declared: {report.missing_declared_count}")
     lines.append("")
 
-    # Status section
-    lines.append("Status:")
+    # Lifecycle section
+    lines.append("Lifecycle:")
     lines.append(f"  active: {lifecycle_counts.get('active', 0)}")
     lines.append(f"  experimental: {lifecycle_counts.get('experimental', 0)}")
     lines.append(f"  legacy: {lifecycle_counts.get('legacy', 0)}")

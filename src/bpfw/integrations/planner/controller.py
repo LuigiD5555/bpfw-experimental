@@ -490,7 +490,7 @@ class PlannerController:
             return
         selected_box = ordered_boxes[index]
         self.state.selected_box_id = selected_box.id
-        field_choice = read_line("Field [1 purpose,2 domain,3 status,4 path,5 symbol,6 kind,7 inputs,8 output]: ").strip()
+        field_choice = read_line("Field [1 purpose,2 domain,3 lifecycle,4 path,5 symbol,6 kind,7 inputs,8 output]: ").strip()
         if not field_choice.isdigit():
             self.state.screen = "workspace"
             return

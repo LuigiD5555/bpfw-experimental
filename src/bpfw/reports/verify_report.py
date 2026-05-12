@@ -115,9 +115,9 @@ def render_verify_report(report: VerificationReport) -> str:
         sections.append(f"  undeclared code: {report.undeclared_count}")
         sections.append("")
 
-        # Status
-        sections.append("Status:")
-        sections.append(f"  invalid statuses: {report.invalid_lifecycle_count}")
+        # Lifecycle
+        sections.append("Lifecycle:")
+        sections.append(f"  invalid lifecycles: {report.invalid_lifecycle_count}")
         sections.append(f"  duplicate active purposes: {report.duplicate_active_intent_count}")
         sections.append("")
 

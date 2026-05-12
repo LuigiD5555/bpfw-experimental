@@ -6,6 +6,7 @@ import termios
 import tty
 
 from bpfw.integrations.shared.visual_boxes import render_box
+from bpfw.integrations.shared.screen_control import refresh_screen
 from bpfw.integrations.shared.visual_theme import (
     DEFAULT_THEME,
     compute_panel_width,
@@ -19,9 +20,7 @@ DEFAULT_INPUT_PROMPT = "> "
 
 def clear_screen() -> None:
     """Clear the terminal screen using ANSI escape codes."""
-
-    # Try ANSI escape first (works on most modern terminals)
-    print("\033[2J\033[H", end="", flush=True)
+    refresh_screen()
 
 
 def get_terminal_width() -> int:
@@ -268,7 +267,7 @@ def render_search_screen() -> None:
         title="Search block to inspect",
         lines=[
             " Search by:",
-            "   id, name, domain, purpose, status, path or symbol",
+            "   id, name, domain, purpose, lifecycle, path or symbol",
         ],
     )
     print()
@@ -338,7 +337,7 @@ def _render_results_table_rows(results: list, ratio: float = 0.70) -> None:
     # Header
     header = (
         f"\u2502{'IDX':^{idx_width}}"
-        f"\u2502{'STATUS':^{status_width}}"
+        f"\u2502{'LIFECYCLE':^{status_width}}"
         f"\u2502{'DOMAIN':^{domain_width}}"
         f"\u2502{'NAME':^{name_width}}"
         f"\u2502{'CODE':^{code_width}}\u2502"
@@ -504,7 +503,7 @@ def render_editor_help_screen() -> None:
     print("│    name          Simple block name.                            │")
     print("│    domain        Where this block belongs in the system.           │")
     print("│    purpose        What this block is supposed to do.            │")
-    print("│    status     Current block status.                         │")
+    print("│    lifecycle  Current block lifecycle.                      │")
     print("│    path          Code path associated with this block.     │")
     print("│    symbol        Related code symbol or block symbol.                   │")
     print("│                                                                         │")
@@ -513,7 +512,7 @@ def render_editor_help_screen() -> None:
     print("│  Search results are displayed as a table.                               │")
     print("│                                                                         │")
     print("│    IDX           Row identifier used to inspect a result.               │")
-    print("│    STATUS     Current block status.                                │")
+    print("│    LIFECYCLE  Current block lifecycle.                             │")
     print("│    DOMAIN        Block domain.                                  │")
     print("│    NAME          Block name.                                   │")
     print("│    CODE      Related file path.                                     │")
@@ -522,7 +521,7 @@ def render_editor_help_screen() -> None:
     print("│  ───────                                                                │")
     print("│  Filters restrict visible search results.                               │")
     print("│                                                                         │")
-    print("│    status     Filter by block status.                              │")
+    print("│    lifecycle  Filter by block lifecycle (status key).              │")
     print("│    domain        Filter by project area.                                │")
     print("│    name          Filter by block name.                         │")
     print("│    path          Filter by file path.                                   │")
