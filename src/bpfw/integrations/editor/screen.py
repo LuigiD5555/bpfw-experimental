@@ -230,23 +230,23 @@ def _editor_block_width(ratio: float = 0.70) -> int:
 
 
 def _results_block_ratio(results: list) -> float:
-    """Return dynamic width ratio (70%-95%) based on LOCATION content size."""
+    """Return dynamic width ratio (70%-95%) based on CODE content size."""
 
     if not results:
         return 0.70
 
-    max_location_length = max(len((record.location or "")) for record in results)
+    max_code_length = max(len((record.code or "")) for record in results)
     min_ratio = 0.70
     max_ratio = 0.95
     min_length = 24
     max_length = 120
 
-    if max_location_length <= min_length:
+    if max_code_length <= min_length:
         return min_ratio
-    if max_location_length >= max_length:
+    if max_code_length >= max_length:
         return max_ratio
 
-    growth_fraction = (max_location_length - min_length) / (max_length - min_length)
+    growth_fraction = (max_code_length - min_length) / (max_length - min_length)
     return min_ratio + (max_ratio - min_ratio) * growth_fraction
 
 
@@ -265,10 +265,10 @@ def render_search_screen() -> None:
     render_editor_banner()
     print()
     _render_search_scope_box(
-        title="Search responsibility to inspect",
+        title="Search block to inspect",
         lines=[
             " Search by:",
-            "   id, name, domain, intent, lifecycle, path or symbol",
+            "   id, name, domain, purpose, status, path or symbol",
         ],
     )
     print()
@@ -304,7 +304,7 @@ def render_results_table(
     print()
 
     if not results:
-        print(" No responsibilities found.")
+        print(" No blocks found.")
         print()
         _render_filter_display(filter_display_lines)
         print()
@@ -326,43 +326,43 @@ def _render_results_table_rows(results: list, ratio: float = 0.70) -> None:
     # Five columns need six vertical separators.
     total_content_width = max(54, width - 6)
     idx_width = 5
-    # Keep LOCATION narrower so the other columns can breathe.
-    location_width = max(18, min(36, total_content_width // 3))
-    remaining_width = total_content_width - idx_width - location_width
+    # Keep CODE narrower so the other columns can breathe.
+    code_width = max(18, min(36, total_content_width // 3))
+    remaining_width = total_content_width - idx_width - code_width
 
     # Redistribute remaining width with NAME slightly wider.
-    lifecycle_width = max(10, int(remaining_width * 0.28))
+    status_width = max(10, int(remaining_width * 0.28))
     domain_width = max(10, int(remaining_width * 0.28))
-    name_width = max(14, remaining_width - lifecycle_width - domain_width)
+    name_width = max(14, remaining_width - status_width - domain_width)
 
     # Header
     header = (
         f"\u2502{'IDX':^{idx_width}}"
-        f"\u2502{'LIFECYCLE':^{lifecycle_width}}"
+        f"\u2502{'STATUS':^{status_width}}"
         f"\u2502{'DOMAIN':^{domain_width}}"
         f"\u2502{'NAME':^{name_width}}"
-        f"\u2502{'LOCATION':^{location_width}}\u2502"
+        f"\u2502{'CODE':^{code_width}}\u2502"
     )
     separator = (
         f"\u251c{'\u2500' * idx_width}"
-        f"\u253c{'\u2500' * lifecycle_width}"
+        f"\u253c{'\u2500' * status_width}"
         f"\u253c{'\u2500' * domain_width}"
         f"\u253c{'\u2500' * name_width}"
-        f"\u253c{'\u2500' * location_width}\u2524"
+        f"\u253c{'\u2500' * code_width}\u2524"
     )
     top_border = (
         f"\u250c{'\u2500' * idx_width}"
-        f"\u252c{'\u2500' * lifecycle_width}"
+        f"\u252c{'\u2500' * status_width}"
         f"\u252c{'\u2500' * domain_width}"
         f"\u252c{'\u2500' * name_width}"
-        f"\u252c{'\u2500' * location_width}\u2510"
+        f"\u252c{'\u2500' * code_width}\u2510"
     )
     bottom_border = (
         f"\u2514{'\u2500' * idx_width}"
-        f"\u2534{'\u2500' * lifecycle_width}"
+        f"\u2534{'\u2500' * status_width}"
         f"\u2534{'\u2500' * domain_width}"
         f"\u2534{'\u2500' * name_width}"
-        f"\u2534{'\u2500' * location_width}\u2518"
+        f"\u2534{'\u2500' * code_width}\u2518"
     )
 
     print(top_border)
@@ -370,12 +370,12 @@ def _render_results_table_rows(results: list, ratio: float = 0.70) -> None:
     print(separator)
 
     for display_index, record in enumerate(results, start=1):
-        lifecycle = truncate(record.lifecycle or "-", lifecycle_width).center(lifecycle_width)
+        status = truncate(record.status or "-", status_width).center(status_width)
         domain = truncate(record.domain or "-", domain_width).center(domain_width)
         name = truncate(record.name or "-", name_width).ljust(name_width)
-        location = truncate(record.location or "-", location_width).ljust(location_width)
+        code = truncate(record.code or "-", code_width).ljust(code_width)
         index_str = str(display_index).center(idx_width)
-        print(f"\u2502{index_str}\u2502{lifecycle}\u2502{domain}\u2502{name}\u2502{location}\u2502")
+        print(f"\u2502{index_str}\u2502{status}\u2502{domain}\u2502{name}\u2502{code}\u2502")
 
     print(bottom_border)
 
@@ -426,14 +426,14 @@ def render_filter_screen() -> None:
     print(" Add Filter")
     print()
     print(" Available columns:")
-    print("   lifecycle")
+    print("   status")
     print("   domain")
     print("   name")
     print("   path")
     print()
     _render_examples_box(
         [
-            " lifecycle=active",
+            " status=active",
             " domain=catalog",
             " name=loader",
             " path=editor",
@@ -498,38 +498,38 @@ def render_editor_help_screen() -> None:
     print("│                                                                         │")
     print("│  Search                                                                 │")
     print("│  ──────                                                                 │")
-    print("│  Search across blueprint responsibilities using words related to:       │")
+    print("│  Search across blueprint blocks using words related to:                 │")
     print("│                                                                         │")
-    print("│    id            Unique responsibility identifier.                      │")
-    print("│    name          Simple responsibility name.                            │")
-    print("│    domain        Project area related to this responsibility.           │")
-    print("│    intent        What this responsibility is supposed to do.            │")
-    print("│    lifecycle     Current responsibility status.                         │")
-    print("│    path          File location associated with this responsibility.     │")
-    print("│    symbol        Related code symbol or snippet name.                   │")
+    print("│    id            Unique block identifier.                      │")
+    print("│    name          Simple block name.                            │")
+    print("│    domain        Where this block belongs in the system.           │")
+    print("│    purpose        What this block is supposed to do.            │")
+    print("│    status     Current block status.                         │")
+    print("│    path          Code path associated with this block.     │")
+    print("│    symbol        Related code symbol or block symbol.                   │")
     print("│                                                                         │")
     print("│  Results                                                                │")
     print("│  ───────                                                                │")
     print("│  Search results are displayed as a table.                               │")
     print("│                                                                         │")
     print("│    IDX           Row identifier used to inspect a result.               │")
-    print("│    LIFECYCLE     Current snippet status.                                │")
-    print("│    DOMAIN        Related project area.                                  │")
-    print("│    NAME          Responsibility name.                                   │")
-    print("│    LOCATION      Related file path.                                     │")
+    print("│    STATUS     Current block status.                                │")
+    print("│    DOMAIN        Block domain.                                  │")
+    print("│    NAME          Block name.                                   │")
+    print("│    CODE      Related file path.                                     │")
     print("│                                                                         │")
     print("│  Filters                                                                │")
     print("│  ───────                                                                │")
     print("│  Filters restrict visible search results.                               │")
     print("│                                                                         │")
-    print("│    lifecycle     Filter by snippet status.                              │")
+    print("│    status     Filter by block status.                              │")
     print("│    domain        Filter by project area.                                │")
-    print("│    name          Filter by responsibility name.                         │")
+    print("│    name          Filter by block name.                         │")
     print("│    path          Filter by file path.                                   │")
     print("│                                                                         │")
     print("│  Examples                                                               │")
     print("│  ────────                                                               │")
-    print("│    lifecycle=active                                                     │")
+    print("│    status=active                                                     │")
     print("│    domain=catalog                                                       │")
     print("│    name=loader                                                          │")
     print("│    path=editor                                                          │")
@@ -540,7 +540,7 @@ def render_editor_help_screen() -> None:
     print("│  [/]        Search again                                                │")
     print("│  [f]        Add filter                                                  │")
     print("│  [c]        Clear all filters                                           │")
-    print("│  [a]        Show all responsibilities                                   │")
+    print("│  [a]        Show all blocks                                   │")
     print("│  [h]        Toggle help                                                 │")
     print("│  [q]        Quit                                                        │")
     print("│                                                                         │")
