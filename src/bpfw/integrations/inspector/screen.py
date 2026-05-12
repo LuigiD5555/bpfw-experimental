@@ -69,7 +69,7 @@ def render_inspector_screen(
         f"  PURPOSE    {display_value(get_purpose(block))}",
         f"  DOMAIN     {display_value(block.get('domain'))}",
         f"  NAME       {display_value(block.get('name'))}",
-        f"  LIFECYCLE  {display_value(get_status(block))}",
+        f"  STATUS     {display_value(get_status(block))}",
         "",
     ]
 
@@ -103,7 +103,7 @@ def render_inspector_screen(
     command_lines = [
         "[1-5] purpose suggestion  [6] custom purpose",
         "[a|s|d|f] domain          [g] custom domain",
-        "[z|x|c|v] lifecycle       [n] name        [i] interface",
+        "[z|x|c|v] status          [n] name        [i] interface",
         "[o] notes                 [h] help        [q] quit",
         "[Enter] save + next       [b] back",
     ]

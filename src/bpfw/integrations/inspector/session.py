@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import List
 
 from bpfw.catalog.intent_suggestions import IntentSuggestion, suggest_intents
 from bpfw.catalog.learning import record_domain_value, record_intent_phrase
@@ -85,17 +85,28 @@ def run_text_inspector_session(
     current_index = 0
     total = len(session.issues)
     existing_intents = collect_existing_intents(session.blueprint_data)
+    suggestion_cache: dict[str, list] = {}
     while current_index < total:
         issue = session.issues[current_index]
         block = issue.block
         if issue.issue_type != ISSUE_NEW_DETECTED:
             apply_suggestions(block)
 
-        intent_suggestions = suggest_intents(
-            block,
-            existing_intents=existing_intents,
-        )
-        domain_suggestions = suggest_domains(block)
+        cache_key = block.get("id") or ""
+        if not cache_key:
+            code = block.get("code") or block.get("location") or {}
+            cache_key = f"{code.get('path', '')}:{code.get('symbol', '')}"
+
+        if cache_key in suggestion_cache:
+            intent_suggestions, domain_suggestions = suggestion_cache[cache_key]
+        else:
+            intent_suggestions = suggest_intents(
+                block,
+                existing_intents=existing_intents,
+            )
+            domain_suggestions = suggest_domains(block)
+            if cache_key:
+                suggestion_cache[cache_key] = (intent_suggestions, domain_suggestions)
 
         render_inspector_screen(
             project_root=session.project_root,
@@ -277,7 +288,7 @@ def _render_help_block() -> list[str]:
         "  notes         Optional notes for this block.",
         "  interface     Input and output type definitions.",
         "",
-        "  lifecycle     Current block lifecycle.",
+        "  status        Current block status.",
         "                active        In use now.",
         "                experimental  Still being tested.",
         "                legacy        Old, but still kept.",
@@ -289,7 +300,7 @@ def _render_help_block() -> list[str]:
         "  [6]        Write custom purpose",
         "  [a|s|d|f]  Choose suggested domain",
         "  [g]        Write custom domain",
-        "  [z|x|c|v]  Set lifecycle",
+        "  [z|x|c|v]  Set status",
         "",
         "  Editing",
         "  ───────",

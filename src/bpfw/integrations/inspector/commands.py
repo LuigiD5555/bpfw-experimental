@@ -4,7 +4,7 @@ from collections.abc import Callable
 from typing import Any, Dict, List
 
 from bpfw.catalog.intent_suggestions import IntentSuggestion
-from bpfw.catalog.schema import get_purpose, get_status, set_purpose, set_status
+from bpfw.catalog.schema import set_purpose, set_status
 from bpfw.integrations.inspector.base import InspectIssue
 
 InputFunc = Callable[[str], str]
@@ -57,7 +57,7 @@ def apply_inspector_command(
             issue.block["domain"] = domain_suggestions[domain_index]
         return InspectorAction.STAY
 
-    # Then check lifecycle keys (z, x, c, v)
+    # Then check status keys (z, x, c, v)
     if stripped_command in {"z", "x", "c", "v"}:
         set_status(issue.block, {
             "z": "active",
