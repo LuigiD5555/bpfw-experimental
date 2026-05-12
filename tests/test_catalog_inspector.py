@@ -616,6 +616,90 @@ def test_text_inspector_blocks_when_input_is_unavailable(tmp_path: Path) -> None
     assert "exampleservice:example" not in saved
 
 
+def test_text_inspector_stops_cleanly_on_keyboard_interrupt(tmp_path: Path) -> None:
+    blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
+    blueprint_path.parent.mkdir(parents=True)
+    blueprint_path.write_text(
+        "version: 1\n"
+        "blocks:\n"
+        "  - id: example\n"
+        "    name: ExampleService\n"
+        "    domain: catalog\n"
+        "    lifecycle: active\n"
+        "    purpose: ''\n"
+        "    location:\n"
+        "      path: src/bpfw/catalog/example.py\n"
+        "      symbol: ExampleService\n"
+        "      symbol_type: class\n",
+        encoding="utf-8",
+    )
+    session = load_inspect_session(project_root=tmp_path)
+    output: list[str] = []
+
+    def interrupting_input(_prompt: str) -> str:
+        raise KeyboardInterrupt
+
+    exit_code = run_text_inspector_session(
+        session=session,
+        input_func=interrupting_input,
+        print_func=output.append,
+    )
+
+    saved = blueprint_path.read_text(encoding="utf-8")
+    assert exit_code == 0
+    assert "Inspector stopped." in output
+    assert "purpose: ''" in saved
+
+
+def test_text_inspector_keyboard_interrupt_in_interface_editor_returns_to_main(
+    tmp_path: Path,
+) -> None:
+    blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
+    blueprint_path.parent.mkdir(parents=True)
+    blueprint_path.write_text(
+        "version: 1\n"
+        "blocks:\n"
+        "  - id: example\n"
+        "    name: ExampleService\n"
+        "    domain: catalog\n"
+        "    lifecycle: active\n"
+        "    purpose: ''\n"
+        "    location:\n"
+        "      path: src/bpfw/catalog/example.py\n"
+        "      symbol: ExampleService\n"
+        "      symbol_type: class\n",
+        encoding="utf-8",
+    )
+    session = load_inspect_session(project_root=tmp_path)
+    output: list[str] = []
+    command_stream: list[object] = [
+        "i",
+        "a",
+        KeyboardInterrupt(),
+        "6maintain example",
+        "",
+    ]
+
+    def scripted_input(_prompt: str) -> str:
+        next_value = command_stream.pop(0)
+        if isinstance(next_value, BaseException):
+            raise next_value
+        return str(next_value)
+
+    exit_code = run_text_inspector_session(
+        session=session,
+        input_func=scripted_input,
+        print_func=output.append,
+    )
+
+    rendered = "\n".join(output)
+    saved = blueprint_path.read_text(encoding="utf-8")
+    assert exit_code == 0
+    assert "Interface editor cancelled." in rendered
+    assert "Saved." in rendered
+    assert "maintain example" in saved
+
+
 def test_text_inspector_accepts_new_detected_code(tmp_path: Path) -> None:
     source_path = tmp_path / "src" / "demo"
     source_path.mkdir(parents=True)

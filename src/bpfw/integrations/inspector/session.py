@@ -110,20 +110,22 @@ def run_text_inspector_session(
         )
         try:
             raw_command = input_func("> ")
+            action = apply_inspector_command(
+                command=normalize_command(raw_command),
+                issue=issue,
+                intent_suggestions=intent_suggestions,
+                domain_suggestions=domain_suggestions,
+                input_func=input_func,
+            )
         except EOFError:
             print_func("Interactive inspector input unavailable.")
             print_func("")
             print_func("Next:")
             print_func("  Run bpfw inspector in an interactive terminal.")
             return 1
-
-        action = apply_inspector_command(
-            command=normalize_command(raw_command),
-            issue=issue,
-            intent_suggestions=intent_suggestions,
-            domain_suggestions=domain_suggestions,
-            input_func=input_func,
-        )
+        except KeyboardInterrupt:
+            print_func("Inspector stopped.")
+            return 0
 
         if action == "save_next":
             missing_fields = validate_required_fields(block)

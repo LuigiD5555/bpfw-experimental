@@ -137,179 +137,162 @@ def run_interface_edit_submode(
         block["interface"] = {}
         interface = block["interface"]
 
-    while True:
-        print_func("")
-        print_func("─" * 50)
-        print_func(" Interface Editor")
-        print_func("─" * 50)
+    try:
+        while True:
+            print_func("")
+            print_func("─" * 50)
+            print_func(" Interface Editor")
+            print_func("─" * 50)
 
-        # Show current interface
-        inputs = interface.get("inputs", [])
-        if not isinstance(inputs, list):
-            inputs = []
-            interface["inputs"] = inputs
+            # Show current interface
+            inputs = interface.get("inputs", [])
+            if not isinstance(inputs, list):
+                inputs = []
+                interface["inputs"] = inputs
 
-        output = interface.get("output", {})
-        if not isinstance(output, dict):
-            output = {}
-            interface["output"] = output
+            output = interface.get("output", {})
+            if not isinstance(output, dict):
+                output = {}
+                interface["output"] = output
 
-        print_func("")
-        print_func("  inputs:")
-        if not inputs:
-            print_func("    (none defined)")
-        else:
-            for i, inp in enumerate(inputs, 1):
-                if not isinstance(inp, dict):
-                    continue
-                name = inp.get("name", "?")
-                param_type = inp.get("type", "-")
-                default = inp.get("default", "-")
-                required = inp.get("required", True)
-                req_str = "required" if required else "optional"
-                print_func(f"    [{i}] {name} ({param_type}) {req_str} = {default}")
-
-        print_func("")
-        print_func("  output:")
-        output_type = output.get("type", "-")
-        print_func(f"    type: {output_type}")
-
-        print_func("")
-        print_func("  Commands:")
-        print_func("    [a] add input              [o] edit output")
-        print_func("    [1-N] edit input N          [dN] delete input N")
-        print_func("    [Enter] return to inspector")
-        print_func("")
-
-        # Get command
-        command = input_func("> ").strip()
-
-        # Handle commands
-        if command == "":
-            # Return to main inspector
-            break
-
-        if command == "a":
-            # Add new input
-            name = input_func("  parameter name: ").strip()
-            if not name:
-                print_func("  Name is required")
-                continue
-
-            param_type = input_func("  type (or Enter to skip): ").strip() or None
-            default_str = input_func("  default value (or Enter for required): ").strip()
-
-            if default_str == "":
-                required = True
-                default_val = None
+            print_func("")
+            print_func("  inputs:")
+            if not inputs:
+                print_func("    (none defined)")
             else:
-                required = False
-                # Try to parse as Python literal, otherwise keep as string
-                try:
-                    default_val = eval(default_str, {"__builtins__": {}}, {})
-                except Exception:
-                    default_val = default_str
-
-            description = None  # Optional, can be added later
-
-            new_input = {
-                "name": name,
-                "type": param_type,
-                "default": default_val,
-                "required": required,
-                "description": description,
-            }
-            inputs.append(new_input)
-            interface["inputs"] = inputs
-            print_func(f"  Added input: {name}")
-
-        elif command == "o":
-            # Edit output
-            current_type = output.get("type", "")
-            current_desc = output.get("description", "")
-
-            new_type = input_func(f"  output type [{current_type}]: ").strip() or current_type or None
-
-            if not new_type:
-                # Remove output if type is cleared
-                if "output" in interface:
-                    del interface["output"]
-                print_func("  Output removed")
-            else:
-                new_output = {"type": new_type, "description": current_desc}
-                interface["output"] = new_output
-                print_func(f"  Output type set to: {new_type}")
-
-        elif command.startswith("d") and len(command) > 1:
-            # Delete input by index
-            try:
-                index = int(command[1:]) - 1
-                if 0 <= index < len(inputs):
-                    removed = inputs.pop(index)
-                    interface["inputs"] = inputs
-                    print_func(f"  Removed input: {removed.get('name', '?')}")
-                else:
-                    print_func(f"  Invalid input index: {index + 1}")
-            except ValueError:
-                print_func(f"  Invalid command: {command}")
-
-        else:
-            # Try to edit input by index
-            try:
-                index = int(command) - 1
-                if 0 <= index < len(inputs):
-                    inp = inputs[index]
+                for i, inp in enumerate(inputs, 1):
                     if not isinstance(inp, dict):
                         continue
-
-                    name = inp.get("name", "")
-                    param_type = inp.get("type", "")
-                    default_val = inp.get("default")
+                    name = inp.get("name", "?")
+                    param_type = inp.get("type", "-")
+                    default = inp.get("default", "-")
                     required = inp.get("required", True)
+                    req_str = "required" if required else "optional"
+                    print_func(f"    [{i}] {name} ({param_type}) {req_str} = {default}")
 
-                    new_name = input_func(f"  name [{name}]: ").strip() or name
-                    new_type = input_func(f"  type [{param_type}]: ").strip() or param_type or None
+            print_func("")
+            print_func("  output:")
+            output_type = output.get("type", "-")
+            print_func(f"    type: {output_type}")
 
-                    new_default = None
-                    if not required:
-                        default_str = str(default_val) if default_val is not None else ""
-                        new_default_str = input_func(f"  default [{default_str}]: ").strip()
-                        if new_default_str:
-                            try:
-                                new_default = eval(new_default_str, {"__builtins__": {}}, {})
-                            except Exception:
-                                new_default = new_default_str
-                        else:
-                            new_default = None
+            print_func("")
+            print_func("  Commands:")
+            print_func("    [a] add input              [o] edit output")
+            print_func("    [1-N] edit input N          [dN] delete input N")
+            print_func("    [Enter] return to inspector")
+            print_func("")
+
+            command = input_func("> ").strip()
+            if command == "":
+                break
+
+            if command == "a":
+                name = input_func("  parameter name: ").strip()
+                if not name:
+                    print_func("  Name is required")
+                    continue
+
+                param_type = input_func("  type (or Enter to skip): ").strip() or None
+                default_str = input_func("  default value (or Enter for required): ").strip()
+
+                if default_str == "":
+                    required = True
+                    default_val = None
+                else:
+                    required = False
+                    try:
+                        default_val = eval(default_str, {"__builtins__": {}}, {})
+                    except Exception:
+                        default_val = default_str
+
+                new_input = {
+                    "name": name,
+                    "type": param_type,
+                    "default": default_val,
+                    "required": required,
+                    "description": None,
+                }
+                inputs.append(new_input)
+                interface["inputs"] = inputs
+                print_func(f"  Added input: {name}")
+
+            elif command == "o":
+                current_type = output.get("type", "")
+                current_desc = output.get("description", "")
+                new_type = input_func(f"  output type [{current_type}]: ").strip() or current_type or None
+
+                if not new_type:
+                    if "output" in interface:
+                        del interface["output"]
+                    print_func("  Output removed")
+                else:
+                    interface["output"] = {"type": new_type, "description": current_desc}
+                    print_func(f"  Output type set to: {new_type}")
+
+            elif command.startswith("d") and len(command) > 1:
+                try:
+                    index = int(command[1:]) - 1
+                    if 0 <= index < len(inputs):
+                        removed = inputs.pop(index)
+                        interface["inputs"] = inputs
+                        print_func(f"  Removed input: {removed.get('name', '?')}")
                     else:
-                        required_str = input_func(f"  required? [Y/n]: ").strip().lower()
-                        if required_str and required_str.startswith("n"):
-                            # Making optional, ask for default
-                            new_default_str = input_func(f"  default value: ").strip()
+                        print_func(f"  Invalid input index: {index + 1}")
+                except ValueError:
+                    print_func(f"  Invalid command: {command}")
+
+            else:
+                try:
+                    index = int(command) - 1
+                    if 0 <= index < len(inputs):
+                        inp = inputs[index]
+                        if not isinstance(inp, dict):
+                            continue
+
+                        name = inp.get("name", "")
+                        param_type = inp.get("type", "")
+                        default_val = inp.get("default")
+                        required = inp.get("required", True)
+
+                        new_name = input_func(f"  name [{name}]: ").strip() or name
+                        new_type = input_func(f"  type [{param_type}]: ").strip() or param_type or None
+
+                        new_default = None
+                        if not required:
+                            default_str = str(default_val) if default_val is not None else ""
+                            new_default_str = input_func(f"  default [{default_str}]: ").strip()
                             if new_default_str:
                                 try:
                                     new_default = eval(new_default_str, {"__builtins__": {}}, {})
                                 except Exception:
                                     new_default = new_default_str
-                            required = False
+                        else:
+                            required_str = input_func("  required? [Y/n]: ").strip().lower()
+                            if required_str and required_str.startswith("n"):
+                                new_default_str = input_func("  default value: ").strip()
+                                if new_default_str:
+                                    try:
+                                        new_default = eval(new_default_str, {"__builtins__": {}}, {})
+                                    except Exception:
+                                        new_default = new_default_str
+                                required = False
 
-                    new_description = None  # Keep description as None for now
+                        inputs[index] = {
+                            "name": new_name,
+                            "type": new_type,
+                            "default": new_default,
+                            "required": required,
+                            "description": None,
+                        }
+                        interface["inputs"] = inputs
+                        print_func(f"  Updated input: {new_name}")
+                    else:
+                        print_func(f"  Invalid input index: {index + 1}")
+                except ValueError:
+                    print_func(f"  Unknown command: {command}")
 
-                    inputs[index] = {
-                        "name": new_name,
-                        "type": new_type,
-                        "default": new_default,
-                        "required": required,
-                        "description": new_description,
-                    }
-                    interface["inputs"] = inputs
-                    print_func(f"  Updated input: {new_name}")
-                else:
-                    print_func(f"  Invalid input index: {index + 1}")
-            except ValueError:
-                print_func(f"  Unknown command: {command}")
-
-        # Clean up empty interface
-        if not inputs and not output.get("type"):
-            if "interface" in block:
-                del block["interface"]
+            if not inputs and not output.get("type"):
+                if "interface" in block:
+                    del block["interface"]
+    except KeyboardInterrupt:
+        print_func("Interface editor cancelled.")
