@@ -32,10 +32,10 @@ policy:
     detected_detail_level: minimal
 blocks:
 - id: ensure_blueprint_can_be_written
-  purpose: null
+  purpose: Raise Blueprint Locked Error
   name: ensure_blueprint_can_be_written
-  domain: null
-  status: null
+  domain: catalog
+  status: active
   code:
     path: src/bpfw/catalog/access_control.py
     module: src.bpfw.catalog.access_control
@@ -51,7 +51,7 @@ blocks:
   entrypoints: []
   connections: []
   uniqueness:
-    group: null
+    group: raise_blueprint_locked_error
     allow_multiple_non_active: true
     forbid_active_duplicates: true
     suspected_duplicates: []
@@ -71,10 +71,10 @@ blocks:
       type: None
       description: null
 - id: domain_suggestion
-  purpose: null
+  purpose: Declare DomainSuggestion Class
   name: DomainSuggestion
-  domain: null
-  status: null
+  domain: catalog
+  status: active
   code:
     path: src/bpfw/catalog/domain_suggestions.py
     module: src.bpfw.catalog.domain_suggestions
@@ -90,7 +90,7 @@ blocks:
   entrypoints: []
   connections: []
   uniqueness:
-    group: null
+    group: declare_domain_suggestion_class
     allow_multiple_non_active: true
     forbid_active_duplicates: true
     suspected_duplicates: []
@@ -314,8 +314,8 @@ blocks:
     module: src.bpfw.catalog.intent_suggestions
     symbol: IntentSuggestion
     kind: class
-    start_line: 17
-    end_line: 22
+    start_line: 16
+    end_line: 21
   detected:
     qualified_name: src.bpfw.catalog.intent_suggestions.IntentSuggestion
     kind: class
@@ -343,8 +343,8 @@ blocks:
     module: src.bpfw.catalog.intent_suggestions
     symbol: suggest_intents
     kind: function
-    start_line: 305
-    end_line: 338
+    start_line: 326
+    end_line: 360
   detected:
     qualified_name: src.bpfw.catalog.intent_suggestions.suggest_intents
     kind: function
@@ -387,8 +387,8 @@ blocks:
     module: src.bpfw.catalog.intent_suggestions
     symbol: compose_fixed_intent_slots
     kind: function
-    start_line: 367
-    end_line: 423
+    start_line: 389
+    end_line: 445
   detected:
     qualified_name: src.bpfw.catalog.intent_suggestions.compose_fixed_intent_slots
     kind: function
@@ -451,8 +451,8 @@ blocks:
     module: src.bpfw.catalog.intent_suggestions
     symbol: normalize_duplicate_slots
     kind: function
-    start_line: 426
-    end_line: 458
+    start_line: 448
+    end_line: 480
   detected:
     qualified_name: src.bpfw.catalog.intent_suggestions.normalize_duplicate_slots
     kind: function
@@ -490,8 +490,8 @@ blocks:
     module: src.bpfw.catalog.intent_suggestions
     symbol: collect_evidence_text
     kind: function
-    start_line: 611
-    end_line: 614
+    start_line: 633
+    end_line: 636
   detected:
     qualified_name: src.bpfw.catalog.intent_suggestions.collect_evidence_text
     kind: function
@@ -529,8 +529,8 @@ blocks:
     module: src.bpfw.catalog.intent_suggestions
     symbol: tokenize_evidence
     kind: function
-    start_line: 715
-    end_line: 722
+    start_line: 737
+    end_line: 744
   detected:
     qualified_name: src.bpfw.catalog.intent_suggestions.tokenize_evidence
     kind: function
@@ -568,8 +568,8 @@ blocks:
     module: src.bpfw.catalog.intent_suggestions
     symbol: detect_action
     kind: function
-    start_line: 736
-    end_line: 793
+    start_line: 758
+    end_line: 815
   detected:
     qualified_name: src.bpfw.catalog.intent_suggestions.detect_action
     kind: function
@@ -607,8 +607,8 @@ blocks:
     module: src.bpfw.catalog.intent_suggestions
     symbol: detect_object
     kind: function
-    start_line: 941
-    end_line: 1005
+    start_line: 963
+    end_line: 1027
   detected:
     qualified_name: src.bpfw.catalog.intent_suggestions.detect_object
     kind: function
@@ -651,8 +651,8 @@ blocks:
     module: src.bpfw.catalog.intent_suggestions
     symbol: detect_context
     kind: function
-    start_line: 1166
-    end_line: 1242
+    start_line: 1189
+    end_line: 1265
   detected:
     qualified_name: src.bpfw.catalog.intent_suggestions.detect_context
     kind: function
@@ -700,8 +700,8 @@ blocks:
     module: src.bpfw.catalog.intent_suggestions
     symbol: detect_behavior
     kind: function
-    start_line: 1245
-    end_line: 1340
+    start_line: 1268
+    end_line: 1363
   detected:
     qualified_name: src.bpfw.catalog.intent_suggestions.detect_behavior
     kind: function
@@ -749,8 +749,8 @@ blocks:
     module: src.bpfw.catalog.intent_suggestions
     symbol: compose_candidates
     kind: function
-    start_line: 1343
-    end_line: 1446
+    start_line: 1366
+    end_line: 1469
   detected:
     qualified_name: src.bpfw.catalog.intent_suggestions.compose_candidates
     kind: function
@@ -813,8 +813,8 @@ blocks:
     module: src.bpfw.catalog.intent_suggestions
     symbol: compact_intent_text
     kind: function
-    start_line: 1648
-    end_line: 1664
+    start_line: 1671
+    end_line: 1687
   detected:
     qualified_name: src.bpfw.catalog.intent_suggestions.compact_intent_text
     kind: function
@@ -852,8 +852,8 @@ blocks:
     module: src.bpfw.catalog.intent_suggestions
     symbol: remove_low_value_context
     kind: function
-    start_line: 1667
-    end_line: 1674
+    start_line: 1690
+    end_line: 1697
   detected:
     qualified_name: src.bpfw.catalog.intent_suggestions.remove_low_value_context
     kind: function
@@ -891,8 +891,8 @@ blocks:
     module: src.bpfw.catalog.intent_suggestions
     symbol: remove_low_value_adjectives
     kind: function
-    start_line: 1677
-    end_line: 1687
+    start_line: 1700
+    end_line: 1710
   detected:
     qualified_name: src.bpfw.catalog.intent_suggestions.remove_low_value_adjectives
     kind: function
@@ -930,8 +930,8 @@ blocks:
     module: src.bpfw.catalog.intent_suggestions
     symbol: apply_intent_compaction_rules
     kind: function
-    start_line: 1690
-    end_line: 1697
+    start_line: 1713
+    end_line: 1720
   detected:
     qualified_name: src.bpfw.catalog.intent_suggestions.apply_intent_compaction_rules
     kind: function
@@ -969,8 +969,8 @@ blocks:
     module: src.bpfw.catalog.intent_suggestions
     symbol: limit_intent_words
     kind: function
-    start_line: 1700
-    end_line: 1706
+    start_line: 1723
+    end_line: 1729
   detected:
     qualified_name: src.bpfw.catalog.intent_suggestions.limit_intent_words
     kind: function
@@ -1013,8 +1013,8 @@ blocks:
     module: src.bpfw.catalog.intent_suggestions
     symbol: rank_suggestions
     kind: function
-    start_line: 1826
-    end_line: 1838
+    start_line: 1849
+    end_line: 1861
   detected:
     qualified_name: src.bpfw.catalog.intent_suggestions.rank_suggestions
     kind: function
@@ -1052,8 +1052,8 @@ blocks:
     module: src.bpfw.catalog.intent_suggestions
     symbol: deduplicate_suggestions
     kind: function
-    start_line: 1977
-    end_line: 1990
+    start_line: 2002
+    end_line: 2015
   detected:
     qualified_name: src.bpfw.catalog.intent_suggestions.deduplicate_suggestions
     kind: function
@@ -4386,8 +4386,8 @@ blocks:
     module: src.bpfw.integrations.editor.__init__
     symbol: can_use_interactive_terminal
     kind: function
-    start_line: 14
-    end_line: 17
+    start_line: 10
+    end_line: 13
   detected:
     qualified_name: src.bpfw.integrations.editor.__init__.can_use_interactive_terminal
     kind: function
@@ -4419,8 +4419,8 @@ blocks:
     module: src.bpfw.integrations.editor.__init__
     symbol: run_interactive_editor
     kind: function
-    start_line: 20
-    end_line: 37
+    start_line: 16
+    end_line: 29
   detected:
     qualified_name: src.bpfw.integrations.editor.__init__.run_interactive_editor
     kind: function
@@ -4458,8 +4458,8 @@ blocks:
     module: src.bpfw.integrations.editor.__init__
     symbol: run_editor
     kind: function
-    start_line: 40
-    end_line: 61
+    start_line: 32
+    end_line: 53
   detected:
     qualified_name: src.bpfw.integrations.editor.__init__.run_editor
     kind: function
@@ -4497,8 +4497,8 @@ blocks:
     module: src.bpfw.integrations.editor.__init__
     symbol: EditorIntegration.is_available
     kind: method
-    start_line: 69
-    end_line: 72
+    start_line: 61
+    end_line: 64
   detected:
     qualified_name: src.bpfw.integrations.editor.__init__.EditorIntegration.is_available
     kind: method
@@ -4530,8 +4530,8 @@ blocks:
     module: src.bpfw.integrations.editor.__init__
     symbol: EditorIntegration.run
     kind: method
-    start_line: 74
-    end_line: 85
+    start_line: 66
+    end_line: 77
   detected:
     qualified_name: src.bpfw.integrations.editor.__init__.EditorIntegration.run
     kind: method
@@ -4569,8 +4569,8 @@ blocks:
     module: src.bpfw.integrations.editor.__init__
     symbol: EditorIntegration
     kind: class
-    start_line: 64
-    end_line: 85
+    start_line: 56
+    end_line: 77
   detected:
     qualified_name: src.bpfw.integrations.editor.__init__.EditorIntegration
     kind: class
@@ -5461,8 +5461,8 @@ blocks:
     module: src.bpfw.integrations.editor.screen
     symbol: render_filter_screen
     kind: function
-    start_line: 421
-    end_line: 443
+    start_line: 419
+    end_line: 441
   detected:
     qualified_name: src.bpfw.integrations.editor.screen.render_filter_screen
     kind: function
@@ -5494,8 +5494,8 @@ blocks:
     module: src.bpfw.integrations.editor.screen
     symbol: render_invalid_selection
     kind: function
-    start_line: 472
-    end_line: 484
+    start_line: 470
+    end_line: 482
   detected:
     qualified_name: src.bpfw.integrations.editor.screen.render_invalid_selection
     kind: function
@@ -5527,8 +5527,8 @@ blocks:
     module: src.bpfw.integrations.editor.screen
     symbol: render_filter_error
     kind: function
-    start_line: 487
-    end_line: 491
+    start_line: 485
+    end_line: 489
   detected:
     qualified_name: src.bpfw.integrations.editor.screen.render_filter_error
     kind: function
@@ -5566,8 +5566,8 @@ blocks:
     module: src.bpfw.integrations.editor.screen
     symbol: render_editor_help_screen
     kind: function
-    start_line: 494
-    end_line: 554
+    start_line: 492
+    end_line: 552
   detected:
     qualified_name: src.bpfw.integrations.editor.screen.render_editor_help_screen
     kind: function
@@ -6842,7 +6842,7 @@ blocks:
     symbol: InspectorAction
     kind: class
     start_line: 13
-    end_line: 25
+    end_line: 22
   detected:
     qualified_name: src.bpfw.integrations.inspector.commands.InspectorAction
     kind: class
@@ -6870,8 +6870,8 @@ blocks:
     module: src.bpfw.integrations.inspector.commands
     symbol: apply_inspector_command
     kind: function
-    start_line: 28
-    end_line: 124
+    start_line: 25
+    end_line: 109
   detected:
     qualified_name: src.bpfw.integrations.inspector.commands.apply_inspector_command
     kind: function
@@ -6929,8 +6929,8 @@ blocks:
     module: src.bpfw.integrations.inspector.commands
     symbol: run_interface_edit_submode
     kind: function
-    start_line: 127
-    end_line: 330
+    start_line: 112
+    end_line: 298
   detected:
     qualified_name: src.bpfw.integrations.inspector.commands.run_interface_edit_submode
     kind: function
@@ -6979,7 +6979,7 @@ blocks:
     symbol: render_inspector_screen
     kind: function
     start_line: 38
-    end_line: 207
+    end_line: 206
   detected:
     qualified_name: src.bpfw.integrations.inspector.screen.render_inspector_screen
     kind: function
@@ -7057,8 +7057,8 @@ blocks:
     module: src.bpfw.integrations.inspector.session
     symbol: run_text_inspector
     kind: function
-    start_line: 40
-    end_line: 78
+    start_line: 36
+    end_line: 74
   detected:
     qualified_name: src.bpfw.integrations.inspector.session.run_text_inspector
     kind: function
@@ -7111,8 +7111,8 @@ blocks:
     module: src.bpfw.integrations.inspector.session
     symbol: run_text_inspector_session
     kind: function
-    start_line: 81
-    end_line: 205
+    start_line: 77
+    end_line: 198
   detected:
     qualified_name: src.bpfw.integrations.inspector.session.run_text_inspector_session
     kind: function
@@ -7263,8 +7263,8 @@ blocks:
     module: src.bpfw.integrations.planner.__init__
     symbol: run_planner
     kind: function
-    start_line: 26
-    end_line: 34
+    start_line: 22
+    end_line: 26
   detected:
     qualified_name: src.bpfw.integrations.planner.__init__.run_planner
     kind: function
@@ -7302,8 +7302,8 @@ blocks:
     module: src.bpfw.integrations.planner.__init__
     symbol: PlannerIntegration.is_available
     kind: method
-    start_line: 42
-    end_line: 45
+    start_line: 34
+    end_line: 37
   detected:
     qualified_name: src.bpfw.integrations.planner.__init__.PlannerIntegration.is_available
     kind: method
@@ -7335,8 +7335,8 @@ blocks:
     module: src.bpfw.integrations.planner.__init__
     symbol: PlannerIntegration.run
     kind: method
-    start_line: 47
-    end_line: 51
+    start_line: 39
+    end_line: 43
   detected:
     qualified_name: src.bpfw.integrations.planner.__init__.PlannerIntegration.run
     kind: method
@@ -7374,8 +7374,8 @@ blocks:
     module: src.bpfw.integrations.planner.__init__
     symbol: PlannerIntegration
     kind: class
-    start_line: 37
-    end_line: 51
+    start_line: 29
+    end_line: 43
   detected:
     qualified_name: src.bpfw.integrations.planner.__init__.PlannerIntegration
     kind: class
@@ -8559,7 +8559,7 @@ blocks:
     symbol: render_workspace
     kind: function
     start_line: 204
-    end_line: 258
+    end_line: 257
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_workspace
     kind: function
@@ -8597,8 +8597,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_pieces_panel_internal
     kind: function
-    start_line: 261
-    end_line: 343
+    start_line: 260
+    end_line: 342
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_pieces_panel_internal
     kind: function
@@ -8651,8 +8651,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_assembly_panel_internal
     kind: function
-    start_line: 346
-    end_line: 412
+    start_line: 345
+    end_line: 411
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_assembly_panel_internal
     kind: function
@@ -8700,8 +8700,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_details_panel_internal
     kind: function
-    start_line: 415
-    end_line: 460
+    start_line: 414
+    end_line: 459
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_details_panel_internal
     kind: function
@@ -8739,8 +8739,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_add_block_modal
     kind: function
-    start_line: 467
-    end_line: 497
+    start_line: 466
+    end_line: 496
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_add_block_modal
     kind: function
@@ -8778,8 +8778,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_connect_target_modal
     kind: function
-    start_line: 500
-    end_line: 520
+    start_line: 499
+    end_line: 519
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_connect_target_modal
     kind: function
@@ -8817,8 +8817,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_connect_meaning_modal
     kind: function
-    start_line: 523
-    end_line: 549
+    start_line: 522
+    end_line: 548
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_connect_meaning_modal
     kind: function
@@ -8856,8 +8856,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_connect_feedback_modal
     kind: function
-    start_line: 552
-    end_line: 583
+    start_line: 551
+    end_line: 582
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_connect_feedback_modal
     kind: function
@@ -8895,8 +8895,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_edit_block_modal
     kind: function
-    start_line: 586
-    end_line: 611
+    start_line: 585
+    end_line: 610
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_edit_block_modal
     kind: function
@@ -8934,8 +8934,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_edit_inputs_modal
     kind: function
-    start_line: 614
-    end_line: 679
+    start_line: 613
+    end_line: 678
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_edit_inputs_modal
     kind: function
@@ -8973,8 +8973,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_edit_input_modal
     kind: function
-    start_line: 682
-    end_line: 704
+    start_line: 681
+    end_line: 703
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_edit_input_modal
     kind: function
@@ -9012,8 +9012,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_edit_output_modal
     kind: function
-    start_line: 707
-    end_line: 742
+    start_line: 706
+    end_line: 741
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_edit_output_modal
     kind: function
@@ -9051,8 +9051,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_project_settings_modal
     kind: function
-    start_line: 745
-    end_line: 779
+    start_line: 744
+    end_line: 778
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_project_settings_modal
     kind: function
@@ -9090,8 +9090,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_review_modal
     kind: function
-    start_line: 782
-    end_line: 821
+    start_line: 781
+    end_line: 820
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_review_modal
     kind: function
@@ -9129,8 +9129,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_yaml_preview_modal
     kind: function
-    start_line: 824
-    end_line: 879
+    start_line: 823
+    end_line: 878
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_yaml_preview_modal
     kind: function
@@ -9168,8 +9168,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_saved_modal
     kind: function
-    start_line: 882
-    end_line: 907
+    start_line: 881
+    end_line: 906
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_saved_modal
     kind: function
@@ -9207,8 +9207,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_graph_overview
     kind: function
-    start_line: 910
-    end_line: 935
+    start_line: 909
+    end_line: 934
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_graph_overview
     kind: function
@@ -9246,8 +9246,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_disconnect_modal
     kind: function
-    start_line: 938
-    end_line: 997
+    start_line: 937
+    end_line: 996
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_disconnect_modal
     kind: function
@@ -9285,8 +9285,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_delete_block_modal
     kind: function
-    start_line: 1000
-    end_line: 1053
+    start_line: 999
+    end_line: 1052
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_delete_block_modal
     kind: function
@@ -9324,8 +9324,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_unsaved_changes_modal
     kind: function
-    start_line: 1056
-    end_line: 1093
+    start_line: 1055
+    end_line: 1092
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_unsaved_changes_modal
     kind: function
@@ -9363,8 +9363,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_removed_connection_modal
     kind: function
-    start_line: 1096
-    end_line: 1113
+    start_line: 1095
+    end_line: 1112
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_removed_connection_modal
     kind: function
@@ -9402,8 +9402,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_broken_connections_modal
     kind: function
-    start_line: 1116
-    end_line: 1150
+    start_line: 1115
+    end_line: 1149
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_broken_connections_modal
     kind: function
@@ -9441,8 +9441,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_no_blocks_to_connect_modal
     kind: function
-    start_line: 1153
-    end_line: 1178
+    start_line: 1152
+    end_line: 1177
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_no_blocks_to_connect_modal
     kind: function
@@ -9480,8 +9480,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_duplicate_connection_modal
     kind: function
-    start_line: 1181
-    end_line: 1211
+    start_line: 1180
+    end_line: 1210
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_duplicate_connection_modal
     kind: function
@@ -9524,8 +9524,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_self_connection_modal
     kind: function
-    start_line: 1214
-    end_line: 1234
+    start_line: 1213
+    end_line: 1233
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_self_connection_modal
     kind: function
@@ -9563,8 +9563,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_cannot_save_empty_modal
     kind: function
-    start_line: 1237
-    end_line: 1258
+    start_line: 1236
+    end_line: 1257
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_cannot_save_empty_modal
     kind: function
@@ -9602,8 +9602,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_duplicate_name_modal
     kind: function
-    start_line: 1261
-    end_line: 1291
+    start_line: 1260
+    end_line: 1290
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_duplicate_name_modal
     kind: function
@@ -9651,8 +9651,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_active_intent_conflict_modal
     kind: function
-    start_line: 1294
-    end_line: 1330
+    start_line: 1293
+    end_line: 1329
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_active_intent_conflict_modal
     kind: function
@@ -9700,8 +9700,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_path_already_used_modal
     kind: function
-    start_line: 1333
-    end_line: 1367
+    start_line: 1332
+    end_line: 1366
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_path_already_used_modal
     kind: function
@@ -9749,8 +9749,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_domain_changed_modal
     kind: function
-    start_line: 1370
-    end_line: 1401
+    start_line: 1369
+    end_line: 1400
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_domain_changed_modal
     kind: function
@@ -9808,8 +9808,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_no_connections_warning_modal
     kind: function
-    start_line: 1404
-    end_line: 1430
+    start_line: 1403
+    end_line: 1429
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_no_connections_warning_modal
     kind: function
@@ -9847,8 +9847,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_experimental_to_active_warning_modal
     kind: function
-    start_line: 1433
-    end_line: 1463
+    start_line: 1432
+    end_line: 1462
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_experimental_to_active_warning_modal
     kind: function
@@ -9896,8 +9896,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_blueprint_locked_modal
     kind: function
-    start_line: 1466
-    end_line: 1487
+    start_line: 1465
+    end_line: 1486
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_blueprint_locked_modal
     kind: function
@@ -9935,8 +9935,8 @@ blocks:
     module: src.bpfw.integrations.planner.renderer
     symbol: render_invalid_blueprint_modal
     kind: function
-    start_line: 1490
-    end_line: 1512
+    start_line: 1489
+    end_line: 1511
   detected:
     qualified_name: src.bpfw.integrations.planner.renderer.render_invalid_blueprint_modal
     kind: function
@@ -10908,7 +10908,7 @@ blocks:
     symbol: normalize_command
     kind: function
     start_line: 14
-    end_line: 31
+    end_line: 17
   detected:
     qualified_name: src.bpfw.integrations.shared.cli_runtime.normalize_command
     kind: function
@@ -10946,8 +10946,8 @@ blocks:
     module: src.bpfw.integrations.shared.cli_runtime
     symbol: is_back_command
     kind: function
-    start_line: 34
-    end_line: 37
+    start_line: 20
+    end_line: 23
   detected:
     qualified_name: src.bpfw.integrations.shared.cli_runtime.is_back_command
     kind: function
@@ -10985,8 +10985,8 @@ blocks:
     module: src.bpfw.integrations.shared.cli_runtime
     symbol: is_quit_command
     kind: function
-    start_line: 40
-    end_line: 43
+    start_line: 26
+    end_line: 29
   detected:
     qualified_name: src.bpfw.integrations.shared.cli_runtime.is_quit_command
     kind: function
@@ -11024,8 +11024,8 @@ blocks:
     module: src.bpfw.integrations.shared.cli_runtime
     symbol: run_interactive_loop
     kind: function
-    start_line: 46
-    end_line: 72
+    start_line: 32
+    end_line: 58
   detected:
     qualified_name: src.bpfw.integrations.shared.cli_runtime.run_interactive_loop
     kind: function
@@ -11107,72 +11107,6 @@ blocks:
     replaced_by: null
     reason: null
   notes: null
-- id: begin_interactive_screen_session
-  purpose: null
-  name: begin_interactive_screen_session
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/integrations/shared/screen_control.py
-    module: src.bpfw.integrations.shared.screen_control
-    symbol: begin_interactive_screen_session
-    kind: function
-    start_line: 44
-    end_line: 61
-  detected:
-    qualified_name: src.bpfw.integrations.shared.screen_control.begin_interactive_screen_session
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    output:
-      type: None
-      description: null
-- id: end_interactive_screen_session
-  purpose: null
-  name: end_interactive_screen_session
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/integrations/shared/screen_control.py
-    module: src.bpfw.integrations.shared.screen_control
-    symbol: end_interactive_screen_session
-    kind: function
-    start_line: 64
-    end_line: 86
-  detected:
-    qualified_name: src.bpfw.integrations.shared.screen_control.end_interactive_screen_session
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    output:
-      type: None
-      description: null
 - id: refresh_screen
   purpose: null
   name: refresh_screen
@@ -11183,8 +11117,8 @@ blocks:
     module: src.bpfw.integrations.shared.screen_control
     symbol: refresh_screen
     kind: function
-    start_line: 89
-    end_line: 96
+    start_line: 6
+    end_line: 13
   detected:
     qualified_name: src.bpfw.integrations.shared.screen_control.refresh_screen
     kind: function
