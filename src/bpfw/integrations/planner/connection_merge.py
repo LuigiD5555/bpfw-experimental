@@ -23,7 +23,7 @@ def merge_connections(
             relationship=connection.relationship,
             source_kind="blueprint",
             confidence=connection.confidence or "high",
-            evidence=connection.evidence or ["declared:related_code"],
+            evidence=connection.evidence or ["declared:connections"],
             status="accepted",
             notes=connection.notes,
         )

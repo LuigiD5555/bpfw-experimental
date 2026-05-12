@@ -4,6 +4,19 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from bpfw.catalog.paths import resolve_blueprint_path
+from bpfw.catalog.schema import (
+    get_allowed_statuses,
+    get_blocks,
+    get_code,
+    get_connection_meaning,
+    get_connections,
+    get_one_active_block_per_purpose,
+    get_purpose,
+    get_status,
+    get_kind,
+    get_uniqueness,
+    normalize_blueprint,
+)
 from bpfw.integrations.planner.connection_detection import detect_connections
 from bpfw.integrations.planner.connection_merge import merge_connections
 from bpfw.integrations.planner.models import (
@@ -105,13 +118,15 @@ class BlueprintStateLoader:
             state.source_mode = "empty_blueprint"
             return state
         
+        blueprint_data = normalize_blueprint(blueprint_data)
+
         # Load project configuration
         project_config = BlueprintStateLoader._load_project_config(blueprint_data)
         
-        # Load boxes from responsibilities
+        # Load boxes from blocks
         boxes = BlueprintStateLoader._load_boxes(blueprint_data)
         
-        # Load connections from related_code (and detect broken ones)
+        # Load connections from block connections (and detect broken ones)
         connections, broken_connections = BlueprintStateLoader._load_connections(blueprint_data, boxes)
         
         # Merge with inferred connections
@@ -171,10 +186,8 @@ class BlueprintStateLoader:
             policy_mode=policy.get("mode", "catalog"),
             empty_blueprint_allows_execution=policy.get("empty_blueprint_allows_execution", True),
             defined_blueprint_blocks_on_drift=policy.get("defined_blueprint_blocks_on_drift", True),
-            allowed_lifecycles=policy.get("allowed_lifecycles", [
-                "active", "experimental", "legacy", "deprecated"
-            ]),
-            single_active_per_intent=policy.get("single_active_per_intent", True),
+            allowed_lifecycles=get_allowed_statuses(policy),
+            single_active_per_purpose=get_one_active_block_per_purpose(policy),
             undeclared_code_blocks=policy.get("undeclared_code_blocks", True),
             missing_declared_code_blocks=policy.get("missing_declared_code_blocks", True),
             security=security,
@@ -182,7 +195,7 @@ class BlueprintStateLoader:
     
     @staticmethod
     def _load_boxes(blueprint_data: Dict[str, Any]) -> List[PlannerBox]:
-        """Load boxes from responsibilities section.
+        """Load boxes from blocks section.
         
         Args:
             blueprint_data: The parsed blueprint.yaml data.
@@ -190,10 +203,10 @@ class BlueprintStateLoader:
         Returns:
             List of PlannerBox instances.
         """
-        responsibilities = blueprint_data.get("responsibilities", [])
+        blocks = get_blocks(blueprint_data)
         boxes = []
         
-        for resp in responsibilities:
+        for resp in blocks:
             # Load interface if present
             interface = None
             interface_data = resp.get("interface")
@@ -218,17 +231,17 @@ class BlueprintStateLoader:
                 
                 interface = PlannerInterface(inputs=inputs, output=output)
             
-            # Get location data
-            location = resp.get("location", {})
+            # Get code data
+            code = get_code(resp)
             
             box = PlannerBox(
                 name=resp.get("name", ""),
                 domain=resp.get("domain", ""),
-                intent=resp.get("intent", ""),
-                symbol_type=location.get("symbol_type", "class"),
-                lifecycle=resp.get("lifecycle", "active"),
-                path=location.get("path"),
-                symbol=location.get("symbol"),
+                purpose=get_purpose(resp) or "",
+                symbol_type=get_kind(code) or "class",
+                lifecycle=get_status(resp) or "active",
+                path=code.get("path"),
+                symbol=code.get("symbol"),
                 interface=interface,
                 notes=resp.get("notes"),
             )
@@ -237,14 +250,16 @@ class BlueprintStateLoader:
             if "id" in resp:
                 box.id = resp["id"]
             
-            if location.get("module"):
-                box.module = location.get("module")
+            if code.get("module"):
+                box.module = code.get("module")
             
-            if location.get("detected", {}).get("qualified_name"):
-                box.qualified_name = location.get("detected", {}).get("qualified_name")
+            detected = resp.get("detected", {})
+            if isinstance(detected, dict) and detected.get("qualified_name"):
+                box.qualified_name = detected.get("qualified_name")
             
-            if resp.get("duplicate_policy", {}).get("group"):
-                box.duplicate_group = resp.get("duplicate_policy", {}).get("group")
+            uniqueness = get_uniqueness(resp)
+            if uniqueness.get("group"):
+                box.duplicate_group = uniqueness.get("group")
             
             boxes.append(box)
         
@@ -252,7 +267,7 @@ class BlueprintStateLoader:
     
     @staticmethod
     def _load_connections(blueprint_data: Dict[str, Any], boxes: List[PlannerBox]) -> tuple[List[PlannerConnection], List[PlannerConnection]]:
-        """Load connections from related_code sections.
+        """Load connections from block connections sections.
         
         Args:
             blueprint_data: The parsed blueprint.yaml data.
@@ -261,19 +276,19 @@ class BlueprintStateLoader:
         Returns:
             Tuple of (valid_connections, broken_connections).
         """
-        responsibilities = blueprint_data.get("responsibilities", [])
+        blocks = get_blocks(blueprint_data)
         connections = []
         broken_connections = []
         
         box_ids = {box.id for box in boxes}
 
-        for resp in responsibilities:
+        for resp in blocks:
             resp_id = resp.get("id")
-            related_code = resp.get("related_code", [])
+            block_connections = get_connections(resp)
             
-            for rel in related_code:
+            for rel in block_connections:
                 target_id = rel.get("target")
-                relationship = rel.get("relationship")
+                relationship = get_connection_meaning(rel)
                 
                 if not resp_id or not target_id or not relationship:
                     continue
@@ -287,7 +302,7 @@ class BlueprintStateLoader:
                         relationship=relationship,
                         source_kind="blueprint",
                         confidence="high",
-                        evidence=["declared:related_code"],
+                        evidence=["declared:connections"],
                         status="broken",
                         notes=rel.get("notes"),
                     ))
@@ -298,7 +313,7 @@ class BlueprintStateLoader:
                         relationship=relationship,
                         source_kind="blueprint",
                         confidence="high",
-                        evidence=["declared:related_code"],
+                        evidence=["declared:connections"],
                         status="accepted",
                         notes=rel.get("notes"),
                     ))

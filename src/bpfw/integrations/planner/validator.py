@@ -127,10 +127,10 @@ class PlanValidator:
                     box_id=box.id or "unknown",
                 ))
             
-            if not box.intent or not box.intent.strip():
+            if not box.purpose or not box.purpose.strip():
                 errors.append(PlanFinding(
                     level="error",
-                    message=f"Box has no intent/purpose",
+                    message=f"Block has no purpose",
                     box_id=box.id,
                 ))
             
@@ -141,15 +141,15 @@ class PlanValidator:
                     box_id=box.id,
                 ))
             
-            # Validate lifecycle
+            # Validate status
             if box.lifecycle not in state.project_config.allowed_lifecycles:
                 errors.append(PlanFinding(
                     level="error",
-                    message=f"Invalid lifecycle '{box.lifecycle}'. Must be one of: {state.project_config.allowed_lifecycles}",
+                    message=f"Invalid status '{box.lifecycle}'. Must be one of: {state.project_config.allowed_lifecycles}",
                     box_id=box.id,
                 ))
             
-            # Validate location
+            # Validate code location
             if not box.path or not box.path.strip():
                 warnings.append(PlanFinding(
                     level="warning",
@@ -167,7 +167,7 @@ class PlanValidator:
             if not box.symbol_type or not box.symbol_type.strip():
                 warnings.append(PlanFinding(
                     level="warning",
-                    message=f"Box has no symbol_type",
+                    message=f"Block has no kind",
                     box_id=box.id,
                 ))
             
@@ -252,22 +252,22 @@ class PlanValidator:
         errors = []
         warnings = []
         
-        # Check for duplicate active intents
-        if state.project_config.single_active_per_intent:
-            active_by_intent = {}
+        # Check for duplicate active purposes
+        if state.project_config.single_active_per_purpose:
+            active_by_purpose = {}
             
             for box in state.boxes:
                 if box.lifecycle == "active" and box.duplicate_group:
-                    if box.duplicate_group not in active_by_intent:
-                        active_by_intent[box.duplicate_group] = []
-                    active_by_intent[box.duplicate_group].append(box)
+                    if box.duplicate_group not in active_by_purpose:
+                        active_by_purpose[box.duplicate_group] = []
+                    active_by_purpose[box.duplicate_group].append(box)
             
-            for intent, boxes in active_by_intent.items():
+            for purpose, boxes in active_by_purpose.items():
                 if len(boxes) > 1:
                     box_ids = ", ".join(b.id for b in boxes)
                     errors.append(PlanFinding(
                         level="error",
-                        message=f"Multiple active boxes with same intent '{intent}': {box_ids}",
+                        message=f"Multiple active blocks with same purpose '{purpose}': {box_ids}",
                     ))
         
         return errors, warnings

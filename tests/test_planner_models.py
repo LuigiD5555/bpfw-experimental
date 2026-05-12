@@ -18,14 +18,14 @@ def test_planner_box_creation() -> None:
     box = PlannerBox(
         name="TestBox",
         domain="test_domain",
-        intent="Test purpose",
+        purpose="Test purpose",
         lifecycle="active",
         symbol_type="class",
     )
     
     assert box.name == "TestBox"
     assert box.domain == "test_domain"
-    assert box.intent == "Test purpose"
+    assert box.purpose == "Test purpose"
     assert box.lifecycle == "active"
     assert box.symbol_type == "class"
     assert box.path is None
@@ -53,7 +53,7 @@ def test_planner_box_with_interface() -> None:
     box = PlannerBox(
         name="TestBox",
         domain="test_domain",
-        intent="Test purpose",
+        purpose="Test purpose",
         lifecycle="active",
         symbol_type="class",
         interface=interface,

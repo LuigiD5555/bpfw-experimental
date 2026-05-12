@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
+from bpfw.catalog.symbol_types import VALID_SYMBOL_TYPES
 from bpfw.integrations.planner.models import (
     PlannerBox,
     PlannerInterface,
@@ -16,14 +17,13 @@ from bpfw.integrations.planner.utils import (
     to_snake_case,
 )
 
-
 @dataclass
 class AddBoxInput:
     """Input data for adding a new box."""
     
     name: str
     domain: str
-    intent: str
+    purpose: str
     symbol_type: str
     lifecycle: Optional[str] = None
 
@@ -77,7 +77,7 @@ class PlannerDefaultsBuilder:
         box = PlannerBox(
             name=box_input.name,
             domain=box_input.domain,
-            intent=box_input.intent,
+            purpose=box_input.purpose,
             symbol_type=box_input.symbol_type,
             lifecycle=lifecycle,
             path=path,
@@ -113,20 +113,21 @@ class BoxFactory:
         if not input_data.domain or not input_data.domain.strip():
             raise ValueError("Box domain cannot be empty")
         
-        # Validate intent
-        if not input_data.intent or not input_data.intent.strip():
-            raise ValueError("Box intent cannot be empty")
+        # Validate purpose
+        if not input_data.purpose or not input_data.purpose.strip():
+            raise ValueError("Block purpose cannot be empty")
         
         # Validate symbol_type
-        valid_types = ["class", "function", "module"]
-        if input_data.symbol_type not in valid_types:
-            raise ValueError(f"Invalid symbol_type: {input_data.symbol_type}. Must be one of: {valid_types}")
+        if input_data.symbol_type not in VALID_SYMBOL_TYPES:
+            raise ValueError(
+                f"Invalid kind: {input_data.symbol_type}. Must be one of: {VALID_SYMBOL_TYPES}"
+            )
         
         # Validate lifecycle if provided
         if input_data.lifecycle:
             allowed_lifecycles = state.project_config.allowed_lifecycles
             if input_data.lifecycle not in allowed_lifecycles:
-                raise ValueError(f"Invalid lifecycle: {input_data.lifecycle}. Must be one of: {allowed_lifecycles}")
+                raise ValueError(f"Invalid status: {input_data.lifecycle}. Must be one of: {allowed_lifecycles}")
         
         # Generate defaults
         box = PlannerDefaultsBuilder.build_box_defaults(input_data, state)
@@ -163,7 +164,7 @@ class BoxFactory:
         updated_box = PlannerBox(
             name=updates.get("name", box.name),
             domain=updates.get("domain", box.domain),
-            intent=updates.get("intent", box.intent),
+            purpose=updates.get("purpose", box.purpose),
             symbol_type=updates.get("symbol_type", box.symbol_type),
             lifecycle=updates.get("lifecycle", box.lifecycle),
             path=updates.get("path", box.path),

@@ -25,7 +25,7 @@ class BlueprintAssembler:
             "version": 1,
             "project": BlueprintAssembler._assemble_project(state),
             "policy": BlueprintAssembler._assemble_policy(state),
-            "responsibilities": BlueprintAssembler._assemble_responsibilities(state),
+            "blocks": BlueprintAssembler._assemble_blocks(state),
         }
         
         return blueprint_data
@@ -67,8 +67,8 @@ class BlueprintAssembler:
             "mode": config.policy_mode,
             "empty_blueprint_allows_execution": config.empty_blueprint_allows_execution,
             "defined_blueprint_blocks_on_drift": config.defined_blueprint_blocks_on_drift,
-            "allowed_lifecycles": config.allowed_lifecycles,
-            "single_active_per_intent": config.single_active_per_intent,
+            "allowed_statuses": config.allowed_lifecycles,
+            "one_active_block_per_purpose": config.single_active_per_purpose,
             "undeclared_code_blocks": config.undeclared_code_blocks,
             "missing_declared_code_blocks": config.missing_declared_code_blocks,
             "security": {
@@ -81,16 +81,16 @@ class BlueprintAssembler:
         return policy
     
     @staticmethod
-    def _assemble_responsibilities(state: PlannerState) -> List[Dict[str, Any]]:
-        """Assemble responsibilities section.
+    def _assemble_blocks(state: PlannerState) -> List[Dict[str, Any]]:
+        """Assemble blocks section.
         
         Args:
             state: Current planner state.
         
         Returns:
-            List of responsibility dictionaries.
+            List of block dictionaries.
         """
-        responsibilities = []
+        blocks = []
         
         # Build a mapping of connections by source box
         connections_by_source: Dict[str, List[PlannerConnection]] = {}
@@ -102,42 +102,42 @@ class BlueprintAssembler:
             connections_by_source[conn.source_box_id].append(conn)
         
         for box in state.boxes:
-            responsibility = BlueprintAssembler._assemble_responsibility(
+            block = BlueprintAssembler._assemble_block(
                 box,
                 connections_by_source.get(box.id, []),
             )
-            responsibilities.append(responsibility)
+            blocks.append(block)
         
-        return responsibilities
+        return blocks
     
     @staticmethod
-    def _assemble_responsibility(
+    def _assemble_block(
         box: PlannerBox,
         connections: List[PlannerConnection],
     ) -> Dict[str, Any]:
-        """Assemble a single responsibility.
+        """Assemble a single block.
         
         Args:
             box: The box to convert.
             connections: Connections from this box.
         
         Returns:
-            Responsibility dictionary.
+            Block dictionary.
         """
-        # Build related_code from connections
-        related_code = []
+        # Build connections from accepted planner connections
+        block_connections = []
         for conn in connections:
-            related_code.append({
+            block_connections.append({
                 "target": conn.target_box_id,
-                "relationship": conn.relationship,
+                "meaning": conn.relationship,
             })
         
-        # Build location
-        location = {
+        # Build code metadata
+        code = {
             "path": box.path,
             "module": box.module,
             "symbol": box.symbol,
-            "symbol_type": box.symbol_type,
+            "kind": box.symbol_type,
             "start_line": None,
             "end_line": None,
         }
@@ -148,11 +148,11 @@ class BlueprintAssembler:
             "kind": box.symbol_type,
         }
         
-        # Build duplicate_policy
-        duplicate_policy = {
+        # Build uniqueness metadata
+        uniqueness = {
             "group": box.duplicate_group,
             "allow_multiple_non_active": True,
-            "forbidden_active_duplicates": True,
+            "forbid_active_duplicates": True,
             "suspected_duplicates": [],
         }
         
@@ -163,18 +163,18 @@ class BlueprintAssembler:
             "reason": None,
         }
         
-        # Build responsibility
-        responsibility = {
+        # Build block
+        block = {
             "id": box.id,
-            "intent": box.intent,
+            "purpose": box.purpose,
             "name": box.name,
             "domain": box.domain,
-            "lifecycle": box.lifecycle,
-            "location": location,
+            "status": box.lifecycle,
+            "code": code,
             "detected": detected,
             "entrypoints": [],
-            "related_code": related_code,
-            "duplicate_policy": duplicate_policy,
+            "connections": block_connections,
+            "uniqueness": uniqueness,
             "replacement": replacement,
             "notes": box.notes,
         }
@@ -202,9 +202,9 @@ class BlueprintAssembler:
                 }
             
             if interface_data:
-                responsibility["interface"] = interface_data
+                block["interface"] = interface_data
         
-        return responsibility
+        return block
 
 
 class BlueprintYamlWriter:

@@ -50,7 +50,7 @@ class PlannerProjectConfig:
     allowed_lifecycles: List[str] = field(default_factory=lambda: [
         "active", "experimental", "legacy", "deprecated"
     ])
-    single_active_per_intent: bool = True
+    single_active_per_purpose: bool = True
     undeclared_code_blocks: bool = True
     missing_declared_code_blocks: bool = True
     security: PlannerSecurityConfig = field(default_factory=PlannerSecurityConfig)
@@ -58,7 +58,7 @@ class PlannerProjectConfig:
 
 @dataclass
 class PlannerInterfaceInput:
-    """Input parameter for a responsibility interface."""
+    """Input parameter for a block interface."""
     
     name: str
     type: Optional[str] = None
@@ -69,7 +69,7 @@ class PlannerInterfaceInput:
 
 @dataclass
 class PlannerInterfaceOutput:
-    """Output specification for a responsibility interface."""
+    """Output specification for a block interface."""
     
     type: Optional[str] = None
     description: Optional[str] = None
@@ -77,7 +77,7 @@ class PlannerInterfaceOutput:
 
 @dataclass
 class PlannerInterface:
-    """Interface specification for a responsibility."""
+    """Interface specification for a block."""
     
     inputs: List[PlannerInterfaceInput] = field(default_factory=list)
     output: Optional[PlannerInterfaceOutput] = None
@@ -85,11 +85,11 @@ class PlannerInterface:
 
 @dataclass
 class PlannerBox:
-    """Black box representing a system responsibility."""
+    """Black box representing a system block."""
     
     name: str
     domain: str
-    intent: str
+    purpose: str
     symbol_type: str
     lifecycle: str = "active"
     path: Optional[str] = None
@@ -105,11 +105,19 @@ class PlannerBox:
     
     def __post_init__(self) -> None:
         """Compute derived fields after initialization."""
+        self.name = str(self.name or "").strip()
+        self.domain = str(self.domain or "").strip()
+        self.purpose = str(self.purpose or "").strip()
+        self.symbol_type = str(self.symbol_type or "class").strip() or "class"
+        self.lifecycle = str(self.lifecycle or "active").strip() or "active"
+        self.path = str(self.path).strip() if self.path is not None else None
+        self.symbol = str(self.symbol).strip() if self.symbol is not None else None
+
         from bpfw.integrations.planner.utils import (
             generate_box_id,
             generate_module_from_path,
             generate_qualified_name,
-            normalize_intent_for_duplicate_group,
+            normalize_purpose_for_duplicate_group,
         )
         
         self.id = generate_box_id(self.domain, self.name)
@@ -124,12 +132,11 @@ class PlannerBox:
         else:
             self.qualified_name = None
         
-        self.duplicate_group = normalize_intent_for_duplicate_group(self.intent)
-
+        self.duplicate_group = normalize_purpose_for_duplicate_group(self.purpose)
 
 @dataclass
 class PlannerConnection:
-    """Connection between two responsibilities."""
+    """Connection between two blocks."""
     
     source_box_id: str
     target_box_id: str

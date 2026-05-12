@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
+from bpfw.catalog.symbol_types import VALID_SYMBOL_TYPES
 from bpfw.integrations.editor.screen import read_input, read_line
 from bpfw.integrations.planner.defaults import AddBoxInput
 
@@ -19,8 +20,6 @@ class ConnectionInput:
 
 class AddBoxModal:
     """Modal dialog for adding a new box."""
-    
-    VALID_SYMBOL_TYPES = ["class", "function", "module"]
     
     def __init__(self) -> None:
         """Initialize the modal."""
@@ -45,9 +44,9 @@ class AddBoxModal:
         if not domain:
             return None
         
-        # Collect intent
-        intent = self._collect_field("Intent")
-        if not intent:
+        # Collect purpose
+        purpose = self._collect_field("Purpose")
+        if not purpose:
             return None
         
         # Collect symbol type
@@ -66,7 +65,7 @@ class AddBoxModal:
         return AddBoxInput(
             name=name,
             domain=domain,
-            intent=intent,
+            purpose=purpose,
             symbol_type=symbol_type,
         )
     
@@ -99,20 +98,20 @@ class AddBoxModal:
         """
         while True:
             print("│ Type                            │")
-            print("│   [1] class                     │")
-            print("│   [2] function                  │")
-            print("│   [3] module                    │")
+            visible_symbol_types = [
+                symbol_type for symbol_type in VALID_SYMBOL_TYPES if not symbol_type.startswith("nested_")
+            ]
+            for index, symbol_type in enumerate(visible_symbol_types, start=1):
+                print(f"│   [{index}] {symbol_type:<23}│")
             choice = read_input("> ").strip().lower()
             
             if choice in ["q", "esc"]:
                 return None
             
-            if choice in ["1", "class"]:
-                return "class"
-            if choice in ["2", "function"]:
-                return "function"
-            if choice in ["3", "module"]:
-                return "module"
+            if choice.isdigit() and 1 <= int(choice) <= len(visible_symbol_types):
+                return visible_symbol_types[int(choice) - 1]
+            if choice in VALID_SYMBOL_TYPES:
+                return choice
             
             print("│ Invalid choice. Try again.       │")
 
@@ -145,7 +144,7 @@ class ConnectionModal:
         Returns:
             ConnectionInput if user provided data, None if cancelled.
         """
-        print("\n╭──────────── Connect Boxes ────────────╮")
+        print("\n╭──────────── Connect Blocks ────────────╮")
         print("│                                   │")
         
         # Collect source box
