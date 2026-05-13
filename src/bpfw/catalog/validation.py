@@ -42,7 +42,10 @@ def _validate_block_fields(
                 source=_SOURCE,
                 code="INCOMPLETE_BLOCK",
                 severity=FINDING_SEVERITY_BLOCK,
-                message="A declared block is missing required authority fields.",
+                message=(
+                    "Blueprint authority drift: a declared block in "
+                    "bpfw/blueprint.yaml is incomplete and cannot be enforced."
+                ),
                 evidence={
                     "block_index": block_index,
                     "missing_fields": list(_BLOCK_REQUIRED_FIELDS + _CODE_REQUIRED_FIELDS),
@@ -74,7 +77,10 @@ def _validate_block_fields(
                 severity=FINDING_SEVERITY_BLOCK,
                 path=_safe_code_field(block, "path"),
                 symbol=_safe_code_field(block, "symbol"),
-                message="A declared block is missing required authority fields.",
+                message=(
+                    "Blueprint authority drift: declared block metadata is incomplete "
+                    "in bpfw/blueprint.yaml."
+                ),
                 evidence={
                     "block_index": block_index,
                     "missing_fields": missing_fields,

@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from bpfw.catalog.models import DiscoveredCodeUnit, ScanResult
+from bpfw.catalog.review_order import order_blocks_for_review
 from bpfw.reports.finding import Finding
 
 
@@ -362,6 +363,9 @@ def _extract_class_unit(
     # Extract docstring
     docstring = ast.get_docstring(node)
 
+    # Extract local calls made by class methods and nested code.
+    called_symbols = _extract_called_symbols_from_node(node)
+
     # Extract interface metadata
     interface_inputs, interface_output = extract_interface_metadata(
         node=node,
@@ -385,6 +389,7 @@ def _extract_class_unit(
         signature=None,
         interface_inputs=interface_inputs,
         interface_output=interface_output,
+        called_symbols=called_symbols,
     )
 
 
@@ -420,6 +425,7 @@ def _extract_function_unit(
         nodes=node.body,
         parent_symbol=symbol,
     )
+    called_symbols = _extract_called_symbols(node)
 
     # Extract interface metadata
     interface_inputs, interface_output = extract_interface_metadata(
@@ -444,6 +450,7 @@ def _extract_function_unit(
         signature=signature,
         interface_inputs=interface_inputs,
         interface_output=interface_output,
+        called_symbols=called_symbols,
     )
 
 
@@ -560,6 +567,32 @@ def _get_attribute_name(node: ast.Attribute) -> str:
 
     return ".".join(reversed(parts))
 
+
+
+
+def _extract_called_symbols(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> List[str]:
+    """Extract locally called symbol names from a function body."""
+
+    return _extract_called_symbols_from_node(node)
+
+
+def _extract_called_symbols_from_node(node: ast.AST) -> List[str]:
+    """Extract locally called symbol names from an AST subtree."""
+
+    called_symbols: List[str] = []
+
+    for child in ast.walk(node):
+        if not isinstance(child, ast.Call):
+            continue
+
+        if isinstance(child.func, ast.Name):
+            called_symbols.append(child.func.id)
+        elif isinstance(child.func, ast.Attribute):
+            called_symbols.append(child.func.attr)
+
+    return sorted(set(called_symbols))
 
 def _extract_function_signature(
     node: ast.FunctionDef | ast.AsyncFunctionDef,

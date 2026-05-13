@@ -19,8 +19,8 @@ _SUGGESTED_ACTIONS: Dict[str, str] = {
         "Fix bpfw/blueprint.yaml so it can be parsed and loaded."
     ),
     "INCOMPLETE_BLOCK": (
-        "Complete purpose, name, domain, status, "
-        "code.path, code.symbol, and code.kind."
+        "Sync bpfw/blueprint.yaml by completing: id, purpose, name, domain, status, "
+        "code.path, code.symbol, and code.kind (legacy aliases are accepted)."
     ),
     "INVALID_STATUS": (
         f"Use {', '.join(ALLOWED_LIFECYCLES)}."

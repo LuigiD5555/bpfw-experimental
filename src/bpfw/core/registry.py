@@ -46,15 +46,22 @@ class IntegrationStep(PipelineStep):
     def run(self, context) -> StepResult:  # noqa: ANN001
         lock_state = get_blueprint_lock_state(project_root=context.project_root)
         if self.integration_name in {"inspector", "editor", "planner"} and lock_state in {"locked", "degraded"}:
-            return StepResult(
-                status=ResultStatus.BLOCK,
-                message=(
-                    "BLOCK: Blueprint is locked. "
-                    "Run bpfw unlock before editing authority data."
-                ),
-                source=self.name,
-                details={"error_code": "AUTHORITY_LOCKED"},
-            )
+            unlock_result = unlock_authority(project_root=context.project_root)
+            if unlock_result.status != "unlocked":
+                return StepResult(
+                    status=ResultStatus.BLOCK,
+                    message=(
+                        "BLOCK: Blueprint is locked and automatic unlock failed. "
+                        "Run bpfw unlock before editing authority data."
+                    ),
+                    source=self.name,
+                    details={
+                        "error_code": "AUTHORITY_LOCKED",
+                        "lock_state": lock_state,
+                        "unlock_status": unlock_result.status,
+                    },
+                    suggested_actions=["Run bpfw unlock"],
+                )
 
         result = self.integration_registry.run(
             name=self.integration_name,
@@ -254,7 +261,7 @@ def build_default_registry(
                     integration_registry=optional_integrations,
                     integration_name="inspector",
                     name="integrations.inspector",
-                )
+                ),
             ],
         ),
         "editor": Pipeline(
@@ -264,7 +271,7 @@ def build_default_registry(
                     integration_registry=optional_integrations,
                     integration_name="editor",
                     name="integrations.editor",
-                )
+                ),
             ],
         ),
         "planner": Pipeline(
@@ -274,7 +281,7 @@ def build_default_registry(
                     integration_registry=optional_integrations,
                     integration_name="planner",
                     name="integrations.planner",
-                )
+                ),
             ],
         ),
         "verify": Pipeline(name="verify", steps=[VerifyBlueprintStep()]),

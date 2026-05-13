@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from bpfw.core.context import ProjectContext
-from bpfw.core.result import StepResult
+from bpfw.core.result import ResultStatus, StepResult
 
 
 class PipelineStep(Protocol):
@@ -26,6 +26,12 @@ class Pipeline:
 
 
 def execute_pipeline(pipeline: Pipeline, context: ProjectContext) -> list[StepResult]:
-    """Run all steps in order and collect results."""
+    """Run steps in order and stop when a blocking result is produced."""
 
-    return [step.run(context) for step in pipeline.steps]
+    step_results: list[StepResult] = []
+    for step in pipeline.steps:
+        step_result = step.run(context)
+        step_results.append(step_result)
+        if step_result.status in {ResultStatus.BLOCK, ResultStatus.CRITICAL}:
+            break
+    return step_results
