@@ -27,9 +27,9 @@ from bpfw.catalog.schema import (
 )
 from bpfw.catalog.verify import _read_ignored_paths, _read_source_roots
 from bpfw.catalog.verify import run_verify
-from bpfw.catalog.writer import to_snake_case
 from bpfw.core.errors import BlueprintLockedError
 from bpfw.reports.finding import Finding
+from bpfw.shared.text import to_snake_case
 
 ALLOWED_LIFECYCLES = ("active", "experimental", "legacy", "deprecated")
 REQUIRED_HUMAN_FIELDS = ("purpose", "name", "domain", "status")
@@ -317,7 +317,7 @@ def suggest_domain(block: Dict[str, Any]) -> str | None:
 
 
 def suggest_domains(block: Dict[str, Any]) -> List[str]:
-    """Suggest deterministic domains in z/x/c/v source order."""
+    """Suggest inspector domains using catalog deterministic engine plus adapter rules."""
 
     location = get_code(block)
     symbol_based = None

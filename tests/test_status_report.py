@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from bpfw.commands.status import run_status
+from bpfw.reports.status_report import run_status
 
 
 def test_status_recommends_init_when_blueprint_is_missing(tmp_path: Path) -> None:

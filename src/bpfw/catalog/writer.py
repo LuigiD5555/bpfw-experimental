@@ -9,29 +9,7 @@ from bpfw.catalog.models import DiscoveredCodeUnit
 from bpfw.catalog.paths import resolve_blueprint_path
 from bpfw.catalog.symbol_types import normalize_symbol_type
 from bpfw.protection.setup import format_init_setup_summary, run_protection_setup
-
-
-def to_snake_case(value: str) -> str:
-    """Convert a string to snake_case.
-    
-    Args:
-        value: The string to convert.
-    
-    Returns:
-        The string converted to snake_case.
-    """
-    result = []
-    for character in value:
-        if character.isupper():
-            if result and result[-1] != "_":
-                result.append("_")
-            result.append(character.lower())
-        elif character in (" ", "-", "."):
-            if result and result[-1] != "_":
-                result.append("_")
-        else:
-            result.append(character)
-    return "".join(result).strip("_")
+from bpfw.shared.text import to_snake_case
 
 
 def build_initial_blueprint(

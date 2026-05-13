@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import Iterable, List, Sequence
 
+from bpfw.integrations.shared.render_text import center_text
 from bpfw.integrations.shared.visual_width import display_width, fit_text, measure_lines, pad_text
 
 
@@ -44,7 +45,7 @@ def render_header(
     """Render a standard integration header block."""
 
     if centered:
-        title_line = _center_text(title, width)
+        title_line = center_text(title, width)
     else:
         title_line = pad_text(title, width)
     return [
@@ -135,14 +136,3 @@ def _center_fill(label: str, width: int, fill: str) -> str:
     right = remaining - left
     return (fill * left) + label + (fill * right)
 
-
-def _center_text(text: str, width: int) -> str:
-    """Center plain text inside fixed width."""
-
-    text_width = display_width(text)
-    if text_width >= width:
-        return fit_text(text, width)
-    remaining = width - text_width
-    left = remaining // 2
-    right = remaining - left
-    return (" " * left) + text + (" " * right)

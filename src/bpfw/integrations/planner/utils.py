@@ -2,36 +2,7 @@
 
 from pathlib import Path
 
-
-def to_snake_case(value: object) -> str:
-    """Convert a value to snake_case.
-
-    Args:
-        value: The value to convert.
-
-    Returns:
-        The value converted to snake_case, or an empty string when the value is empty.
-    """
-    if value is None:
-        return ""
-
-    value_text = str(value).strip()
-    if not value_text:
-        return ""
-
-    result: list[str] = []
-    for character in value_text:
-        if character.isupper():
-            if result and result[-1] != "_":
-                result.append("_")
-            result.append(character.lower())
-        elif character in (" ", "-", "."):
-            if result and result[-1] != "_":
-                result.append("_")
-        else:
-            result.append(character)
-
-    return "".join(result).strip("_")
+from bpfw.shared.text import to_snake_case
 
 
 def generate_box_id(domain: object, name: object) -> str:

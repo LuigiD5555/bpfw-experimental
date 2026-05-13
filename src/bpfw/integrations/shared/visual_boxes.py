@@ -2,12 +2,7 @@
 
 from typing import List
 
-from bpfw.integrations.shared.visual_width import (
-    display_width,
-    fit_text,
-    pad_text,
-    measure_lines,
-)
+from bpfw.integrations.shared.visual_width import display_width, fit_text, measure_lines, pad_text
 
 COLUMN_GAP_WIDTH = 1
 
@@ -25,18 +20,6 @@ def _centered_title_bar(title: str, width: int, fill: str = "─") -> str:
     left_fill = remaining // 2
     right_fill = remaining - left_fill
     return (fill * left_fill) + label + (fill * right_fill)
-
-
-def _center_text(text: str, width: int) -> str:
-    """Center plain text inside fixed width."""
-
-    text_width = display_width(text)
-    if text_width >= width:
-        return fit_text(text, width)
-    remaining = width - text_width
-    left_padding = remaining // 2
-    right_padding = remaining - left_padding
-    return (" " * left_padding) + text + (" " * right_padding)
 
 
 def render_box(title: str, lines: list[str], width: int) -> list[str]:

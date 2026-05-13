@@ -17,6 +17,7 @@ from bpfw.protection.authority import (
 )
 from bpfw.reports.status_report import run_status
 from bpfw.reports.verify_report import render_verify_report
+from bpfw.shared.text import normalize_text_command
 
 
 MVP_COMMANDS = (
@@ -47,43 +48,46 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 
-def normalize_command(command: str, subcommand: str | None) -> str:
+def resolve_cli_command(command: str, subcommand: str | None) -> str:
     """Map CLI tokens into engine command names for MVP."""
 
-    if command == "lock":
-        if subcommand is not None:
+    normalized_command = normalize_text_command(command)
+    normalized_subcommand = normalize_text_command(subcommand) if subcommand is not None else None
+
+    if normalized_command == "lock":
+        if normalized_subcommand is not None:
             raise ValueError("lock does not accept subcommands")
         return "lock"
-    if command == "unlock":
-        if subcommand is not None and subcommand != "blueprint":
+    if normalized_command == "unlock":
+        if normalized_subcommand is not None and normalized_subcommand != "blueprint":
             raise ValueError("unlock only supports blueprint resource in MVP. Usage: bpfw unlock [blueprint]")
         return "unlock"
-    if command == "inspector":
-        if subcommand is not None:
+    if normalized_command == "inspector":
+        if normalized_subcommand is not None:
             raise ValueError("inspector does not accept subcommands")
         return "inspector"
-    if command == "editor":
-        if subcommand is not None:
+    if normalized_command == "editor":
+        if normalized_subcommand is not None:
             raise ValueError("editor does not accept subcommands")
         return "editor"
-    if command == "planner":
-        if subcommand is not None:
+    if normalized_command == "planner":
+        if normalized_subcommand is not None:
             raise ValueError("planner does not accept subcommands")
         return "planner"
-    if command == "init":
-        if subcommand is not None:
+    if normalized_command == "init":
+        if normalized_subcommand is not None:
             raise ValueError("init does not accept subcommands")
         return "init"
-    if command == "verify":
-        if subcommand is not None:
+    if normalized_command == "verify":
+        if normalized_subcommand is not None:
             raise ValueError("verify does not accept subcommands")
         return "verify"
-    if command == "status":
-        if subcommand is not None:
+    if normalized_command == "status":
+        if normalized_subcommand is not None:
             raise ValueError("status does not accept subcommands")
         return "status"
 
-    raise ValueError(f"Unknown command: {command}")
+    raise ValueError(f"Unknown command: {normalized_command}")
 
 
 def _format_protected_resources(result: ProtectionResult) -> str:
@@ -178,7 +182,7 @@ def main() -> int:
     parsed_arguments = parser.parse_args()
 
     try:
-        normalized_command = normalize_command(
+        normalized_command = resolve_cli_command(
             command=parsed_arguments.command,
             subcommand=parsed_arguments.subcommand,
         )
