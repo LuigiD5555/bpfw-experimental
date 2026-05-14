@@ -10,11 +10,32 @@ PromptResolver = Callable[[str], str]
 ScreenHandler = Callable[[str], None]
 ExitChecker = Callable[[], bool]
 
+QUIT_COMMAND_KEY = "esc"
+QUIT_COMMAND = "escape"
+QUIT_COMMAND_ALIASES = frozenset({QUIT_COMMAND, "quit"})
+
+
+def command_label(shortcut: str, description: str) -> str:
+    """Return the standard command label for command boxes."""
+
+    return f"[{shortcut}] {description}"
+
+
+def quit_command_label(description: str = "quit") -> str:
+    """Return the standard quit command label for command boxes."""
+
+    return command_label(QUIT_COMMAND_KEY, description)
+
 
 def normalize_command(raw_value: str) -> str:
     """Return normalized command text for dispatch."""
 
-    return raw_value.strip().lower()
+    command = raw_value.strip().lower()
+    if command in {QUIT_COMMAND_KEY, QUIT_COMMAND}:
+        return QUIT_COMMAND
+    if command and all(character == "\x1b" for character in command):
+        return QUIT_COMMAND
+    return command
 
 
 def is_back_command(command: str) -> bool:
@@ -26,7 +47,7 @@ def is_back_command(command: str) -> bool:
 def is_quit_command(command: str) -> bool:
     """Return True when command is a quit action."""
 
-    return command in {"q", "quit"}
+    return command in QUIT_COMMAND_ALIASES
 
 
 def run_interactive_loop(

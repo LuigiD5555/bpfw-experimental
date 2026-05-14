@@ -18,6 +18,7 @@ class ThemeConfig:
 
 
 DEFAULT_THEME = ThemeConfig()
+COMMAND_LEFT_PADDING = 1
 
 
 def compute_panel_width(
@@ -81,9 +82,11 @@ def render_commands_box(
 ) -> List[str]:
     """Render commands panel with safe wrapping/truncation."""
 
+    content_width = max(1, width - COMMAND_LEFT_PADDING)
     wrapped_lines: List[str] = []
     for line in lines:
-        wrapped_lines.extend(_safe_wrap_line(line=line, width=width) if wrap_mode == "safe_wrap" else [fit_text(line, width)])
+        wrapped = _safe_wrap_line(line=line, width=content_width) if wrap_mode == "safe_wrap" else [fit_text(line, content_width)]
+        wrapped_lines.extend(f"{' ' * COMMAND_LEFT_PADDING}{wrapped_line}" for wrapped_line in wrapped)
     return render_panel(title="Commands", lines=wrapped_lines, width=width, theme=theme, centered_title=True)
 
 
@@ -135,4 +138,3 @@ def _center_fill(label: str, width: int, fill: str) -> str:
     left = remaining // 2
     right = remaining - left
     return (fill * left) + label + (fill * right)
-

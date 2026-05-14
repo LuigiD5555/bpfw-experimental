@@ -5,6 +5,7 @@ from typing import List
 from bpfw.integrations.shared.visual_width import display_width, fit_text, measure_lines, pad_text
 
 COLUMN_GAP_WIDTH = 1
+MIN_TEXT_RIGHT_PADDING = 1
 
 
 def _centered_title_bar(title: str, width: int, fill: str = "─") -> str:
@@ -42,18 +43,15 @@ def render_two_column_box(
     """Render a two-column box using dynamically calculated widths."""
 
     available_width = max(2, total_width - COLUMN_GAP_WIDTH)
-    left_required = max(display_width(left_title) + 3, measure_lines(left_lines))
-    right_required = max(display_width(right_title) + 3, measure_lines(right_lines))
-    left_width = int(available_width * preferred_left_ratio)
-    left_width = max(left_width, left_required)
-    right_width = available_width - left_width
-    min_column_width = 8
-    if right_width < min_column_width:
-        left_width = available_width // 2
-        right_width = available_width - left_width
-    if left_width < min_column_width:
-        left_width = min_column_width
-        right_width = max(min_column_width, available_width - left_width)
+    left_required = max(display_width(left_title) + 3, measure_lines(left_lines) + MIN_TEXT_RIGHT_PADDING)
+    right_required = max(display_width(right_title) + 3, measure_lines(right_lines) + MIN_TEXT_RIGHT_PADDING)
+    left_width, right_width = _resolve_two_column_widths(
+        available_width=available_width,
+        left_required=left_required,
+        right_required=right_required,
+        preferred_left_ratio=preferred_left_ratio,
+        min_column_width=8,
+    )
 
     left_top = _centered_title_bar(title=left_title, width=left_width, fill="─")
     right_top = _centered_title_bar(title=right_title, width=right_width, fill="─")
@@ -80,18 +78,15 @@ def render_split_box(
     """Render a two-column terminal box with independent visual emphasis."""
 
     available_width = max(2, total_width - COLUMN_GAP_WIDTH)
-    left_required = max(display_width(left_title) + 3, measure_lines(left_lines))
-    right_required = max(display_width(right_title) + 3, measure_lines(right_lines))
-    left_width = int(available_width * preferred_left_ratio)
-    left_width = max(left_width, left_required)
-    right_width = available_width - left_width
-    min_column_width = 12
-    if right_width < min_column_width:
-        left_width = available_width - min_column_width
-        right_width = min_column_width
-    if left_width < min_column_width:
-        left_width = min_column_width
-        right_width = available_width - left_width
+    left_required = max(display_width(left_title) + 3, measure_lines(left_lines) + MIN_TEXT_RIGHT_PADDING)
+    right_required = max(display_width(right_title) + 3, measure_lines(right_lines) + MIN_TEXT_RIGHT_PADDING)
+    left_width, right_width = _resolve_two_column_widths(
+        available_width=available_width,
+        left_required=left_required,
+        right_required=right_required,
+        preferred_left_ratio=preferred_left_ratio,
+        min_column_width=12,
+    )
 
     left_top = _centered_title_bar(title=left_title, width=left_width, fill=left_border_fill)
     right_top = _centered_title_bar(title=right_title, width=right_width, fill=right_border_fill)
@@ -104,3 +99,27 @@ def render_split_box(
         lines.append(f"║{pad_text(left_text, left_width)}║{pad_text(right_text, right_width)}│")
     lines.append(f"╚{'═' * left_width}╩{'─' * right_width}╯")
     return lines
+
+
+def _resolve_two_column_widths(
+    available_width: int,
+    left_required: int,
+    right_required: int,
+    preferred_left_ratio: float,
+    min_column_width: int,
+) -> tuple[int, int]:
+    """Resolve column widths without truncating when the total width can fit."""
+
+    available_width = max(2, available_width)
+    if left_required + right_required <= available_width:
+        preferred_left_width = int(available_width * preferred_left_ratio)
+        spare_width = available_width - left_required - right_required
+        left_extra = min(spare_width, max(0, preferred_left_width - left_required))
+        left_width = left_required + left_extra
+        return left_width, available_width - left_width
+
+    effective_min_width = min(min_column_width, max(1, available_width // 2))
+    maximum_left_width = max(effective_min_width, available_width - effective_min_width)
+    preferred_left_width = int(available_width * preferred_left_ratio)
+    left_width = min(max(preferred_left_width, effective_min_width), maximum_left_width)
+    return left_width, available_width - left_width
