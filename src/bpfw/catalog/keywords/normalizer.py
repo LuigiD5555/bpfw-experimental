@@ -21,7 +21,14 @@ def normalize_token(token: str) -> str:
     # Plural to singular: common patterns
     if len(lowered) > 4 and lowered.endswith("ies"):
         return f"{lowered[:-3]}y"
-    if len(lowered) > 3 and lowered.endswith("es"):
+    if (
+        len(lowered) > 3
+        and lowered.endswith("es")
+        and (
+            lowered.endswith(("ses", "xes", "zes"))
+            or lowered.endswith(("ches", "shes"))
+        )
+    ):
         return lowered[:-2]
     if len(lowered) > 3 and lowered.endswith("s"):
         return lowered[:-1]

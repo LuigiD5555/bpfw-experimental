@@ -184,6 +184,46 @@ def test_suggests_richer_intent_for_suggest_intents_function() -> None:
     assert suggestions[3].text == "Suggest purpose"
 
 
+def test_docstring_slot_prefers_docstring_sentence_over_keyword_stems() -> None:
+    block = _responsibility(
+        symbol="resolve_guard_files",
+        path="src/bpfw/protection/authority.py",
+        signature="resolve_guard_files() -> List[Path]",
+        docstring="Return paths to BPFW package files that implement the protection mechanism.",
+    )
+
+    suggestions = suggest_intents(block)
+
+    assert suggestions[3].text == "Return protection mechanism file paths"
+    assert "fil" not in suggestions[3].text.lower()
+
+
+def test_name_slot_preserves_symbol_token_order() -> None:
+    block = _responsibility(
+        symbol="resolve_guard_files",
+        path="src/bpfw/protection/authority.py",
+        signature="resolve_guard_files() -> List[Path]",
+        docstring="Return paths to BPFW package files that implement the protection mechanism.",
+    )
+
+    suggestions = suggest_intents(block)
+
+    assert suggestions[2].text == "Resolve guard file"
+
+
+def test_build_docstring_slot_drops_secondary_clauses() -> None:
+    block = _responsibility(
+        symbol="resolve_protected_resources",
+        path="src/bpfw/protection/authority.py",
+        signature="resolve_protected_resources(project_root: Path) -> List[ProtectedResource]",
+        docstring="Build the full protection resource list for a project, including its blueprint and BPFW guard files.",
+    )
+
+    suggestions = suggest_intents(block)
+
+    assert suggestions[3].text == "Build protection resource list"
+
+
 def test_suggests_collecting_responsibility_evidence() -> None:
     """Suggest evidence collection rather than scanning evidence text."""
 

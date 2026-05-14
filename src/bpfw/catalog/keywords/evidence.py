@@ -28,6 +28,82 @@ EVIDENCE_WEIGHTS = {
 }
 
 
+def _resolve_block_info(block: dict[str, Any]) -> dict[str, Any]:
+    """
+    Extract block information from various possible structures.
+
+    Blocks can have data in:
+    - Top-level keys: symbol, path, module
+    - Nested in "location": location.symbol, location.path, location.module
+    - Nested in "code": code.symbol, code.path, code.module
+
+    Args:
+        block: Block dictionary from scanner.
+
+    Returns:
+        Dictionary with resolved symbol, path, module, symbol_type.
+    """
+    # Try nested structures first, then fall back to top-level
+    info: dict[str, Any] = {}
+
+    # Get symbol
+    symbol = (
+        block.get("location", {}).get("symbol")
+        or block.get("code", {}).get("symbol")
+        or block.get("symbol")
+        or block.get("name")
+        or ""
+    )
+    info["symbol"] = symbol
+
+    # Get path
+    path = (
+        block.get("location", {}).get("path")
+        or block.get("code", {}).get("path")
+        or block.get("path")
+        or ""
+    )
+    info["path"] = path
+
+    # Get module
+    module = (
+        block.get("location", {}).get("module")
+        or block.get("code", {}).get("module")
+        or block.get("module")
+        or ""
+    )
+    info["module"] = module
+
+    # Get symbol_type
+    symbol_type = (
+        block.get("location", {}).get("symbol_type")
+        or block.get("code", {}).get("symbol_type")
+        or block.get("symbol_type")
+        or ""
+    )
+    info["symbol_type"] = symbol_type
+
+    return info
+
+
+# Evidence source weights (higher = more important)
+EVIDENCE_WEIGHTS = {
+    "symbol_name": 10.0,
+    "docstring_summary": 8.0,
+    "parameters": 5.0,
+    "return_annotation": 5.0,
+    "called_symbols": 5.0,
+    "assigned_attributes": 4.0,
+    "raised_exceptions": 4.0,
+    "decorators": 3.0,
+    "path": 3.0,
+    "module": 3.0,
+    "imports": 2.0,
+    "methods": 3.0,
+    "functions": 2.5,
+}
+
+
 def extract_evidence_from_block(block: dict[str, Any]) -> list[KeywordEvidence]:
     """
     Extract keyword evidence from a single code block.
@@ -40,8 +116,11 @@ def extract_evidence_from_block(block: dict[str, Any]) -> list[KeywordEvidence]:
     """
     evidence: list[KeywordEvidence] = []
 
+    # Resolve block information from various structures
+    info = _resolve_block_info(block)
+
     # Extract symbol name
-    symbol = block.get("symbol", "")
+    symbol = info.get("symbol", "")
     if symbol:
         # Get just the last part (unqualified name)
         simple_name = symbol.split(".")[-1] if "." in symbol else symbol
@@ -57,7 +136,7 @@ def extract_evidence_from_block(block: dict[str, Any]) -> list[KeywordEvidence]:
             )
 
     # Extract path
-    path = block.get("path", "")
+    path = info.get("path", "")
     if path:
         tokens = tokenize_path(path)
         for token in tokens:
@@ -71,7 +150,7 @@ def extract_evidence_from_block(block: dict[str, Any]) -> list[KeywordEvidence]:
             )
 
     # Extract module
-    module = block.get("module", "")
+    module = info.get("module", "")
     if module:
         tokens = tokenize_identifier(module)
         for token in tokens:

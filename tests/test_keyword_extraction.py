@@ -4,7 +4,7 @@ import pytest
 
 from bpfw.catalog.keywords import extract_block_keywords, build_project_vocabulary
 from bpfw.catalog.keywords.tokenizer import tokenize_identifier
-from bpfw.catalog.keywords.normalizer import normalize_tokens
+from bpfw.catalog.keywords.normalizer import normalize_token, normalize_tokens
 
 
 def test_tokenize_snake_case():
@@ -47,6 +47,11 @@ def test_tokenize_mixed_case():
     assert "parse" in tokens
     assert "xml" in tokens or "xmlhttp" in tokens  # May combine acronyms
     assert "request" in tokens
+
+
+def test_normalize_file_plural_keeps_final_e() -> None:
+    assert normalize_token("files") == "file"
+    assert normalize_token("classes") == "class"
 
 
 def test_tokenize_dot_case():
