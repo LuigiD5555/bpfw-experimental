@@ -914,20 +914,20 @@ blocks:
     output:
       type: List[Finding]
       description: null
-- id: intent_suggestion
+- id: purpose_suggestion
   purpose: null
-  name: IntentSuggestion
+  name: PurposeSuggestion
   domain: null
   status: null
   code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: IntentSuggestion
+    path: src/bpfw/catalog/purpose_suggestions.py
+    module: src.bpfw.catalog.purpose_suggestions
+    symbol: PurposeSuggestion
     kind: class
     start_line: 14
     end_line: 19
   detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.IntentSuggestion
+    qualified_name: src.bpfw.catalog.purpose_suggestions.PurposeSuggestion
     kind: class
     methods: []
     functions: []
@@ -943,20 +943,20 @@ blocks:
     replaced_by: null
     reason: null
   notes: null
-- id: compact_intent_text
+- id: compact_purpose_text
   purpose: null
-  name: compact_intent_text
+  name: compact_purpose_text
   domain: null
   status: null
   code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: compact_intent_text
+    path: src/bpfw/catalog/purpose_suggestions.py
+    module: src.bpfw.catalog.purpose_suggestions
+    symbol: compact_purpose_text
     kind: function
     start_line: 44
     end_line: 85
   detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.compact_intent_text
+    qualified_name: src.bpfw.catalog.purpose_suggestions.compact_purpose_text
     kind: function
     methods: []
     functions: []
@@ -1319,20 +1319,20 @@ blocks:
     output:
       type: BlockKeywordProfile
       description: null
-- id: suggest_intents
+- id: suggest_purposes
   purpose: null
-  name: suggest_intents
+  name: suggest_purposes
   domain: null
   status: null
   code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: suggest_intents
+    path: src/bpfw/catalog/purpose_suggestions.py
+    module: src.bpfw.catalog.purpose_suggestions
+    symbol: suggest_purposes
     kind: function
     start_line: 152
     end_line: 252
   detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.suggest_intents
+    qualified_name: src.bpfw.catalog.purpose_suggestions.suggest_purposes
     kind: function
     methods: []
     functions: []
@@ -1360,13 +1360,13 @@ blocks:
       default: null
       required: false
       description: null
-    - name: existing_intents
+    - name: existing_purposes
       type: tuple[str, ...]
       default: ()
       required: false
       description: null
     output:
-      type: list[IntentSuggestion]
+      type: list[PurposeSuggestion]
       description: null
 - id: project_vocabulary_get_token_block_frequency
   purpose: null
@@ -1805,20 +1805,20 @@ blocks:
     output:
       type: LearningScores
       description: null
-- id: record_intent_phrase
+- id: record_purpose_phrase
   purpose: null
-  name: record_intent_phrase
+  name: record_purpose_phrase
   domain: null
   status: null
   code:
     path: src/bpfw/catalog/learning.py
     module: src.bpfw.catalog.learning
-    symbol: record_intent_phrase
+    symbol: record_purpose_phrase
     kind: function
     start_line: 81
     end_line: 87
   detected:
-    qualified_name: src.bpfw.catalog.learning.record_intent_phrase
+    qualified_name: src.bpfw.catalog.learning.record_purpose_phrase
     kind: function
     methods: []
     functions: []
@@ -1893,20 +1893,20 @@ blocks:
     output:
       type: None
       description: null
-- id: get_top_learned_intents
+- id: get_top_learned_purposes
   purpose: null
-  name: get_top_learned_intents
+  name: get_top_learned_purposes
   domain: null
   status: null
   code:
     path: src/bpfw/catalog/learning.py
     module: src.bpfw.catalog.learning
-    symbol: get_top_learned_intents
+    symbol: get_top_learned_purposes
     kind: function
     start_line: 99
     end_line: 113
   detected:
-    qualified_name: src.bpfw.catalog.learning.get_top_learned_intents
+    qualified_name: src.bpfw.catalog.learning.get_top_learned_purposes
     kind: function
     methods: []
     functions: []
@@ -6736,8 +6736,8 @@ blocks:
       default: null
       required: true
       description: null
-    - name: intent_suggestions
-      type: List[IntentSuggestion]
+    - name: purpose_suggestions
+      type: List[PurposeSuggestion]
       default: null
       required: true
       description: null
@@ -6910,20 +6910,20 @@ blocks:
     output:
       type: None
       description: null
-- id: collect_existing_intents
+- id: collect_existing_purposes
   purpose: null
-  name: collect_existing_intents
+  name: collect_existing_purposes
   domain: null
   status: null
   code:
     path: src/bpfw/integrations/inspector/base.py
     module: src.bpfw.integrations.inspector.base
-    symbol: collect_existing_intents
+    symbol: collect_existing_purposes
     kind: function
     start_line: 403
     end_line: 416
   detected:
-    qualified_name: src.bpfw.integrations.inspector.base.collect_existing_intents
+    qualified_name: src.bpfw.integrations.inspector.base.collect_existing_purposes
     kind: function
     methods: []
     functions: []
@@ -7505,8 +7505,8 @@ blocks:
       default: null
       required: true
       description: null
-    - name: intent_suggestions
-      type: List[IntentSuggestion]
+    - name: purpose_suggestions
+      type: List[PurposeSuggestion]
       default: null
       required: true
       description: null
@@ -12516,20 +12516,20 @@ blocks:
     output:
       type: None
       description: null
-- id: render_active_intent_conflict_modal
+- id: render_active_purpose_conflict_modal
   purpose: null
-  name: render_active_intent_conflict_modal
+  name: render_active_purpose_conflict_modal
   domain: null
   status: null
   code:
     path: src/bpfw/integrations/planner/renderer.py
     module: src.bpfw.integrations.planner.renderer
-    symbol: render_active_intent_conflict_modal
+    symbol: render_active_purpose_conflict_modal
     kind: function
     start_line: 1293
     end_line: 1329
   detected:
-    qualified_name: src.bpfw.integrations.planner.renderer.render_active_intent_conflict_modal
+    qualified_name: src.bpfw.integrations.planner.renderer.render_active_purpose_conflict_modal
     kind: function
     methods: []
     functions: []
@@ -12557,7 +12557,7 @@ blocks:
       default: null
       required: true
       description: null
-    - name: new_intent
+    - name: new_purpose
       type: str
       default: null
       required: true
