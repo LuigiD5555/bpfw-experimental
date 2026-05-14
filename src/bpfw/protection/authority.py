@@ -49,8 +49,8 @@ def resolve_bpfw_package_root() -> Path:
 
 
 def resolve_guard_files() -> List[Path]:
-    """Return internal BPFW guard files that should be protected."""
-
+    """Return paths to BPFW package files that implement the protection mechanism."""
+    
     package_root = resolve_bpfw_package_root()
     return [
         package_root / "protection" / "os_lock.py",
@@ -61,7 +61,7 @@ def resolve_guard_files() -> List[Path]:
 
 
 def resolve_protected_resources(project_root: Path) -> List[ProtectedResource]:
-    """Return all authority and guard files that BPFW lock must protect."""
+    """Build the full protection resource list for a project, including its blueprint and BPFW guard files."""
 
     blueprint_path = resolve_project_blueprint_path(project_root=project_root)
     resources = [
