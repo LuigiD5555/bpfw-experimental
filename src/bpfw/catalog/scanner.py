@@ -55,25 +55,14 @@ def scan_python_project(
             discovered_units.extend(file_units)
             findings.extend(file_findings)
 
-    # Sort discovered units so inspect reviews children before parent blocks.
-    discovered_units.sort(
-        key=_discovered_unit_sort_key
-    )
+    # Sort discovered units using dependency-first topological ordering.
+    # Dependencies are reviewed before dependents for better context.
+    discovered_units = order_blocks_for_review(discovered_units)
 
     return ScanResult(
         discovered_units=discovered_units,
         findings=findings,
     )
-
-
-def _discovered_unit_sort_key(unit: DiscoveredCodeUnit) -> tuple[str, int, int, int, int, str]:
-    """Return a stable contained-first order for inspect traversal."""
-
-    end_line = unit.end_line or unit.start_line or 0
-    start_line = unit.start_line or 0
-    span_size = max(0, end_line - start_line)
-    nesting_depth = unit.symbol.count(".")
-    return unit.path, end_line, span_size, -nesting_depth, start_line, unit.symbol
 
 
 def _is_path_ignored(file_path: Path, ignored_paths: List[str]) -> bool:
@@ -568,8 +557,6 @@ def _get_attribute_name(node: ast.Attribute) -> str:
     return ".".join(reversed(parts))
 
 
-
-
 def _extract_called_symbols(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
 ) -> List[str]:
@@ -593,6 +580,7 @@ def _extract_called_symbols_from_node(node: ast.AST) -> List[str]:
             called_symbols.append(child.func.attr)
 
     return sorted(set(called_symbols))
+
 
 def _extract_function_signature(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
@@ -743,7 +731,6 @@ def _get_default_value(node: ast.FunctionDef | ast.AsyncFunctionDef, arg_name: s
     kwonlyargs = node.args.kwonlyargs
 
     # Find which argument list contains our parameter
-    arg_node = None
     default_index = None
 
     # Check positional-only args
