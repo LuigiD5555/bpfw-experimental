@@ -21,7 +21,7 @@ from bpfw.integrations.planner.models import (
 from bpfw.integrations.planner.renderer import render_planner
 from bpfw.integrations.planner.utils import generate_box_path
 from bpfw.integrations.planner.validator import PlanValidator
-from bpfw.integrations.shared.cli_runtime import is_back_command, run_interactive_loop
+from bpfw.integrations.shared.cli_runtime import is_back_command, is_quit_command, run_interactive_loop
 from bpfw.core.errors import BlueprintLockedError
 
 
@@ -143,7 +143,7 @@ class PlannerController:
         command = key.lower()
         if command in {"", "enter", "continue", "start", "c"}:
             self.state.screen = "workspace"
-        elif command == 'q':
+        elif is_quit_command(command):
             self.should_exit = True
     
     # ---------------------------------------------------------------------------
@@ -200,7 +200,7 @@ class PlannerController:
         elif command == 'v' or command == 'g' or command == "view":
             # Graph overview
             self.state.screen = "graph_overview"
-        elif command == 'q' or command == "quit":
+        elif is_quit_command(command):
             # Quit with unsaved check
             if self.state.dirty:
                 self.state.screen = "unsaved_changes"
@@ -867,7 +867,7 @@ class PlannerController:
         command = key.strip().lower()
         if command == '' or command == 'enter' or command in {'b', 'back'}:
             self.state.screen = "workspace"
-        elif command == 'q':
+        elif is_quit_command(command):
             self.should_exit = True
     
     # ---------------------------------------------------------------------------
@@ -1014,7 +1014,7 @@ class PlannerController:
             # Save and quit
             self._save_blueprint()
             # After saving, will exit on next q
-        elif command == 'q':
+        elif is_quit_command(command):
             # Quit without saving
             self.state.dirty = False  # Skip unsaved check
             self.should_exit = True
@@ -1037,7 +1037,7 @@ class PlannerController:
         elif command in {'k', 'back'} or is_back_command(command):
             # Keep and continue
             self.state.screen = "workspace"
-        elif command == 'q':
+        elif is_quit_command(command):
             # Quit
             self.should_exit = True
     
@@ -1218,11 +1218,11 @@ class PlannerController:
         command = key.strip().lower()
         if command in {"", "enter", "b", "back"}:
             self.state.screen = "workspace"
-        elif command == "q":
+        elif is_quit_command(command):
             self.should_exit = True
 
     def _handle_invalid_blueprint_key(self, key: str) -> None:
         """Handle key input for invalid blueprint modal."""
         command = key.strip().lower()
-        if command in {"", "enter", "q", "b", "escape", "back"}:
+        if command in {"", "enter", "b", "back"} or is_quit_command(command):
             self.should_exit = True

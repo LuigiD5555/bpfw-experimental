@@ -5,6 +5,7 @@ import sys
 import termios
 import tty
 
+from bpfw.integrations.shared.cli_runtime import QUIT_COMMAND, QUIT_COMMAND_KEY, quit_command_label
 from bpfw.integrations.shared.visual_boxes import render_box
 from bpfw.integrations.shared.screen_control import refresh_screen
 from bpfw.integrations.shared.visual_theme import (
@@ -54,7 +55,7 @@ def read_input(prompt: str = DEFAULT_INPUT_PROMPT) -> str:
         value = input(_normalize_prompt(prompt))
         return value.strip()
     except (EOFError, KeyboardInterrupt):
-        return "q"
+        return QUIT_COMMAND
 
 
 def read_line(prompt: str = DEFAULT_INPUT_PROMPT) -> str:
@@ -208,7 +209,7 @@ def read_key() -> str:
         except (EOFError, KeyboardInterrupt):
             if isinstance(sys.last_type, KeyboardInterrupt):
                 raise
-            return 'q'
+            return QUIT_COMMAND
 
 
 # ---------------------------------------------------------------------------
@@ -234,7 +235,7 @@ def _results_block_ratio(results: list) -> float:
     if not results:
         return 0.70
 
-    max_code_length = max(len((record.code or "")) for record in results)
+    max_code_length = max(len((record.location or "")) for record in results)
     min_ratio = 0.70
     max_ratio = 0.95
     min_length = 24
@@ -372,7 +373,7 @@ def _render_results_table_rows(results: list, ratio: float = 0.70) -> None:
         status = truncate(record.status or "-", status_width).center(status_width)
         domain = truncate(record.domain or "-", domain_width).center(domain_width)
         name = truncate(record.name or "-", name_width).ljust(name_width)
-        code = truncate(record.code or "-", code_width).ljust(code_width)
+        code = truncate(record.location or "-", code_width).ljust(code_width)
         index_str = str(display_index).center(idx_width)
         print(f"\u2502{index_str}\u2502{status}\u2502{domain}\u2502{name}\u2502{code}\u2502")
 
@@ -392,7 +393,7 @@ def _render_results_commands(ratio: float = 0.70) -> None:
 
     lines = [
         "[idx] inspect             [f] filter               [h] help",
-        "[/] search again          [c] clear filters        [q] quit",
+        f"[/] search again          [c] clear filters        {quit_command_label()}",
         "[a] show all",
     ]
     _render_editor_commands_box(lines, ratio=ratio)
@@ -403,7 +404,7 @@ def _render_empty_commands(ratio: float = 0.70) -> None:
 
     lines = [
         "[/] search again          [c] clear filters        [h] help",
-        "[a] show all              [q] quit",
+        f"[a] show all              {quit_command_label()}",
     ]
     _render_editor_commands_box(lines, ratio=ratio)
 
@@ -479,7 +480,7 @@ def render_invalid_selection() -> None:
     print("   c      clear filters")
     print("   a      show all")
     print("   h      help")
-    print("   q      quit")
+    print(f"   {QUIT_COMMAND_KEY:<6} quit")
 
 
 def render_filter_error(message: str) -> None:
@@ -541,7 +542,7 @@ def render_editor_help_screen() -> None:
     print("│  [c]        Clear all filters                                           │")
     print("│  [a]        Show all blocks                                   │")
     print("│  [h]        Toggle help                                                 │")
-    print("│  [q]        Quit                                                        │")
+    print(f"│  {quit_command_label('Quit'):<71}│")
     print("│                                                                         │")
     print("│  Flow                                                                   │")
     print("│  ────                                                                   │")

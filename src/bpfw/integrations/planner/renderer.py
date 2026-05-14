@@ -20,6 +20,7 @@ from bpfw.integrations.shared.visual_theme import (
     render_commands_box,
     render_header,
 )
+from bpfw.integrations.shared.cli_runtime import quit_command_label
 from bpfw.integrations.shared.visual_layout import (
     VisualPanel,
     append_hidden_count,
@@ -150,7 +151,7 @@ def render_welcome(state: PlannerState) -> None:
         ]
         command_lines = [
             "[enter] Start planning",
-            "[q] Quit",
+            quit_command_label("Quit"),
         ]
     elif state.source_mode == "empty_blueprint":
         lines = [
@@ -164,7 +165,7 @@ def render_welcome(state: PlannerState) -> None:
         ]
         command_lines = [
             "[enter] Continue",
-            "[q] Quit",
+            quit_command_label("Quit"),
         ]
     else:
         # Existing blueprint.yaml
@@ -180,7 +181,7 @@ def render_welcome(state: PlannerState) -> None:
         ]
         command_lines = [
             "[enter] Continue",
-            "[q] Quit",
+            quit_command_label("Quit"),
         ]
 
     width = resolve_uniform_width(
@@ -241,7 +242,7 @@ def render_workspace(state: PlannerState) -> None:
     action_lines = [
         "[a] Add block        [c] Connect blocks    [e] Edit block",
         "[i] Edit interface   [v] View assembly     [p] Project settings",
-        "[r] Review           [s] Save              [q] Quit",
+        f"[r] Review           [s] Save              {quit_command_label('Quit')}",
         "",
         "Choose action:",
         "> ",
@@ -898,7 +899,7 @@ def render_saved_modal(state: PlannerState) -> None:
         "  bpfw verify",
         "",
         "[b] Back to planner",
-        "[q] Quit",
+        quit_command_label("Quit"),
     ]
     width = resolve_uniform_width(terminal_width=terminal_width, panels=[("Saved", lines)])
 
@@ -1083,7 +1084,7 @@ def render_unsaved_changes_modal(state: PlannerState) -> None:
     ] + change_lines + [
         "",
         "[s] Save and quit",
-        "[q] Quit without saving",
+        quit_command_label("Quit without saving"),
         "[b] Back",
     ]
     width = resolve_uniform_width(terminal_width=terminal_width, panels=[("Unsaved Changes", lines)])
@@ -1141,7 +1142,7 @@ def render_broken_connections_modal(state: PlannerState) -> None:
         "",
         "[r] Remove broken connections",
         "[k] Keep and review later",
-        "[q] Quit",
+        quit_command_label("Quit"),
     ])
     width = resolve_uniform_width(terminal_width=terminal_width, panels=[("Broken Assembly", lines)])
 
@@ -1478,7 +1479,7 @@ def render_blueprint_locked_modal(state: PlannerState) -> None:
         "  bpfw unlock",
         "",
         "[enter] Keep editing",
-        "[q] Quit",
+        quit_command_label("Quit"),
     ]
     width = resolve_uniform_width(terminal_width=terminal_width, panels=[("Blueprint Locked", lines)])
 
