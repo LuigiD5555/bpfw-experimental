@@ -2,6 +2,7 @@
 import ast
 from dataclasses import dataclass
 from pathlib import Path
+import re
 from typing import Any, Dict, List
 
 import yaml
@@ -316,7 +317,7 @@ def suggest_domain(block: Dict[str, Any]) -> str | None:
     return suggestions[0]
 
 
-def suggest_domains(block: Dict[str, Any]) -> List[str]:
+def suggest_domains(block: Dict[str, Any], project_blocks: List[Dict[str, Any]] | None = None) -> List[str]:
     """Suggest inspector domains using catalog deterministic engine plus adapter rules."""
 
     location = get_code(block)
@@ -382,6 +383,10 @@ def suggest_domains(block: Dict[str, Any]) -> List[str]:
     for candidate in [file_based, module_based, symbol_based]:
         if candidate is not None and candidate not in ordered:
             ordered.append(candidate)
+    historical_domains = _historical_domains_for_path(block=block, project_blocks=project_blocks or [])
+    for candidate in historical_domains:
+        if candidate not in ordered:
+            ordered.append(candidate)
 
     clean: List[str] = []
     for candidate in ordered:
@@ -390,14 +395,81 @@ def suggest_domains(block: Dict[str, Any]) -> List[str]:
             continue
         if normalized not in clean:
             clean.append(normalized)
-    if len(clean) < 4:
-        fallback_tokens = ("core", "general", "shared", "misc")
+    fallback_tokens = ("core", "general", "shared", "misc", "system")
+    historical_set = set(historical_domains)
+    historical_in_clean = [domain for domain in historical_domains if domain in clean]
+    if historical_in_clean:
+        clean = [domain for domain in clean if domain not in historical_set]
+        for token in fallback_tokens:
+            if len(clean) >= 4:
+                break
+            if token not in clean:
+                clean.append(token)
+        insertion_index = min(4, len(clean))
+        for offset, historical_domain in enumerate(historical_in_clean):
+            clean.insert(insertion_index + offset, historical_domain)
+    if len(clean) < 5:
         for token in fallback_tokens:
             if token not in clean:
                 clean.append(token)
-            if len(clean) >= 4:
+            if len(clean) >= 5:
                 break
-    return clean[:4]
+    return clean[:5]
+
+
+def _historical_domains_for_path(
+    block: Dict[str, Any],
+    project_blocks: List[Dict[str, Any]],
+) -> List[str]:
+    """Return previously used domains for blocks with the same code path."""
+
+    current_path = _block_path(block)
+    if current_path is None:
+        return []
+
+    current_id = clean_string(block.get("id"))
+    path_tokens = set(_path_tokens(current_path))
+    domain_scores: dict[str, int] = {}
+    for project_block in project_blocks:
+        if project_block is block:
+            continue
+        if current_id is not None and clean_string(project_block.get("id")) == current_id:
+            continue
+        if _block_path(project_block) != current_path:
+            continue
+        domain_value = clean_string(project_block.get("domain"))
+        if domain_value is None:
+            continue
+        normalized_domain = domain_value.lower().replace("-", "_")
+        domain_tokens = set(_path_tokens(normalized_domain))
+        domain_scores[normalized_domain] = max(
+            domain_scores.get(normalized_domain, 0),
+            len(path_tokens & domain_tokens),
+        )
+
+    ranked_domains = sorted(
+        domain_scores,
+        key=lambda domain: (-domain_scores[domain], domain),
+    )
+    return ranked_domains
+
+
+def _block_path(block: Dict[str, Any]) -> str | None:
+    """Return the normalized code path for a block."""
+
+    location = get_code(block)
+    if not isinstance(location, dict):
+        return None
+    path = clean_string(location.get("path"))
+    if path is None:
+        return None
+    return path.replace("\\", "/").lower()
+
+
+def _path_tokens(value: str) -> List[str]:
+    """Tokenize path-like text into lowercase words."""
+
+    return [token for token in re.split(r"[^a-zA-Z0-9]+", value.lower()) if token]
 
 
 def collect_existing_intents(blueprint_data: Dict[str, Any]) -> tuple[str, ...]:
@@ -431,6 +503,48 @@ def apply_suggestions(block: Dict[str, Any]) -> None:
             block["domain"] = domain
     if clean_string(get_status(block)) is None:
         block["status"] = suggest_lifecycle(block)
+
+
+def backfill_detected_docstring_from_source(project_root: Path, block: Dict[str, Any]) -> None:
+    """Populate detected docstring from source when blueprint metadata lacks it."""
+
+    detected = block.get("detected")
+    if not isinstance(detected, dict):
+        detected = {}
+        block["detected"] = detected
+    if clean_string(detected.get("docstring")) is not None:
+        return
+
+    location = get_code(block)
+    if not isinstance(location, dict):
+        return
+    relative_path = clean_string(location.get("path"))
+    symbol = clean_string(location.get("symbol"))
+    symbol_type = clean_string(get_kind(location))
+    if relative_path is None or symbol is None or symbol_type is None:
+        return
+
+    source_path = project_root / relative_path
+    if not source_path.exists():
+        return
+    try:
+        module_ast = ast.parse(source_path.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError):
+        return
+
+    node_line = location.get("start_line")
+    matching_node = _find_matching_symbol_node(
+        module_ast=module_ast,
+        symbol_type=symbol_type,
+        target_name=symbol.split(".")[-1],
+        node_line=node_line if isinstance(node_line, int) else None,
+    )
+    if matching_node is None:
+        return
+
+    docstring = ast.get_docstring(matching_node)
+    if docstring:
+        detected["docstring"] = docstring
 
 
 def build_code_lines(

@@ -3,13 +3,16 @@ from pathlib import Path
 
 from bpfw.catalog.intent_suggestions import suggest_intents
 from bpfw.integrations.inspector.base import (
+    InspectIssue,
     apply_automatic_authority_fields,
+    backfill_detected_docstring_from_source,
     build_code_lines,
     get_incomplete_responsibilities,
     suggest_domain,
     suggest_domains,
 )
 from bpfw.integrations.inspector.base import load_inspect_session
+from bpfw.integrations.inspector.commands import InspectorAction, apply_inspector_command
 from bpfw.integrations.inspector.text import (
     render_text_inspector_screen,
     run_text_inspector,
@@ -146,6 +149,84 @@ def test_suggest_domains_prioritizes_inspector_over_integrations() -> None:
     assert suggestions[0] == "inspector"
 
 
+def test_suggest_domains_includes_historic_domain_for_same_path() -> None:
+    block = _responsibility(
+        responsibility_id="lock_command",
+        purpose="lock blueprint",
+        lifecycle="active",
+        path="src/bpfw/protection/authority.py",
+        symbol="lock_blueprint",
+    )
+    historic_block = _responsibility(
+        responsibility_id="unlock_command",
+        purpose="unlock blueprint",
+        lifecycle="active",
+        path="src/bpfw/protection/authority.py",
+        symbol="unlock_blueprint",
+    )
+    historic_block["domain"] = "lock system"
+
+    suggestions = suggest_domains(block, project_blocks=[historic_block])
+
+    assert "lock system" in suggestions
+
+
+def test_suggest_domains_orders_multiple_historic_domains_by_path_content() -> None:
+    block = _responsibility(
+        responsibility_id="lock_command",
+        purpose="lock blueprint",
+        lifecycle="active",
+        path="src/bpfw/protection/lock_authority.py",
+        symbol="lock_blueprint",
+    )
+    weak_match = _responsibility(
+        responsibility_id="authority_command",
+        purpose="authority blueprint",
+        lifecycle="active",
+        path="src/bpfw/protection/lock_authority.py",
+        symbol="authority_blueprint",
+    )
+    weak_match["domain"] = "security policy"
+    strong_match = _responsibility(
+        responsibility_id="lock_system_command",
+        purpose="lock system",
+        lifecycle="active",
+        path="src/bpfw/protection/lock_authority.py",
+        symbol="lock_system_blueprint",
+    )
+    strong_match["domain"] = "lock system"
+
+    suggestions = suggest_domains(block, project_blocks=[weak_match, strong_match])
+
+    assert suggestions[4] == "lock system"
+    assert "security policy" not in suggestions or suggestions.index("lock system") < suggestions.index("security policy")
+
+
+def test_inspector_domain_shortcuts_use_qwerty_and_y_custom() -> None:
+    issue = _responsibility("example", "maintain example", "active")
+    action = apply_inspector_command(
+        command="t",
+        issue=InspectIssue(issue_type="draft", block=issue),
+        intent_suggestions=[],
+        domain_suggestions=["one", "two", "three", "four", "five"],
+        input_func=lambda _prompt: "",
+    )
+
+    assert action == InspectorAction.STAY
+    assert issue["domain"] == "five"
+
+    action = apply_inspector_command(
+        command="ycustom_domain",
+        issue=InspectIssue(issue_type="draft", block=issue),
+        intent_suggestions=[],
+        domain_suggestions=[],
+        input_func=lambda _prompt: "",
+    )
+
+    assert action == InspectorAction.STAY
+    assert issue["domain"] == "custom_domain"
+
+
 def test_get_incomplete_responsibilities_detects_missing_fields() -> None:
     complete = _responsibility("example", "maintain example", "active")
     complete["domain"] = "example"
@@ -208,11 +289,12 @@ def test_text_inspector_renders_expected_sections(tmp_path: Path) -> None:
     assert "Purpose suggestions" in rendered
     assert "[6] write custom purpose" in rendered
     assert "Domain suggestions" in rendered
-    assert " [a] " in rendered
-    assert " [s] " in rendered
-    assert " [d] " in rendered
-    assert " [f] " in rendered
-    assert "[g] write custom domain" in rendered
+    assert " [q] " in rendered
+    assert " [w] " in rendered
+    assert " [e] " in rendered
+    assert " [r] " in rendered
+    assert " [t] " in rendered
+    assert "[y] write custom domain" in rendered
     assert "Hierarchy" in rendered
     assert "children:" in rendered
     assert "ExampleService.run" in rendered
@@ -224,6 +306,33 @@ def test_text_inspector_renders_expected_sections(tmp_path: Path) -> None:
     assert "s save" not in rendered
     assert "l1" not in rendered
     assert "d1" not in rendered
+
+
+def test_backfill_detected_docstring_from_source(tmp_path: Path) -> None:
+    source_path = tmp_path / "src" / "bpfw" / "protection"
+    source_path.mkdir(parents=True)
+    (source_path / "authority.py").write_text(
+        "from pathlib import Path\n"
+        "\n"
+        "def resolve_protected_resources(project_root: Path):\n"
+        "    \"\"\"Build the full protection resource list for a project, including its blueprint and BPFW guard files.\"\"\"\n"
+        "    return []\n",
+        encoding="utf-8",
+    )
+    block = _responsibility(
+        responsibility_id="resolve_protected_resources",
+        purpose="",
+        lifecycle="active",
+        path="src/bpfw/protection/authority.py",
+        symbol="resolve_protected_resources",
+    )
+    block["location"]["symbol_type"] = "function"
+    block["location"]["start_line"] = 3
+    block["detected"] = {}
+
+    backfill_detected_docstring_from_source(project_root=tmp_path, block=block)
+
+    assert block["detected"]["docstring"].startswith("Build the full protection resource list")
 
 
 def test_code_preview_includes_blank_lines_after_snippet(tmp_path: Path) -> None:
@@ -502,7 +611,7 @@ def test_text_inspector_edits_fields_and_accepts(tmp_path: Path) -> None:
     answers = iter(
         [
             "6maintain example",
-            "gcatalog",
+            "ycatalog",
             "x",
             "o reviewed",
             "",
@@ -738,7 +847,7 @@ def test_text_inspector_accepts_new_detected_code(tmp_path: Path) -> None:
     answers = iter(
         [
             "6maintain extra func",
-            "g demo",
+            "y demo",
             "",
         ]
     )
@@ -786,7 +895,7 @@ def test_text_inspector_back_returns_to_saved_previous_item(tmp_path: Path) -> N
         encoding="utf-8",
     )
     session = load_inspect_session(project_root=tmp_path)
-    answers = iter(["6first purpose", "gfirst_domain", "", "b", "q"])
+    answers = iter(["6first purpose", "yfirst_domain", "", "b", "escape"])
     output: list[str] = []
 
     exit_code = run_text_inspector_session(

@@ -15,6 +15,7 @@ from bpfw.integrations.inspector.base import (
     clean_string,
     display_value,
 )
+from bpfw.integrations.inspector.commands import CUSTOM_DOMAIN_KEY, DOMAIN_SUGGESTION_KEYS
 from bpfw.integrations.shared.visual_width import display_width, fit_text, measure_lines, pad_text
 from bpfw.integrations.shared.visual_boxes import (
     render_box,
@@ -27,12 +28,14 @@ from bpfw.integrations.shared.visual_theme import (
     render_commands_box,
     render_header,
 )
+from bpfw.integrations.shared.cli_runtime import quit_command_label
 from bpfw.integrations.shared.screen_control import refresh_screen
 
 PrintFunc = Callable[[str], None]
 MIN_TOTAL_WIDTH = 72
 HORIZONTAL_PADDING = 1
 DEFAULT_INSPECTOR_HEADER_TITLE = "Blueprint Framework Inspector"
+COMMAND_COLUMN_WIDTHS = (28, 22)
 
 
 def render_inspector_screen(
@@ -93,19 +96,18 @@ def render_inspector_screen(
     intent_lines.append(" [6] write custom purpose")
 
     domain_lines: List[str] = []
-    domain_labels = ("a", "s", "d", "f")
-    for domain_index, domain_label in enumerate(domain_labels):
+    for domain_index, domain_label in enumerate(DOMAIN_SUGGESTION_KEYS):
         domain_text = "-"
         if domain_index < len(domain_suggestions):
             domain_text = domain_suggestions[domain_index]
         domain_lines.append(f" [{domain_label}] {domain_text}")
-    domain_lines.append(" [g] write custom domain")
+    domain_lines.append(f" [{CUSTOM_DOMAIN_KEY}] write custom domain")
     command_lines = [
-        "[1-5] purpose suggestion  [6] custom purpose",
-        "[a|s|d|f] domain          [g] custom domain",
-        "[z|x|c|v] status          [n] name        [i] interface",
-        "[o] notes                 [h] help        [q] quit",
-        "[Enter] save + next       [b] back",
+        _format_command_row("[1-5] purpose suggestion", "[6] custom purpose"),
+        _format_command_row(f"[{'|'.join(DOMAIN_SUGGESTION_KEYS)}] domain", f"[{CUSTOM_DOMAIN_KEY}] custom domain"),
+        _format_command_row("[z|x|c|v] status", "[n] name", "[i] interface"),
+        _format_command_row("[o] notes", "[h] help", quit_command_label()),
+        _format_command_row("[Enter] save + next", "[b] back"),
     ]
     observation_preview_lines = _build_observation_panel_lines(
         block=block,
@@ -204,6 +206,18 @@ def render_inspector_screen(
     ):
         print_func(line)
     print_func("")
+
+
+def _format_command_row(*commands: str) -> str:
+    """Format command labels into stable visual columns."""
+
+    if not commands:
+        return ""
+    formatted_parts: list[str] = []
+    for command, column_width in zip(commands[:-1], COMMAND_COLUMN_WIDTHS):
+        formatted_parts.append(pad_text(command, column_width))
+    formatted_parts.append(commands[-1])
+    return "".join(formatted_parts)
 
 
 def _build_header(title: str, meta: str, width: int) -> List[str]:

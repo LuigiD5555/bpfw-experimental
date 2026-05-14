@@ -6,8 +6,11 @@ from typing import Any, Dict, List
 from bpfw.catalog.intent_suggestions import IntentSuggestion
 from bpfw.catalog.schema import set_purpose, set_status
 from bpfw.integrations.inspector.base import InspectIssue
+from bpfw.integrations.shared.cli_runtime import is_quit_command, normalize_command
 
 InputFunc = Callable[[str], str]
+DOMAIN_SUGGESTION_KEYS = ("q", "w", "e", "r", "t")
+CUSTOM_DOMAIN_KEY = "y"
 
 
 class InspectorAction:
@@ -31,7 +34,7 @@ def apply_inspector_command(
 ) -> str:
     """Apply one inspector command and return the navigation action."""
 
-    stripped_command = command.strip()
+    stripped_command = normalize_command(command)
 
     if stripped_command == "":
         return InspectorAction.SAVE_NEXT
@@ -50,9 +53,9 @@ def apply_inspector_command(
             set_purpose(issue.block, value)
         return InspectorAction.STAY
 
-    # Check domain keys first (a, s, d, f)
-    if stripped_command in {"a", "s", "d", "f"}:
-        domain_index = {"a": 0, "s": 1, "d": 2, "f": 3}[stripped_command]
+    # Check domain keys before other single-key commands.
+    if stripped_command in DOMAIN_SUGGESTION_KEYS:
+        domain_index = DOMAIN_SUGGESTION_KEYS.index(stripped_command)
         if domain_index < len(domain_suggestions):
             issue.block["domain"] = domain_suggestions[domain_index]
         return InspectorAction.STAY
@@ -67,9 +70,9 @@ def apply_inspector_command(
         }[stripped_command])
         return InspectorAction.STAY
 
-    # Custom domain input (g prefix)
-    if stripped_command.startswith("g"):
-        value = stripped_command[1:].strip()
+    # Custom domain input.
+    if stripped_command.startswith(CUSTOM_DOMAIN_KEY):
+        value = stripped_command[len(CUSTOM_DOMAIN_KEY):].strip()
         if not value:
             value = input_func("domain: ").strip()
         if value:
@@ -100,7 +103,7 @@ def apply_inspector_command(
     if stripped_command == "b":
         return InspectorAction.BACK
 
-    if stripped_command == "q":
+    if is_quit_command(stripped_command):
         return InspectorAction.QUIT
 
     if stripped_command == "h":

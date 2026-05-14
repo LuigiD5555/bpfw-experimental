@@ -13,12 +13,15 @@ from bpfw.integrations.inspector.base import (
     InspectIssue,
     InspectLoadResult,
     apply_suggestions,
+    backfill_detected_docstring_from_source,
     collect_existing_intents,
     load_inspect_session,
     save_blueprint,
     suggest_domains,
 )
 from bpfw.integrations.inspector.commands import (
+    CUSTOM_DOMAIN_KEY,
+    DOMAIN_SUGGESTION_KEYS,
     apply_inspector_command,
     run_interface_edit_submode,
 )
@@ -27,7 +30,7 @@ from bpfw.integrations.inspector.screen import (
     DEFAULT_INSPECTOR_HEADER_TITLE,
     render_inspector_screen,
 )
-from bpfw.integrations.shared.cli_runtime import normalize_command
+from bpfw.integrations.shared.cli_runtime import normalize_command, quit_command_label
 
 InputFunc = Callable[[str], str]
 PrintFunc = Callable[[str], None]
@@ -100,11 +103,15 @@ def run_text_inspector_session(
         if cache_key in suggestion_cache:
             intent_suggestions, domain_suggestions = suggestion_cache[cache_key]
         else:
+            backfill_detected_docstring_from_source(
+                project_root=session.project_root,
+                block=block,
+            )
             intent_suggestions = suggest_intents(
                 block,
                 existing_intents=existing_intents,
             )
-            domain_suggestions = suggest_domains(block)
+            domain_suggestions = suggest_domains(block, project_blocks=get_blocks(session.blueprint_data))
             if cache_key:
                 suggestion_cache[cache_key] = (intent_suggestions, domain_suggestions)
 
@@ -298,8 +305,8 @@ def _render_help_block() -> list[str]:
         "  ─────────",
         "  [1-5]      Choose suggested purpose",
         "  [6]        Write custom purpose",
-        "  [a|s|d|f]  Choose suggested domain",
-        "  [g]        Write custom domain",
+        f"  [{'|'.join(DOMAIN_SUGGESTION_KEYS)}]  Choose suggested domain",
+        f"  [{CUSTOM_DOMAIN_KEY}]        Write custom domain",
         "  [z|x|c|v]  Set status",
         "",
         "  Editing",
@@ -313,7 +320,7 @@ def _render_help_block() -> list[str]:
         "  [Enter]    Save and continue",
         "  [b]        Back",
         "  [h]        Toggle help",
-        "  [q]        Quit",
+        f"  {quit_command_label('Quit'):<10}",
         "",
     ]
     return render_notification_block(
@@ -332,7 +339,7 @@ def _compute_help_width() -> int:
     sample_lines = [
         "  domain        Where this block belongs in the system.",
         "                deprecated    Should be replaced or removed later.",
-        "  [a|s|d|f]  Choose suggested domain",
+        f"  [{'|'.join(DOMAIN_SUGGESTION_KEYS)}]  Choose suggested domain",
         "  [Enter]    Save and continue",
     ]
     required_width = max(measure_lines(sample_lines), display_width("Inspector help") + 2) + 2
