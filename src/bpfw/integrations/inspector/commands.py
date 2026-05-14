@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import Any, Dict, List
 
-from bpfw.catalog.intent_suggestions import IntentSuggestion
+from bpfw.catalog.purpose_suggestions import PurposeSuggestion
 from bpfw.catalog.schema import set_purpose, set_status
 from bpfw.integrations.inspector.base import InspectIssue
 from bpfw.integrations.shared.cli_runtime import is_quit_command, normalize_command
@@ -28,7 +28,7 @@ class InspectorAction:
 def apply_inspector_command(
     command: str,
     issue: InspectIssue,
-    intent_suggestions: List[IntentSuggestion],
+    intent_suggestions: List[PurposeSuggestion],
     domain_suggestions: List[str],
     input_func: InputFunc,
 ) -> str:

@@ -6,8 +6,8 @@ filters bad ones, handles legacy fields, and remains stable on repeated calls.
 
 import pytest
 
-from bpfw.catalog.intent_suggestions import (
-    IntentSuggestion,
+from bpfw.catalog.purpose_suggestions import (
+    PurposeSuggestion,
     _apply_quality_filters,
     _NormalizedFacts,
     suggest_intents,
@@ -233,8 +233,8 @@ class TestQualityFilter:
 
     def test_rejects_ending_with_can(self, facts: _NormalizedFacts) -> None:
         suggestions = [
-            IntentSuggestion(text="Ensure blueprint can", source="test", evidence=()),
-            IntentSuggestion(text="Write custom purpose...", source="custom", evidence=()),
+            PurposeSuggestion(text="Ensure blueprint can", source="test", evidence=()),
+            PurposeSuggestion(text="Write custom purpose...", source="custom", evidence=()),
         ]
         filtered = _apply_quality_filters(suggestions, facts)
         texts = [s.text for s in filtered]
@@ -242,7 +242,7 @@ class TestQualityFilter:
 
     def test_rejects_ending_with_be(self, facts: _NormalizedFacts) -> None:
         suggestions = [
-            IntentSuggestion(text="Ensure blueprint can be", source="test", evidence=()),
+            PurposeSuggestion(text="Ensure blueprint can be", source="test", evidence=()),
         ]
         filtered = _apply_quality_filters(suggestions, facts)
         texts = [s.text for s in filtered]
@@ -250,7 +250,7 @@ class TestQualityFilter:
 
     def test_accepts_complete_suggestion(self, facts: _NormalizedFacts) -> None:
         suggestions = [
-            IntentSuggestion(
+            PurposeSuggestion(
                 text="Ensure blueprint can be written", source="test", evidence=()
             ),
         ]
@@ -260,7 +260,7 @@ class TestQualityFilter:
 
     def test_rejects_raise_for_non_error_block(self, facts: _NormalizedFacts) -> None:
         suggestions = [
-            IntentSuggestion(
+            PurposeSuggestion(
                 text="Raise blueprint locked error", source="test", evidence=()
             ),
         ]
@@ -270,8 +270,8 @@ class TestQualityFilter:
 
     def test_passes_through_placeholders(self, facts: _NormalizedFacts) -> None:
         suggestions = [
-            IntentSuggestion(text="-", source="existing", evidence=()),
-            IntentSuggestion(
+            PurposeSuggestion(text="-", source="existing", evidence=()),
+            PurposeSuggestion(
                 text="Write custom purpose...", source="custom", evidence=()
             ),
         ]
@@ -282,7 +282,7 @@ class TestQualityFilter:
 
     def test_rejects_duplicate_words(self, facts: _NormalizedFacts) -> None:
         suggestions = [
-            IntentSuggestion(
+            PurposeSuggestion(
                 text="Ensure ensure blueprint written", source="test", evidence=()
             ),
         ]
@@ -292,8 +292,8 @@ class TestQualityFilter:
 
     def test_rejects_short_suggestions(self, facts: _NormalizedFacts) -> None:
         suggestions = [
-            IntentSuggestion(text="Validate", source="test", evidence=()),
-            IntentSuggestion(text="Write code", source="test", evidence=()),
+            PurposeSuggestion(text="Validate", source="test", evidence=()),
+            PurposeSuggestion(text="Write code", source="test", evidence=()),
         ]
         filtered = _apply_quality_filters(suggestions, facts)
         texts = [s.text for s in filtered]

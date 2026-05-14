@@ -1,7 +1,7 @@
 """Tests for the catalog inspector module."""
 from pathlib import Path
 
-from bpfw.catalog.intent_suggestions import suggest_intents
+from bpfw.catalog.purpose_suggestions import suggest_intents
 from bpfw.integrations.inspector.base import (
     InspectIssue,
     apply_automatic_authority_fields,
@@ -85,7 +85,7 @@ def test_suggest_domains_strips_python_extension() -> None:
         purpose="suggest purposes",
         lifecycle="active",
         path="src/bpfw/catalog/intent_suggestions.py",
-        symbol="IntentSuggestion",
+        symbol="PurposeSuggestion",
     )
 
     suggestions = suggest_domains(block)
@@ -100,7 +100,7 @@ def test_suggest_domains_ignores_package_roots() -> None:
         purpose="suggest purposes",
         lifecycle="active",
         path="src/bpfw/catalog/intent_suggestions.py",
-        symbol="IntentSuggestion",
+        symbol="PurposeSuggestion",
     )
 
     suggestions = suggest_domains(block)
@@ -114,7 +114,7 @@ def test_suggest_domain_returns_first_domain_suggestion() -> None:
         purpose="suggest purposes",
         lifecycle="active",
         path="src/bpfw/catalog/intent_suggestions.py",
-        symbol="IntentSuggestion",
+        symbol="PurposeSuggestion",
     )
 
     assert suggest_domain(block) == suggest_domains(block)[0]
@@ -126,7 +126,7 @@ def test_suggest_domains_uses_symbol_tokens() -> None:
         purpose="suggest purposes",
         lifecycle="active",
         path="src/bpfw/catalog/intent_suggestions.py",
-        symbol="IntentSuggestion",
+        symbol="PurposeSuggestion",
     )
 
     suggestions = suggest_domains(block)

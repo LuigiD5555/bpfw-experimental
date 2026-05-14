@@ -4,7 +4,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import List
 
-from bpfw.catalog.intent_suggestions import IntentSuggestion, suggest_intents
+from bpfw.catalog.purpose_suggestions import PurposeSuggestion, suggest_intents
 from bpfw.catalog.learning import record_domain_value, record_intent_phrase
 from bpfw.catalog.models import AUTHORITY_STATE_EMPTY
 from bpfw.catalog.schema import get_blocks, get_purpose, set_blocks
@@ -229,7 +229,7 @@ def _save_issue(session: InspectLoadResult, issue: InspectIssue) -> bool:
 
 def _record_learning_feedback(
     issue: InspectIssue,
-    intent_suggestions: List[IntentSuggestion],
+    intent_suggestions: List[PurposeSuggestion],
     domain_suggestions: List[str],
 ) -> None:
     """Record accepted purpose/domain values for incremental learning."""

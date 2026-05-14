@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from bpfw.catalog.intent_suggestions import compact_intent_text, suggest_intents
+from bpfw.catalog.purpose_suggestions import compact_intent_text, suggest_intents
 
 
 def test_suggests_token_creation_from_issuer_symbol() -> None:
@@ -157,7 +157,7 @@ def test_suggests_intent_from_intent_suggestion_dataclass() -> None:
     """Suggest purpose suggestions from the dataclass evidence."""
 
     block = _responsibility(
-        symbol="IntentSuggestion",
+        symbol="PurposeSuggestion",
         path="src/bpfw/catalog/intent_suggestions.py",
         symbol_type="class",
         docstring="Represent one deterministic natural-language purpose suggestion.",
@@ -174,7 +174,7 @@ def test_suggests_richer_intent_for_suggest_intents_function() -> None:
     block = _responsibility(
         symbol="suggest_intents",
         path="src/bpfw/catalog/intent_suggestions.py",
-        signature="suggest_intents(block: dict[str, Any]) -> list[IntentSuggestion]",
+        signature="suggest_intents(block: dict[str, Any]) -> list[PurposeSuggestion]",
         docstring="Suggest natural-language purposes from deterministic block evidence.",
     )
 
@@ -319,7 +319,7 @@ def test_suggest_intents_returns_fixed_slots_when_evidence_is_sufficient() -> No
     block = _responsibility(
         symbol="suggest_intents",
         path="src/bpfw/catalog/intent_suggestions.py",
-        signature="suggest_intents(block: dict[str, Any]) -> list[IntentSuggestion]",
+        signature="suggest_intents(block: dict[str, Any]) -> list[PurposeSuggestion]",
         docstring="Suggest natural-language purposes from deterministic block evidence.",
     )
 
@@ -347,7 +347,7 @@ def test_suggest_intents_does_not_return_duplicate_variants() -> None:
     block = _responsibility(
         symbol="suggest_intents",
         path="src/bpfw/catalog/intent_suggestions.py",
-        signature="suggest_intents(block: dict[str, Any]) -> list[IntentSuggestion]",
+        signature="suggest_intents(block: dict[str, Any]) -> list[PurposeSuggestion]",
         docstring="Suggest natural-language purposes from deterministic block evidence.",
     )
 
@@ -383,7 +383,7 @@ def test_suggest_intents_returns_compact_options() -> None:
     block = _responsibility(
         symbol="suggest_intents",
         path="src/bpfw/catalog/intent_suggestions.py",
-        signature="suggest_intents(block: dict[str, Any]) -> list[IntentSuggestion]",
+        signature="suggest_intents(block: dict[str, Any]) -> list[PurposeSuggestion]",
         docstring="Suggest natural-language purposes from deterministic block evidence.",
     )
     suggestions = suggest_intents(block)
@@ -426,7 +426,7 @@ def test_intent_suggestions_include_distinct_sources_when_evidence_is_sufficient
     block = _responsibility(
         symbol="suggest_intents",
         path="src/bpfw/catalog/intent_suggestions.py",
-        signature="suggest_intents(block: dict[str, Any]) -> list[IntentSuggestion]",
+        signature="suggest_intents(block: dict[str, Any]) -> list[PurposeSuggestion]",
         functions=["compose_fixed_intent_slots"],
         docstring="Suggest natural-language purposes from deterministic block evidence.",
     )

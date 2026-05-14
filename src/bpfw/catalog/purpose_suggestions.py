@@ -8,7 +8,7 @@ from bpfw.catalog.keywords import extract_block_keywords, build_project_vocabula
 from bpfw.catalog.keywords.models import BlockKeywordProfile, KeywordCandidate, ProjectVocabulary
 from bpfw.catalog.keywords.normalizer import normalize_tokens
 from bpfw.catalog.keywords.tokenizer import tokenize_identifier
-from bpfw.catalog.learning import get_top_learned_purposes, score_phrase_context_match
+from bpfw.catalog.learning import get_top_learned_intents, score_phrase_context_match
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,9 +91,9 @@ def compact_intent_text(text: str) -> str:
 
 
 def _apply_quality_filters(
-    suggestions: list[IntentSuggestion],
+    suggestions: list[PurposeSuggestion],
     facts: _NormalizedFacts,
-) -> list[IntentSuggestion]:
+) -> list[PurposeSuggestion]:
     """
     Filter suggestions by quality criteria.
 
@@ -114,7 +114,7 @@ def _apply_quality_filters(
     Returns:
         Filtered suggestions.
     """
-    filtered: list[IntentSuggestion] = []
+    filtered: list[PurposeSuggestion] = []
 
     # Check if this is an error class
     is_error = facts.symbol.endswith("Error") or facts.symbol.endswith("Exception")
@@ -158,7 +158,7 @@ def suggest_intents(
     block: dict[str, Any],
     project_blocks: list[dict[str, Any]] | None = None,
     existing_intents: tuple[str, ...] = (),
-) -> list[IntentSuggestion]:
+) -> list[PurposeSuggestion]:
     """
     Suggest purposes using AST-extracted keywords.
 
@@ -173,7 +173,7 @@ def suggest_intents(
         existing_intents: Existing purposes to consider for reuse.
 
     Returns:
-        List of IntentSuggestion items.
+        List of PurposeSuggestion items.
     """
     # Build project vocabulary if blocks provided
     vocabulary = None
@@ -246,7 +246,7 @@ def suggest_intents(
     # Compact suggestions
     compacted_suggestions = []
     for suggestion in suggestions:
-        compacted = IntentSuggestion(
+        compacted = PurposeSuggestion(
             text=compact_intent_text(suggestion.text),
             source=suggestion.source,
             evidence=suggestion.evidence,
@@ -257,16 +257,16 @@ def suggest_intents(
     return _ensure_six_slots(compacted_suggestions)
 
 
-def _empty_intent_slots() -> list[IntentSuggestion]:
+def _empty_intent_slots() -> list[PurposeSuggestion]:
     """Return fixed empty purpose slots when no purpose can be inferred."""
 
     return [
-        IntentSuggestion("-", "existing_intent", ("source: existing_intent",)),
-        IntentSuggestion("-", "learned_based", ("source: learned_based",)),
-        IntentSuggestion("-", "name_based", ("source: name_based",)),
-        IntentSuggestion("-", "docstring_based", ("source: docstring_based",)),
-        IntentSuggestion("-", "blended_based", ("source: blended_based",)),
-        IntentSuggestion("Write custom purpose...", "custom_intent", ("source: custom_intent",)),
+        PurposeSuggestion("-", "existing_intent", ("source: existing_intent",)),
+        PurposeSuggestion("-", "learned_based", ("source: learned_based",)),
+        PurposeSuggestion("-", "name_based", ("source: name_based",)),
+        PurposeSuggestion("-", "docstring_based", ("source: docstring_based",)),
+        PurposeSuggestion("-", "blended_based", ("source: blended_based",)),
+        PurposeSuggestion("Write custom purpose...", "custom_intent", ("source: custom_intent",)),
     ]
 
 
@@ -275,7 +275,7 @@ def _compose_suggestions(
     profile: BlockKeywordProfile,
     vocabulary: ProjectVocabulary | None,
     existing_intents: tuple[str, ...],
-) -> list[IntentSuggestion]:
+) -> list[PurposeSuggestion]:
     """
     Compose purpose suggestions from keyword profile.
 
@@ -288,7 +288,7 @@ def _compose_suggestions(
     Returns:
         List of suggestions.
     """
-    suggestions: list[IntentSuggestion] = []
+    suggestions: list[PurposeSuggestion] = []
 
     # Get top keywords
     top_keywords = profile.keywords[:10]
@@ -326,7 +326,7 @@ def _compose_suggestions(
 
     # 6. Custom option
     suggestions.append(
-        IntentSuggestion(
+        PurposeSuggestion(
             text="Write custom purpose...",
             source="custom_intent",
             evidence=("source: custom_intent",),
@@ -337,7 +337,7 @@ def _compose_suggestions(
     while len(suggestions) < 6:
         suggestions.insert(
             -1,  # Insert before custom option
-            IntentSuggestion(text="-", source="empty", evidence=("source: empty",)),
+            PurposeSuggestion(text="-", source="empty", evidence=("source: empty",)),
         )
 
     return suggestions[:6]
@@ -347,7 +347,7 @@ def _find_existing_intent_match(
     block: dict[str, Any],
     existing_intents: tuple[str, ...],
     top_keywords: list[KeywordCandidate],
-) -> IntentSuggestion | None:
+) -> PurposeSuggestion | None:
     """Find best matching existing intent from current blueprint."""
 
     if not existing_intents:
@@ -368,7 +368,7 @@ def _find_existing_intent_match(
             best_match = intent
 
     if best_match:
-        return IntentSuggestion(
+        return PurposeSuggestion(
             text=best_match,
             source="existing_intent",
             evidence=(f"overlap: {best_score:.2f}", "source: existing_intent"),
@@ -377,7 +377,7 @@ def _find_existing_intent_match(
     return None
 
 
-def _ensure_six_slots(suggestions: list[IntentSuggestion]) -> list[IntentSuggestion]:
+def _ensure_six_slots(suggestions: list[PurposeSuggestion]) -> list[PurposeSuggestion]:
     """
     Ensure suggestions list has exactly 6 slots, padding with placeholders.
 
@@ -397,7 +397,7 @@ def _ensure_six_slots(suggestions: list[IntentSuggestion]) -> list[IntentSuggest
         "custom_intent",
     ]
 
-    result: list[IntentSuggestion] = []
+    result: list[PurposeSuggestion] = []
 
     # Fill each slot
     for source in slot_sources:
@@ -413,7 +413,7 @@ def _ensure_six_slots(suggestions: list[IntentSuggestion]) -> list[IntentSuggest
         else:
             # Add placeholder
             text = "Write custom purpose..." if source == "custom_intent" else "-"
-            result.append(IntentSuggestion(text=text, source=source, evidence=(f"source: {source}",)))
+            result.append(PurposeSuggestion(text=text, source=source, evidence=(f"source: {source}",)))
 
     return result
 
@@ -421,7 +421,7 @@ def _ensure_six_slots(suggestions: list[IntentSuggestion]) -> list[IntentSuggest
 def _find_learned_intent_match(
     block: dict[str, Any],
     top_keywords: list[KeywordCandidate],
-) -> IntentSuggestion | None:
+) -> PurposeSuggestion | None:
     """Find best matching intent from learning system."""
 
     # Get top learned intents
@@ -445,7 +445,7 @@ def _find_learned_intent_match(
             best_match = text
 
     if best_match:
-        return IntentSuggestion(
+        return PurposeSuggestion(
             text=best_match.title(),
             source="learned_based",
             evidence=(f"score: {best_score:.1f}", "source: learned_based"),
@@ -457,7 +457,7 @@ def _find_learned_intent_match(
 def _compose_from_keywords(
     keywords: list[KeywordCandidate],
     primary_source: str = "symbol_name",
-) -> IntentSuggestion | None:
+) -> PurposeSuggestion | None:
     """
     Compose a suggestion from keywords, prioritizing a specific source.
 
@@ -466,7 +466,7 @@ def _compose_from_keywords(
         primary_source: Source to prioritize (e.g., "symbol_name").
 
     Returns:
-        IntentSuggestion or None.
+        PurposeSuggestion or None.
     """
     # Filter keywords by primary source
     primary_keywords = [k for k in keywords if primary_source in k.sources]
@@ -488,14 +488,14 @@ def _compose_from_keywords(
     text = " ".join(tokens)
     text = text[0].upper() + text[1:] if text else ""
 
-    return IntentSuggestion(
+    return PurposeSuggestion(
         text=text,
         source="name_based" if primary_source == "symbol_name" else "docstring_based",
         evidence=(f"keywords: {', '.join(tokens[:3])}", f"source: {primary_source}"),
     )
 
 
-def _compose_from_symbol(block: dict[str, Any]) -> IntentSuggestion | None:
+def _compose_from_symbol(block: dict[str, Any]) -> PurposeSuggestion | None:
     """Compose a purpose suggestion from the symbol while preserving token order."""
 
     symbol = (
@@ -513,14 +513,14 @@ def _compose_from_symbol(block: dict[str, Any]) -> IntentSuggestion | None:
         return None
     text = " ".join(tokens[:5])
     text = text[0].upper() + text[1:] if text else ""
-    return IntentSuggestion(
+    return PurposeSuggestion(
         text=text,
         source="name_based",
         evidence=(f"symbol: {simple_name}", "source: symbol_name"),
     )
 
 
-def _compose_from_docstring(block: dict[str, Any]) -> IntentSuggestion | None:
+def _compose_from_docstring(block: dict[str, Any]) -> PurposeSuggestion | None:
     """Compose a purpose suggestion directly from the block docstring."""
 
     detected = block.get("detected")
@@ -538,7 +538,7 @@ def _compose_from_docstring(block: dict[str, Any]) -> IntentSuggestion | None:
     if text is None:
         return None
 
-    return IntentSuggestion(
+    return PurposeSuggestion(
         text=text,
         source="docstring_based",
         evidence=(f"docstring: {first_sentence}", "source: docstring_based"),
@@ -611,7 +611,7 @@ def _compact_build_docstring(sentence: str) -> str:
 def _compose_blended(
     keywords: list[KeywordCandidate],
     phrases: list[str],
-) -> IntentSuggestion | None:
+) -> PurposeSuggestion | None:
     """
     Compose a blended suggestion from keywords and phrases.
 
@@ -620,7 +620,7 @@ def _compose_blended(
         phrases: List of extracted phrases.
 
     Returns:
-        IntentSuggestion or None.
+        PurposeSuggestion or None.
     """
     # Prefer phrases over keywords
     if phrases:
@@ -628,7 +628,7 @@ def _compose_blended(
         text = phrases[0].strip()
         text = text[0].upper() + text[1:] if text else ""
 
-        return IntentSuggestion(
+        return PurposeSuggestion(
             text=text,
             source="blended_based",
             evidence=(f"phrase: {phrases[0]}", "source: phrase"),
@@ -640,7 +640,7 @@ def _compose_blended(
         text = " ".join(tokens)
         text = text[0].upper() + text[1:] if text else ""
 
-        return IntentSuggestion(
+        return PurposeSuggestion(
             text=text,
             source="blended_based",
             evidence=(f"keywords: {', '.join(tokens[:3])}", "source: keywords"),

@@ -98,7 +98,7 @@ def main():
     print("=" * 60)
 
     try:
-        from bpfw.catalog.intent_suggestions import suggest_intents
+        from bpfw.catalog.purpose_suggestions import suggest_intents
 
         for i, unit in enumerate(sample_units[:3], 1):
             print(f"\n--- Block {i}: {unit.symbol} ---")

@@ -6,7 +6,7 @@ from typing import Any, Dict, List
 import shutil
 import textwrap
 
-from bpfw.catalog.intent_suggestions import IntentSuggestion
+from bpfw.catalog.purpose_suggestions import PurposeSuggestion
 from bpfw.catalog.schema import get_code, get_purpose, get_status
 from bpfw.integrations.inspector.base import (
     build_hierarchy_lines,
@@ -44,7 +44,7 @@ def render_inspector_screen(
     block: Dict[str, Any],
     index: int,
     total: int,
-    intent_suggestions: List[IntentSuggestion],
+    intent_suggestions: List[PurposeSuggestion],
     domain_suggestions: List[str],
     header_title: str = DEFAULT_INSPECTOR_HEADER_TITLE,
     print_func: PrintFunc = print,
