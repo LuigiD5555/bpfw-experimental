@@ -132,12 +132,11 @@ def main():
                     "symbol": unit.symbol,
                 },
             }
-            suggestions = suggest_domains(block_dict, project_blocks=blocks_as_dicts)
+            suggestions = suggest_domains(block_dict)
 
-            for j, suggestion in enumerate(suggestions, 1):
-                print(f"  [{j}] {suggestion.text}")
-                print(f"      Score: {suggestion.score}")
-                print(f"      Evidence: {suggestion.evidence}")
+            slot_labels = ['[q]', '[w]', '[e]', '[r]', '[t]', '[y]']
+            for j, suggestion in enumerate(suggestions):
+                print(f"  {slot_labels[j]} {suggestion}")
     except Exception as e:
         print(f"Error testing domain suggestions: {e}")
         import traceback

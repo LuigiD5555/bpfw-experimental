@@ -2,14 +2,11 @@
 import ast
 from dataclasses import dataclass
 from pathlib import Path
-import re
 from typing import Any, Dict, List
 
 import yaml
 
 from bpfw.catalog.access_control import ensure_blueprint_can_be_written
-from bpfw.catalog.domain_suggestions import BROAD_FOLDER_TOKENS
-from bpfw.catalog.domain_suggestions import suggest_domains as suggest_domain_objects
 from bpfw.catalog.loader import BlueprintLoader
 from bpfw.catalog.models import (
     AUTHORITY_STATE_INVALID,
@@ -309,167 +306,14 @@ def display_value(value: Any) -> str:
 
 
 def suggest_domain(block: Dict[str, Any]) -> str | None:
-    """Suggest the strongest deterministic domain for one block."""
+    """Suggest the first deterministic domain for one block."""
 
-    suggestions = suggest_domains(block)
+    from bpfw.catalog.domain_suggestions import suggest_domains as catalog_suggest_domains
+
+    suggestions = catalog_suggest_domains(block)
     if not suggestions:
         return None
     return suggestions[0]
-
-
-def suggest_domains(block: Dict[str, Any], project_blocks: List[Dict[str, Any]] | None = None) -> List[str]:
-    """Suggest inspector domains using catalog deterministic engine plus adapter rules."""
-
-    location = get_code(block)
-    symbol_based = None
-    module_based = None
-    file_based = None
-    path_folders: List[str] = []
-    if isinstance(location, dict):
-        symbol = clean_string(location.get("symbol"))
-        if symbol:
-            symbol_tokens = []
-            current = ""
-            for character in symbol:
-                if character == "_":
-                    if current:
-                        symbol_tokens.append(current.lower())
-                    current = ""
-                    continue
-                if character.isupper() and current:
-                    symbol_tokens.append(current.lower())
-                    current = character
-                else:
-                    current += character
-            if current:
-                symbol_tokens.append(current.lower())
-            filtered = [token for token in symbol_tokens if token not in {"service", "manager", "handler", "helper", "run", "session", "text"}]
-            if filtered:
-                symbol_based = filtered[0]
-
-        module = clean_string(location.get("module"))
-        if module:
-            parts = [part.strip().lower() for part in module.split(".") if part.strip()]
-            parts = [part for part in parts if part not in {"src", "bpfw", "tests", "test", "__init__"}]
-            if parts:
-                module_based = parts[-1]
-
-        path = clean_string(location.get("path"))
-        if path:
-            normalized_path = path.replace("\\", "/")
-            path_parts = normalized_path.split("/")
-            file_name = path_parts[-1]
-            file_based = file_name.removesuffix(".py").lower()
-            if file_based in {"src", "bpfw", "tests", "test", "__init__"}:
-                file_based = None
-            for part in path_parts[:-1]:
-                normalized = part.strip().lower()
-                if (
-                    normalized
-                    and normalized not in {"src", "bpfw", "tests", "test", "__init__"}
-                    and normalized not in BROAD_FOLDER_TOKENS
-                    and normalized not in path_folders
-                ):
-                    path_folders.append(normalized)
-
-    blended_candidates = [suggestion.text for suggestion in suggest_domain_objects(block)]
-    ordered: List[str] = []
-    for candidate in path_folders:
-        if candidate not in ordered:
-            ordered.append(candidate)
-    for candidate in blended_candidates:
-        if candidate not in ordered:
-            ordered.append(candidate)
-    for candidate in [file_based, module_based, symbol_based]:
-        if candidate is not None and candidate not in ordered:
-            ordered.append(candidate)
-    historical_domains = _historical_domains_for_path(block=block, project_blocks=project_blocks or [])
-    for candidate in historical_domains:
-        if candidate not in ordered:
-            ordered.append(candidate)
-
-    clean: List[str] = []
-    for candidate in ordered:
-        normalized = candidate.strip().lower().replace("-", "_")
-        if not normalized or normalized in {"src", "bpfw", "tests", "test", "__init__"}:
-            continue
-        if normalized not in clean:
-            clean.append(normalized)
-    fallback_tokens = ("core", "general", "shared", "misc", "system")
-    historical_set = set(historical_domains)
-    historical_in_clean = [domain for domain in historical_domains if domain in clean]
-    if historical_in_clean:
-        clean = [domain for domain in clean if domain not in historical_set]
-        for token in fallback_tokens:
-            if len(clean) >= 4:
-                break
-            if token not in clean:
-                clean.append(token)
-        insertion_index = min(4, len(clean))
-        for offset, historical_domain in enumerate(historical_in_clean):
-            clean.insert(insertion_index + offset, historical_domain)
-    if len(clean) < 5:
-        for token in fallback_tokens:
-            if token not in clean:
-                clean.append(token)
-            if len(clean) >= 5:
-                break
-    return clean[:5]
-
-
-def _historical_domains_for_path(
-    block: Dict[str, Any],
-    project_blocks: List[Dict[str, Any]],
-) -> List[str]:
-    """Return previously used domains for blocks with the same code path."""
-
-    current_path = _block_path(block)
-    if current_path is None:
-        return []
-
-    current_id = clean_string(block.get("id"))
-    path_tokens = set(_path_tokens(current_path))
-    domain_scores: dict[str, int] = {}
-    for project_block in project_blocks:
-        if project_block is block:
-            continue
-        if current_id is not None and clean_string(project_block.get("id")) == current_id:
-            continue
-        if _block_path(project_block) != current_path:
-            continue
-        domain_value = clean_string(project_block.get("domain"))
-        if domain_value is None:
-            continue
-        normalized_domain = domain_value.lower().replace("-", "_")
-        domain_tokens = set(_path_tokens(normalized_domain))
-        domain_scores[normalized_domain] = max(
-            domain_scores.get(normalized_domain, 0),
-            len(path_tokens & domain_tokens),
-        )
-
-    ranked_domains = sorted(
-        domain_scores,
-        key=lambda domain: (-domain_scores[domain], domain),
-    )
-    return ranked_domains
-
-
-def _block_path(block: Dict[str, Any]) -> str | None:
-    """Return the normalized code path for a block."""
-
-    location = get_code(block)
-    if not isinstance(location, dict):
-        return None
-    path = clean_string(location.get("path"))
-    if path is None:
-        return None
-    return path.replace("\\", "/").lower()
-
-
-def _path_tokens(value: str) -> List[str]:
-    """Tokenize path-like text into lowercase words."""
-
-    return [token for token in re.split(r"[^a-zA-Z0-9]+", value.lower()) if token]
 
 
 def collect_existing_purposes(blueprint_data: Dict[str, Any]) -> tuple[str, ...]:
@@ -812,6 +656,7 @@ def apply_automatic_authority_fields(blueprint_data: Dict[str, Any]) -> None:
                         duplicates.append(identifier)
 
     set_blocks(blueprint_data, [block for block in blocks if isinstance(block, dict)])
+
 
 def save_blueprint(
     blueprint_path: Path,

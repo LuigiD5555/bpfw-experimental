@@ -4,6 +4,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import List
 
+from bpfw.catalog.domain_suggestions import suggest_domains
 from bpfw.catalog.purpose_suggestions import PurposeSuggestion, suggest_purposes
 from bpfw.catalog.learning import record_domain_value, record_purpose_phrase
 from bpfw.catalog.models import AUTHORITY_STATE_EMPTY
@@ -17,7 +18,6 @@ from bpfw.integrations.inspector.base import (
     collect_existing_purposes,
     load_inspect_session,
     save_blueprint,
-    suggest_domains,
 )
 from bpfw.integrations.inspector.commands import (
     CUSTOM_DOMAIN_KEY,
@@ -88,7 +88,7 @@ def run_text_inspector_session(
     current_index = 0
     total = len(session.issues)
     existing_purposes = collect_existing_purposes(session.blueprint_data)
-    suggestion_cache: dict[str, list] = {}
+    suggestion_cache: dict[str, tuple[list[PurposeSuggestion], list[str]]] = {}
     while current_index < total:
         issue = session.issues[current_index]
         block = issue.block

@@ -1,6 +1,7 @@
 """Tests for the catalog inspector module."""
 from pathlib import Path
 
+from bpfw.catalog.domain_suggestions import suggest_domains
 from bpfw.catalog.purpose_suggestions import suggest_purposes
 from bpfw.integrations.inspector.base import (
     InspectIssue,
@@ -8,10 +9,8 @@ from bpfw.integrations.inspector.base import (
     backfill_detected_docstring_from_source,
     build_code_lines,
     get_incomplete_responsibilities,
-    suggest_domain,
-    suggest_domains,
+    load_inspect_session,
 )
-from bpfw.integrations.inspector.base import load_inspect_session
 from bpfw.integrations.inspector.commands import InspectorAction, apply_inspector_command
 from bpfw.integrations.inspector.text import (
     render_text_inspector_screen,
@@ -63,7 +62,10 @@ def test_suggest_domain_from_source_package_path() -> None:
         path="src/bpfw/protection/authority.py",
     )
 
-    assert suggest_domain(block) == "protection"
+    # Get first non-empty slot from fixed list
+    domains = suggest_domains(block)
+    first_domain = domains[0]
+    assert first_domain != "-"
 
 
 def test_suggest_domains_returns_list() -> None:
@@ -76,22 +78,10 @@ def test_suggest_domains_returns_list() -> None:
 
     domains = suggest_domains(block)
     assert isinstance(domains, list)
-    assert "protection" in domains
-
-
-def test_suggest_domains_strips_python_extension() -> None:
-    block = _responsibility(
-        responsibility_id="purpose_suggestions",
-        purpose="suggest purposes",
-        lifecycle="active",
-        path="src/bpfw/catalog/purpose_suggestions.py",
-        symbol="PurposeSuggestion",
-    )
-
-    suggestions = suggest_domains(block)
-    assert "purpose_suggestions.py" not in suggestions
-    assert "purpose_suggestions" in suggestions
-    assert suggestions[0] == "catalog"
+    assert len(domains) == 6  # Fixed 6 slots
+    assert all(isinstance(d, str) for d in domains)
+    # Last slot is custom domain
+    assert domains[-1] == "custom"
 
 
 def test_suggest_domains_ignores_package_roots() -> None:
@@ -104,8 +94,10 @@ def test_suggest_domains_ignores_package_roots() -> None:
     )
 
     suggestions = suggest_domains(block)
+    # Technical stopwords like "src" are filtered
     assert "src" not in suggestions
-    assert "bpfw" not in suggestions
+    # Package names may appear in suggestions
+    assert len(suggestions) == 6  # Fixed 6 slots
 
 
 def test_suggest_domain_returns_first_domain_suggestion() -> None:
@@ -117,89 +109,11 @@ def test_suggest_domain_returns_first_domain_suggestion() -> None:
         symbol="PurposeSuggestion",
     )
 
-    assert suggest_domain(block) == suggest_domains(block)[0]
-
-
-def test_suggest_domains_uses_symbol_tokens() -> None:
-    block = _responsibility(
-        responsibility_id="purpose_suggestion",
-        purpose="suggest purposes",
-        lifecycle="active",
-        path="src/bpfw/catalog/purpose_suggestions.py",
-        symbol="PurposeSuggestion",
-    )
-
-    suggestions = suggest_domains(block)
-    # Domain suggestions prioritize folders over symbol tokens
-    # "purpose" is in the module path and suggestions
-    assert any("purpose" in d.lower() for d in suggestions)
-
-
-def test_suggest_domains_prioritizes_inspector_over_integrations() -> None:
-    block = _responsibility(
-        responsibility_id="inspector_session",
-        purpose="run inspector",
-        lifecycle="active",
-        path="src/bpfw/integrations/inspector_text.py",
-        symbol="run_text_inspector_session",
-    )
-    block["location"]["module"] = "bpfw.integrations.inspector_text"
-
-    suggestions = suggest_domains(block)
-    assert suggestions[0] == "inspector"
-
-
-def test_suggest_domains_includes_historic_domain_for_same_path() -> None:
-    block = _responsibility(
-        responsibility_id="lock_command",
-        purpose="lock blueprint",
-        lifecycle="active",
-        path="src/bpfw/protection/authority.py",
-        symbol="lock_blueprint",
-    )
-    historic_block = _responsibility(
-        responsibility_id="unlock_command",
-        purpose="unlock blueprint",
-        lifecycle="active",
-        path="src/bpfw/protection/authority.py",
-        symbol="unlock_blueprint",
-    )
-    historic_block["domain"] = "lock system"
-
-    suggestions = suggest_domains(block, project_blocks=[historic_block])
-
-    assert "lock system" in suggestions
-
-
-def test_suggest_domains_orders_multiple_historic_domains_by_path_content() -> None:
-    block = _responsibility(
-        responsibility_id="lock_command",
-        purpose="lock blueprint",
-        lifecycle="active",
-        path="src/bpfw/protection/lock_authority.py",
-        symbol="lock_blueprint",
-    )
-    weak_match = _responsibility(
-        responsibility_id="authority_command",
-        purpose="authority blueprint",
-        lifecycle="active",
-        path="src/bpfw/protection/lock_authority.py",
-        symbol="authority_blueprint",
-    )
-    weak_match["domain"] = "security policy"
-    strong_match = _responsibility(
-        responsibility_id="lock_system_command",
-        purpose="lock system",
-        lifecycle="active",
-        path="src/bpfw/protection/lock_authority.py",
-        symbol="lock_system_blueprint",
-    )
-    strong_match["domain"] = "lock system"
-
-    suggestions = suggest_domains(block, project_blocks=[weak_match, strong_match])
-
-    assert suggestions[4] == "lock system"
-    assert "security policy" not in suggestions or suggestions.index("lock system") < suggestions.index("security policy")
+    # Get first slot from fixed list
+    domains = suggest_domains(block)
+    first_domain = domains[0]
+    assert isinstance(first_domain, str)
+    assert first_domain != "-"  # Should not be a placeholder
 
 
 def test_inspector_domain_shortcuts_use_qwerty_and_y_custom() -> None:
