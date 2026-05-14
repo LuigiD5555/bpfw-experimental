@@ -8,12 +8,16 @@ from bpfw.catalog.keywords import extract_block_keywords, build_project_vocabula
 from bpfw.catalog.keywords.models import BlockKeywordProfile, KeywordCandidate, ProjectVocabulary
 from bpfw.catalog.keywords.normalizer import normalize_tokens
 from bpfw.catalog.keywords.tokenizer import tokenize_identifier
-from bpfw.catalog.learning import get_top_learned_intents, score_phrase_context_match
+from bpfw.catalog.learning import get_top_learned_purposes, score_phrase_context_match
 
 
 @dataclass(frozen=True, slots=True)
-class IntentSuggestion:
-    """Represent one deterministic natural-language purpose suggestion."""
+class PurposeSuggestion:
+    """Represent one deterministic natural-language purpose suggestion.
+
+    The suggestion system uses fixed semantic slots with deterministic ordering.
+    Scoring is local to each slot only, never global across all candidates.
+    """
 
     text: str
     source: str
