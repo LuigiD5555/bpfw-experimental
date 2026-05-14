@@ -20,7 +20,7 @@ from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, Finding
 # Finding codes used for counting.
 CODE_MISSING_DECLARED = "MISSING_DECLARED_CODE"
 CODE_UNDECLARED = "UNDECLARED_CODE"
-CODE_DUPLICATE_ACTIVE_INTENT = "DUPLICATE_ACTIVE_PURPOSE"
+CODE_DUPLICATE_ACTIVE_PURPOSE = "DUPLICATE_ACTIVE_PURPOSE"
 CODE_INVALID_LIFECYCLE = "INVALID_STATUS"
 CODE_INCOMPLETE_RESPONSIBILITY = "INCOMPLETE_BLOCK"
 
@@ -70,7 +70,7 @@ def _build_report(
     """Build a VerificationReport with computed counts and allowed flag."""
     missing_declared_count = _count_by_code(findings, CODE_MISSING_DECLARED)
     undeclared_count = _count_by_code(findings, CODE_UNDECLARED)
-    duplicate_active_intent_count = _count_by_code(findings, CODE_DUPLICATE_ACTIVE_INTENT)
+    duplicate_active_purpose_count = _count_by_code(findings, CODE_DUPLICATE_ACTIVE_PURPOSE)
     invalid_lifecycle_count = _count_by_code(findings, CODE_INVALID_LIFECYCLE)
     incomplete_responsibility_count = _count_by_code(findings, CODE_INCOMPLETE_RESPONSIBILITY)
 
@@ -87,7 +87,7 @@ def _build_report(
         discovered_count=discovered_count,
         missing_declared_count=missing_declared_count,
         undeclared_count=undeclared_count,
-        duplicate_active_intent_count=duplicate_active_intent_count,
+        duplicate_active_purpose_count=duplicate_active_purpose_count,
         invalid_lifecycle_count=invalid_lifecycle_count,
         incomplete_responsibility_count=incomplete_responsibility_count,
     )

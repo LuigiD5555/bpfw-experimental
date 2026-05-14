@@ -472,7 +472,7 @@ def _path_tokens(value: str) -> List[str]:
     return [token for token in re.split(r"[^a-zA-Z0-9]+", value.lower()) if token]
 
 
-def collect_existing_intents(blueprint_data: Dict[str, Any]) -> tuple[str, ...]:
+def collect_existing_purposes(blueprint_data: Dict[str, Any]) -> tuple[str, ...]:
     """Collect existing declared purposes from blueprint blocks."""
 
     blocks = get_blocks(blueprint_data)

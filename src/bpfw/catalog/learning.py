@@ -46,9 +46,12 @@ COMPOUND_ERROR_QUALIFIERS = (
 
 @dataclass(frozen=True, slots=True)
 class LearningScores:
-    """Learning boost dictionaries used by ranking functions."""
+    """Learning boost dictionaries used by suggestion scoring.
 
-    intent_phrase_boost: dict[str, int]
+    Scoring is local to each slot only, never global.
+    """
+
+    purpose_phrase_boost: dict[str, int]
     domain_boost: dict[str, int]
 
 
@@ -64,27 +67,27 @@ def load_learning_scores() -> LearningScores:
     """Load learning scores from the global user learning file."""
 
     if not learning_enabled():
-        return LearningScores(intent_phrase_boost={}, domain_boost={})
+        return LearningScores(purpose_phrase_boost={}, domain_boost={})
 
     data = _read_learning_data()
-    purpose = data.get("intent_phrase_counts", {})
+    purpose = data.get("purpose_phrase_counts", {})
     domain = data.get("domain_counts", {})
     if not isinstance(purpose, dict) or not isinstance(domain, dict):
-        return LearningScores(intent_phrase_boost={}, domain_boost={})
+        return LearningScores(purpose_phrase_boost={}, domain_boost={})
 
     return LearningScores(
-        intent_phrase_boost={key: _to_int(value) for key, value in purpose.items()},
+        purpose_phrase_boost={key: _to_int(value) for key, value in purpose.items()},
         domain_boost={key: _to_int(value) for key, value in domain.items()},
     )
 
 
-def record_intent_phrase(text: str, increment: int = 1) -> None:
+def record_purpose_phrase(text: str, increment: int = 1) -> None:
     """Record one accepted purpose phrase."""
 
     normalized = _normalize_phrase(text)
     if not normalized or not learning_enabled():
         return
-    _update_counter(section="intent_phrase_counts", key=normalized, increment=increment)
+    _update_counter(section="purpose_phrase_counts", key=normalized, increment=increment)
 
 
 def record_domain_value(text: str, increment: int = 1) -> None:
@@ -96,13 +99,13 @@ def record_domain_value(text: str, increment: int = 1) -> None:
     _update_counter(section="domain_counts", key=normalized, increment=increment)
 
 
-def get_top_learned_intents(limit: int = 20) -> list[tuple[str, int]]:
+def get_top_learned_purposes(limit: int = 20) -> list[tuple[str, int]]:
     """Return top learned purpose phrases with counts."""
 
     if not learning_enabled():
         return []
     data = _read_learning_data()
-    bucket = data.get("intent_phrase_counts", {})
+    bucket = data.get("purpose_phrase_counts", {})
     if not isinstance(bucket, dict):
         return []
     ranked = sorted(
@@ -185,7 +188,7 @@ def _empty_learning_data() -> dict[str, Any]:
     return {
         "version": LEARNING_VERSION,
         "updated_at": None,
-        "intent_phrase_counts": {},
+        "purpose_phrase_counts": {},
         "domain_counts": {},
     }
 

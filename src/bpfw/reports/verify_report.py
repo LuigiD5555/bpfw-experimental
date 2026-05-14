@@ -118,7 +118,7 @@ def render_verify_report(report: VerificationReport) -> str:
         # Lifecycle
         sections.append("Lifecycle:")
         sections.append(f"  invalid lifecycles: {report.invalid_lifecycle_count}")
-        sections.append(f"  duplicate active purposes: {report.duplicate_active_intent_count}")
+        sections.append(f"  duplicate active purposes: {report.duplicate_active_purpose_count}")
         sections.append("")
 
         # Execution

@@ -44,7 +44,7 @@ def render_inspector_screen(
     block: Dict[str, Any],
     index: int,
     total: int,
-    intent_suggestions: List[PurposeSuggestion],
+    purpose_suggestions: List[PurposeSuggestion],
     domain_suggestions: List[str],
     header_title: str = DEFAULT_INSPECTOR_HEADER_TITLE,
     print_func: PrintFunc = print,
@@ -87,13 +87,13 @@ def render_inspector_screen(
         marker = " *" if lifecycle_value == current_lifecycle else ""
         lifecycle_lines.append(f"{lifecycle_label}{marker}")
 
-    intent_lines: List[str] = []
+    purpose_lines: List[str] = []
     for suggestion_index in range(1, 6):
         suggestion_text = "-"
-        if suggestion_index - 1 < len(intent_suggestions):
-            suggestion_text = intent_suggestions[suggestion_index - 1].text
-        intent_lines.append(f" [{suggestion_index}] {suggestion_text}")
-    intent_lines.append(" [6] write custom purpose")
+        if suggestion_index - 1 < len(purpose_suggestions):
+            suggestion_text = purpose_suggestions[suggestion_index - 1].text
+        purpose_lines.append(f" [{suggestion_index}] {suggestion_text}")
+    purpose_lines.append(" [6] write custom purpose")
 
     domain_lines: List[str] = []
     for domain_index, domain_label in enumerate(DOMAIN_SUGGESTION_KEYS):
@@ -128,7 +128,7 @@ def render_inspector_screen(
         observation_preview_lines=observation_preview_lines,
         interface_preview_lines=interface_preview_lines,
         domain_lines=domain_lines,
-        intent_lines=intent_lines,
+        purpose_lines=purpose_lines,
         command_lines=command_lines,
     )
 
@@ -180,7 +180,7 @@ def render_inspector_screen(
         left_title="Domain suggestions",
         left_lines=domain_lines,
         right_title="Purpose suggestions",
-        right_lines=intent_lines,
+        right_lines=purpose_lines,
         total_width=global_inner_width,
         preferred_left_ratio=0.45,
     ):
@@ -355,7 +355,7 @@ def _compute_layout_width(
     observation_preview_lines: list[str],
     interface_preview_lines: list[str],
     domain_lines: list[str],
-    intent_lines: list[str],
+    purpose_lines: list[str],
     command_lines: list[str],
 ) -> int:
     """Compute one global inner width for all panels."""
@@ -378,12 +378,12 @@ def _compute_layout_width(
         display_width("Domain suggestions") + 3,
         measure_lines(domain_lines),
     )
-    intent_required = max(
+    purpose_required = max(
         display_width("Purpose suggestions") + 3,
-        measure_lines(intent_lines),
+        measure_lines(purpose_lines),
     )
     two_col_required_authority = authority_required + 1 + lifecycle_required
-    two_col_required_suggestions = domain_required + 1 + intent_required
+    two_col_required_suggestions = domain_required + 1 + purpose_required
     required_width = max(
         header_required,
         code_required,

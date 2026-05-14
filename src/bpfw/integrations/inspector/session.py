@@ -4,8 +4,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import List
 
-from bpfw.catalog.purpose_suggestions import PurposeSuggestion, suggest_intents
-from bpfw.catalog.learning import record_domain_value, record_intent_phrase
+from bpfw.catalog.purpose_suggestions import PurposeSuggestion, suggest_purposes
+from bpfw.catalog.learning import record_domain_value, record_purpose_phrase
 from bpfw.catalog.models import AUTHORITY_STATE_EMPTY
 from bpfw.catalog.schema import get_blocks, get_purpose, set_blocks
 from bpfw.integrations.inspector.base import (
@@ -14,7 +14,7 @@ from bpfw.integrations.inspector.base import (
     InspectLoadResult,
     apply_suggestions,
     backfill_detected_docstring_from_source,
-    collect_existing_intents,
+    collect_existing_purposes,
     load_inspect_session,
     save_blueprint,
     suggest_domains,
@@ -87,7 +87,7 @@ def run_text_inspector_session(
 
     current_index = 0
     total = len(session.issues)
-    existing_intents = collect_existing_intents(session.blueprint_data)
+    existing_purposes = collect_existing_purposes(session.blueprint_data)
     suggestion_cache: dict[str, list] = {}
     while current_index < total:
         issue = session.issues[current_index]
@@ -101,19 +101,19 @@ def run_text_inspector_session(
             cache_key = f"{code.get('path', '')}:{code.get('symbol', '')}"
 
         if cache_key in suggestion_cache:
-            intent_suggestions, domain_suggestions = suggestion_cache[cache_key]
+            purpose_suggestions, domain_suggestions = suggestion_cache[cache_key]
         else:
             backfill_detected_docstring_from_source(
                 project_root=session.project_root,
                 block=block,
             )
-            intent_suggestions = suggest_intents(
+            purpose_suggestions = suggest_purposes(
                 block,
-                existing_intents=existing_intents,
+                existing_purposes=existing_purposes,
             )
             domain_suggestions = suggest_domains(block, project_blocks=get_blocks(session.blueprint_data))
             if cache_key:
-                suggestion_cache[cache_key] = (intent_suggestions, domain_suggestions)
+                suggestion_cache[cache_key] = (purpose_suggestions, domain_suggestions)
 
         render_inspector_screen(
             project_root=session.project_root,
@@ -121,7 +121,7 @@ def run_text_inspector_session(
             block=block,
             index=current_index,
             total=total,
-            intent_suggestions=intent_suggestions,
+            purpose_suggestions=purpose_suggestions,
             domain_suggestions=domain_suggestions,
             header_title=header_title,
             print_func=print_func,
@@ -131,7 +131,7 @@ def run_text_inspector_session(
             action = apply_inspector_command(
                 command=normalize_command(raw_command),
                 issue=issue,
-                intent_suggestions=intent_suggestions,
+                purpose_suggestions=purpose_suggestions,
                 domain_suggestions=domain_suggestions,
                 input_func=input_func,
             )
@@ -153,7 +153,7 @@ def run_text_inspector_session(
                 continue
             _record_learning_feedback(
                 issue=issue,
-                intent_suggestions=intent_suggestions,
+                purpose_suggestions=purpose_suggestions,
                 domain_suggestions=domain_suggestions,
             )
             if not _save_issue(session=session, issue=issue):
@@ -229,20 +229,20 @@ def _save_issue(session: InspectLoadResult, issue: InspectIssue) -> bool:
 
 def _record_learning_feedback(
     issue: InspectIssue,
-    intent_suggestions: List[PurposeSuggestion],
+    purpose_suggestions: List[PurposeSuggestion],
     domain_suggestions: List[str],
 ) -> None:
     """Record accepted purpose/domain values for incremental learning."""
 
-    intent_value = get_purpose(issue.block)
-    if isinstance(intent_value, str) and intent_value.strip():
-        normalized_intent = " ".join(intent_value.strip().split()).lower()
-        suggested_intents = {
+    purpose_value = get_purpose(issue.block)
+    if isinstance(purpose_value, str) and purpose_value.strip():
+        normalized_purpose = " ".join(purpose_value.strip().split()).lower()
+        suggested_purposes = {
             " ".join(suggestion.text.strip().split()).lower()
-            for suggestion in intent_suggestions
+            for suggestion in purpose_suggestions
         }
-        increment = 2 if normalized_intent in suggested_intents else 3
-        record_intent_phrase(intent_value, increment=increment)
+        increment = 2 if normalized_purpose in suggested_purposes else 3
+        record_purpose_phrase(purpose_value, increment=increment)
 
     domain_value = issue.block.get("domain")
     if isinstance(domain_value, str) and domain_value.strip():

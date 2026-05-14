@@ -90,7 +90,7 @@ class VerifyBlueprintStep(PipelineStep):
             "discovered_count": str(report.discovered_count),
             "missing_declared_code": str(report.missing_declared_count),
             "undeclared_code": str(report.undeclared_count),
-            "duplicate_active_purposes": str(report.duplicate_active_intent_count),
+            "duplicate_active_purposes": str(report.duplicate_active_purpose_count),
             "invalid_statuses": str(report.invalid_lifecycle_count),
             "incomplete_blocks": str(report.incomplete_responsibility_count),
         }

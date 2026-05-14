@@ -28,7 +28,7 @@ class InspectorAction:
 def apply_inspector_command(
     command: str,
     issue: InspectIssue,
-    intent_suggestions: List[PurposeSuggestion],
+    purpose_suggestions: List[PurposeSuggestion],
     domain_suggestions: List[str],
     input_func: InputFunc,
 ) -> str:
@@ -41,8 +41,8 @@ def apply_inspector_command(
 
     if stripped_command in {"1", "2", "3", "4", "5"}:
         suggestion_index = int(stripped_command) - 1
-        if suggestion_index < len(intent_suggestions):
-            set_purpose(issue.block, intent_suggestions[suggestion_index].text)
+        if suggestion_index < len(purpose_suggestions):
+            set_purpose(issue.block, purpose_suggestions[suggestion_index].text)
         return InspectorAction.STAY
 
     if stripped_command.startswith("6"):

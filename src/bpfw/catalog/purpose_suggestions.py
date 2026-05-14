@@ -1,4 +1,4 @@
-"""AST-based intent suggestions using keyword extraction."""
+"""AST-based purpose suggestions using keyword extraction."""
 
 import re
 from dataclasses import dataclass
@@ -8,7 +8,7 @@ from bpfw.catalog.keywords import extract_block_keywords, build_project_vocabula
 from bpfw.catalog.keywords.models import BlockKeywordProfile, KeywordCandidate, ProjectVocabulary
 from bpfw.catalog.keywords.normalizer import normalize_tokens
 from bpfw.catalog.keywords.tokenizer import tokenize_identifier
-from bpfw.catalog.learning import get_top_learned_intents, score_phrase_context_match
+from bpfw.catalog.learning import get_top_learned_purposes, score_phrase_context_match
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,6 +17,14 @@ class PurposeSuggestion:
 
     The suggestion system uses fixed semantic slots with deterministic ordering.
     Scoring is local to each slot only, never global across all candidates.
+    
+    Slot order (fixed, never changes):
+    1. Existing/similar purpose - reuse from current blueprint
+    2. Learned/contextual purpose - from learning system
+    3. Name-based purpose - from symbol name tokens
+    4. Docstring-based purpose - from docstring summary
+    5. Blended-based purpose - from multiple sources
+    6. Custom purpose - user-provided
     """
 
     text: str
@@ -46,7 +54,7 @@ class _NormalizedFacts:
     all_tokens: tuple[str, ...]
 
 
-def compact_intent_text(text: str) -> str:
+def compact_purpose_text(text: str) -> str:
     """
     Compact purpose text to a concise form.
 
@@ -154,10 +162,10 @@ def _apply_quality_filters(
     return filtered
 
 
-def suggest_intents(
+def suggest_purposes(
     block: dict[str, Any],
     project_blocks: list[dict[str, Any]] | None = None,
-    existing_intents: tuple[str, ...] = (),
+    existing_purposes: tuple[str, ...] = (),
 ) -> list[PurposeSuggestion]:
     """
     Suggest purposes using AST-extracted keywords.
@@ -166,14 +174,16 @@ def suggest_intents(
     - Extracts keywords from block using AST analysis
     - Uses project vocabulary to boost rare, distinctive tokens
     - Composes suggestions from keywords without hardcoded vocabulary
+    - Uses fixed semantic slots with deterministic ordering
+    - Scoring is local to each slot only, never global
 
     Args:
         block: Block dictionary from scanner.
         project_blocks: Optional list of all blocks for vocabulary building.
-        existing_intents: Existing purposes to consider for reuse.
+        existing_purposes: Existing purposes to consider for reuse.
 
     Returns:
-        List of PurposeSuggestion items.
+        List of PurposeSuggestion items in fixed slot order.
     """
     # Build project vocabulary if blocks provided
     vocabulary = None
@@ -185,10 +195,10 @@ def suggest_intents(
 
     # If no keywords found, return empty suggestions
     if not profile.keywords:
-        return _empty_intent_slots()
+        return _empty_purpose_slots()
 
     # Normalize block facts for quality filtering
-    from bpfw.catalog.keywords.tokenizer import tokenize_identifier, tokenize_text
+    from bpfw.catalog.keywords.tokenizer import tokenize_identifier
 
     def _get_nested_value(keys: tuple[str, ...], default: str = "") -> str:
         """Get value from nested dict or top level."""
@@ -219,7 +229,7 @@ def suggest_intents(
         block=block,
         profile=profile,
         vocabulary=vocabulary,
-        existing_intents=existing_intents,
+        existing_purposes=existing_purposes,
     )
 
     # Apply quality filters
@@ -247,26 +257,26 @@ def suggest_intents(
     compacted_suggestions = []
     for suggestion in suggestions:
         compacted = PurposeSuggestion(
-            text=compact_intent_text(suggestion.text),
+            text=compact_purpose_text(suggestion.text),
             source=suggestion.source,
             evidence=suggestion.evidence,
         )
         compacted_suggestions.append(compacted)
 
-    # Ensure we have exactly 6 slots
+    # Ensure we have exactly 6 slots in fixed order
     return _ensure_six_slots(compacted_suggestions)
 
 
-def _empty_intent_slots() -> list[PurposeSuggestion]:
+def _empty_purpose_slots() -> list[PurposeSuggestion]:
     """Return fixed empty purpose slots when no purpose can be inferred."""
 
     return [
-        PurposeSuggestion("-", "existing_intent", ("source: existing_intent",)),
+        PurposeSuggestion("-", "existing_purpose", ("source: existing_purpose",)),
         PurposeSuggestion("-", "learned_based", ("source: learned_based",)),
         PurposeSuggestion("-", "name_based", ("source: name_based",)),
         PurposeSuggestion("-", "docstring_based", ("source: docstring_based",)),
         PurposeSuggestion("-", "blended_based", ("source: blended_based",)),
-        PurposeSuggestion("Write custom purpose...", "custom_intent", ("source: custom_intent",)),
+        PurposeSuggestion("Write custom purpose...", "custom_purpose", ("source: custom_purpose",)),
     ]
 
 
@@ -274,32 +284,40 @@ def _compose_suggestions(
     block: dict[str, Any],
     profile: BlockKeywordProfile,
     vocabulary: ProjectVocabulary | None,
-    existing_intents: tuple[str, ...],
+    existing_purposes: tuple[str, ...],
 ) -> list[PurposeSuggestion]:
     """
     Compose purpose suggestions from keyword profile.
+
+    Uses fixed slot order:
+    1. Existing/similar purpose - reuse from current blueprint
+    2. Learned/contextual purpose - from learning system
+    3. Name-based purpose - from symbol name tokens
+    4. Docstring-based purpose - from docstring summary
+    5. Blended-based purpose - from multiple sources
+    6. Custom purpose - user-provided
 
     Args:
         block: Block dictionary.
         profile: Keyword profile for block.
         vocabulary: Optional project vocabulary.
-        existing_intents: Existing purposes to consider.
+        existing_purposes: Existing purposes to consider.
 
     Returns:
-        List of suggestions.
+        List of suggestions in fixed slot order.
     """
     suggestions: list[PurposeSuggestion] = []
 
     # Get top keywords
     top_keywords = profile.keywords[:10]
 
-    # 1. Existing intent-based suggestion
-    existing = _find_existing_intent_match(block, existing_intents, top_keywords)
+    # 1. Existing purpose-based suggestion
+    existing = _find_existing_purpose_match(block, existing_purposes, top_keywords)
     if existing:
         suggestions.append(existing)
 
     # 2. Learned-based suggestion
-    learned = _find_learned_intent_match(block, top_keywords)
+    learned = _find_learned_purpose_match(block, top_keywords)
     if learned:
         suggestions.append(learned)
 
@@ -328,8 +346,8 @@ def _compose_suggestions(
     suggestions.append(
         PurposeSuggestion(
             text="Write custom purpose...",
-            source="custom_intent",
-            evidence=("source: custom_intent",),
+            source="custom_purpose",
+            evidence=("source: custom_purpose",),
         )
     )
 
@@ -343,14 +361,14 @@ def _compose_suggestions(
     return suggestions[:6]
 
 
-def _find_existing_intent_match(
+def _find_existing_purpose_match(
     block: dict[str, Any],
-    existing_intents: tuple[str, ...],
+    existing_purposes: tuple[str, ...],
     top_keywords: list[KeywordCandidate],
 ) -> PurposeSuggestion | None:
-    """Find best matching existing intent from current blueprint."""
+    """Find best matching existing purpose from current blueprint."""
 
-    if not existing_intents:
+    if not existing_purposes:
         return None
 
     # Build context from keywords
@@ -360,18 +378,18 @@ def _find_existing_intent_match(
     best_match = ""
     best_score = 0
 
-    for intent in existing_intents:
+    for purpose in existing_purposes:
         # Score match using learning system
-        overlap = score_phrase_context_match(intent, context)
+        overlap = score_phrase_context_match(purpose, context)
         if overlap > best_score and overlap > 0.3:  # Minimum similarity threshold
             best_score = overlap
-            best_match = intent
+            best_match = purpose
 
     if best_match:
         return PurposeSuggestion(
             text=best_match,
-            source="existing_intent",
-            evidence=(f"overlap: {best_score:.2f}", "source: existing_intent"),
+            source="existing_purpose",
+            evidence=(f"overlap: {best_score:.2f}", "source: existing_purpose"),
         )
 
     return None
@@ -379,22 +397,30 @@ def _find_existing_intent_match(
 
 def _ensure_six_slots(suggestions: list[PurposeSuggestion]) -> list[PurposeSuggestion]:
     """
-    Ensure suggestions list has exactly 6 slots, padding with placeholders.
+    Ensure suggestions list has exactly 6 slots in fixed order, padding with placeholders.
+
+    Slot order is deterministic and never changes:
+    1. existing_purpose
+    2. learned_based
+    3. name_based
+    4. docstring_based
+    5. blended_based
+    6. custom_purpose
 
     Args:
         suggestions: List of suggestions.
 
     Returns:
-        List of exactly 6 suggestions.
+        List of exactly 6 suggestions in fixed slot order.
     """
     # Define slot sources in fixed order
     slot_sources = [
-        "existing_intent",
+        "existing_purpose",
         "learned_based",
         "name_based",
         "docstring_based",
         "blended_based",
-        "custom_intent",
+        "custom_purpose",
     ]
 
     result: list[PurposeSuggestion] = []
@@ -412,20 +438,20 @@ def _ensure_six_slots(suggestions: list[PurposeSuggestion]) -> list[PurposeSugge
             result.append(found)
         else:
             # Add placeholder
-            text = "Write custom purpose..." if source == "custom_intent" else "-"
+            text = "Write custom purpose..." if source == "custom_purpose" else "-"
             result.append(PurposeSuggestion(text=text, source=source, evidence=(f"source: {source}",)))
 
     return result
 
 
-def _find_learned_intent_match(
+def _find_learned_purpose_match(
     block: dict[str, Any],
     top_keywords: list[KeywordCandidate],
 ) -> PurposeSuggestion | None:
-    """Find best matching intent from learning system."""
+    """Find best matching purpose from learning system."""
 
-    # Get top learned intents
-    learned = get_top_learned_intents(limit=10)
+    # Get top learned purposes
+    learned = get_top_learned_purposes(limit=10)
 
     if not learned:
         return None
@@ -460,6 +486,8 @@ def _compose_from_keywords(
 ) -> PurposeSuggestion | None:
     """
     Compose a suggestion from keywords, prioritizing a specific source.
+
+    Scoring is local to this slot only, not global.
 
     Args:
         keywords: List of ranked keywords.
@@ -588,7 +616,7 @@ def _purpose_text_from_docstring_sentence(sentence: str) -> str | None:
     )
     if not lower.startswith(action_verbs):
         return None
-    return compact_intent_text(normalized)
+    return compact_purpose_text(normalized)
 
 
 def _clean_docstring_noun_phrase(text: str) -> str:
@@ -605,7 +633,7 @@ def _compact_build_docstring(sentence: str) -> str:
     phrase = re.sub(r",\s*including\b.*$", "", sentence, flags=re.IGNORECASE)
     phrase = re.sub(r"\s+for\s+a\s+project\b.*$", "", phrase, flags=re.IGNORECASE)
     phrase = re.sub(r"^Build\s+the\s+full\s+", "Build ", phrase, flags=re.IGNORECASE)
-    return compact_intent_text(phrase)
+    return compact_purpose_text(phrase)
 
 
 def _compose_blended(
@@ -614,6 +642,8 @@ def _compose_blended(
 ) -> PurposeSuggestion | None:
     """
     Compose a blended suggestion from keywords and phrases.
+
+    Scoring is local to this slot only, not global.
 
     Args:
         keywords: List of ranked keywords.

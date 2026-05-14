@@ -98,7 +98,7 @@ def render_planner(state: PlannerState) -> None:
         render_invalid_blueprint_modal(state)
     elif state.screen == "duplicate_name":
         render_workspace(state)
-    elif state.screen == "active_intent_conflict":
+    elif state.screen == "active_purpose_conflict":
         render_workspace(state)
     elif state.screen == "path_already_used":
         path = str(state.modal_data.get("path") or "")
@@ -1291,13 +1291,13 @@ def render_duplicate_name_modal(state: PlannerState, existing_box: PlannerBox, s
         print(line)
 
 
-def render_active_intent_conflict_modal(state: PlannerState, existing_box: PlannerBox, new_intent: str) -> None:
+def render_active_purpose_conflict_modal(state: PlannerState, existing_box: PlannerBox, new_purpose: str) -> None:
     """Render modal when creating block with duplicate active purpose.
     
     Args:
         state: Current planner state.
         existing_box: Existing active box with same purpose.
-        new_intent: The conflicting purpose.
+        new_purpose: The conflicting purpose.
     """
     clear_screen()
     terminal_width = get_terminal_width()
@@ -1311,7 +1311,7 @@ def render_active_intent_conflict_modal(state: PlannerState, existing_box: Plann
         "",
         "New",
         f"- (your new block)",
-        f"  {new_intent}",
+        f"  {new_purpose}",
         "",
         "BPFW allows only one active block per purpose.",
         "",

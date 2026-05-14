@@ -92,25 +92,25 @@ def main():
             for phrase in profile.phrases[:3]:
                 print(f"  - {phrase}")
 
-    # Test intent suggestions
+    # Test purpose suggestions
     print("\n" + "=" * 60)
-    print("INTENT SUGGESTIONS TEST")
+    print("PURPOSE SUGGESTIONS TEST")
     print("=" * 60)
 
     try:
-        from bpfw.catalog.purpose_suggestions import suggest_intents
+        from bpfw.catalog.purpose_suggestions import suggest_purposes
 
         for i, unit in enumerate(sample_units[:3], 1):
             print(f"\n--- Block {i}: {unit.symbol} ---")
             block_dict = discovered_unit_to_dict(unit)
-            suggestions = suggest_intents(block_dict, project_blocks=blocks_as_dicts)
+            suggestions = suggest_purposes(block_dict, project_blocks=blocks_as_dicts)
 
             for j, suggestion in enumerate(suggestions, 1):
                 print(f"  [{j}] {suggestion.text}")
                 print(f"      Source: {suggestion.source}")
                 print(f"      Evidence: {suggestion.evidence}")
     except Exception as e:
-        print(f"Error testing intent suggestions: {e}")
+        print(f"Error testing purpose suggestions: {e}")
         import traceback
         traceback.print_exc()
 

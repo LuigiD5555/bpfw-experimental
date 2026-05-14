@@ -1,7 +1,7 @@
 """Tests for the catalog inspector module."""
 from pathlib import Path
 
-from bpfw.catalog.purpose_suggestions import suggest_intents
+from bpfw.catalog.purpose_suggestions import suggest_purposes
 from bpfw.integrations.inspector.base import (
     InspectIssue,
     apply_automatic_authority_fields,
@@ -81,25 +81,25 @@ def test_suggest_domains_returns_list() -> None:
 
 def test_suggest_domains_strips_python_extension() -> None:
     block = _responsibility(
-        responsibility_id="intent_suggestions",
+        responsibility_id="purpose_suggestions",
         purpose="suggest purposes",
         lifecycle="active",
-        path="src/bpfw/catalog/intent_suggestions.py",
+        path="src/bpfw/catalog/purpose_suggestions.py",
         symbol="PurposeSuggestion",
     )
 
     suggestions = suggest_domains(block)
-    assert "intent_suggestions.py" not in suggestions
-    assert "intent_suggestions" in suggestions
+    assert "purpose_suggestions.py" not in suggestions
+    assert "purpose_suggestions" in suggestions
     assert suggestions[0] == "catalog"
 
 
 def test_suggest_domains_ignores_package_roots() -> None:
     block = _responsibility(
-        responsibility_id="intent_suggestions",
+        responsibility_id="purpose_suggestions",
         purpose="suggest purposes",
         lifecycle="active",
-        path="src/bpfw/catalog/intent_suggestions.py",
+        path="src/bpfw/catalog/purpose_suggestions.py",
         symbol="PurposeSuggestion",
     )
 
@@ -110,10 +110,10 @@ def test_suggest_domains_ignores_package_roots() -> None:
 
 def test_suggest_domain_returns_first_domain_suggestion() -> None:
     block = _responsibility(
-        responsibility_id="intent_suggestions",
+        responsibility_id="purpose_suggestions",
         purpose="suggest purposes",
         lifecycle="active",
-        path="src/bpfw/catalog/intent_suggestions.py",
+        path="src/bpfw/catalog/purpose_suggestions.py",
         symbol="PurposeSuggestion",
     )
 
@@ -122,17 +122,17 @@ def test_suggest_domain_returns_first_domain_suggestion() -> None:
 
 def test_suggest_domains_uses_symbol_tokens() -> None:
     block = _responsibility(
-        responsibility_id="intent_suggestion",
+        responsibility_id="purpose_suggestion",
         purpose="suggest purposes",
         lifecycle="active",
-        path="src/bpfw/catalog/intent_suggestions.py",
+        path="src/bpfw/catalog/purpose_suggestions.py",
         symbol="PurposeSuggestion",
     )
 
     suggestions = suggest_domains(block)
     # Domain suggestions prioritize folders over symbol tokens
-    # "intent" is in the module path and suggestions
-    assert any("intent" in d.lower() for d in suggestions)
+    # "purpose" is in the module path and suggestions
+    assert any("purpose" in d.lower() for d in suggestions)
 
 
 def test_suggest_domains_prioritizes_inspector_over_integrations() -> None:
@@ -207,7 +207,7 @@ def test_inspector_domain_shortcuts_use_qwerty_and_y_custom() -> None:
     action = apply_inspector_command(
         command="t",
         issue=InspectIssue(issue_type="draft", block=issue),
-        intent_suggestions=[],
+        purpose_suggestions=[],
         domain_suggestions=["one", "two", "three", "four", "five"],
         input_func=lambda _prompt: "",
     )
@@ -218,7 +218,7 @@ def test_inspector_domain_shortcuts_use_qwerty_and_y_custom() -> None:
     action = apply_inspector_command(
         command="ycustom_domain",
         issue=InspectIssue(issue_type="draft", block=issue),
-        intent_suggestions=[],
+        purpose_suggestions=[],
         domain_suggestions=[],
         input_func=lambda _prompt: "",
     )
@@ -269,7 +269,7 @@ def test_text_inspector_renders_expected_sections(tmp_path: Path) -> None:
         "functions": ["ExampleService.Helper"],
     }
     output: list[str] = []
-    intent_suggestions = suggest_intents(block)
+    purpose_suggestions = suggest_purposes(block)
     domain_suggestions = suggest_domains(block)
 
     render_text_inspector_screen(
@@ -278,7 +278,7 @@ def test_text_inspector_renders_expected_sections(tmp_path: Path) -> None:
         block=block,
         index=11,
         total=82,
-        intent_suggestions=intent_suggestions,
+        purpose_suggestions=purpose_suggestions,
         domain_suggestions=domain_suggestions,
         print_func=output.append,
     )

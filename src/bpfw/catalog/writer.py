@@ -199,7 +199,7 @@ def run_init(project_root: Path) -> tuple[bool, str, int]:
     
     # Step 10: Print init summary
     total_units = len(scan_result.discovered_units)
-    pending_intent = sum(1 for _ in scan_result.discovered_units)
+    pending_purpose = sum(1 for _ in scan_result.discovered_units)
     pending_lifecycle = sum(1 for _ in scan_result.discovered_units)
     pending_domain = sum(1 for _ in scan_result.discovered_units)
     
@@ -215,7 +215,7 @@ Detected code units:
   total: {total_units}
 
 Pending fields:
-  purpose: {pending_intent}
+  purpose: {pending_purpose}
   status: {pending_lifecycle}
   domain: {pending_domain}
 

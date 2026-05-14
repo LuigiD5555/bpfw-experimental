@@ -3,13 +3,6 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from bpfw.catalog.lifecycle import (
-    ALLOWED_LIFECYCLES,
-    LIFECYCLE_ACTIVE,
-    LIFECYCLE_DEPRECATED,
-    LIFECYCLE_EXPERIMENTAL,
-    LIFECYCLE_LEGACY,
-)
 from bpfw.reports.finding import Finding
 
 # Authority state constants
@@ -18,6 +11,7 @@ AUTHORITY_STATE_EMPTY = "empty"
 AUTHORITY_STATE_DRAFT = "draft"
 AUTHORITY_STATE_DEFINED = "defined"
 AUTHORITY_STATE_INVALID = "invalid"
+
 
 @dataclass(frozen=True)
 class DiscoveredCodeUnit:
@@ -70,6 +64,6 @@ class VerificationReport:
     discovered_count: int = 0
     missing_declared_count: int = 0
     undeclared_count: int = 0
-    duplicate_active_intent_count: int = 0
+    duplicate_active_purpose_count: int = 0
     invalid_lifecycle_count: int = 0
     incomplete_responsibility_count: int = 0
