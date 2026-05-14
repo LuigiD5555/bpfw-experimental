@@ -32,9 +32,9 @@ policy:
     detected_detail_level: minimal
 blocks:
 - id: blueprint_locked_error
-  purpose: Raise Blueprint Locked Error
+  purpose: Declare BlueprintLockedError class
   name: BlueprintLockedError
-  domain: lock system
+  domain: Lock System
   status: active
   code:
     path: src/bpfw/core/errors.py
@@ -51,7 +51,7 @@ blocks:
   entrypoints: []
   connections: []
   uniqueness:
-    group: raise_blueprint_locked_error
+    group: declare_blueprint_locked_error_class
     allow_multiple_non_active: true
     forbid_active_duplicates: true
     suspected_duplicates: []
@@ -61,10 +61,10 @@ blocks:
     reason: null
   notes: null
 - id: protection_result
-  purpose: null
+  purpose: Declare ProtectionResult class
   name: ProtectionResult
-  domain: null
-  status: null
+  domain: Lock System
+  status: active
   code:
     path: src/bpfw/protection/authority.py
     module: src.bpfw.protection.authority
@@ -80,7 +80,7 @@ blocks:
   entrypoints: []
   connections: []
   uniqueness:
-    group: null
+    group: declare_protection_result_class
     allow_multiple_non_active: true
     forbid_active_duplicates: true
     suspected_duplicates: []
@@ -90,10 +90,10 @@ blocks:
     reason: null
   notes: null
 - id: resolve_project_blueprint_path
-  purpose: null
+  purpose: Return project blueprint path
   name: resolve_project_blueprint_path
-  domain: null
-  status: null
+  domain: lock system
+  status: active
   code:
     path: src/bpfw/protection/authority.py
     module: src.bpfw.protection.authority
@@ -109,7 +109,7 @@ blocks:
   entrypoints: []
   connections: []
   uniqueness:
-    group: null
+    group: return_project_blueprint_path
     allow_multiple_non_active: true
     forbid_active_duplicates: true
     suspected_duplicates: []
@@ -129,10 +129,10 @@ blocks:
       type: Path
       description: null
 - id: protected_resource
-  purpose: null
+  purpose: Declare ProtectedResource class
   name: ProtectedResource
-  domain: null
-  status: null
+  domain: lock system
+  status: active
   code:
     path: src/bpfw/protection/authority.py
     module: src.bpfw.protection.authority
@@ -148,7 +148,7 @@ blocks:
   entrypoints: []
   connections: []
   uniqueness:
-    group: null
+    group: declare_protected_resource_class
     allow_multiple_non_active: true
     forbid_active_duplicates: true
     suspected_duplicates: []
@@ -158,10 +158,10 @@ blocks:
     reason: null
   notes: null
 - id: resolve_bpfw_package_root
-  purpose: null
+  purpose: Return package root
   name: resolve_bpfw_package_root
-  domain: null
-  status: null
+  domain: lock system
+  status: active
   code:
     path: src/bpfw/protection/authority.py
     module: src.bpfw.protection.authority
@@ -177,7 +177,7 @@ blocks:
   entrypoints: []
   connections: []
   uniqueness:
-    group: null
+    group: return_package_root
     allow_multiple_non_active: true
     forbid_active_duplicates: true
     suspected_duplicates: []
@@ -191,10 +191,10 @@ blocks:
       type: Path
       description: null
 - id: resolve_guard_files
-  purpose: null
+  purpose: Return protected BPFW guard files
   name: resolve_guard_files
-  domain: null
-  status: null
+  domain: lock system
+  status: active
   code:
     path: src/bpfw/protection/authority.py
     module: src.bpfw.protection.authority
@@ -210,7 +210,7 @@ blocks:
   entrypoints: []
   connections: []
   uniqueness:
-    group: null
+    group: return_protected_b_p_f_w_guard_files
     allow_multiple_non_active: true
     forbid_active_duplicates: true
     suspected_duplicates: []
@@ -389,8 +389,8 @@ blocks:
     module: src.bpfw.catalog.domain_suggestions
     symbol: DomainSuggestion
     kind: class
-    start_line: 62
-    end_line: 67
+    start_line: 25
+    end_line: 30
   detected:
     qualified_name: src.bpfw.catalog.domain_suggestions.DomainSuggestion
     kind: class
@@ -408,20 +408,82 @@ blocks:
     replaced_by: null
     reason: null
   notes: null
-- id: get_code
+- id: project_vocabulary
   purpose: null
-  name: get_code
+  name: ProjectVocabulary
   domain: null
   status: null
   code:
-    path: src/bpfw/catalog/schema.py
-    module: src.bpfw.catalog.schema
-    symbol: get_code
-    kind: function
-    start_line: 83
-    end_line: 91
+    path: src/bpfw/catalog/keywords/models.py
+    module: src.bpfw.catalog.keywords.models
+    symbol: ProjectVocabulary
+    kind: class
+    start_line: 36
+    end_line: 62
   detected:
-    qualified_name: src.bpfw.catalog.schema.get_code
+    qualified_name: src.bpfw.catalog.keywords.models.ProjectVocabulary
+    kind: class
+    methods:
+    - ProjectVocabulary.get_token_block_frequency
+    - ProjectVocabulary.get_token_global_frequency
+    - ProjectVocabulary.is_common_token
+    - ProjectVocabulary.is_rare_token
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: keyword_evidence
+  purpose: null
+  name: KeywordEvidence
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/models.py
+    module: src.bpfw.catalog.keywords.models
+    symbol: KeywordEvidence
+    kind: class
+    start_line: 7
+    end_line: 13
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.models.KeywordEvidence
+    kind: class
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: tokenize_identifier
+  purpose: null
+  name: tokenize_identifier
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/tokenizer.py
+    module: src.bpfw.catalog.keywords.tokenizer
+    symbol: tokenize_identifier
+    kind: function
+    start_line: 6
+    end_line: 56
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.tokenizer.tokenize_identifier
     kind: function
     methods: []
     functions: []
@@ -439,28 +501,106 @@ blocks:
   notes: null
   interface:
     inputs:
-    - name: block
-      type: Dict[str, Any]
+    - name: identifier
+      type: str
       default: null
       required: true
       description: null
     output:
-      type: Dict[str, Any]
+      type: list[str]
       description: null
-- id: collect_domain_evidence
+- id: tokenize_path
   purpose: null
-  name: collect_domain_evidence
+  name: tokenize_path
   domain: null
   status: null
   code:
-    path: src/bpfw/catalog/domain_suggestions.py
-    module: src.bpfw.catalog.domain_suggestions
-    symbol: collect_domain_evidence
+    path: src/bpfw/catalog/keywords/tokenizer.py
+    module: src.bpfw.catalog.keywords.tokenizer
+    symbol: tokenize_path
     kind: function
-    start_line: 88
-    end_line: 123
+    start_line: 82
+    end_line: 112
   detected:
-    qualified_name: src.bpfw.catalog.domain_suggestions.collect_domain_evidence
+    qualified_name: src.bpfw.catalog.keywords.tokenizer.tokenize_path
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: path
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: tokenize_text
+  purpose: null
+  name: tokenize_text
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/tokenizer.py
+    module: src.bpfw.catalog.keywords.tokenizer
+    symbol: tokenize_text
+    kind: function
+    start_line: 59
+    end_line: 79
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.tokenizer.tokenize_text
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: text
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: extract_evidence_from_block
+  purpose: null
+  name: extract_evidence_from_block
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/evidence.py
+    module: src.bpfw.catalog.keywords.evidence
+    symbol: extract_evidence_from_block
+    kind: function
+    start_line: 107
+    end_line: 301
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.evidence.extract_evidence_from_block
     kind: function
     methods: []
     functions: []
@@ -484,22 +624,617 @@ blocks:
       required: true
       description: null
     output:
-      type: _DomainEvidence
+      type: list[KeywordEvidence]
       description: null
-- id: compose_domain_candidates
+- id: deduplicate_tokens
   purpose: null
-  name: compose_domain_candidates
+  name: deduplicate_tokens
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/normalizer.py
+    module: src.bpfw.catalog.keywords.normalizer
+    symbol: deduplicate_tokens
+    kind: function
+    start_line: 68
+    end_line: 86
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.normalizer.deduplicate_tokens
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: tokens
+      type: list[str]
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: filter_noise_tokens
+  purpose: null
+  name: filter_noise_tokens
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/normalizer.py
+    module: src.bpfw.catalog.keywords.normalizer
+    symbol: filter_noise_tokens
+    kind: function
+    start_line: 32
+    end_line: 65
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.normalizer.filter_noise_tokens
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: tokens
+      type: list[str]
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: normalize_token
+  purpose: null
+  name: normalize_token
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/normalizer.py
+    module: src.bpfw.catalog.keywords.normalizer
+    symbol: normalize_token
+    kind: function
+    start_line: 4
+    end_line: 29
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.normalizer.normalize_token
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: token
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: normalize_tokens
+  purpose: null
+  name: normalize_tokens
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/normalizer.py
+    module: src.bpfw.catalog.keywords.normalizer
+    symbol: normalize_tokens
+    kind: function
+    start_line: 89
+    end_line: 111
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.normalizer.normalize_tokens
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: tokens
+      type: list[str]
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: build_project_vocabulary
+  purpose: null
+  name: build_project_vocabulary
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/vocabulary.py
+    module: src.bpfw.catalog.keywords.vocabulary
+    symbol: build_project_vocabulary
+    kind: function
+    start_line: 10
+    end_line: 65
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.vocabulary.build_project_vocabulary
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: blocks
+      type: list[dict[str, Any]]
+      default: null
+      required: true
+      description: null
+    output:
+      type: ProjectVocabulary
+      description: null
+- id: suggest_domains
+  purpose: null
+  name: suggest_domains
   domain: null
   status: null
   code:
     path: src/bpfw/catalog/domain_suggestions.py
     module: src.bpfw.catalog.domain_suggestions
-    symbol: compose_domain_candidates
+    symbol: suggest_domains
     kind: function
-    start_line: 126
-    end_line: 212
+    start_line: 33
+    end_line: 63
   detected:
-    qualified_name: src.bpfw.catalog.domain_suggestions.compose_domain_candidates
+    qualified_name: src.bpfw.catalog.domain_suggestions.suggest_domains
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: dict[str, Any]
+      default: null
+      required: true
+      description: null
+    - name: project_blocks
+      type: list[dict[str, Any]] | None
+      default: null
+      required: false
+      description: null
+    output:
+      type: list[DomainSuggestion]
+      description: null
+- id: compare_declared_to_discovered
+  purpose: null
+  name: compare_declared_to_discovered
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/drift.py
+    module: src.bpfw.catalog.drift
+    symbol: compare_declared_to_discovered
+    kind: function
+    start_line: 130
+    end_line: 176
+  detected:
+    qualified_name: src.bpfw.catalog.drift.compare_declared_to_discovered
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: blueprint_data
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    - name: discovered_units
+      type: List[DiscoveredCodeUnit]
+      default: null
+      required: true
+      description: null
+    - name: authority_state
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: List[Finding]
+      description: null
+- id: intent_suggestion
+  purpose: null
+  name: IntentSuggestion
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/intent_suggestions.py
+    module: src.bpfw.catalog.intent_suggestions
+    symbol: IntentSuggestion
+    kind: class
+    start_line: 14
+    end_line: 19
+  detected:
+    qualified_name: src.bpfw.catalog.intent_suggestions.IntentSuggestion
+    kind: class
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: compact_intent_text
+  purpose: null
+  name: compact_intent_text
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/intent_suggestions.py
+    module: src.bpfw.catalog.intent_suggestions
+    symbol: compact_intent_text
+    kind: function
+    start_line: 44
+    end_line: 85
+  detected:
+    qualified_name: src.bpfw.catalog.intent_suggestions.compact_intent_text
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: text
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: block_keyword_profile
+  purpose: null
+  name: BlockKeywordProfile
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/models.py
+    module: src.bpfw.catalog.keywords.models
+    symbol: BlockKeywordProfile
+    kind: class
+    start_line: 27
+    end_line: 32
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.models.BlockKeywordProfile
+    kind: class
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: edit_distance
+  purpose: null
+  name: edit_distance
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/scorer.py
+    module: src.bpfw.catalog.keywords.scorer
+    symbol: edit_distance
+    kind: function
+    start_line: 237
+    end_line: 264
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.scorer.edit_distance
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: s1
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: s2
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: int
+      description: null
+- id: tokens_similar
+  purpose: null
+  name: tokens_similar
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/scorer.py
+    module: src.bpfw.catalog.keywords.scorer
+    symbol: tokens_similar
+    kind: function
+    start_line: 211
+    end_line: 234
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.scorer.tokens_similar
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: token1
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: token2
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: threshold
+      type: int
+      default: 2
+      required: false
+      description: null
+    output:
+      type: bool
+      description: null
+- id: deduplicate_similar
+  purpose: null
+  name: deduplicate_similar
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/scorer.py
+    module: src.bpfw.catalog.keywords.scorer
+    symbol: deduplicate_similar
+    kind: function
+    start_line: 172
+    end_line: 208
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.scorer.deduplicate_similar
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: candidates
+      type: list[KeywordCandidate]
+      default: null
+      required: true
+      description: null
+    - name: similarity_threshold
+      type: int
+      default: 2
+      required: false
+      description: null
+    output:
+      type: list[KeywordCandidate]
+      description: null
+- id: keyword_candidate
+  purpose: null
+  name: KeywordCandidate
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/models.py
+    module: src.bpfw.catalog.keywords.models
+    symbol: KeywordCandidate
+    kind: class
+    start_line: 17
+    end_line: 23
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.models.KeywordCandidate
+    kind: class
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: compute_distinctiveness
+  purpose: null
+  name: compute_distinctiveness
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/scorer.py
+    module: src.bpfw.catalog.keywords.scorer
+    symbol: compute_distinctiveness
+    kind: function
+    start_line: 75
+    end_line: 110
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.scorer.compute_distinctiveness
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: token
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: vocabulary
+      type: ProjectVocabulary
+      default: null
+      required: true
+      description: null
+    output:
+      type: float
+      description: null
+- id: score_evidence
+  purpose: null
+  name: score_evidence
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/scorer.py
+    module: src.bpfw.catalog.keywords.scorer
+    symbol: score_evidence
+    kind: function
+    start_line: 9
+    end_line: 72
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.scorer.score_evidence
     kind: function
     methods: []
     functions: []
@@ -518,12 +1253,462 @@ blocks:
   interface:
     inputs:
     - name: evidence
-      type: _DomainEvidence
+      type: list[KeywordEvidence]
+      default: null
+      required: true
+      description: null
+    - name: vocabulary
+      type: ProjectVocabulary | None
+      default: null
+      required: false
+      description: null
+    output:
+      type: list[KeywordCandidate]
+      description: null
+- id: extract_block_keywords
+  purpose: null
+  name: extract_block_keywords
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/extractor.py
+    module: src.bpfw.catalog.keywords.extractor
+    symbol: extract_block_keywords
+    kind: function
+    start_line: 12
+    end_line: 52
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.extractor.extract_block_keywords
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: dict[str, Any]
+      default: null
+      required: true
+      description: null
+    - name: vocabulary
+      type: '''ProjectVocabulary | None'''
+      default: null
+      required: false
+      description: null
+    - name: max_keywords
+      type: int
+      default: 15
+      required: false
+      description: null
+    - name: max_phrases
+      type: int
+      default: 10
+      required: false
+      description: null
+    output:
+      type: BlockKeywordProfile
+      description: null
+- id: suggest_intents
+  purpose: null
+  name: suggest_intents
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/intent_suggestions.py
+    module: src.bpfw.catalog.intent_suggestions
+    symbol: suggest_intents
+    kind: function
+    start_line: 152
+    end_line: 252
+  detected:
+    qualified_name: src.bpfw.catalog.intent_suggestions.suggest_intents
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: dict[str, Any]
+      default: null
+      required: true
+      description: null
+    - name: project_blocks
+      type: list[dict[str, Any]] | None
+      default: null
+      required: false
+      description: null
+    - name: existing_intents
+      type: tuple[str, ...]
+      default: ()
+      required: false
+      description: null
+    output:
+      type: list[IntentSuggestion]
+      description: null
+- id: project_vocabulary_get_token_block_frequency
+  purpose: null
+  name: ProjectVocabulary.get_token_block_frequency
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/models.py
+    module: src.bpfw.catalog.keywords.models
+    symbol: ProjectVocabulary.get_token_block_frequency
+    kind: method
+    start_line: 44
+    end_line: 48
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.models.ProjectVocabulary.get_token_block_frequency
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: token
+      type: str
       default: null
       required: true
       description: null
     output:
-      type: list[DomainSuggestion]
+      type: float
+      description: null
+- id: project_vocabulary_get_token_global_frequency
+  purpose: null
+  name: ProjectVocabulary.get_token_global_frequency
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/models.py
+    module: src.bpfw.catalog.keywords.models
+    symbol: ProjectVocabulary.get_token_global_frequency
+    kind: method
+    start_line: 50
+    end_line: 54
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.models.ProjectVocabulary.get_token_global_frequency
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: token
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: float
+      description: null
+- id: project_vocabulary_is_common_token
+  purpose: null
+  name: ProjectVocabulary.is_common_token
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/models.py
+    module: src.bpfw.catalog.keywords.models
+    symbol: ProjectVocabulary.is_common_token
+    kind: method
+    start_line: 56
+    end_line: 58
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.models.ProjectVocabulary.is_common_token
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: token
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: threshold
+      type: float
+      default: 0.7
+      required: false
+      description: null
+    output:
+      type: bool
+      description: null
+- id: project_vocabulary_is_rare_token
+  purpose: null
+  name: ProjectVocabulary.is_rare_token
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/models.py
+    module: src.bpfw.catalog.keywords.models
+    symbol: ProjectVocabulary.is_rare_token
+    kind: method
+    start_line: 60
+    end_line: 62
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.models.ProjectVocabulary.is_rare_token
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: token
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: threshold
+      type: float
+      default: 0.1
+      required: false
+      description: null
+    output:
+      type: bool
+      description: null
+- id: build_phrases_from_tokens
+  purpose: null
+  name: build_phrases_from_tokens
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/normalizer.py
+    module: src.bpfw.catalog.keywords.normalizer
+    symbol: build_phrases_from_tokens
+    kind: function
+    start_line: 114
+    end_line: 138
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.normalizer.build_phrases_from_tokens
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: tokens
+      type: list[str]
+      default: null
+      required: true
+      description: null
+    - name: max_length
+      type: int
+      default: 4
+      required: false
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: get_confidence_level
+  purpose: null
+  name: get_confidence_level
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/scorer.py
+    module: src.bpfw.catalog.keywords.scorer
+    symbol: get_confidence_level
+    kind: function
+    start_line: 113
+    end_line: 143
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.scorer.get_confidence_level
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: candidate
+      type: KeywordCandidate
+      default: null
+      required: true
+      description: null
+    - name: vocabulary
+      type: ProjectVocabulary | None
+      default: null
+      required: false
+      description: null
+    output:
+      type: str
+      description: null
+- id: filter_low_confidence
+  purpose: null
+  name: filter_low_confidence
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/scorer.py
+    module: src.bpfw.catalog.keywords.scorer
+    symbol: filter_low_confidence
+    kind: function
+    start_line: 146
+    end_line: 169
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.scorer.filter_low_confidence
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: candidates
+      type: list[KeywordCandidate]
+      default: null
+      required: true
+      description: null
+    - name: vocabulary
+      type: ProjectVocabulary | None
+      default: null
+      required: false
+      description: null
+    - name: min_confidence
+      type: str
+      default: low
+      required: false
+      description: null
+    output:
+      type: list[KeywordCandidate]
+      description: null
+- id: get_vocabulary_summary
+  purpose: null
+  name: get_vocabulary_summary
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/keywords/vocabulary.py
+    module: src.bpfw.catalog.keywords.vocabulary
+    symbol: get_vocabulary_summary
+    kind: function
+    start_line: 68
+    end_line: 116
+  detected:
+    qualified_name: src.bpfw.catalog.keywords.vocabulary.get_vocabulary_summary
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: vocabulary
+      type: ProjectVocabulary
+      default: null
+      required: true
+      description: null
+    output:
+      type: dict[str, Any]
       description: null
 - id: learning_scores
   purpose: null
@@ -619,910 +1804,6 @@ blocks:
   interface:
     output:
       type: LearningScores
-      description: null
-- id: rank_domain_suggestions
-  purpose: null
-  name: rank_domain_suggestions
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/domain_suggestions.py
-    module: src.bpfw.catalog.domain_suggestions
-    symbol: rank_domain_suggestions
-    kind: function
-    start_line: 215
-    end_line: 238
-  detected:
-    qualified_name: src.bpfw.catalog.domain_suggestions.rank_domain_suggestions
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: candidates
-      type: list[DomainSuggestion]
-      default: null
-      required: true
-      description: null
-    output:
-      type: list[DomainSuggestion]
-      description: null
-- id: suggest_domains
-  purpose: null
-  name: suggest_domains
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/domain_suggestions.py
-    module: src.bpfw.catalog.domain_suggestions
-    symbol: suggest_domains
-    kind: function
-    start_line: 81
-    end_line: 85
-  detected:
-    qualified_name: src.bpfw.catalog.domain_suggestions.suggest_domains
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: block
-      type: dict[str, Any]
-      default: null
-      required: true
-      description: null
-    output:
-      type: list[DomainSuggestion]
-      description: null
-- id: compare_declared_to_discovered
-  purpose: null
-  name: compare_declared_to_discovered
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/drift.py
-    module: src.bpfw.catalog.drift
-    symbol: compare_declared_to_discovered
-    kind: function
-    start_line: 130
-    end_line: 176
-  detected:
-    qualified_name: src.bpfw.catalog.drift.compare_declared_to_discovered
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: blueprint_data
-      type: Dict[str, Any]
-      default: null
-      required: true
-      description: null
-    - name: discovered_units
-      type: List[DiscoveredCodeUnit]
-      default: null
-      required: true
-      description: null
-    - name: authority_state
-      type: str
-      default: null
-      required: true
-      description: null
-    output:
-      type: List[Finding]
-      description: null
-- id: intent_suggestion
-  purpose: null
-  name: IntentSuggestion
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: IntentSuggestion
-    kind: class
-    start_line: 16
-    end_line: 21
-  detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.IntentSuggestion
-    kind: class
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-- id: compose_fixed_intent_slots
-  purpose: null
-  name: compose_fixed_intent_slots
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: compose_fixed_intent_slots
-    kind: function
-    start_line: 389
-    end_line: 445
-  detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.compose_fixed_intent_slots
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: action
-      type: _DetectedAction
-      default: null
-      required: true
-      description: null
-    - name: detected_object
-      type: _DetectedObject
-      default: null
-      required: true
-      description: null
-    - name: context
-      type: _DetectedContext
-      default: null
-      required: true
-      description: null
-    - name: behavior
-      type: _DetectedBehavior
-      default: null
-      required: true
-      description: null
-    - name: facts
-      type: _NormalizedFacts
-      default: null
-      required: true
-      description: null
-    - name: existing_intents
-      type: tuple[str, ...]
-      default: null
-      required: true
-      description: null
-    output:
-      type: list[IntentSuggestion]
-      description: null
-- id: detect_action
-  purpose: null
-  name: detect_action
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: detect_action
-    kind: function
-    start_line: 758
-    end_line: 815
-  detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.detect_action
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: facts
-      type: _NormalizedFacts
-      default: null
-      required: true
-      description: null
-    output:
-      type: _DetectedAction | None
-      description: null
-- id: detect_behavior
-  purpose: null
-  name: detect_behavior
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: detect_behavior
-    kind: function
-    start_line: 1268
-    end_line: 1363
-  detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.detect_behavior
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: facts
-      type: _NormalizedFacts
-      default: null
-      required: true
-      description: null
-    - name: action
-      type: _DetectedAction
-      default: null
-      required: true
-      description: null
-    - name: detected_object
-      type: _DetectedObject
-      default: null
-      required: true
-      description: null
-    output:
-      type: _DetectedBehavior
-      description: null
-- id: detect_context
-  purpose: null
-  name: detect_context
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: detect_context
-    kind: function
-    start_line: 1189
-    end_line: 1265
-  detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.detect_context
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: facts
-      type: _NormalizedFacts
-      default: null
-      required: true
-      description: null
-    - name: action
-      type: _DetectedAction
-      default: null
-      required: true
-      description: null
-    - name: detected_object
-      type: _DetectedObject
-      default: null
-      required: true
-      description: null
-    output:
-      type: _DetectedContext
-      description: null
-- id: detect_object
-  purpose: null
-  name: detect_object
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: detect_object
-    kind: function
-    start_line: 963
-    end_line: 1027
-  detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.detect_object
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: facts
-      type: _NormalizedFacts
-      default: null
-      required: true
-      description: null
-    - name: action
-      type: _DetectedAction
-      default: null
-      required: true
-      description: null
-    output:
-      type: _DetectedObject | None
-      description: null
-- id: tokenize_evidence
-  purpose: null
-  name: tokenize_evidence
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: tokenize_evidence
-    kind: function
-    start_line: 737
-    end_line: 744
-  detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.tokenize_evidence
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: text
-      type: str
-      default: null
-      required: true
-      description: null
-    output:
-      type: list[str]
-      description: null
-- id: normalize_duplicate_slots
-  purpose: null
-  name: normalize_duplicate_slots
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: normalize_duplicate_slots
-    kind: function
-    start_line: 448
-    end_line: 480
-  detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.normalize_duplicate_slots
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: suggestions
-      type: list[IntentSuggestion]
-      default: null
-      required: true
-      description: null
-    output:
-      type: list[IntentSuggestion]
-      description: null
-- id: suggest_intents
-  purpose: null
-  name: suggest_intents
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: suggest_intents
-    kind: function
-    start_line: 326
-    end_line: 360
-  detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.suggest_intents
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: block
-      type: dict[str, Any]
-      default: null
-      required: true
-      description: null
-    - name: existing_intents
-      type: tuple[str, ...]
-      default: ()
-      required: false
-      description: null
-    output:
-      type: list[IntentSuggestion]
-      description: null
-- id: collect_evidence_text
-  purpose: null
-  name: collect_evidence_text
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: collect_evidence_text
-    kind: function
-    start_line: 633
-    end_line: 636
-  detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.collect_evidence_text
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: block
-      type: dict[str, Any]
-      default: null
-      required: true
-      description: null
-    output:
-      type: str
-      description: null
-- id: compose_candidates
-  purpose: null
-  name: compose_candidates
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: compose_candidates
-    kind: function
-    start_line: 1366
-    end_line: 1469
-  detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.compose_candidates
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: action
-      type: _DetectedAction
-      default: null
-      required: true
-      description: null
-    - name: detected_object
-      type: _DetectedObject
-      default: null
-      required: true
-      description: null
-    - name: context
-      type: _DetectedContext
-      default: null
-      required: true
-      description: null
-    - name: behavior
-      type: _DetectedBehavior
-      default: null
-      required: true
-      description: null
-    - name: facts
-      type: _NormalizedFacts
-      default: null
-      required: true
-      description: null
-    - name: existing_intents
-      type: tuple[str, ...]
-      default: ()
-      required: false
-      description: null
-    output:
-      type: list[_Candidate]
-      description: null
-- id: apply_intent_compaction_rules
-  purpose: null
-  name: apply_intent_compaction_rules
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: apply_intent_compaction_rules
-    kind: function
-    start_line: 1713
-    end_line: 1720
-  detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.apply_intent_compaction_rules
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: text
-      type: str
-      default: null
-      required: true
-      description: null
-    output:
-      type: str
-      description: null
-- id: limit_intent_words
-  purpose: null
-  name: limit_intent_words
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: limit_intent_words
-    kind: function
-    start_line: 1723
-    end_line: 1729
-  detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.limit_intent_words
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: text
-      type: str
-      default: null
-      required: true
-      description: null
-    - name: max_words
-      type: int
-      default: MAX_INTENT_WORDS
-      required: false
-      description: null
-    output:
-      type: str
-      description: null
-- id: remove_low_value_adjectives
-  purpose: null
-  name: remove_low_value_adjectives
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: remove_low_value_adjectives
-    kind: function
-    start_line: 1700
-    end_line: 1710
-  detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.remove_low_value_adjectives
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: text
-      type: str
-      default: null
-      required: true
-      description: null
-    output:
-      type: str
-      description: null
-- id: remove_low_value_context
-  purpose: null
-  name: remove_low_value_context
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: remove_low_value_context
-    kind: function
-    start_line: 1690
-    end_line: 1697
-  detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.remove_low_value_context
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: text
-      type: str
-      default: null
-      required: true
-      description: null
-    output:
-      type: str
-      description: null
-- id: compact_intent_text
-  purpose: null
-  name: compact_intent_text
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: compact_intent_text
-    kind: function
-    start_line: 1671
-    end_line: 1687
-  detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.compact_intent_text
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: text
-      type: str
-      default: null
-      required: true
-      description: null
-    output:
-      type: str
-      description: null
-- id: deduplicate_suggestions
-  purpose: null
-  name: deduplicate_suggestions
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: deduplicate_suggestions
-    kind: function
-    start_line: 2002
-    end_line: 2015
-  detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.deduplicate_suggestions
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: suggestions
-      type: list[IntentSuggestion]
-      default: null
-      required: true
-      description: null
-    output:
-      type: list[IntentSuggestion]
-      description: null
-- id: rank_suggestions
-  purpose: null
-  name: rank_suggestions
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/catalog/intent_suggestions.py
-    module: src.bpfw.catalog.intent_suggestions
-    symbol: rank_suggestions
-    kind: function
-    start_line: 1849
-    end_line: 1861
-  detected:
-    qualified_name: src.bpfw.catalog.intent_suggestions.rank_suggestions
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: candidates
-      type: list[_Candidate]
-      default: null
-      required: true
-      description: null
-    output:
-      type: list[IntentSuggestion]
       description: null
 - id: record_intent_phrase
   purpose: null
@@ -1909,6 +2190,45 @@ blocks:
     replaced_by: null
     reason: null
   notes: null
+- id: get_code
+  purpose: null
+  name: get_code
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/catalog/schema.py
+    module: src.bpfw.catalog.schema
+    symbol: get_code
+    kind: function
+    start_line: 83
+    end_line: 91
+  detected:
+    qualified_name: src.bpfw.catalog.schema.get_code
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: Dict[str, Any]
+      description: null
 - id: get_kind
   purpose: null
   name: get_kind
