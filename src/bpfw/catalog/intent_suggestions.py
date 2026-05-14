@@ -1,16 +1,12 @@
-"""Deterministic natural-language purpose suggestions for catalog blocks."""
+"""AST-based intent suggestions using keyword extraction."""
 
-import ast
-import re
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
-from bpfw.catalog.schema import get_code, get_kind, get_purpose
-from bpfw.catalog.learning import (
-    get_top_learned_intents,
-    score_phrase_context_match,
-)
+from bpfw.catalog.keywords import extract_block_keywords, build_project_vocabulary
+from bpfw.catalog.keywords.models import BlockKeywordProfile, KeywordCandidate, ProjectVocabulary
+from bpfw.catalog.learning import get_top_learned_intents, score_phrase_context_match
+
 
 @dataclass(frozen=True, slots=True)
 class IntentSuggestion:
@@ -21,343 +17,48 @@ class IntentSuggestion:
     evidence: tuple[str, ...]
 
 
-@dataclass(frozen=True, slots=True)
-class _EvidenceItem:
-    """Represent one weighted source of purpose evidence."""
-
-    source: str
-    text: str
-    weight: int
-
-
-@dataclass(frozen=True, slots=True)
-class _NormalizedFacts:
-    """Hold normalized evidence grouped by source confidence."""
-
-    symbol: str
-    symbol_type: str
-    symbol_tokens: tuple[str, ...]
-    path_tokens: tuple[str, ...]
-    module_tokens: tuple[str, ...]
-    signature_tokens: tuple[str, ...]
-    parameter_tokens: tuple[str, ...]
-    return_tokens: tuple[str, ...]
-    method_tokens: tuple[str, ...]
-    function_tokens: tuple[str, ...]
-    docstring_tokens: tuple[str, ...]
-    import_tokens: tuple[str, ...]
-    decorator_tokens: tuple[str, ...]
-    raw_functions: tuple[str, ...]
-    raw_methods: tuple[str, ...]
-    all_tokens: tuple[str, ...]
-
-
-@dataclass(frozen=True, slots=True)
-class _DetectedAction:
-    """Represent the selected action and its evidence."""
-
-    verb: str
-    score: int
-    evidence: tuple[str, ...]
-    matched_token: str
-
-
-@dataclass(frozen=True, slots=True)
-class _DetectedObject:
-    """Represent the selected object and its evidence."""
-
-    text: str
-    score: int
-    evidence: tuple[str, ...]
-
-
-@dataclass(frozen=True, slots=True)
-class _DetectedContext:
-    """Represent the selected context and its evidence."""
-
-    text: str
-    score: int
-    evidence: tuple[str, ...]
-
-
-@dataclass(frozen=True, slots=True)
-class _DetectedBehavior:
-    """Represent a behavior signal used to select templates."""
-
-    text: str
-    score: int
-    evidence: tuple[str, ...]
-
-
-@dataclass(frozen=True, slots=True)
-class _Candidate:
-    """Represent an unranked purpose sentence candidate."""
-
-    text: str
-    score: int
-    evidence: tuple[str, ...]
-    source: str
-
-
-ACTION_WORDS = {
-    "ensure": "Ensure",
-    "verify": "Validate",
-    "check": "Validate",
-    "validate": "Validate",
-    "assert": "Validate",
-    "load": "Load",
-    "read": "Load",
-    "open": "Load",
-    "parse": "Load",
-    "save": "Write",
-    "write": "Write",
-    "dump": "Write",
-    "serialize": "Write",
-    "scan": "Scan",
-    "collect": "Collect",
-    "discover": "Scan",
-    "tokenize": "Normalize",
-    "normalize": "Normalize",
-    "compose": "Compose",
-    "compare": "Compare",
-    "diff": "Compare",
-    "match": "Compare",
-    "detect": "Detect",
-    "find": "Detect",
-    "block": "Block",
-    "prevent": "Block",
-    "deny": "Block",
-    "create": "Create",
-    "build": "Create",
-    "generate": "Create",
-    "make": "Create",
-    "issue": "Create",
-    "resolve": "Resolve",
-    "map": "Resolve",
-    "convert": "Resolve",
-    "render": "Render",
-    "format": "Render",
-    "display": "Render",
-    "apply": "Apply",
-    "update": "Update",
-    "delete": "Remove",
-    "remove": "Remove",
-    "lock": "Protect",
-    "protect": "Protect",
-    "unlock": "Unlock",
-    "run": "Run",
-    "execute": "Run",
-    "extract": "Extract",
-    "suggest": "Suggest",
-    "edit": "Edit",
-    "inspect": "Inspect",
-    "plan": "Plan",
-    "raise": "Raise",
-    "raised": "Raise",
-}
-
-ROLE_TO_ACTION = {
-    "issuer": "Create",
-    "validator": "Validate",
-    "verifier": "Validate",
-    "loader": "Load",
-    "reader": "Load",
-    "parser": "Load",
-    "writer": "Write",
-    "scanner": "Scan",
-    "collector": "Collect",
-    "normalizer": "Normalize",
-    "composer": "Compose",
-    "detector": "Detect",
-    "protector": "Protect",
-    "renderer": "Render",
-    "formatter": "Render",
-    "extractor": "Extract",
-    "resolver": "Resolve",
-    "builder": "Create",
-    "factory": "Create",
-    "suggestion": "Suggest",
-    "suggestor": "Suggest",
-    "runner": "Run",
-    "executor": "Run",
-    "editor": "Edit",
-    "inspector": "Inspect",
-    "planner": "Plan",
-}
-
-LOW_WEIGHT_ROLES = {
-    "manager",
-    "handler",
-    "service",
-    "helper",
-    "util",
-    "utility",
-    "base",
-    "abstract",
-    "mixin",
-    "engine",
-    "controller",
-}
-
-NOISE_TOKENS = LOW_WEIGHT_ROLES | {
-    "src",
-    "bpfw",
-    "catalog",
-    "core",
-    "integrations",
-    "protection",
-    "reports",
-    "py",
-    "self",
-    "none",
-    "list",
-    "dict",
-    "tuple",
-    "set",
-    "str",
-    "int",
-    "bool",
-    "any",
-}
-
-MINIMUM_SCORE = 55
-MAX_INTENT_WORDS = 5
-MAX_INTENT_CHARACTERS = 48
-LOW_VALUE_CONTEXT_PHRASES = (
-    "from deterministic block evidence",
-    "from deterministic block evidence",
-    "from one block dictionary",
-    "from one block dictionary",
-    "from block evidence",
-    "from block evidence",
-    "from block data",
-    "from block data",
-    "from evidence",
-    "using block evidence",
-    "using block evidence",
-    "based on block evidence",
-    "based on block evidence",
-)
-LOW_VALUE_ADJECTIVES = frozenset(
-    {"natural-language", "natural", "language", "deterministic", "ranked", "one", "current", "specific"}
-)
-COMPACTION_REPLACEMENTS = (
-    ("Produce ranked purpose suggestions", "Rank purpose suggestions"),
-    ("Produce purpose suggestions", "Suggest purposes"),
-    ("Suggest natural-language purposes", "Suggest purposes"),
-    ("Suggest natural language purposes", "Suggest purposes"),
-    ("Suggest purpose suggestions", "Suggest purposes"),
-    ("Suggest purposes", "Suggest purposes"),
-    ("Suggest purpose", "Suggest purpose"),
-    ("Rank purpose suggestions", "Rank purpose suggestions"),
-    ("Collect deterministic text evidence", "Collect evidence text"),
-    ("Collect text evidence", "Collect evidence text"),
-    ("Collect block evidence", "Collect evidence text"),
-    ("Build candidate suggestions", "Build suggestions"),
-    ("Compose candidate suggestions", "Compose suggestions"),
-    ("Compose purpose sentence candidates", "Build purpose candidates"),
-)
-DOCSTRING_OBJECT_STOPWORDS = frozenset(
-    {
-        "a",
-        "an",
-        "and",
-        "or",
-        "the",
-        "when",
-        "if",
-        "while",
-        "with",
-        "without",
-        "for",
-        "to",
-        "from",
-        "of",
-        "on",
-        "in",
-        "by",
-        "is",
-        "are",
-        "was",
-        "were",
-        "be",
-        "been",
-        "being",
-        "this",
-        "that",
-        "these",
-        "those",
-        "operation",
-        "attempt",
-        "attempted",
-        "require",
-        "requires",
-        "required",
-        "occur",
-        "occurs",
-        "occurred",
-        "raised",
-        "raise",
-        "raises",
-    }
-)
-ERROR_TOKENS = frozenset({"error", "exception"})
-
-INCOMPLETE_END_WORDS = frozenset(
-    {
-        "can",
-        "be",
-        "to",
-        "for",
-        "with",
-        "from",
-        "by",
-        "of",
-        "in",
-        "and",
-        "or",
-        "the",
-        "a",
-        "an",
-    }
-)
-
-
 def suggest_intents(
     block: dict[str, Any],
+    project_blocks: list[dict[str, Any]] | None = None,
     existing_intents: tuple[str, ...] = (),
 ) -> list[IntentSuggestion]:
-    """Suggest purposes using stable inspector slots.
-
-    Slot meaning:
-    - existing_purpose: reuse from current blueprint purposes when similar.
-    - learned_based: reuse from previously accepted purposes when context matches.
-    - name_based/docstring_based/blended_based: generated from current code evidence.
-    - custom_purpose: manual user entry option.
     """
+    Suggest purposes using AST-extracted keywords.
 
-    evidence = _collect_evidence(block)
-    facts = _normalize_facts(evidence)
-    action = detect_action(facts)
-    if action is None:
+    This implementation:
+    - Extracts keywords from block using AST analysis
+    - Uses project vocabulary to boost rare, distinctive tokens
+    - Composes suggestions from keywords without hardcoded vocabulary
+
+    Args:
+        block: Block dictionary from scanner.
+        project_blocks: Optional list of all blocks for vocabulary building.
+        existing_intents: Existing purposes to consider for reuse.
+
+    Returns:
+        List of IntentSuggestion items.
+    """
+    # Build project vocabulary if blocks provided
+    vocabulary = None
+    if project_blocks:
+        vocabulary = build_project_vocabulary(project_blocks)
+
+    # Extract keywords from block
+    profile = extract_block_keywords(block, vocabulary=vocabulary)
+
+    # If no keywords found, return empty suggestions
+    if not profile.keywords:
         return _empty_intent_slots()
 
-    detected_object = detect_object(facts=facts, action=action)
-    if detected_object is None:
-        return _empty_intent_slots()
-
-    context = detect_context(facts=facts, action=action, detected_object=detected_object)
-    behavior = detect_behavior(facts=facts, action=action, detected_object=detected_object)
-    slots = compose_fixed_intent_slots(
-        action=action,
-        detected_object=detected_object,
-        context=context,
-        behavior=behavior,
-        facts=facts,
+    # Compose suggestions from keywords
+    suggestions = _compose_suggestions(
+        block=block,
+        profile=profile,
+        vocabulary=vocabulary,
         existing_intents=existing_intents,
     )
-    deduplicated = normalize_duplicate_slots(slots)
-    return deduplicated
+
+    return suggestions
 
 
 def _empty_intent_slots() -> list[IntentSuggestion]:
@@ -366,1722 +67,227 @@ def _empty_intent_slots() -> list[IntentSuggestion]:
     return [
         IntentSuggestion("-", "existing_intent", ("source: existing_intent",)),
         IntentSuggestion("-", "learned_based", ("source: learned_based",)),
-        IntentSuggestion("-", "name_based", ("source: name_based",)),
+        IntentSuggestion("-", "keyword_based", ("source: keyword_based",)),
         IntentSuggestion("-", "docstring_based", ("source: docstring_based",)),
         IntentSuggestion("-", "blended_based", ("source: blended_based",)),
         IntentSuggestion("Write custom purpose...", "custom_intent", ("source: custom_intent",)),
     ]
 
 
-def _make_slot(
-    text: str,
-    source: str,
-    evidence: tuple[str, ...],
-) -> IntentSuggestion:
-    """Create one fixed suggestion slot with a placeholder when empty."""
-
-    cleaned = compact_intent_text(text)
-    if not cleaned:
-        cleaned = "-"
-    return IntentSuggestion(text=cleaned, source=source, evidence=evidence)
-
-
-def compose_fixed_intent_slots(
-    action: _DetectedAction,
-    detected_object: _DetectedObject,
-    context: _DetectedContext,
-    behavior: _DetectedBehavior,
-    facts: _NormalizedFacts,
+def _compose_suggestions(
+    block: dict[str, Any],
+    profile: BlockKeywordProfile,
+    vocabulary: ProjectVocabulary | None,
     existing_intents: tuple[str, ...],
 ) -> list[IntentSuggestion]:
-    """Compose purpose suggestions in a fixed inspector slot order."""
+    """
+    Compose purpose suggestions from keyword profile.
 
-    return [
-        _make_slot(
-            text=_compose_existing_intent_based_candidate(
-                facts=facts,
-                existing_intents=existing_intents,
-            ),
-            source="existing_intent",
-            evidence=("source: existing_intent",),
-        ),
-        _make_slot(
-            text=_compose_learned_based_candidate(facts=facts),
-            source="learned_based",
-            evidence=("source: learned_based",),
-        ),
-        _make_slot(
-            text=_compose_name_based_candidate(
-                facts=facts,
-                action=action,
-            ),
-            source="name_based",
-            evidence=("source: name_based",),
-        ),
-        _make_slot(
-            text=_compose_docstring_based_candidate(
-                facts=facts,
-                action=action,
-            ),
-            source="docstring_based",
-            evidence=("source: docstring_based",),
-        ),
-        _make_slot(
-            text=_compose_blended_based_candidate(
-                action=action,
-                detected_object=detected_object,
-                context=context,
-                behavior=behavior,
-                facts=facts,
-            ),
-            source="blended_based",
-            evidence=("source: blended_based",),
-        ),
+    Args:
+        block: Block dictionary.
+        profile: Keyword profile for block.
+        vocabulary: Optional project vocabulary.
+        existing_intents: Existing purposes to consider.
+
+    Returns:
+        List of suggestions.
+    """
+    suggestions: list[IntentSuggestion] = []
+
+    # Get top keywords
+    top_keywords = profile.keywords[:10]
+
+    # 1. Existing intent-based suggestion
+    existing = _find_existing_intent_match(block, existing_intents, top_keywords)
+    if existing:
+        suggestions.append(existing)
+
+    # 2. Learned-based suggestion
+    learned = _find_learned_intent_match(block, top_keywords)
+    if learned:
+        suggestions.append(learned)
+
+    # 3. Keyword-based suggestion (from symbol name)
+    keyword_based = _compose_from_keywords(top_keywords, primary_source="symbol_name")
+    if keyword_based:
+        suggestions.append(keyword_based)
+
+    # 4. Docstring-based suggestion
+    docstring_based = _compose_from_keywords(top_keywords, primary_source="docstring_summary")
+    if docstring_based and docstring_based != keyword_based:
+        suggestions.append(docstring_based)
+
+    # 5. Blended suggestion (from multiple sources)
+    blended = _compose_blended(top_keywords, profile.phrases)
+    if blended:
+        suggestions.append(blended)
+
+    # 6. Custom option
+    suggestions.append(
         IntentSuggestion(
             text="Write custom purpose...",
             source="custom_intent",
             evidence=("source: custom_intent",),
-        ),
-    ]
-
-
-def normalize_duplicate_slots(
-    suggestions: list[IntentSuggestion],
-) -> list[IntentSuggestion]:
-    """Replace repeated suggestion text with placeholders while preserving slot order."""
-
-    seen_index_by_key: dict[str, int] = {}
-    normalized: list[IntentSuggestion] = []
-    for suggestion_index, suggestion in enumerate(suggestions):
-        key = " ".join(tokenize_evidence(suggestion.text))
-        if suggestion.text != "-" and key in seen_index_by_key:
-            previous_index = seen_index_by_key[key]
-            previous_suggestion = normalized[previous_index]
-            if _is_more_informative(suggestion.text, previous_suggestion.text):
-                normalized[previous_index] = IntentSuggestion(
-                    text="-",
-                    source=previous_suggestion.source,
-                    evidence=previous_suggestion.evidence + ("duplicate: hidden",),
-                )
-                seen_index_by_key[key] = suggestion_index
-                normalized.append(suggestion)
-                continue
-            normalized.append(
-                IntentSuggestion(
-                    text="-",
-                    source=suggestion.source,
-                    evidence=suggestion.evidence + ("duplicate: hidden",),
-                )
-            )
-            continue
-        if suggestion.text != "-":
-            seen_index_by_key[key] = suggestion_index
-        normalized.append(suggestion)
-    return normalized
-
-
-def _is_more_informative(candidate: str, baseline: str) -> bool:
-    """Return True when candidate carries more meaningful object detail."""
-
-    candidate_tokens = [
-        token
-        for token in tokenize_evidence(candidate)
-        if token not in NOISE_TOKENS and token not in DOCSTRING_OBJECT_STOPWORDS
-    ]
-    baseline_tokens = [
-        token
-        for token in tokenize_evidence(baseline)
-        if token not in NOISE_TOKENS and token not in DOCSTRING_OBJECT_STOPWORDS
-    ]
-    return len(candidate_tokens) > len(baseline_tokens)
-
-
-def _collect_evidence(block: dict[str, Any]) -> list[_EvidenceItem]:
-    """Collect structured deterministic evidence from one block."""
-
-    evidence: list[_EvidenceItem] = []
-
-    location = get_code(block)
-    if isinstance(location, dict) and location:
-        _append_evidence(evidence, source="path", value=location.get("path"), weight=10)
-        _append_evidence(evidence, source="module", value=location.get("module"), weight=10)
-        _append_evidence(evidence, source="symbol", value=location.get("symbol"), weight=50)
-        _append_evidence(
-            evidence,
-            source="symbol_type",
-            value=get_kind(location),
-            weight=15,
-        )
-
-    detected_docstring = None
-
-    detected = block.get("detected")
-    if isinstance(detected, dict):
-        if not any(item.source == "symbol" for item in evidence):
-            qualified_name = detected.get("qualified_name")
-            if isinstance(qualified_name, str) and qualified_name.strip():
-                _append_evidence(
-                    evidence,
-                    source="symbol",
-                    value=qualified_name.split(".")[-1],
-                    weight=50,
-                )
-
-        if not any(item.source == "symbol_type" for item in evidence):
-            _append_evidence(
-                evidence,
-                source="symbol_type",
-                value=detected.get("kind"),
-                weight=15,
-            )
-
-        detected_docstring = detected.get("docstring")
-        _append_evidence(
-            evidence,
-            source="docstring",
-            value=detected_docstring,
-            weight=25,
-        )
-        _append_evidence(
-            evidence,
-            source="signature",
-            value=detected.get("signature"),
-            weight=45,
-        )
-
-        for source, weight in (
-            ("methods", 35),
-            ("functions", 25),
-            ("imports", 15),
-            ("decorators", 15),
-        ):
-            values = detected.get(source)
-            if isinstance(values, list):
-                for value in values:
-                    _append_evidence(evidence, source=source, value=value, weight=weight)
-
-    if not isinstance(detected_docstring, str) or not detected_docstring.strip():
-        source_docstring = _extract_docstring_from_source(location=location)
-        _append_evidence(
-            evidence,
-            source="docstring",
-            value=source_docstring,
-            weight=25,
-        )
-
-    _append_evidence(
-        evidence,
-        source="purpose",
-        value=get_purpose(block),
-        weight=35,
-    )
-    _append_evidence(
-        evidence,
-        source="name",
-        value=block.get("name"),
-        weight=35,
-    )
-
-    return evidence
-
-
-def _extract_docstring_from_source(location: dict[str, Any]) -> str:
-    """Extract symbol docstring from source when scanner-provided docstring is missing."""
-
-    path_value = location.get("path")
-    symbol_value = location.get("symbol")
-    symbol_type_value = get_kind(location)
-    if not isinstance(path_value, str) or not path_value.strip():
-        return ""
-    if not isinstance(symbol_value, str) or not symbol_value.strip():
-        return ""
-    if not isinstance(symbol_type_value, str) or not symbol_type_value.strip():
-        return ""
-
-    source_path = Path(path_value.strip())
-    if not source_path.exists():
-        return ""
-
-    try:
-        module_ast = ast.parse(source_path.read_text(encoding="utf-8"))
-    except (SyntaxError, OSError, UnicodeDecodeError):
-        return ""
-
-    target_name = symbol_value.strip().split(".")[-1]
-    symbol_type = symbol_type_value.strip().lower()
-    for node in module_ast.body:
-        if symbol_type == "class" and isinstance(node, ast.ClassDef) and node.name == target_name:
-            return ast.get_docstring(node) or ""
-        if symbol_type in {"function", "method"} and isinstance(node, ast.FunctionDef) and node.name == target_name:
-            return ast.get_docstring(node) or ""
-
-    return ""
-
-
-def _append_evidence(
-    evidence: list[_EvidenceItem],
-    source: str,
-    value: Any,
-    weight: int,
-) -> None:
-    """Append one evidence item when the value is meaningful text."""
-
-    if isinstance(value, str) and value.strip():
-        evidence.append(_EvidenceItem(source=source, text=value.strip(), weight=weight))
-
-
-def collect_evidence_text(block: dict[str, Any]) -> str:
-    """Collect deterministic text evidence from one block dictionary."""
-
-    return " ".join(item.text for item in _collect_evidence(block))
-
-
-def _normalize_facts(evidence: list[_EvidenceItem]) -> _NormalizedFacts:
-    """Normalize evidence into source-specific token groups."""
-
-    values_by_source: dict[str, list[str]] = {}
-    for item in evidence:
-        values_by_source.setdefault(item.source, []).append(item.text)
-
-    symbol = _first_text(values_by_source.get("symbol", []))
-    symbol_type = _first_text(values_by_source.get("symbol_type", []))
-    signature = _first_text(values_by_source.get("signature", []))
-    parameters, return_type = _parse_signature(signature)
-
-    symbol_tokens = tuple(tokenize_evidence(symbol))
-    path_tokens = _tokens_from_values(values_by_source.get("path", []))
-    module_tokens = _tokens_from_values(values_by_source.get("module", []))
-    signature_tokens = tuple(tokenize_evidence(signature))
-    parameter_tokens = _tokens_from_values(parameters)
-    return_tokens = tuple(tokenize_evidence(return_type))
-    method_tokens = _tokens_from_values(values_by_source.get("methods", []))
-    function_tokens = _tokens_from_values(values_by_source.get("functions", []))
-    docstring_tokens = _tokens_from_values(values_by_source.get("docstring", []))
-    import_tokens = _tokens_from_values(values_by_source.get("imports", []))
-    decorator_tokens = _tokens_from_values(values_by_source.get("decorators", []))
-    all_tokens = (
-        symbol_tokens
-        + path_tokens
-        + module_tokens
-        + signature_tokens
-        + parameter_tokens
-        + return_tokens
-        + method_tokens
-        + function_tokens
-        + docstring_tokens
-        + import_tokens
-        + decorator_tokens
-    )
-
-    return _NormalizedFacts(
-        symbol=symbol,
-        symbol_type=symbol_type,
-        symbol_tokens=symbol_tokens,
-        path_tokens=path_tokens,
-        module_tokens=module_tokens,
-        signature_tokens=signature_tokens,
-        parameter_tokens=parameter_tokens,
-        return_tokens=return_tokens,
-        method_tokens=method_tokens,
-        function_tokens=function_tokens,
-        docstring_tokens=docstring_tokens,
-        import_tokens=import_tokens,
-        decorator_tokens=decorator_tokens,
-        raw_functions=tuple(values_by_source.get("functions", [])),
-        raw_methods=tuple(values_by_source.get("methods", [])),
-        all_tokens=all_tokens,
-    )
-
-
-def _first_text(values: list[str]) -> str:
-    """Return the first non-empty text from a list."""
-
-    for value in values:
-        if value.strip():
-            return value.strip()
-    return ""
-
-
-def _tokens_from_values(values: list[str]) -> tuple[str, ...]:
-    """Tokenize multiple values into one tuple."""
-
-    tokens: list[str] = []
-    for value in values:
-        tokens.extend(tokenize_evidence(value))
-    return tuple(tokens)
-
-
-def _parse_signature(signature: str) -> tuple[list[str], str]:
-    """Extract parameter fragments and return type from a signature string."""
-
-    if not signature:
-        return [], ""
-
-    parameters: list[str] = []
-    parameters_match = re.search(r"\((.*?)\)", signature)
-    if parameters_match:
-        raw_parameters = parameters_match.group(1)
-        for raw_parameter in raw_parameters.split(","):
-            name = raw_parameter.split(":", 1)[0].strip()
-            if name and name != "self":
-                parameters.append(name)
-
-    return_type = ""
-    return_match = re.search(r"->\s*([^:]+)$", signature)
-    if return_match:
-        return_type = return_match.group(1).strip()
-
-    return parameters, return_type
-
-
-def tokenize_evidence(text: str) -> list[str]:
-    """Convert technical names and text evidence into normalized tokens."""
-
-    spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", text)
-    spaced = spaced.replace("_", " ").replace("-", " ")
-    spaced = spaced.replace("/", " ").replace(".", " ")
-    tokens = re.findall(r"[A-Za-z][A-Za-z0-9]*", spaced)
-    return [_normalize_token(token) for token in tokens]
-
-
-def _normalize_token(token: str) -> str:
-    """Normalize one token for deterministic ranking."""
-
-    lowered = token.lower()
-    if len(lowered) > 4 and lowered.endswith("ies"):
-        return f"{lowered[:-3]}y"
-    if len(lowered) > 3 and lowered.endswith("s"):
-        return lowered[:-1]
-    return lowered
-
-
-def detect_action(facts: _NormalizedFacts) -> _DetectedAction | None:
-    """Detect the strongest action from source-weighted normalized facts."""
-
-    candidates: list[_DetectedAction] = []
-
-    command_action = _detect_command_action(facts.symbol_tokens)
-    if command_action is not None:
-        candidates.append(command_action)
-
-    symbol_action = _detect_action_in_tokens(
-        tokens=facts.symbol_tokens,
-        score=50,
-        evidence_source="symbol",
-    )
-    if symbol_action is not None:
-        candidates.append(symbol_action)
-
-    method_action = _detect_action_in_tokens(
-        tokens=facts.method_tokens,
-        score=35,
-        evidence_source="methods",
-    )
-    if method_action is not None:
-        candidates.append(method_action)
-
-    docstring_action = _detect_action_in_tokens(
-        tokens=facts.docstring_tokens,
-        score=25,
-        evidence_source="docstring",
-    )
-    if docstring_action is not None:
-        candidates.append(docstring_action)
-
-    error_action = _detect_error_action(facts)
-    if error_action is not None:
-        candidates.append(error_action)
-
-    function_action = _detect_action_in_tokens(
-        tokens=facts.function_tokens,
-        score=25,
-        evidence_source="functions",
-    )
-    if function_action is not None:
-        candidates.append(function_action)
-
-    role_action = _detect_role_action(facts.symbol_tokens)
-    if role_action is not None:
-        candidates.append(role_action)
-
-    path_action = _detect_action_in_tokens(
-        tokens=facts.path_tokens + facts.module_tokens,
-        score=10,
-        evidence_source="path/module",
-    )
-    if path_action is not None:
-        candidates.append(path_action)
-
-    return _highest_scored(candidates)
-
-
-def _detect_error_action(facts: _NormalizedFacts) -> _DetectedAction | None:
-    """Detect error/exception symbols as raise behavior for purpose generation."""
-
-    symbol_tokens = set(facts.symbol_tokens)
-    docstring_tokens = set(facts.docstring_tokens)
-    if "error" in symbol_tokens or "exception" in symbol_tokens:
-        return _DetectedAction(
-            verb="Raise",
-            score=30,
-            evidence=("symbol: error/exception",),
-            matched_token="error" if "error" in symbol_tokens else "exception",
-        )
-    if "raised" in docstring_tokens or "raise" in docstring_tokens:
-        return _DetectedAction(
-            verb="Raise",
-            score=25,
-            evidence=("docstring: raised/raise",),
-            matched_token="raised" if "raised" in docstring_tokens else "raise",
-        )
-    return None
-
-
-def _is_error_symbol(symbol_tokens: tuple[str, ...]) -> bool:
-    """Return True when the symbol clearly represents an error/exception type."""
-
-    return bool(ERROR_TOKENS & set(symbol_tokens))
-
-
-def _extract_error_object_from_docstring(facts: _NormalizedFacts) -> str:
-    """Extract a concise error object phrase from docstring evidence."""
-
-    cleaned_tokens = [
-        token
-        for token in facts.docstring_tokens
-        if token not in NOISE_TOKENS and token not in DOCSTRING_OBJECT_STOPWORDS
-    ]
-    if not cleaned_tokens:
-        return ""
-
-    candidate_tokens: list[str] = []
-    for token in cleaned_tokens:
-        if token in ERROR_TOKENS:
-            continue
-        if token in {"missing", "invalid", "unknown", "locked", "protected"}:
-            candidate_tokens.append(token)
-            continue
-        if token in {"blueprint", "file", "path", "permission", "state", "token", "input"}:
-            candidate_tokens.append(token)
-            continue
-    if not candidate_tokens:
-        candidate_tokens = cleaned_tokens[:3]
-    candidate_tokens = _dedupe_tokens(candidate_tokens)
-    candidate_text = _humanize_object_tokens(candidate_tokens[:4])
-    if not candidate_text:
-        return ""
-    return f"{candidate_text} error"
-
-
-def _fallback_error_object_from_symbol(facts: _NormalizedFacts) -> str:
-    """Build an error object fallback from symbol tokens when docstring is weak."""
-
-    symbol_tokens = [
-        token
-        for token in facts.symbol_tokens
-        if token not in NOISE_TOKENS and token not in DOCSTRING_OBJECT_STOPWORDS
-    ]
-    symbol_tokens = [token for token in symbol_tokens if token not in ERROR_TOKENS]
-    if not symbol_tokens:
-        return "error"
-    symbol_text = _humanize_object_tokens(_dedupe_tokens(symbol_tokens)[:4])
-    if not symbol_text:
-        return "error"
-    return f"{symbol_text} error"
-
-
-def _detect_action_in_tokens(
-    tokens: tuple[str, ...],
-    score: int,
-    evidence_source: str,
-) -> _DetectedAction | None:
-    """Detect an action from one token stream."""
-
-    low_weight_action: _DetectedAction | None = None
-    for token in tokens:
-        if token in LOW_WEIGHT_ROLES:
-            low_weight_action = _DetectedAction(
-                verb=token.title(),
-                score=min(score, 15),
-                evidence=(f"{evidence_source}: {token}",),
-                matched_token=token,
-            )
-            continue
-
-        verb = ACTION_WORDS.get(token)
-        if verb is not None:
-            return _DetectedAction(
-                verb=verb,
-                score=score,
-                evidence=(f"{evidence_source}: {token}",),
-                matched_token=token,
-            )
-
-    return low_weight_action
-
-
-def _detect_command_action(tokens: tuple[str, ...]) -> _DetectedAction | None:
-    """Detect command wrapper symbols as runnable command-line behavior."""
-
-    if "command" not in tokens:
-        return None
-
-    if "verify" in tokens or "verification" in tokens:
-        return _DetectedAction(
-            verb="Run",
-            score=50,
-            evidence=("symbol: command",),
-            matched_token="command",
-        )
-
-    return None
-
-
-def _detect_role_action(tokens: tuple[str, ...]) -> _DetectedAction | None:
-    """Detect an action from a class role suffix."""
-
-    for token in reversed(tokens):
-        verb = ROLE_TO_ACTION.get(token)
-        if verb is not None:
-            return _DetectedAction(
-                verb=verb,
-                score=20,
-                evidence=(f"role: {token}",),
-                matched_token=token,
-            )
-    return None
-
-
-def _highest_scored(candidates: list[_DetectedAction]) -> _DetectedAction | None:
-    """Return the highest-scored action candidate."""
-
-    if not candidates:
-        return None
-    return sorted(candidates, key=lambda candidate: candidate.score, reverse=True)[0]
-
-
-def detect_object(
-    facts: _NormalizedFacts,
-    action: _DetectedAction,
-) -> _DetectedObject | None:
-    """Detect the object acted on by the block."""
-
-    all_tokens = facts.all_tokens
-
-    known_object = _detect_known_object(facts=facts, action=action)
-    if known_object is not None:
-        return known_object
-
-    symbol_object = _object_from_tokens(
-        tokens=facts.symbol_tokens,
-        action=action,
-        score=35,
-        evidence_source="symbol",
-    )
-    if symbol_object is not None:
-        return symbol_object
-
-    parameter_object = _object_from_tokens(
-        tokens=facts.parameter_tokens + facts.return_tokens,
-        action=action,
-        score=25,
-        evidence_source="signature",
-    )
-    if parameter_object is not None:
-        return parameter_object
-
-    call_object = _object_from_tokens(
-        tokens=facts.function_tokens + facts.method_tokens,
-        action=action,
-        score=20,
-        evidence_source="calls",
-    )
-    if call_object is not None:
-        return call_object
-
-    path_object = _object_from_tokens(
-        tokens=facts.path_tokens + facts.module_tokens,
-        action=action,
-        score=10,
-        evidence_source="path/module",
-    )
-    if path_object is not None:
-        return path_object
-
-    if "purpose" in all_tokens and action.verb == "Suggest":
-        return _DetectedObject(
-            text="purpose",
-            score=35,
-            evidence=("symbol: purpose",),
-        )
-
-    if action.verb == "Raise" and _is_error_symbol(facts.symbol_tokens):
-        docstring_error_object = _extract_error_object_from_docstring(facts)
-        object_text = docstring_error_object or _fallback_error_object_from_symbol(facts)
-        return _DetectedObject(
-            text=object_text,
-            score=30,
-            evidence=("error: fallback object",),
-        )
-
-    return None
-
-
-def _detect_known_object(
-    facts: _NormalizedFacts,
-    action: _DetectedAction,
-) -> _DetectedObject | None:
-    """Detect domain-specific object phrases from deterministic token sets."""
-
-    tokens = set(facts.all_tokens)
-
-    # Handle both old "purpose" and new "purpose" terminology in symbols
-    if "duplicate" in tokens and ("purpose" in tokens or "intent" in tokens):
-        return _DetectedObject(
-            text="duplicate active blocks by purpose",
-            score=40,
-            evidence=("tokens: duplicate purpose",),
-        )
-
-    if "authority" in tokens and "file" in tokens:
-        return _DetectedObject(
-            text="authority files",
-            score=40,
-            evidence=("tokens: authority file",),
-        )
-
-    if "blueprint" in tokens and (
-        "authority" in tokens
-        or "yaml" in tokens
-        or "path" in tokens
-        or "loader" in tokens
-        or "writer" in tokens
-        or action.verb in {"Load", "Write"}
-    ):
-        return _DetectedObject(
-            text="blueprint authority",
-            score=40,
-            evidence=("tokens: blueprint authority",),
-        )
-
-    if "block" in tokens and (
-        "declaration" in tokens
-        or "compare" in tokens
-        or "declared" in tokens
-        or "detected" in tokens
-    ):
-        return _DetectedObject(
-            text="block declarations",
-            score=40,
-            evidence=("tokens: block declarations",),
-        )
-
-    if "python" in tokens and ("source" in tokens or "file" in tokens):
-        return _DetectedObject(
-            text="Python source files",
-            score=40,
-            evidence=("tokens: python source",),
-        )
-
-    if "project" in tokens and ("source" in tokens or "code" in tokens):
-        return _DetectedObject(
-            text="project source code",
-            score=35,
-            evidence=("tokens: project source",),
-        )
-
-    if "command" in tokens and ("verify" in tokens or "verification" in tokens):
-        return _DetectedObject(
-            text="blueprint verification",
-            score=35,
-            evidence=("tokens: verify command",),
-        )
-
-    if action.verb == "Suggest" and "purpose" in tokens and "block" in tokens:
-        return _DetectedObject(
-            text="natural-language purposes",
-            score=45,
-            evidence=("tokens: purpose block",),
-        )
-
-    if action.verb == "Collect" and "evidence" in tokens:
-        return _DetectedObject(
-            text="block evidence",
-            score=40,
-            evidence=("tokens: evidence",),
-        )
-
-    if action.verb == "Normalize" and "evidence" in tokens:
-        return _DetectedObject(
-            text="technical evidence tokens",
-            score=40,
-            evidence=("tokens: evidence",),
-        )
-
-    if action.verb == "Compose" and "candidate" in tokens:
-        return _DetectedObject(
-            text="purpose sentence candidates",
-            score=40,
-            evidence=("tokens: candidate",),
-        )
-
-    return None
-
-
-def _object_from_tokens(
-    tokens: tuple[str, ...],
-    action: _DetectedAction,
-    score: int,
-    evidence_source: str,
-) -> _DetectedObject | None:
-    """Build an object phrase from one token stream."""
-
-    object_tokens = [
-        token for token in tokens
-        if token != action.matched_token
-        and ACTION_WORDS.get(token) != action.verb
-        and token not in ROLE_TO_ACTION
-        and token not in NOISE_TOKENS
-    ]
-    object_tokens = _dedupe_tokens(object_tokens)
-    if not object_tokens:
-        return None
-
-    text = _humanize_object_tokens(object_tokens[:4])
-    if not text:
-        return None
-
-    return _DetectedObject(
-        text=text,
-        score=score,
-        evidence=(f"{evidence_source}: {' '.join(object_tokens[:4])}",),
-    )
-
-
-def _dedupe_tokens(tokens: list[str]) -> list[str]:
-    """Return tokens with duplicates removed while preserving order."""
-
-    deduped: list[str] = []
-    seen: set[str] = set()
-    for token in tokens:
-        if token in seen:
-            continue
-        seen.add(token)
-        deduped.append(token)
-    return deduped
-
-
-def _humanize_object_tokens(tokens: list[str]) -> str:
-    """Convert normalized object tokens into a readable object phrase."""
-
-    if not tokens:
-        return ""
-
-    replacements = {
-        "jwt": "JWT",
-        "yaml": "YAML",
-        "python": "Python",
-        "cli": "command line",
-    }
-    return " ".join(replacements.get(token, token) for token in tokens)
-
-
-def detect_context(
-    facts: _NormalizedFacts,
-    action: _DetectedAction,
-    detected_object: _DetectedObject,
-) -> _DetectedContext:
-    """Detect a useful context phrase for the purpose sentence."""
-
-    tokens = set(facts.all_tokens)
-    raw_calls = " ".join(facts.raw_functions + facts.raw_methods)
-
-    if action.verb == "Run" and (
-        "cli" in tokens or "command" in tokens or "arg" in tokens
-    ):
-        return _DetectedContext(
-            text="from the command line",
-            score=20,
-            evidence=("tokens: command args",),
-        )
-
-    if (
-        "compare_responsibilities" in raw_calls
-        or {"compare", "block"} <= tokens
-        or {"source", "code"} <= tokens
-    ):
-        return _DetectedContext(
-            text="against detected source code",
-            score=25,
-            evidence=("calls: compare/source",),
-        )
-
-    if action.verb != "Raise" and ("drift" in tokens or "missing" in tokens or "undeclared" in tokens):
-        return _DetectedContext(
-            text="when blueprint drift is detected",
-            score=20,
-            evidence=("tokens: drift",),
-        )
-
-    if action.verb == "Write" and (
-        "path" in tokens or "file" in tokens or "yaml" in tokens or "blueprint" in tokens
-    ):
-        return _DetectedContext(
-            text="to disk",
-            score=20,
-            evidence=("tokens: write path",),
-        )
-
-    if action.verb == "Load" and (
-        "path" in tokens or "file" in tokens or "yaml" in tokens or "read" in tokens
-    ):
-        return _DetectedContext(
-            text="from disk",
-            score=20,
-            evidence=("tokens: load path",),
-        )
-
-    if "project" in tokens or "project_root" in raw_calls:
-        return _DetectedContext(
-            text="for a project",
-            score=15,
-            evidence=("tokens: project",),
-        )
-
-    if "lock" in tokens or "protect" in tokens or "os" in tokens:
-        return _DetectedContext(
-            text="with OS-level protection",
-            score=15,
-            evidence=("tokens: lock",),
-        )
-
-    if "block" in tokens and "evidence" in tokens:
-        return _DetectedContext(
-            text="from block evidence",
-            score=20,
-            evidence=("tokens: block evidence",),
-        )
-
-    return _DetectedContext(text="", score=0, evidence=())
-
-
-def detect_behavior(
-    facts: _NormalizedFacts,
-    action: _DetectedAction,
-    detected_object: _DetectedObject,
-) -> _DetectedBehavior:
-    """Detect behavior signals used by deterministic templates."""
-
-    tokens = set(facts.all_tokens)
-    raw_calls = " ".join(facts.raw_functions + facts.raw_methods)
-
-    if "load_blueprint" in raw_calls or (
-        action.verb == "Load" and "blueprint" in tokens
-    ):
-        return _DetectedBehavior(
-            text="reads authority from disk",
-            score=20,
-            evidence=("behavior: load blueprint",),
-        )
-
-    if "save_blueprint" in raw_calls or (
-        action.verb == "Write" and "blueprint" in tokens
-    ):
-        return _DetectedBehavior(
-            text="writes authority changes",
-            score=20,
-            evidence=("behavior: save blueprint",),
-        )
-
-    if "scan_python_project" in raw_calls or (
-        action.verb == "Scan" and "python" in tokens
-    ):
-        return _DetectedBehavior(
-            text="extracts Python source metadata",
-            score=20,
-            evidence=("behavior: scan python",),
-        )
-
-    if "compare_responsibilities" in raw_calls or (
-        "compare" in tokens and "block" in tokens
-    ):
-        return _DetectedBehavior(
-            text="compares declared and detected code",
-            score=20,
-            evidence=("behavior: compare blocks",),
-        )
-
-    if {"duplicate", "purpose"} <= tokens:
-        return _DetectedBehavior(
-            text="groups duplicate active blocks",
-            score=20,
-            evidence=("behavior: duplicate purposes",),
-        )
-
-    if action.verb == "Block" or "block" in tokens or "deny" in tokens:
-        return _DetectedBehavior(
-            text="blocks execution",
-            score=20,
-            evidence=("behavior: block execution",),
-        )
-
-    if action.verb == "Protect" or "lock" in tokens or "protect" in tokens:
-        return _DetectedBehavior(
-            text="protects authority files",
-            score=20,
-            evidence=("behavior: protect authority",),
-        )
-
-    if action.verb == "Suggest" and {"purpose", "evidence"} <= tokens:
-        return _DetectedBehavior(
-            text="produces ranked purpose suggestions",
-            score=20,
-            evidence=("behavior: suggest purposes",),
-        )
-
-    if action.verb == "Collect" and "evidence" in tokens:
-        return _DetectedBehavior(
-            text="collects block evidence",
-            score=15,
-            evidence=("behavior: collect evidence",),
-        )
-
-    if action.verb == "Normalize" and "evidence" in tokens:
-        return _DetectedBehavior(
-            text="normalizes technical evidence",
-            score=15,
-            evidence=("behavior: normalize evidence",),
-        )
-
-    if action.verb == "Compose" and "candidate" in tokens:
-        return _DetectedBehavior(
-            text="composes purpose candidates",
-            score=15,
-            evidence=("behavior: compose candidates",),
-        )
-
-    return _DetectedBehavior(text="", score=0, evidence=())
-
-
-def compose_candidates(
-    action: _DetectedAction,
-    detected_object: _DetectedObject,
-    context: _DetectedContext,
-    behavior: _DetectedBehavior,
-    facts: _NormalizedFacts,
-    existing_intents: tuple[str, ...] = (),
-) -> list[_Candidate]:
-    """Compose deterministic purpose sentence candidates."""
-
-    candidates: list[_Candidate] = []
-    base_score = action.score + detected_object.score + context.score + behavior.score
-    evidence = action.evidence + detected_object.evidence + context.evidence + behavior.evidence
-
-    template_text = _compose_blended_based_candidate(
-        action=action,
-        detected_object=detected_object,
-        context=context,
-        behavior=behavior,
-        facts=facts,
-    )
-    if template_text:
-        _append_candidate(
-            candidates=candidates,
-            text=template_text,
-            score=base_score + 15,
-            evidence=evidence + ("template: specific",),
-            source="blended_based",
-        )
-
-    name_text = _compose_name_based_candidate(
-        facts=facts,
-        action=action,
-    )
-    if name_text:
-        _append_candidate(
-            candidates=candidates,
-            text=name_text,
-            score=base_score + 10,
-            evidence=evidence + ("source: name_based",),
-            source="name_based",
-        )
-
-    docstring_text = _compose_docstring_based_candidate(
-        facts=facts,
-        action=action,
-    )
-    if docstring_text:
-        _append_candidate(
-            candidates=candidates,
-            text=docstring_text,
-            score=base_score + 5,
-            evidence=evidence + ("source: docstring_based",),
-            source="docstring_based",
-        )
-
-    learned_text = _compose_learned_based_candidate(
-        facts=facts,
-    )
-    if learned_text:
-        _append_candidate(
-            candidates=candidates,
-            text=learned_text,
-            score=base_score,
-            evidence=evidence + ("source: learned_based",),
-            source="learned_based",
-        )
-
-    existing_text = _compose_existing_intent_based_candidate(
-        facts=facts,
-        existing_intents=existing_intents,
-    )
-    if existing_text:
-        _append_candidate(
-            candidates=candidates,
-            text=existing_text,
-            score=base_score - 1,
-            evidence=evidence + ("source: existing_intent_based",),
-            source="existing_intent_based",
-        )
-
-    fallback_text = _compose_fallback(
-        action=action,
-        detected_object=detected_object,
-        context=context,
-    )
-    if fallback_text:
-        _append_candidate(
-            candidates=candidates,
-            text=fallback_text,
-            score=base_score - 5,
-            evidence=evidence + ("template: fallback",),
-            source="blended_based",
-        )
-
-    _append_compact_backfill_candidates(
-        candidates=candidates,
-        action=action,
-        facts=facts,
-        base_score=base_score - 10,
-        evidence=evidence + ("template: backfill",),
-    )
-
-    return candidates
-
-
-def _append_compact_backfill_candidates(
-    candidates: list[_Candidate],
-    action: _DetectedAction,
-    facts: _NormalizedFacts,
-    base_score: int,
-    evidence: tuple[str, ...],
-) -> None:
-    """Append compact deterministic fallbacks to keep three distinct options."""
-
-    tokens = set(facts.all_tokens)
-    object_tokens = _dedupe_tokens(
-        [
-            token
-            for token in facts.symbol_tokens + facts.parameter_tokens + facts.docstring_tokens
-            if token not in NOISE_TOKENS and token not in ACTION_WORDS and token not in ROLE_TO_ACTION
-        ]
-    )
-    object_text = _humanize_object_tokens(object_tokens[:3]) if object_tokens else "data"
-    backfills: list[str] = []
-
-    backfills.extend(
-        [
-            f"{action.verb} {object_text}",
-            f"{action.verb} {object_text} options",
-            f"{action.verb} {object_text} candidates",
-        ]
-    )
-
-    if "purpose" in tokens and action.verb in {"Suggest", "Compose", "Normalize"}:
-        backfills.extend(
-            ["Suggest purpose options", "Rank purpose suggestions", "Build purpose candidates"]
-        )
-    if "evidence" in tokens and action.verb in {"Collect", "Normalize"}:
-        backfills.extend(["Collect evidence text", "Normalize evidence facts"])
-
-    for index, text in enumerate(backfills):
-        _append_candidate(
-            candidates=candidates,
-            text=text,
-            score=base_score - index,
-            evidence=evidence,
-            source="blended_based",
-        )
-
-
-def _append_candidate(
-    candidates: list[_Candidate],
-    text: str,
-    score: int,
-    evidence: tuple[str, ...],
-    source: str,
-) -> None:
-    """Append one candidate when it is non-empty, distinct, and useful."""
-
-    cleaned = compact_intent_text(text)
-    if not cleaned:
-        return
-    if len(cleaned.split()) < 2:
-        return
-    if cleaned.startswith(("Handle ", "Manage ", "Process ")):
-        return
-
-    normalized = " ".join(tokenize_evidence(cleaned))
-    for candidate in candidates:
-        if " ".join(tokenize_evidence(candidate.text)) == normalized:
-            return
-    candidates.append(
-        _Candidate(
-            text=cleaned,
-            score=score,
-            evidence=evidence + (f"source: {source}", f"score_breakdown: base={score}"),
-            source=source,
         )
     )
 
+    # Ensure we have exactly 6 slots
+    while len(suggestions) < 6:
+        suggestions.insert(
+            -1,  # Insert before custom option
+            IntentSuggestion(text="-", source="empty", evidence=("source: empty",)),
+        )
 
-def _compose_name_based_candidate(
-    facts: _NormalizedFacts,
-    action: _DetectedAction,
-) -> str:
-    if action.verb == "Raise" and _is_error_symbol(facts.symbol_tokens):
-        return f"Raise {_fallback_error_object_from_symbol(facts)}"
-
-    symbol_tokens = [token for token in facts.symbol_tokens if token not in NOISE_TOKENS]
-    symbol_tokens = [token for token in symbol_tokens if ACTION_WORDS.get(token) != action.verb]
-    if not symbol_tokens:
-        return ""
-    return f"{action.verb} {_humanize_object_tokens(_dedupe_tokens(symbol_tokens)[:3])}"
+    return suggestions[:6]
 
 
-def _compose_docstring_based_candidate(
-    facts: _NormalizedFacts,
-    action: _DetectedAction,
-) -> str:
-    if action.verb == "Raise":
-        docstring_error_object = _extract_error_object_from_docstring(facts)
-        if docstring_error_object:
-            return f"Raise {docstring_error_object}"
-        if _is_error_symbol(facts.symbol_tokens):
-            return f"Raise {_fallback_error_object_from_symbol(facts)}"
-
-    doc_tokens = [
-        token
-        for token in facts.docstring_tokens
-        if token not in NOISE_TOKENS
-        and token not in LOW_WEIGHT_ROLES
-        and token not in DOCSTRING_OBJECT_STOPWORDS
-        and token != action.matched_token
-    ]
-    if not doc_tokens:
-        return ""
-    return f"{action.verb} {_humanize_object_tokens(_dedupe_tokens(doc_tokens)[:3])}"
-
-
-def _compose_learned_based_candidate(facts: _NormalizedFacts) -> str:
-    """Return best historical learned purpose that matches current context, if any."""
-
-    context_text = " ".join(facts.all_tokens)
-    learned = get_top_learned_intents(limit=15)
-    best_text = ""
-    best_score = 0
-    for text, count in learned:
-        overlap = score_phrase_context_match(text, context_text)
-        score = overlap * 10 + min(count, 8)
-        if score > best_score and overlap > 0:
-            best_score = score
-            best_text = text
-    return best_text.title() if best_text else ""
-
-
-def _compose_existing_intent_based_candidate(
-    facts: _NormalizedFacts,
+def _find_existing_intent_match(
+    block: dict[str, Any],
     existing_intents: tuple[str, ...],
-) -> str:
-    """Return best matching current-blueprint purpose, if similarity is meaningful."""
+    top_keywords: list[KeywordCandidate],
+) -> IntentSuggestion | None:
+    """Find best matching existing intent from current blueprint."""
 
     if not existing_intents:
-        return ""
-    context_tokens = set(facts.all_tokens)
-    strong_context_tokens = {
-        token
-        for token in context_tokens
-        if token not in NOISE_TOKENS and token not in LOW_WEIGHT_ROLES and len(token) > 3
-    }
-    best_intent = ""
-    best_overlap = 0
-    for purpose in existing_intents:
-        tokens = set(tokenize_evidence(purpose))
-        strong_intent_tokens = {
-            token
-            for token in tokens
-            if token not in NOISE_TOKENS and token not in LOW_WEIGHT_ROLES and len(token) > 3
-        }
-        overlap = len(strong_intent_tokens & strong_context_tokens)
-        if overlap > best_overlap:
-            best_overlap = overlap
-            best_intent = purpose
-    # Require meaningful similarity before reusing an existing purpose.
-    if best_overlap < 2:
-        return ""
-    return best_intent
+        return None
 
+    # Build context from keywords
+    context = " ".join(k.token for k in top_keywords)
 
-def _compose_blended_based_candidate(
-    action: _DetectedAction,
-    detected_object: _DetectedObject,
-    context: _DetectedContext,
-    behavior: _DetectedBehavior,
-    facts: _NormalizedFacts,
-) -> str:
-    template_text = _compose_template(action, detected_object, context, behavior, facts)
-    if template_text:
-        return template_text
+    # Find best match
+    best_match = ""
+    best_score = 0
 
-    behavior_text = _compose_behavior_candidate(
-        action=action,
-        detected_object=detected_object,
-        behavior=behavior,
-        context=context,
-        facts=facts,
-    )
-    if behavior_text:
-        return behavior_text
+    for intent in existing_intents:
+        # Score match using learning system
+        overlap = score_phrase_context_match(intent, context)
+        if overlap > best_score and overlap > 0.3:  # Minimum similarity threshold
+            best_score = overlap
+            best_match = intent
 
-    context_text = _compose_context_candidate(
-        action=action,
-        detected_object=detected_object,
-        context=context,
-    )
-    if context_text:
-        return context_text
-
-    return _compose_fallback(
-        action=action,
-        detected_object=detected_object,
-        context=context,
-    )
-
-
-def compact_intent_text(text: str) -> str:
-    """Compact an purpose suggestion into a short inspector-friendly phrase."""
-
-    compacted = " ".join(text.split()).strip()
-    if not compacted:
-        return ""
-
-    compacted = remove_low_value_context(compacted)
-    compacted = remove_low_value_adjectives(compacted)
-    compacted = apply_intent_compaction_rules(compacted)
-    compacted = " ".join(compacted.split()).strip()
-    compacted = limit_intent_words(compacted, max_words=MAX_INTENT_WORDS)
-    if len(compacted) > MAX_INTENT_CHARACTERS:
-        compacted = limit_intent_words(compacted, max_words=MAX_INTENT_WORDS - 1)
-    if not compacted:
-        return ""
-    return compacted[0].upper() + compacted[1:]
-
-
-def remove_low_value_context(text: str) -> str:
-    """Remove low-value context phrases from an purpose suggestion."""
-
-    for phrase in LOW_VALUE_CONTEXT_PHRASES:
-        suffix = f" {phrase}"
-        if text.lower().endswith(suffix):
-            return text[: -len(suffix)].strip()
-    return text
-
-
-def remove_low_value_adjectives(text: str) -> str:
-    """Remove weak adjectives that make purpose suggestions noisy."""
-
-    words = text.split()
-    filtered: list[str] = []
-    for word in words:
-        normalized = word.strip(",. ").lower()
-        if normalized in LOW_VALUE_ADJECTIVES:
-            continue
-        filtered.append(word)
-    return " ".join(filtered)
-
-
-def apply_intent_compaction_rules(text: str) -> str:
-    """Apply known phrase-level compaction rules to purpose text."""
-
-    compacted = text
-    for source, target in COMPACTION_REPLACEMENTS:
-        if compacted.startswith(source):
-            compacted = compacted.replace(source, target, 1)
-    return compacted
-
-
-def limit_intent_words(text: str, max_words: int = MAX_INTENT_WORDS) -> str:
-    """Limit an purpose suggestion to a maximum number of words."""
-
-    words = text.split()
-    if len(words) <= max_words:
-        return text
-    return " ".join(words[:max_words])
-
-
-def _compose_behavior_candidate(
-    action: _DetectedAction,
-    detected_object: _DetectedObject,
-    behavior: _DetectedBehavior,
-    context: _DetectedContext,
-    facts: _NormalizedFacts,
-) -> str:
-    """Compose a behavior-oriented variant when behavior evidence exists."""
-
-    if not behavior.text:
-        return ""
-    if "purpose suggestion" in behavior.text or "purpose suggestion" in behavior.text:
-        return "Produce ranked purpose suggestions from block evidence"
-    if action.verb == "Write" and "authority" in detected_object.text:
-        return "Persist blueprint authority changes to disk"
-    if context.text:
-        return f"{action.verb} {detected_object.text} {context.text}"
-    return f"{action.verb} {detected_object.text}"
-
-
-def _compose_context_candidate(
-    action: _DetectedAction,
-    detected_object: _DetectedObject,
-    context: _DetectedContext,
-) -> str:
-    """Compose an action + object + context variant."""
-
-    if not context.text:
-        return ""
-    return f"{action.verb} {detected_object.text} {context.text}"
-
-
-def _compose_symbol_candidate(
-    facts: _NormalizedFacts,
-    action: _DetectedAction,
-    detected_object: _DetectedObject,
-) -> str:
-    """Compose a shorter symbol-driven variant as a lower-priority option."""
-
-    symbol_tokens = [token for token in facts.symbol_tokens if token not in NOISE_TOKENS]
-    symbol_tokens = [token for token in symbol_tokens if ACTION_WORDS.get(token) != action.verb]
-    if not symbol_tokens:
-        return ""
-    object_text = _humanize_object_tokens(_dedupe_tokens(symbol_tokens)[:3])
-    if not object_text:
-        return ""
-    return f"{action.verb} {object_text}"
-
-
-def _compose_template(
-    action: _DetectedAction,
-    detected_object: _DetectedObject,
-    context: _DetectedContext,
-    behavior: _DetectedBehavior,
-    facts: _NormalizedFacts,
-) -> str:
-    """Compose a specific deterministic template when evidence is strong."""
-
-    tokens = set(facts.all_tokens)
-
-    if action.verb == "Validate" and (
-        "compare" in tokens
-        or behavior.text == "compares declared and detected code"
-        or context.text == "against detected source code"
-    ):
-        return "Validate blueprint declarations against detected source code"
-
-    if action.verb == "Load" and "blueprint" in tokens:
-        return "Load blueprint authority from disk"
-
-    if action.verb == "Write" and "blueprint" in tokens:
-        return "Write blueprint authority changes to disk"
-
-    if action.verb == "Scan" and ("python" in tokens or "source" in tokens):
-        return "Scan Python source files for declared code units"
-
-    if action.verb == "Detect" and {"duplicate", "purpose"} <= tokens:
-        return "Detect duplicate active blocks by purpose"
-
-    if action.verb == "Protect" and "authority" in tokens:
-        return "Protect authority files from direct modification"
-
-    if action.verb == "Run" and (
-        "verify" in tokens or "verification" in tokens
-    ) and ("command" in tokens or "cli" in tokens or "arg" in tokens):
-        return "Run blueprint verification from the command line"
-
-    if action.verb == "Suggest" and {"purpose", "block", "evidence"} <= tokens:
-        return "Suggest natural-language purposes from block evidence"
-
-    if action.verb == "Suggest" and "purpose" in tokens:
-        return "Suggest purpose"
-
-    if action.verb == "Collect" and "evidence" in tokens:
-        return "Collect block evidence"
-
-    if action.verb == "Normalize" and "evidence" in tokens:
-        return "Normalize technical evidence tokens"
-
-    if action.verb == "Compose" and "candidate" in tokens:
-        return "Compose purpose sentence candidates"
-
-    return ""
-
-
-def _compose_fallback(
-    action: _DetectedAction,
-    detected_object: _DetectedObject,
-    context: _DetectedContext,
-) -> str:
-    """Compose a high-evidence fallback sentence."""
-
-    if context.text:
-        return f"{action.verb} {detected_object.text} {context.text}"
-    return f"{action.verb} {detected_object.text}"
-
-
-def rank_suggestions(candidates: list[_Candidate]) -> list[IntentSuggestion]:
-    """Legacy helper: convert candidates to suggestions without reordering by score."""
-
-    suggestions: list[IntentSuggestion] = []
-    for candidate in candidates:
-        suggestions.append(
-            IntentSuggestion(
-                text=candidate.text,
-                source=candidate.source,
-                evidence=candidate.evidence,
-            )
+    if best_match:
+        return IntentSuggestion(
+            text=best_match,
+            source="existing_intent",
+            evidence=(f"overlap: {best_score:.2f}", "source: existing_intent"),
         )
-    return deduplicate_suggestions(suggestions)[:5]
+
+    return None
 
 
-def _apply_source_quota(
-    ranked_suggestions: list[IntentSuggestion],
-    original_candidates: list[_Candidate],
-    limit: int,
-) -> list[IntentSuggestion]:
-    """Keep at most one suggestion per source before filling remaining slots."""
+def _find_learned_intent_match(
+    block: dict[str, Any],
+    top_keywords: list[KeywordCandidate],
+) -> IntentSuggestion | None:
+    """Find best matching intent from learning system."""
 
-    by_text_source: dict[str, str] = {}
-    for candidate in original_candidates:
-        normalized_key = " ".join(tokenize_evidence(candidate.text))
-        # Keep first source seen for this normalized text to preserve
-        # the primary channel ordering from candidate composition.
-        if normalized_key not in by_text_source:
-            by_text_source[normalized_key] = candidate.source
-    chosen: list[IntentSuggestion] = []
-    seen_sources: set[str] = set()
-    leftovers: list[IntentSuggestion] = []
-    for suggestion in ranked_suggestions:
-        key = " ".join(tokenize_evidence(suggestion.text))
-        source = by_text_source.get(key, "blended_based")
-        if source not in seen_sources:
-            chosen.append(suggestion)
-            seen_sources.add(source)
-        else:
-            leftovers.append(suggestion)
-    for suggestion in leftovers:
-        if len(chosen) >= limit:
-            break
-        chosen.append(suggestion)
-    return chosen[:limit]
+    # Get top learned intents
+    learned = get_top_learned_intents(limit=10)
 
+    if not learned:
+        return None
 
-def _intent_learning_boost(
-    normalized_text: str,
-    learning_scores: dict[str, int],
-) -> int:
-    """Return a bounded learning boost for one normalized phrase."""
+    # Build context from keywords
+    context = " ".join(k.token for k in top_keywords)
 
-    count = learning_scores.get(normalized_text, 0)
-    if count <= 0:
-        return 0
-    return min(12, count * 2)
+    # Find best match
+    best_match = ""
+    best_score = 0
 
+    for text, count in learned:
+        overlap = score_phrase_context_match(text, context)
+        score = overlap * 10 + min(count, 8)
+        if score > best_score and overlap > 0.2:  # Minimum similarity threshold
+            best_score = score
+            best_match = text
 
-def _diversify_suggestions(
-    suggestions: list[IntentSuggestion],
-    limit: int,
-) -> list[IntentSuggestion]:
-    """Prefer high-scored suggestions with distinct compact semantics."""
-
-    diversified: list[IntentSuggestion] = []
-    seen_heads: set[str] = set()
-    seen_text: set[str] = set()
-
-    for suggestion in suggestions:
-        normalized_tokens = tokenize_evidence(suggestion.text)
-        if not normalized_tokens:
-            continue
-        normalized_text = " ".join(normalized_tokens)
-        if normalized_text in seen_text:
-            continue
-
-        semantic_head = " ".join(normalized_tokens[:2])
-        if semantic_head in seen_heads and len(diversified) >= max(2, limit - 2):
-            continue
-
-        diversified.append(suggestion)
-        seen_text.add(normalized_text)
-        seen_heads.add(semantic_head)
-        if len(diversified) >= limit:
-            break
-
-    return diversified
-
-
-def _fill_missing_with_synthetic_blends(
-    suggestions: list[IntentSuggestion],
-    limit: int,
-) -> list[IntentSuggestion]:
-    """Backfill missing slots by blending strong existing suggestions."""
-
-    if len(suggestions) >= limit:
-        return suggestions[:limit]
-    if not suggestions:
-        return suggestions
-
-    existing_keys = {" ".join(tokenize_evidence(item.text)) for item in suggestions}
-    seed_texts = [item.text for item in suggestions]
-    verb = seed_texts[0].split()[0] if seed_texts[0].split() else "Define"
-
-    token_pool: list[str] = []
-    for text in seed_texts:
-        tokens = [
-            token
-            for token in tokenize_evidence(text)
-            if token not in NOISE_TOKENS
-            and token not in LOW_WEIGHT_ROLES
-            and token not in {"suggest", "create", "build", "define", "maintain"}
-        ]
-        for token in tokens:
-            if token not in token_pool:
-                token_pool.append(token)
-
-    synthetic_candidates: list[str] = []
-    if token_pool:
-        primary = token_pool[0]
-        synthetic_candidates.append(f"{verb} {primary} options")
-        if len(token_pool) >= 2:
-            synthetic_candidates.append(f"{verb} {token_pool[0]} {token_pool[1]}")
-        synthetic_candidates.append(f"{verb} {primary} model")
-    synthetic_candidates.extend(
-        [
-            f"{verb} domain options",
-            f"{verb} domain metadata",
-            f"{verb} domain structure",
-        ]
-    )
-
-    filled = list(suggestions)
-    for text in synthetic_candidates:
-        compacted = compact_intent_text(text)
-        normalized = " ".join(tokenize_evidence(compacted))
-        if not compacted or normalized in existing_keys:
-            continue
-        existing_keys.add(normalized)
-        filled.append(
-            IntentSuggestion(
-                text=compacted,
-                source="synthetic_blended",
-                evidence=("source: synthetic_blended",),
-            )
+    if best_match:
+        return IntentSuggestion(
+            text=best_match.title(),
+            source="learned_based",
+            evidence=(f"score: {best_score:.1f}", "source: learned_based"),
         )
-        if len(filled) >= limit:
-            break
 
-    return filled[:limit]
+    return None
 
 
-def deduplicate_suggestions(
-    suggestions: list[IntentSuggestion],
-) -> list[IntentSuggestion]:
-    """Remove duplicate purpose suggestions while preserving first occurrence."""
-
-    by_text: dict[str, IntentSuggestion] = {}
-
-    for suggestion in suggestions:
-        normalized_text = " ".join(tokenize_evidence(suggestion.text))
-        existing = by_text.get(normalized_text)
-        if existing is None:
-            by_text[normalized_text] = suggestion
-
-    return list(by_text.values())
-
-
-def _apply_quality_filters(
-    suggestions: list[IntentSuggestion],
-    facts: _NormalizedFacts,
-) -> list[IntentSuggestion]:
-    """Filter out low-quality suggestions, preserving the fixed slot count.
-
-    Bad suggestions are replaced with "-" placeholders rather than removed,
-    so the caller always receives the same number of slots.
+def _compose_from_keywords(
+    keywords: list[KeywordCandidate],
+    primary_source: str = "symbol_name",
+) -> IntentSuggestion | None:
     """
+    Compose a suggestion from keywords, prioritizing a specific source.
 
-    is_error_block = _is_error_symbol(facts.symbol_tokens)
-    symbol_lower = facts.symbol.lower()
-    is_raise_function = (
-        symbol_lower.startswith("raise_")
-        or symbol_lower.startswith("raise")
+    Args:
+        keywords: List of ranked keywords.
+        primary_source: Source to prioritize (e.g., "symbol_name").
+
+    Returns:
+        IntentSuggestion or None.
+    """
+    # Filter keywords by primary source
+    primary_keywords = [k for k in keywords if primary_source in k.sources]
+
+    # If no keywords from primary source, use top keywords
+    source_keywords = primary_keywords if primary_keywords else keywords[:5]
+
+    if not source_keywords:
+        return None
+
+    # Build suggestion from top 3-5 keywords
+    tokens = [k.token for k in source_keywords[:5]]
+
+    # Skip if too few tokens
+    if len(tokens) < 2:
+        return None
+
+    # Capitalize first letter
+    text = " ".join(tokens)
+    text = text[0].upper() + text[1:] if text else ""
+
+    return IntentSuggestion(
+        text=text,
+        source="keyword_based" if primary_source == "symbol_name" else "docstring_based",
+        evidence=(f"keywords: {', '.join(tokens[:3])}", f"source: {primary_source}"),
     )
-    allow_raise = is_error_block or is_raise_function
 
-    filtered: list[IntentSuggestion] = []
-    seen_normalized: set[str] = set()
 
-    for suggestion in suggestions:
-        text = suggestion.text
-        if text == "-" or text.startswith("Write custom"):
-            filtered.append(suggestion)
-            continue
+def _compose_blended(
+    keywords: list[KeywordCandidate],
+    phrases: list[str],
+) -> IntentSuggestion | None:
+    """
+    Compose a blended suggestion from keywords and phrases.
 
-        words = text.split()
-        if len(words) < 3:
-            filtered.append(IntentSuggestion(
-                text="-", source=suggestion.source,
-                evidence=suggestion.evidence + ("filtered: too short",),
-            ))
-            continue
+    Args:
+        keywords: List of ranked keywords.
+        phrases: List of extracted phrases.
 
-        last_word = words[-1].lower().rstrip(".,;:")
-        if last_word in INCOMPLETE_END_WORDS:
-            filtered.append(IntentSuggestion(
-                text="-", source=suggestion.source,
-                evidence=suggestion.evidence + ("filtered: incomplete end",),
-            ))
-            continue
+    Returns:
+        IntentSuggestion or None.
+    """
+    # Prefer phrases over keywords
+    if phrases:
+        # Use first phrase
+        text = phrases[0].strip()
+        text = text[0].upper() + text[1:] if text else ""
 
-        if text.startswith("Raise") and not allow_raise:
-            filtered.append(IntentSuggestion(
-                text="-", source=suggestion.source,
-                evidence=suggestion.evidence + ("filtered: raise not allowed",),
-            ))
-            continue
+        return IntentSuggestion(
+            text=text,
+            source="blended_based",
+            evidence=(f"phrase: {phrases[0]}", "source: phrase"),
+        )
 
-        has_duplicates = len(words) != len(set(word.lower() for word in words))
-        if has_duplicates:
-            filtered.append(IntentSuggestion(
-                text="-", source=suggestion.source,
-                evidence=suggestion.evidence + ("filtered: duplicate words",),
-            ))
-            continue
+    # Fallback to keywords if no phrases
+    if keywords:
+        tokens = [k.token for k in keywords[:4]]
+        text = " ".join(tokens)
+        text = text[0].upper() + text[1:] if text else ""
 
-        normalized = " ".join(tokenize_evidence(text))
-        if normalized in seen_normalized:
-            filtered.append(IntentSuggestion(
-                text="-", source=suggestion.source,
-                evidence=suggestion.evidence + ("filtered: near duplicate",),
-            ))
-            continue
-        seen_normalized.add(normalized)
+        return IntentSuggestion(
+            text=text,
+            source="blended_based",
+            evidence=(f"keywords: {', '.join(tokens[:3])}", "source: keywords"),
+        )
 
-        filtered.append(suggestion)
-
-    return filtered
+    return None

@@ -1,61 +1,24 @@
-"""Deterministic domain suggestions for catalog blocks."""
+"""AST-based domain suggestions using path and vocabulary analysis."""
 
 from dataclasses import dataclass
-import re
 from typing import Any
 
+from bpfw.catalog.keywords import build_project_vocabulary
+from bpfw.catalog.keywords.models import ProjectVocabulary
+from bpfw.catalog.keywords.tokenizer import tokenize_identifier
 from bpfw.catalog.learning import load_learning_scores
 from bpfw.catalog.schema import get_code
 
-PACKAGE_ROOT_STOPWORDS = frozenset(
-    {"src", "bpfw", "tests", "test", "__init__", "py", "init"}
+
+# Technical stopwords that should be filtered regardless of frequency
+TECHNICAL_STOPWORDS = frozenset(
+    {"src", "tests", "test", "__init__", "py", "init"}
 )
-GENERIC_SYMBOL_STOPWORDS = frozenset(
-    {
-        "service",
-        "manager",
-        "handler",
-        "helper",
-        "utils",
-        "utility",
-        "processor",
-        "controller",
-        "builder",
-        "factory",
-        "repository",
-        "adapter",
-        "client",
-        "base",
-        "abstract",
-        "mixin",
-        "model",
-        "schema",
-        "data",
-        "info",
-        "item",
-        "object",
-        "class",
-        "function",
-        "method",
-        "session",
-        "run",
-        "text",
-    }
+
+# Broad folder tokens that are too generic to be meaningful domains
+BROAD_FOLDER_TOKENS = frozenset(
+    {"app", "api", "auth", "config", "core", "data", "db", "lib", "main", "models", "utils"}
 )
-DOCSTRING_STOPWORDS = frozenset(
-    {
-        "the",
-        "and",
-        "for",
-        "from",
-        "with",
-        "one",
-        "deterministic",
-        "represent",
-        "block",
-    }
-)
-BROAD_FOLDER_TOKENS = frozenset({"integrations"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +28,39 @@ class DomainSuggestion:
     text: str
     score: int
     evidence: tuple[str, ...]
+
+
+def suggest_domains(
+    block: dict[str, Any],
+    project_blocks: list[dict[str, Any]] | None = None,
+) -> list[DomainSuggestion]:
+    """
+    Suggest domains using path analysis and vocabulary.
+
+    This implementation:
+    - Analyzes file path structure to find domain clues
+    - Uses project vocabulary to identify generic vs distinctive tokens
+    - Boosts domains that appear in path but are rare in project
+
+    Args:
+        block: Block dictionary from scanner.
+        project_blocks: Optional list of all blocks for vocabulary building.
+
+    Returns:
+        List of DomainSuggestion items.
+    """
+    # Build project vocabulary if blocks provided
+    vocabulary = None
+    if project_blocks:
+        vocabulary = build_project_vocabulary(project_blocks)
+
+    # Collect evidence from block
+    evidence = _collect_domain_evidence(block)
+
+    # Compose and rank candidates
+    candidates = _compose_domain_candidates(evidence, vocabulary)
+
+    return _rank_domain_suggestions(candidates)
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,14 +74,7 @@ class _DomainEvidence:
     docstring_tokens: tuple[str, ...]
 
 
-def suggest_domains(block: dict[str, Any]) -> list[DomainSuggestion]:
-    """Suggest deterministic functional domains from block metadata."""
-
-    evidence = collect_domain_evidence(block)
-    return rank_domain_suggestions(compose_domain_candidates(evidence))
-
-
-def collect_domain_evidence(block: dict[str, Any]) -> _DomainEvidence:
+def _collect_domain_evidence(block: dict[str, Any]) -> _DomainEvidence:
     """Collect deterministic evidence used to suggest functional domains."""
 
     location = get_code(block)
@@ -107,12 +96,15 @@ def collect_domain_evidence(block: dict[str, Any]) -> _DomainEvidence:
         if isinstance(docstring_value, str):
             docstring = docstring_value
 
+    # Normalize path
     normalized_path = path.replace("\\", "/")
     path_parts = tuple(part for part in normalized_path.split("/") if part)
     module_parts = tuple(part for part in module.split(".") if part)
     file_stem = path_parts[-1].removesuffix(".py") if path_parts else ""
-    symbol_tokens = tuple(_split_identifier_tokens(symbol))
-    docstring_tokens = tuple(_split_text_tokens(docstring))
+
+    # Tokenize
+    symbol_tokens = tuple(tokenize_identifier(symbol))
+    docstring_tokens = tuple(_tokenize_text(docstring))
 
     return _DomainEvidence(
         path_parts=path_parts,
@@ -123,118 +115,184 @@ def collect_domain_evidence(block: dict[str, Any]) -> _DomainEvidence:
     )
 
 
-def compose_domain_candidates(evidence: _DomainEvidence) -> list[DomainSuggestion]:
+def _compose_domain_candidates(
+    evidence: _DomainEvidence,
+    vocabulary: ProjectVocabulary | None,
+) -> list[DomainSuggestion]:
     """Compose domain candidates from normalized block evidence."""
 
     candidates: list[DomainSuggestion] = []
 
-    folder_candidates = [
-        _normalize_domain(part)
+    # Extract folder tokens (excluding file name)
+    folder_tokens = [
+        token
         for part in evidence.path_parts[:-1]
-        if _normalize_domain(part) is not None
-    ]
-    file_stem = _normalize_domain(evidence.file_stem)
-    module_candidates = [
-        _normalize_domain(part)
-        for part in evidence.module_parts
-        if _normalize_domain(part) is not None
-    ]
-    symbol_candidates = [
-        token
-        for token in evidence.symbol_tokens
-        if token not in PACKAGE_ROOT_STOPWORDS and token not in GENERIC_SYMBOL_STOPWORDS
-    ]
-    docstring_candidates = [
-        token
-        for token in evidence.docstring_tokens
-        if token not in PACKAGE_ROOT_STOPWORDS
-        and token not in GENERIC_SYMBOL_STOPWORDS
-        and token not in DOCSTRING_STOPWORDS
+        for token in part.split("_")
+        if token and token not in TECHNICAL_STOPWORDS
     ]
 
-    symbol_set = set(symbol_candidates)
-    docstring_set = set(docstring_candidates)
-    path_set = set(folder_candidates + ([file_stem] if file_stem else []))
-    module_set = set(module_candidates)
-    expanded_path_module_tokens: set[str] = set()
-    for value in path_set | module_set:
-        expanded_path_module_tokens.update(token for token in value.split("_") if token)
+    # Extract file stem tokens
+    file_tokens = []
+    if evidence.file_stem:
+        file_tokens = [t for t in evidence.file_stem.split("_") if t and t not in TECHNICAL_STOPWORDS]
 
-    for candidate in folder_candidates:
+    # Extract module tokens
+    module_tokens = [part for part in evidence.module_parts if part and part not in TECHNICAL_STOPWORDS]
+
+    # Extract symbol tokens (excluding generics based on vocabulary)
+    symbol_tokens = []
+    for token in evidence.symbol_tokens:
+        if token in TECHNICAL_STOPWORDS:
+            continue
+        # Filter out generic tokens if vocabulary available
+        if vocabulary and vocabulary.is_common_token(token, threshold=0.7):
+            continue
+        symbol_tokens.append(token)
+
+    # Extract docstring tokens (excluding generics)
+    docstring_tokens = []
+    for token in evidence.docstring_tokens:
+        if token in TECHNICAL_STOPWORDS:
+            continue
+        if vocabulary and vocabulary.is_common_token(token, threshold=0.7):
+            continue
+        docstring_tokens.append(token)
+
+    # Build sets for overlap detection
+    symbol_set = set(symbol_tokens)
+    docstring_set = set(docstring_tokens)
+    path_set = set(folder_tokens + file_tokens)
+    module_set = set(module_tokens)
+
+    # 1. Folder-based candidates (highest priority)
+    for token in set(folder_tokens):
         score = 40
-        evidence_lines = [f"path segment: {candidate}"]
-        if candidate in BROAD_FOLDER_TOKENS:
-            score -= 15
-            evidence_lines.append(f"broad folder: {candidate}")
-        if candidate in symbol_set:
-            score += 25
-            evidence_lines.append(f"symbol token: {candidate}")
-        if candidate in module_set:
-            score += 20
-            evidence_lines.append(f"module segment: {candidate}")
-        _append_candidate(candidates, candidate, score, tuple(evidence_lines))
+        evidence_lines = [f"folder: {token}"]
 
-    if file_stem:
+        # Boost if token appears in symbol
+        if token in symbol_set:
+            score += 25
+            evidence_lines.append("symbol overlap")
+
+        # Boost if token appears in module
+        if token in module_set:
+            score += 20
+            evidence_lines.append("module overlap")
+
+        # Boost if token is rare in project
+        if vocabulary:
+            frequency = vocabulary.get_token_block_frequency(token)
+            if frequency < 0.3:  # Rare token
+                score += 15
+                evidence_lines.append(f"rare token ({frequency:.2f})")
+
+        _append_candidate(candidates, token, score, tuple(evidence_lines))
+
+    # 2. File stem candidates
+    for token in set(file_tokens):
         score = 35
-        evidence_lines = [f"file stem: {file_stem}"]
-        file_tokens = set(file_stem.split("_"))
-        if file_tokens & symbol_set:
+        evidence_lines = [f"file: {token}"]
+
+        # Boost if token appears in symbol
+        if token in symbol_set:
             score += 15
             evidence_lines.append("symbol overlap")
-        _append_candidate(candidates, file_stem, score, tuple(evidence_lines))
 
-    for candidate in module_candidates:
+        # Boost if token is rare
+        if vocabulary:
+            frequency = vocabulary.get_token_block_frequency(token)
+            if frequency < 0.3:
+                score += 10
+                evidence_lines.append(f"rare token ({frequency:.2f})")
+
+        _append_candidate(candidates, token, score, tuple(evidence_lines))
+
+    # 3. Module-based candidates
+    for token in set(module_tokens):
         score = 30
-        evidence_lines = [f"module segment: {candidate}"]
-        if candidate in symbol_set:
-            score += 20
-            evidence_lines.append(f"symbol token: {candidate}")
-        if candidate in path_set:
-            score += 15
-            evidence_lines.append(f"path segment: {candidate}")
-        _append_candidate(candidates, candidate, score, tuple(evidence_lines))
+        evidence_lines = [f"module: {token}"]
 
-    for candidate in symbol_candidates:
-        score = 25
-        evidence_lines = [f"symbol token: {candidate}"]
-        if candidate in docstring_set:
+        # Boost if token appears in symbol
+        if token in symbol_set:
+            score += 20
+            evidence_lines.append("symbol overlap")
+
+        # Boost if token appears in path
+        if token in path_set:
             score += 15
-            evidence_lines.append(f"docstring token: {candidate}")
-        if (
-            candidate in path_set
-            or candidate in module_set
-            or candidate in expanded_path_module_tokens
-        ):
-            score += 25
-            evidence_lines.append(f"path/module token: {candidate}")
-        _append_candidate(candidates, candidate, score, tuple(evidence_lines))
+            evidence_lines.append("path overlap")
+
+        _append_candidate(candidates, token, score, tuple(evidence_lines))
+
+    # 4. Symbol-based candidates (lower priority, only if distinctive)
+    for token in set(symbol_tokens):
+        score = 25
+        evidence_lines = [f"symbol: {token}"]
+
+        # Boost if token appears in docstring
+        if token in docstring_set:
+            score += 15
+            evidence_lines.append("docstring overlap")
+
+        # Boost if token appears in path/module
+        if token in path_set or token in module_set:
+            score += 20
+            evidence_lines.append("path/module overlap")
+
+        # Only add if token is distinctive (rare) or appears in multiple places
+        has_path_overlap = token in path_set or token in module_set
+        has_docstring_overlap = token in docstring_set
+
+        if not (has_path_overlap or has_docstring_overlap):
+            # Check if rare in project
+            is_rare = False
+            if vocabulary:
+                frequency = vocabulary.get_token_block_frequency(token)
+                is_rare = frequency < 0.2
+
+            if not is_rare:
+                # Skip generic symbols that don't appear elsewhere
+                continue
+
+        _append_candidate(candidates, token, score, tuple(evidence_lines))
 
     return candidates
 
 
-def rank_domain_suggestions(candidates: list[DomainSuggestion]) -> list[DomainSuggestion]:
-    """Rank, deduplicate, and limit deterministic domain suggestions."""
+def _rank_domain_suggestions(candidates: list[DomainSuggestion]) -> list[DomainSuggestion]:
+    """Rank, deduplicate, and limit domain suggestions."""
 
+    # Load learning scores for boosts
     learning_scores = load_learning_scores().domain_boost
+
+    # Deduplicate by text, keeping highest score
     by_text: dict[str, DomainSuggestion] = {}
     for candidate in candidates:
         normalized = candidate.text.strip().lower()
         if not normalized:
             continue
+
+        # Apply learning boost
         learned_boost = min(12, learning_scores.get(normalized, 0) * 2)
         boosted_score = candidate.score + learned_boost
+
         existing = by_text.get(normalized)
         if existing is None or boosted_score > existing.score:
+            evidence = candidate.evidence
+            if learned_boost:
+                evidence = candidate.evidence + (f"learned_boost:{learned_boost}",)
             by_text[normalized] = DomainSuggestion(
                 text=normalized,
                 score=boosted_score,
-                evidence=candidate.evidence + ((f"learned_boost:{learned_boost}",) if learned_boost else ()),
+                evidence=evidence,
             )
 
+    # Sort by score (descending), then by length (shorter first), then by text
     ranked = sorted(
         by_text.values(),
         key=lambda suggestion: (-suggestion.score, len(suggestion.text), suggestion.text),
     )
+
     return ranked[:3]
 
 
@@ -244,41 +302,31 @@ def _append_candidate(
     score: int,
     evidence: tuple[str, ...],
 ) -> None:
-    """Append one candidate if the value is valid."""
+    """Append one candidate if value is valid."""
 
     if text is None:
         return
+
     cleaned = text.strip().lower().replace("-", "_")
     if not cleaned:
         return
-    if cleaned in PACKAGE_ROOT_STOPWORDS:
+
+    if cleaned in TECHNICAL_STOPWORDS:
         return
+
     if cleaned.endswith(".py"):
         cleaned = cleaned[:-3]
-    if not cleaned or cleaned in PACKAGE_ROOT_STOPWORDS:
+
+    if not cleaned:
         return
+
     candidates.append(DomainSuggestion(text=cleaned, score=score, evidence=evidence))
 
 
-def _normalize_domain(value: str) -> str | None:
-    """Normalize one possible domain value."""
+def _tokenize_text(text: str) -> list[str]:
+    """Tokenize free text into words."""
 
-    cleaned = value.strip().lower().replace("-", "_").removesuffix(".py")
-    if not cleaned or cleaned in PACKAGE_ROOT_STOPWORDS:
-        return None
-    return cleaned
+    import re
 
-
-def _split_identifier_tokens(value: str) -> list[str]:
-    """Split snake_case and CamelCase identifiers into normalized tokens."""
-
-    spaced = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", value)
-    tokens = re.findall(r"[A-Za-z][A-Za-z0-9]*", spaced.replace("_", " "))
-    return [token.lower() for token in tokens if token]
-
-
-def _split_text_tokens(value: str) -> list[str]:
-    """Split free text into normalized tokens."""
-
-    tokens = re.findall(r"[A-Za-z][A-Za-z0-9]*", value)
+    tokens = re.findall(r"[A-Za-z][A-Za-z0-9]*", text)
     return [token.lower() for token in tokens if token]
