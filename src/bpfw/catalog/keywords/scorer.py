@@ -11,14 +11,14 @@ def score_evidence(
     vocabulary: ProjectVocabulary | None = None,
 ) -> list[KeywordCandidate]:
     """
-    Score and rank keyword candidates from evidence.
+    Evaluate and order keyword candidates from evidence.
 
     Args:
         evidence: List of KeywordEvidence items.
         vocabulary: Optional ProjectVocabulary for global context.
 
     Returns:
-        List of ranked KeywordCandidate items.
+        List of ordered KeywordCandidate items.
     """
     if not evidence:
         return []

@@ -1,4 +1,4 @@
-"""Incremental deterministic learning for suggestion ranking."""
+"""Incremental deterministic learning for fixed-slot suggestions."""
 
 from __future__ import annotations
 
@@ -46,10 +46,7 @@ COMPOUND_ERROR_QUALIFIERS = (
 
 @dataclass(frozen=True, slots=True)
 class LearningScores:
-    """Learning boost dictionaries used by suggestion scoring.
-
-    Scoring is local to each slot only, never global.
-    """
+    """Learning counters used as local evidence inside fixed slots."""
 
     purpose_phrase_boost: dict[str, int]
     domain_boost: dict[str, int]
@@ -81,6 +78,38 @@ def load_learning_scores() -> LearningScores:
     )
 
 
+def get_last_domain_for_origin(origin_key: str) -> str:
+    """Return the last accepted domain recorded for one code origin."""
+
+    normalized_origin = _normalize_origin(origin_key)
+    if not normalized_origin or not learning_enabled():
+        return ""
+    data = _read_learning_data()
+    bucket = data.get("domain_origin_last", {})
+    if not isinstance(bucket, dict):
+        return ""
+    value = bucket.get(normalized_origin)
+    return _normalize_domain(value) if isinstance(value, str) else ""
+
+
+def record_domain_for_origin(origin_key: str, domain: str) -> None:
+    """Record the last accepted domain for one code origin."""
+
+    normalized_origin = _normalize_origin(origin_key)
+    normalized_domain = _normalize_domain(domain)
+    if not normalized_origin or not normalized_domain or not learning_enabled():
+        return
+    payload = _read_learning_data()
+    bucket = payload.get("domain_origin_last")
+    if not isinstance(bucket, dict):
+        bucket = {}
+        payload["domain_origin_last"] = bucket
+    bucket[normalized_origin] = normalized_domain
+    payload["version"] = LEARNING_VERSION
+    payload["updated_at"] = datetime.now(timezone.utc).isoformat()
+    _write_learning_data(payload)
+
+
 def record_purpose_phrase(text: str, increment: int = 1) -> None:
     """Record one accepted purpose phrase."""
 
@@ -108,12 +137,12 @@ def get_top_learned_purposes(limit: int = 20) -> list[tuple[str, int]]:
     bucket = data.get("purpose_phrase_counts", {})
     if not isinstance(bucket, dict):
         return []
-    ranked = sorted(
+    ordered = sorted(
         ((str(key), _to_int(value)) for key, value in bucket.items()),
         key=lambda item: item[1],
         reverse=True,
     )
-    return ranked[:max(1, limit)]
+    return ordered[:max(1, limit)]
 
 
 def score_phrase_context_match(phrase: str, context_text: str) -> int:
@@ -172,13 +201,13 @@ def _trim_bucket(bucket: dict[str, Any], limit: int) -> None:
 
     if len(bucket) <= limit:
         return
-    ranked = sorted(
+    ordered = sorted(
         ((key, _to_int(value)) for key, value in bucket.items()),
         key=lambda item: item[1],
         reverse=True,
     )
     bucket.clear()
-    for key, value in ranked[:limit]:
+    for key, value in ordered[:limit]:
         bucket[key] = value
 
 
@@ -190,6 +219,7 @@ def _empty_learning_data() -> dict[str, Any]:
         "updated_at": None,
         "purpose_phrase_counts": {},
         "domain_counts": {},
+        "domain_origin_last": {},
     }
 
 
@@ -222,6 +252,17 @@ def _normalize_domain(text: str) -> str:
         return ""
     if normalized in IGNORED_TOKENS:
         return ""
+    if normalized in {"-", "custom", "write_custom_domain", "general"}:
+        return ""
+    return normalized
+
+
+def _normalize_origin(text: str) -> str:
+    """Normalize a code origin key for domain history storage."""
+
+    normalized = str(text).strip().lower().replace("\\", "/")
+    normalized = ".".join(part for part in normalized.split(".") if part)
+    normalized = "/".join(part for part in normalized.split("/") if part)
     return normalized
 
 

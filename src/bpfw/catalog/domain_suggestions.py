@@ -6,6 +6,7 @@ from typing import Any
 from bpfw.catalog.keywords import build_project_vocabulary
 from bpfw.catalog.keywords.models import ProjectVocabulary
 from bpfw.catalog.keywords.tokenizer import tokenize_identifier
+from bpfw.catalog.learning import get_last_domain_for_origin
 from bpfw.catalog.schema import get_code
 
 
@@ -14,9 +15,14 @@ TECHNICAL_STOPWORDS = frozenset(
     {"src", "tests", "test", "__init__", "py", "init"}
 )
 
-# Broad folder tokens that are too generic to be meaningful domains
+# Package or utility folder tokens that are too generic to be functional domains.
+# "core" is intentionally allowed because BPFW treats it as a real domain.
 BROAD_FOLDER_TOKENS = frozenset(
-    {"app", "api", "auth", "config", "core", "data", "db", "lib", "main", "models", "utils"}
+    {"app", "api", "config", "data", "db", "lib", "main", "models", "utils"}
+)
+
+GENERIC_SYMBOL_TOKENS = frozenset(
+    {"error", "exception", "service", "manager", "handler", "helper"}
 )
 
 
@@ -25,7 +31,6 @@ class DomainSuggestion:
     """Represent one deterministic domain suggestion."""
 
     text: str
-    score: int
     evidence: tuple[str, ...]
 
 
@@ -34,48 +39,51 @@ def suggest_domains(
     project_blocks: list[dict[str, Any]] | None = None,
 ) -> list[str]:
     """
-    Suggest domains using path analysis and vocabulary.
+    Suggest domains using fixed evidence slots.
 
-    This implementation uses fixed slot ordering:
+    The slot order is fixed:
     [q] folder_based
     [w] file_based
     [e] module_based
     [r] symbol_based
-    [t] fallback_domain
+    [t] previous_domain_for_origin
     [y] custom_domain
 
-    No dynamic sorting, ranking, or reordering is performed.
+    No dynamic sorting or reordering is performed.
 
     Args:
         block: Block dictionary from scanner.
-        project_blocks: Optional list of all blocks for vocabulary building.
+        project_blocks: Optional list of all blocks for vocabulary and origin history.
 
     Returns:
         List of domain strings in fixed slot order.
     """
-    # Build project vocabulary if blocks provided
+
     vocabulary = None
     if project_blocks:
         vocabulary = build_project_vocabulary(project_blocks)
 
-    # Collect evidence from block
     evidence = _collect_domain_evidence(block)
 
-    # Compose candidates for each fixed slot
     folder_result = _compose_folder_based_domain(evidence, vocabulary)
     file_result = _compose_file_based_domain(evidence, vocabulary)
     module_result = _compose_module_based_domain(evidence, vocabulary)
     symbol_result = _compose_symbol_based_domain(evidence, vocabulary)
-    fallback_result = _compose_fallback_domain(evidence)
+    previous_origin_result = _compose_previous_origin_domain(
+        block=block,
+        evidence=evidence,
+        project_blocks=project_blocks or [],
+    )
+    if not previous_origin_result:
+        previous_origin_result = get_last_domain_for_origin(evidence.origin_key)
 
-    # Return domains in fixed slot order
     return [
         folder_result or "-",
         file_result or "-",
         module_result or "-",
         symbol_result or "-",
-        fallback_result or "-",
-        "custom",  # Custom domain slot
+        previous_origin_result or "-",
+        "custom",
     ]
 
 
@@ -88,6 +96,7 @@ class _DomainEvidence:
     symbol_tokens: tuple[str, ...]
     file_stem: str
     docstring_tokens: tuple[str, ...]
+    origin_key: str
 
 
 def _collect_domain_evidence(block: dict[str, Any]) -> _DomainEvidence:
@@ -112,13 +121,12 @@ def _collect_domain_evidence(block: dict[str, Any]) -> _DomainEvidence:
         if isinstance(docstring_value, str):
             docstring = docstring_value
 
-    # Normalize path
     normalized_path = path.replace("\\", "/")
     path_parts = tuple(part for part in normalized_path.split("/") if part)
     module_parts = tuple(part for part in module.split(".") if part)
     file_stem = path_parts[-1].removesuffix(".py") if path_parts else ""
+    origin_key = _resolve_origin_key(path=normalized_path, module=module)
 
-    # Tokenize
     symbol_tokens = tuple(tokenize_identifier(symbol))
     docstring_tokens = tuple(_tokenize_text(docstring))
 
@@ -128,6 +136,7 @@ def _collect_domain_evidence(block: dict[str, Any]) -> _DomainEvidence:
         symbol_tokens=symbol_tokens,
         file_stem=file_stem,
         docstring_tokens=docstring_tokens,
+        origin_key=origin_key,
     )
 
 
@@ -135,21 +144,12 @@ def _compose_folder_based_domain(
     evidence: _DomainEvidence,
     vocabulary: ProjectVocabulary | None,
 ) -> str | None:
-    """Compose domain from folder path tokens (slot q)."""
+    """Compose domain from the nearest functional folder (slot q)."""
 
-    # Extract folder tokens (excluding file name)
-    folder_tokens = [
-        token
-        for part in evidence.path_parts[:-1]
-        for token in part.split("_")
-        if token and token not in TECHNICAL_STOPWORDS and token not in BROAD_FOLDER_TOKENS
-    ]
-
-    # Return first valid folder token
-    for token in folder_tokens:
-        if token and token not in TECHNICAL_STOPWORDS and token not in BROAD_FOLDER_TOKENS:
-            return token
-
+    for part in reversed(evidence.path_parts[:-1]):
+        for token in part.split("_"):
+            if _is_domain_token(token):
+                return token
     return None
 
 
@@ -162,17 +162,9 @@ def _compose_file_based_domain(
     if not evidence.file_stem:
         return None
 
-    # Extract file stem tokens
-    file_tokens = [
-        t
-        for t in evidence.file_stem.split("_")
-        if t and t not in TECHNICAL_STOPWORDS and t not in BROAD_FOLDER_TOKENS
-    ]
-
-    # Return first valid file token
+    file_tokens = [token for token in evidence.file_stem.split("_") if _is_domain_token(token)]
     for token in file_tokens:
         return token
-
     return None
 
 
@@ -180,20 +172,14 @@ def _compose_module_based_domain(
     evidence: _DomainEvidence,
     vocabulary: ProjectVocabulary | None,
 ) -> str | None:
-    """Compose domain from module path tokens (slot e)."""
+    """Compose domain from the functional parent module (slot e)."""
 
-    # Extract module tokens
-    module_tokens = [
-        part
-        for part in evidence.module_parts
-        if part and part not in TECHNICAL_STOPWORDS and part not in BROAD_FOLDER_TOKENS
-    ]
-
-    # Return last valid module token
-    if module_tokens:
-        return module_tokens[-1]
-
-    return None
+    module_tokens = [part for part in evidence.module_parts if _is_domain_token(part)]
+    if not module_tokens:
+        return None
+    if len(module_tokens) >= 2:
+        return module_tokens[-2]
+    return module_tokens[-1]
 
 
 def _compose_symbol_based_domain(
@@ -202,41 +188,96 @@ def _compose_symbol_based_domain(
 ) -> str | None:
     """Compose domain from symbol name tokens (slot r)."""
 
-    # Extract symbol tokens
     symbol_tokens = []
     for token in evidence.symbol_tokens:
-        if token in TECHNICAL_STOPWORDS:
+        if not _is_domain_token(token):
             continue
-        if token in BROAD_FOLDER_TOKENS:
-            continue
-        # Filter out generic tokens if vocabulary available
-        if vocabulary and vocabulary.is_common_token(token, threshold=0.7):
+        if token in GENERIC_SYMBOL_TOKENS:
             continue
         symbol_tokens.append(token)
-
-    # Return first valid symbol token
     if symbol_tokens:
         return symbol_tokens[0]
-
     return None
 
 
-def _compose_fallback_domain(evidence: _DomainEvidence) -> str | None:
-    """Compose fallback domain from generic sources (slot t)."""
+def _compose_previous_origin_domain(
+    block: dict[str, Any],
+    evidence: _DomainEvidence,
+    project_blocks: list[dict[str, Any]],
+) -> str | None:
+    """Return the last accepted domain used by another block from the same origin."""
 
-    fallback_tokens = ("core", "general", "shared", "misc", "system")
+    if not evidence.origin_key:
+        return None
 
-    # Try to find a fallback from path or module
-    all_path_tokens = list(evidence.path_parts[:-1])
-    if evidence.file_stem:
-        all_path_tokens.append(evidence.file_stem)
+    current_identity = _resolve_block_identity(block)
+    last_domain = None
+    for candidate_block in project_blocks:
+        if not isinstance(candidate_block, dict):
+            continue
+        if _resolve_block_identity(candidate_block) == current_identity:
+            continue
+        candidate_evidence = _collect_domain_evidence(candidate_block)
+        if candidate_evidence.origin_key != evidence.origin_key:
+            continue
+        candidate_domain = _get_domain_value(candidate_block)
+        if _is_valid_suggestion_value(candidate_domain):
+            last_domain = candidate_domain.strip()
+    return last_domain
 
-    for token in fallback_tokens:
-        if token in all_path_tokens or token in evidence.module_parts:
-            return token
 
-    # Return first fallback token as default
-    return fallback_tokens[0] if fallback_tokens else None
+def _resolve_block_identity(block: dict[str, Any]) -> tuple[str, str, str]:
+    """Return a stable identity for excluding the current block from history."""
+
+    code = get_code(block)
+    block_id = block.get("id")
+    path = code.get("path") if isinstance(code, dict) else ""
+    symbol = code.get("symbol") if isinstance(code, dict) else ""
+    return (
+        str(block_id or "").strip(),
+        str(path or "").replace("\\", "/").strip(),
+        str(symbol or "").strip(),
+    )
+
+
+def resolve_domain_origin_key(block: dict[str, Any]) -> str:
+    """Resolve the code origin key used by domain history."""
+
+    evidence = _collect_domain_evidence(block)
+    return evidence.origin_key
+
+
+def _resolve_origin_key(path: str, module: str) -> str:
+    """Resolve the code origin used by the previous-domain slot."""
+
+    normalized_module = ".".join(part for part in module.split(".") if part).strip()
+    if normalized_module:
+        return normalized_module
+
+    path_parts = tuple(part for part in path.replace("\\", "/").split("/") if part)
+    if len(path_parts) > 1:
+        return "/".join(path_parts[:-1])
+    return ""
+
+
+def _get_domain_value(block: dict[str, Any]) -> str:
+    """Return the block domain value."""
+
+    value = block.get("domain")
+    return value if isinstance(value, str) else ""
+
+
+def _is_valid_suggestion_value(value: str) -> bool:
+    """Return True when a domain suggestion value is selectable."""
+
+    normalized = value.strip()
+    return bool(normalized and normalized != "-" and normalized != "custom")
+
+
+def _is_domain_token(token: str) -> bool:
+    """Return True when token is useful as a fixed-slot domain value."""
+
+    return bool(token and token not in TECHNICAL_STOPWORDS and token not in BROAD_FOLDER_TOKENS)
 
 
 def _tokenize_text(text: str) -> list[str]:

@@ -25,7 +25,7 @@ class KeywordCandidate:
 
 @dataclass(frozen=True, slots=True)
 class BlockKeywordProfile:
-    """Stores ranked keywords for one code block."""
+    """Stores ordered keyword candidates for one code block."""
 
     block_id: str
     keywords: list[KeywordCandidate]

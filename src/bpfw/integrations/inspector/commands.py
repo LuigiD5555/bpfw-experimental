@@ -42,7 +42,9 @@ def apply_inspector_command(
     if stripped_command in {"1", "2", "3", "4", "5"}:
         suggestion_index = int(stripped_command) - 1
         if suggestion_index < len(purpose_suggestions):
-            set_purpose(issue.block, purpose_suggestions[suggestion_index].text)
+            suggestion_text = purpose_suggestions[suggestion_index].text.strip()
+            if suggestion_text not in {"", "-", "Write custom purpose..."}:
+                set_purpose(issue.block, suggestion_text)
         return InspectorAction.STAY
 
     if stripped_command.startswith("6"):
@@ -57,7 +59,9 @@ def apply_inspector_command(
     if stripped_command in DOMAIN_SUGGESTION_KEYS:
         domain_index = DOMAIN_SUGGESTION_KEYS.index(stripped_command)
         if domain_index < len(domain_suggestions):
-            issue.block["domain"] = domain_suggestions[domain_index]
+            domain_text = domain_suggestions[domain_index].strip()
+            if domain_text not in {"", "-", "custom"}:
+                issue.block["domain"] = domain_text
         return InspectorAction.STAY
 
     # Then check status keys (z, x, c, v)

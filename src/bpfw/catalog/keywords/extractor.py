@@ -16,7 +16,7 @@ def extract_block_keywords(
     max_phrases: int = 10,
 ) -> BlockKeywordProfile:
     """
-    Extract ranked keywords from a single code block.
+    Extract ordered keyword candidates from a single code block.
 
     Args:
         block: Block dictionary from scanner.
@@ -25,7 +25,7 @@ def extract_block_keywords(
         max_phrases: Maximum number of phrases to return.
 
     Returns:
-        BlockKeywordProfile with ranked keywords and phrases.
+        BlockKeywordProfile with ordered keyword candidates and phrases.
     """
     # Get block ID
     block_id = block.get("symbol", block.get("name", "unknown"))

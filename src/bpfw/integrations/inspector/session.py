@@ -4,9 +4,9 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import List
 
-from bpfw.catalog.domain_suggestions import suggest_domains
+from bpfw.catalog.domain_suggestions import resolve_domain_origin_key, suggest_domains
 from bpfw.catalog.purpose_suggestions import PurposeSuggestion, suggest_purposes
-from bpfw.catalog.learning import record_domain_value, record_purpose_phrase
+from bpfw.catalog.learning import record_domain_for_origin, record_domain_value, record_purpose_phrase
 from bpfw.catalog.models import AUTHORITY_STATE_EMPTY
 from bpfw.catalog.schema import get_blocks, get_purpose, set_blocks
 from bpfw.integrations.inspector.base import (
@@ -88,7 +88,6 @@ def run_text_inspector_session(
     current_index = 0
     total = len(session.issues)
     existing_purposes = collect_existing_purposes(session.blueprint_data)
-    suggestion_cache: dict[str, tuple[list[PurposeSuggestion], list[str]]] = {}
     while current_index < total:
         issue = session.issues[current_index]
         block = issue.block
@@ -100,20 +99,17 @@ def run_text_inspector_session(
             code = block.get("code") or block.get("location") or {}
             cache_key = f"{code.get('path', '')}:{code.get('symbol', '')}"
 
-        if cache_key in suggestion_cache:
-            purpose_suggestions, domain_suggestions = suggestion_cache[cache_key]
-        else:
-            backfill_detected_docstring_from_source(
-                project_root=session.project_root,
-                block=block,
-            )
-            purpose_suggestions = suggest_purposes(
-                block,
-                existing_purposes=existing_purposes,
-            )
-            domain_suggestions = suggest_domains(block, project_blocks=get_blocks(session.blueprint_data))
-            if cache_key:
-                suggestion_cache[cache_key] = (purpose_suggestions, domain_suggestions)
+        backfill_detected_docstring_from_source(
+            project_root=session.project_root,
+            block=block,
+        )
+        project_blocks = get_blocks(session.blueprint_data)
+        purpose_suggestions = suggest_purposes(
+            block,
+            project_blocks=project_blocks,
+            existing_purposes=existing_purposes,
+        )
+        domain_suggestions = suggest_domains(block, project_blocks=project_blocks)
 
         render_inspector_screen(
             project_root=session.project_root,
@@ -159,6 +155,7 @@ def run_text_inspector_session(
             if not _save_issue(session=session, issue=issue):
                 print_func("Blueprint path is unavailable.")
                 return 1
+            existing_purposes = collect_existing_purposes(session.blueprint_data)
             print_func("Saved.")
             current_index += 1
             continue
@@ -250,6 +247,7 @@ def _record_learning_feedback(
         suggested_domains = {domain.strip().lower().replace("-", "_") for domain in domain_suggestions}
         increment = 2 if normalized_domain in suggested_domains else 3
         record_domain_value(domain_value, increment=increment)
+        record_domain_for_origin(resolve_domain_origin_key(issue.block), domain_value)
 
 
 def _render_missing_fields_notification(missing_fields: list[str]) -> list[str]:
@@ -271,7 +269,7 @@ def _render_unknown_command_notification() -> list[str]:
     from bpfw.integrations.shared.visual_notifications import render_notification_block
 
     lines = [
-        "Use 1/2/3/4/5/6, a/s/d/f, g<domain>, z/x/c/v, n, o(notes), Enter, b, h, or q."
+        "Use 1/2/3/4/5/6, q/w/e/r/t/y, z/x/c/v, n, i, o(notes), Enter, b, h, or esc."
     ]
     return render_notification_block(
         title="Unknown command",

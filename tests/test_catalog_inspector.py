@@ -858,3 +858,52 @@ def test_text_inspector_custom_purpose_uses_slot_six_with_prompt(tmp_path: Path)
     saved = blueprint_path.read_text(encoding="utf-8")
     assert exit_code == 0
     assert "prompted custom purpose" in saved
+
+def test_suggest_domains_uses_previous_domain_for_same_origin_slot_t() -> None:
+    previous = _responsibility(
+        responsibility_id="previous_error",
+        purpose="raise previous error",
+        lifecycle="active",
+        path="src/bpfw/core/errors.py",
+        symbol="PreviousError",
+    )
+    previous["domain"] = "exceptions"
+    previous["location"]["module"] = "src.bpfw.core.errors"
+
+    current = _responsibility(
+        responsibility_id="blueprint_locked_error",
+        purpose="",
+        lifecycle="active",
+        path="src/bpfw/core/errors.py",
+        symbol="BlueprintLockedError",
+    )
+    current["location"]["module"] = "src.bpfw.core.errors"
+
+    suggestions = suggest_domains(current, project_blocks=[previous, current])
+
+    assert suggestions[4] == "exceptions"
+
+
+def test_suggest_domains_previous_origin_slot_ignores_other_modules() -> None:
+    previous = _responsibility(
+        responsibility_id="previous_error",
+        purpose="raise previous error",
+        lifecycle="active",
+        path="src/bpfw/protection/errors.py",
+        symbol="PreviousError",
+    )
+    previous["domain"] = "protection"
+    previous["location"]["module"] = "src.bpfw.protection.errors"
+
+    current = _responsibility(
+        responsibility_id="blueprint_locked_error",
+        purpose="",
+        lifecycle="active",
+        path="src/bpfw/core/errors.py",
+        symbol="BlueprintLockedError",
+    )
+    current["location"]["module"] = "src.bpfw.core.errors"
+
+    suggestions = suggest_domains(current, project_blocks=[previous, current])
+
+    assert suggestions[4] == "-"

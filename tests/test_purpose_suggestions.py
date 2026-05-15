@@ -375,9 +375,9 @@ def test_compact_purpose_text_removes_responsibility_evidence_context() -> None:
     )
 
 
-def test_compact_purpose_text_converts_produce_ranked_to_rank() -> None:
+def test_compact_purpose_text_compacts_purpose_suggestion_text() -> None:
     assert (
-        compact_purpose_text("Produce ranked purpose suggestions from block evidence")
+        compact_purpose_text("Suggest purpose suggestions from block evidence")
         == "Suggest purposes"
     )
 
@@ -553,6 +553,63 @@ def test_error_docstring_avoids_noisy_raised_when_prefix() -> None:
     assert all("operation" not in text.lower() for text in non_placeholders)
 
 
+def test_docstring_slot_transforms_raised_when_error_docstring() -> None:
+    """Docstring slot should convert raised-when error text into an active purpose."""
+
+    block = _responsibility(
+        symbol="BlueprintLockedError",
+        path="src/bpfw/core/errors.py",
+        symbol_type="class",
+        docstring="Raised when a protected blueprint write is attempted while locked.",
+    )
+
+    suggestions = suggest_purposes(block)
+
+    assert suggestions[3].source == "docstring_based"
+    assert suggestions[3].text == "Raise protected blueprint write error"
+
+
+def test_blended_slot_enriches_compatible_learned_history(monkeypatch: Any) -> None:
+    """Blended slot should use compatible learned text before fallback routes."""
+
+    monkeypatch.setattr(
+        "bpfw.catalog.purpose_suggestions.get_top_learned_purposes",
+        lambda limit=20: [("Declare Blueprintlockederror Class", 5)],
+    )
+    block = _responsibility(
+        symbol="BlueprintLockedError",
+        path="src/bpfw/core/errors.py",
+        symbol_type="class",
+        docstring="Raised when a protected blueprint write is attempted while locked.",
+    )
+
+    suggestions = suggest_purposes(block)
+
+    assert suggestions[1].text == "Declare Blueprintlockederror Class"
+    assert suggestions[4].source == "blended_based"
+    assert suggestions[4].text == "Declare protected blueprint locked error"
+
+
+def test_blended_slot_uses_available_evidence_without_learned_history(monkeypatch: Any) -> None:
+    """Blended slot should not be empty when symbol and docstring are enough."""
+
+    monkeypatch.setattr(
+        "bpfw.catalog.purpose_suggestions.get_top_learned_purposes",
+        lambda limit=20: [],
+    )
+    block = _responsibility(
+        symbol="BlueprintLockedError",
+        path="src/bpfw/core/errors.py",
+        symbol_type="class",
+        docstring="Raised when a protected blueprint write is attempted while locked.",
+    )
+
+    suggestions = suggest_purposes(block)
+
+    assert suggestions[4].source == "blended_based"
+    assert suggestions[4].text == "Protect blueprint write lock"
+
+
 def test_error_symbol_fallback_works_with_poor_docstring() -> None:
     """Error class name should provide fallback purpose when docstring is weak."""
 
@@ -661,3 +718,20 @@ def _responsibility(
         },
         "detected": detected,
     }
+
+def test_represent_result_docstring_fills_docstring_and_blended_slots() -> None:
+    """Represent-result docstrings should not disappear from purpose suggestions."""
+
+    block = _responsibility(
+        symbol="ProtectionResult",
+        path="src/bpfw/protection/authority.py",
+        symbol_type="class",
+        docstring="Represent the result of a BPFW authority protection operation.",
+    )
+
+    suggestions = suggest_purposes(block)
+
+    assert suggestions[3].source == "docstring_based"
+    assert suggestions[3].text == "Represent authority protection result"
+    assert suggestions[4].source == "blended_based"
+    assert suggestions[4].text == "Represent protection result"

@@ -3,7 +3,7 @@
 
 def normalize_token(token: str) -> str:
     """
-    Normalize one token for deterministic ranking.
+    Normalize one token for deterministic ordering.
 
     Applies plural-to-singular conversion and other normalizations.
 

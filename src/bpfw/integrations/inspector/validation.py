@@ -22,6 +22,9 @@ def validate_required_fields(
     missing: List[str] = []
     for field_name in REQUIRED_SAVE_FIELDS:
         value = values.get(field_name)
-        if value is None or (isinstance(value, str) and not value.strip()):
+        if value is None:
+            missing.append(field_name)
+            continue
+        if isinstance(value, str) and value.strip() in {"", "-"}:
             missing.append(field_name)
     return missing
