@@ -43,8 +43,8 @@ def render_two_column_box(
     """Render a two-column box using dynamically calculated widths."""
 
     available_width = max(2, total_width - COLUMN_GAP_WIDTH)
-    left_required = max(display_width(left_title) + 3, measure_lines(left_lines) + MIN_TEXT_RIGHT_PADDING)
-    right_required = max(display_width(right_title) + 3, measure_lines(right_lines) + MIN_TEXT_RIGHT_PADDING)
+    left_required = max(display_width(left_title) + 2, measure_lines(left_lines) + MIN_TEXT_RIGHT_PADDING)
+    right_required = max(display_width(right_title) + 2, measure_lines(right_lines) + MIN_TEXT_RIGHT_PADDING)
     left_width, right_width = _resolve_two_column_widths(
         available_width=available_width,
         left_required=left_required,

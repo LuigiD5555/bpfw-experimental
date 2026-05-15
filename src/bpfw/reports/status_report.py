@@ -195,6 +195,21 @@ def render_status_report(
     # Reason block for missing authority
     if report.authority_state == AUTHORITY_STATE_MISSING:
         lines.append("Reason:")
-        lines.append("  No authority exists yet.")
+        lines.append("  No blueprint authority exists yet.")
+        lines.append("")
+        lines.append("Suggested next command:")
+        lines.append("  bpfw init")
+    elif not report.allowed and report.undeclared_count:
+        lines.append("Reason:")
+        lines.append("  Some detected code units are not declared or are incomplete.")
+        lines.append("")
+        lines.append("Suggested next command:")
+        lines.append("  bpfw inspector")
+    elif report.allowed and lock_state == "unlocked" and report.authority_state == "defined":
+        lines.append("Reason:")
+        lines.append("  The blueprint authority is valid but unlocked.")
+        lines.append("")
+        lines.append("Suggested next command:")
+        lines.append("  bpfw lock")
 
     return "\n".join(lines)

@@ -8,7 +8,7 @@ def center_text(text: str, width: int) -> str:
 
     text_width = display_width(text)
     if text_width >= width:
-        return fit_text(text, width)
+        return text[:width]
     remaining = width - text_width
     left_padding = remaining // 2
     right_padding = remaining - left_padding

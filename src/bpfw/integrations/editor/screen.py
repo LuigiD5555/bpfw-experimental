@@ -373,9 +373,12 @@ def _render_results_table_rows(results: list, ratio: float = 0.70) -> None:
         status = truncate(record.status or "-", status_width).center(status_width)
         domain = truncate(record.domain or "-", domain_width).center(domain_width)
         name = truncate(record.name or "-", name_width).ljust(name_width)
-        code = truncate(record.location or "-", code_width).ljust(code_width)
+        record_location = record.location or "-"
+        code = truncate(record_location, code_width).ljust(code_width)
         index_str = str(display_index).center(idx_width)
         print(f"\u2502{index_str}\u2502{status}\u2502{domain}\u2502{name}\u2502{code}\u2502")
+        if code.strip() != record_location:
+            print(f"  location: {record_location}")
 
     print(bottom_border)
 
