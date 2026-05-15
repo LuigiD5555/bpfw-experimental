@@ -29,7 +29,7 @@ from bpfw.core.errors import BlueprintLockedError
 from bpfw.reports.finding import Finding
 from bpfw.shared.text import to_snake_case
 
-ALLOWED_LIFECYCLES = ("active", "experimental", "legacy", "deprecated")
+ALLOWED_STATUSES = ("active", "experimental", "legacy", "deprecated")
 REQUIRED_HUMAN_FIELDS = ("purpose", "name", "domain", "status")
 ISSUE_DRAFT = "draft"
 ISSUE_NEW_DETECTED = "new_detected"
@@ -120,7 +120,7 @@ def load_inspect_session(project_root: Path) -> InspectLoadResult:
         for finding in report.findings
         if finding.code in {"UNDECLARED_CODE", "MISSING_DECLARED_CODE"}
     ]
-    incomplete = get_incomplete_responsibilities(blueprint_data)
+    incomplete = get_incomplete_blocks(blueprint_data)
     issues = build_inspect_issues(
         project_root=resolved_root,
         blueprint_data=blueprint_data,
@@ -263,7 +263,7 @@ def build_inspect_issues(
     return issues
 
 
-def get_incomplete_responsibilities(
+def get_incomplete_blocks(
     blueprint_data: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
     """Return blocks that are missing required human fields."""

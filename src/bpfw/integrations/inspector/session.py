@@ -25,6 +25,7 @@ from bpfw.integrations.inspector.commands import (
     apply_inspector_command,
     run_interface_edit_submode,
 )
+from bpfw.integrations.inspector.input_adapter import InspectorInputReader
 from bpfw.integrations.inspector.validation import validate_required_fields
 from bpfw.integrations.inspector.screen import (
     DEFAULT_INSPECTOR_HEADER_TITLE,
@@ -90,6 +91,7 @@ def run_text_inspector_session(
 
     current_index = 0
     total = len(session.issues)
+    input_reader = InspectorInputReader(input_func)
     existing_purposes = collect_existing_purposes(session.blueprint_data)
     while current_index < total:
         issue = session.issues[current_index]
@@ -99,7 +101,7 @@ def run_text_inspector_session(
 
         cache_key = block.get("id") or ""
         if not cache_key:
-            code = block.get("code") or block.get("location") or {}
+            code = block.get("code") or {}
             cache_key = f"{code.get('path', '')}:{code.get('symbol', '')}"
 
         backfill_detected_docstring_from_source(
@@ -127,13 +129,13 @@ def run_text_inspector_session(
             show_all=show_all,
         )
         try:
-            raw_command = input_func("> ")
+            raw_command = input_reader.read("> ")
             action = apply_inspector_command(
                 command=normalize_command(raw_command),
                 issue=issue,
                 purpose_suggestions=purpose_suggestions,
                 domain_suggestions=domain_suggestions,
-                input_func=input_func,
+                input_func=input_reader.read,
             )
         except EOFError:
             print_func("Interactive inspector input unavailable.")
@@ -177,10 +179,10 @@ def run_text_inspector_session(
             continue
 
         if action == "help":
-            for line in _render_help_block():
+            for line in _render_help_block(show_all=show_all):
                 print_func(line)
             try:
-                input_func("Press any key then Enter to continue...")
+                input_reader.read("Press any key then Enter to continue...")
             except EOFError:
                 print_func("Interactive inspector input unavailable.")
                 print_func("")
@@ -196,7 +198,7 @@ def run_text_inspector_session(
         if action == "interface_edit":
             run_interface_edit_submode(
                 block=block,
-                input_func=input_func,
+                input_func=input_reader.read,
                 print_func=print_func,
             )
             continue
@@ -277,7 +279,7 @@ def _render_unknown_command_notification() -> list[str]:
     from bpfw.integrations.shared.visual_notifications import render_notification_block
 
     lines = [
-        "Use 1/2/3/4/5/6, q/w/e/r/t/y, z/x/c/v, n, i, o(notes), Enter, b, a, h, or esc."
+        "Use 1/2/3/4/5/6, q/w/e/r/t/y, z/x/c/v, n, i, o(notes), Enter, b, a, h, or ctrl+c to quit."
     ]
     return render_notification_block(
         title="Unknown command",
@@ -286,7 +288,7 @@ def _render_unknown_command_notification() -> list[str]:
     )
 
 
-def _render_help_block() -> list[str]:
+def _render_help_block(show_all: bool = False) -> list[str]:
     """Render inspector help for field meaning and command options."""
 
     from bpfw.integrations.shared.visual_notifications import render_notification_block
@@ -301,11 +303,15 @@ def _render_help_block() -> list[str]:
         "  notes         Optional notes for this block.",
         "  interface     Input and output type definitions.",
         "",
-        "  status        Current block status.",
-        "                active        In use now.",
-        "                experimental  Still being tested.",
-        "                legacy        Old, but still kept.",
-        "                deprecated    Should be replaced or removed later.",
+        "  Lifecycle",
+        "  ─────────",
+        "  lifecycle    Current authority stage for this block.",
+        "               active        Trusted and used now.",
+        "                             Two active blocks should not share",
+        "                             the same purpose.",
+        "               experimental  Being tested or not fully accepted yet.",
+        "               legacy        Old code kept for existing behavior.",
+        "               deprecated    Should be replaced or removed later.",
         "",
         "  Selection",
         "  ─────────",
@@ -313,7 +319,7 @@ def _render_help_block() -> list[str]:
         "  [6]        write custom purpose",
         f"  [{'|'.join(DOMAIN_SUGGESTION_KEYS)}]  Choose suggested domain",
         f"  [{CUSTOM_DOMAIN_KEY}]        Write custom domain",
-        "  [z|x|c|v]  Set status",
+        "  [z|x|c|v]  Set lifecycle",
         "  [a]        Toggle compact/full interface",
         "",
         "  Purpose suggestions",
@@ -334,33 +340,42 @@ def _render_help_block() -> list[str]:
         "  [t] Previous domain used for the same code origin.",
         "  [y] Manual domain written by the user.",
         "",
-        "  Interface modes",
-        "  ───────────────",
-        "  bpfw inspector opens the compact interface by default.",
-        "  Use bpfw inspector -a or bpfw inspector --all to open all panels.",
-        "  Inside inspector, press a + Enter to toggle compact/full view.",
-        "",
-        "  Why '-' appears",
-        "  ───────────────",
-        "  '-' means that source did not have enough evidence.",
-        "  Example: [4] needs a usable docstring.",
-        "  Example: [t] needs previous domain history for that origin.",
-        "",
-        "  Editing",
-        "  ───────",
-        "  [n]        Edit name",
-        "  [o]        Edit notes",
-        "  [i]        Edit interface",
-        "",
-        "  Flow",
-        "  ────",
-        "  [Enter]    Save and continue",
-        "  [b]        Back",
-        "  [a]        Toggle compact/full interface",
-        "  [h]        Toggle help",
-        f"  {quit_command_label('Quit'):<10}",
-        "",
     ]
+    if show_all:
+        help_lines.extend(
+            [
+                "  Interface modes",
+                "  ───────────────",
+                "  bpfw inspector opens the compact interface by default.",
+                "  Use bpfw inspector -a or bpfw inspector --all to open all panels.",
+                "  Inside inspector, press a + Enter to toggle compact/full view.",
+                "",
+                "  Why '-' appears",
+                "  ───────────────",
+                "  '-' means that source did not have enough evidence.",
+                "  Example: [4] needs a usable docstring.",
+                "  Example: [t] needs previous domain history for that origin.",
+                "",
+                "  Editing",
+                "  ───────",
+                "  [n]        Edit name",
+                "  [o]        Edit notes",
+                "  [i]        Edit interface",
+                "",
+            ]
+        )
+    help_lines.extend(
+        [
+            "  Flow",
+            "  ────",
+            "  [Enter]    Save and continue",
+            "  [b]        Back",
+            "  [a]        Toggle compact/full interface",
+            "  [h]        Toggle help",
+            f"  {quit_command_label('Quit'):<10}",
+            "",
+        ]
+    )
     return render_notification_block(
         title="Inspector help",
         lines=help_lines,

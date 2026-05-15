@@ -8,21 +8,18 @@ from bpfw.integrations.inspector.base import (
     apply_automatic_authority_fields,
     backfill_detected_docstring_from_source,
     build_code_lines,
-    get_incomplete_responsibilities,
+    get_incomplete_blocks,
     load_inspect_session,
 )
 from bpfw.integrations.inspector.commands import InspectorAction, apply_inspector_command
-from bpfw.integrations.inspector.text import (
-    render_text_inspector_screen,
-    run_text_inspector,
-    run_text_inspector_session,
-)
+from bpfw.integrations.inspector.screen import render_inspector_screen
+from bpfw.integrations.inspector.session import run_text_inspector, run_text_inspector_session
 
 
 def _responsibility(
     responsibility_id: str,
     purpose: str,
-    lifecycle: str,
+    status: str,
     path: str = "src/bpfw/catalog/example.py",
     symbol: str = "ExampleService",
 ) -> dict:
@@ -31,21 +28,21 @@ def _responsibility(
         "purpose": purpose,
         "name": symbol,
         "domain": None,
-        "lifecycle": lifecycle,
-        "location": {
+        "status": status,
+        "code": {
             "path": path,
             "symbol": symbol,
-            "symbol_type": "class",
+            "kind": "class",
             "start_line": 2,
             "end_line": 4,
         },
-        "duplicate_policy": {
+        "uniqueness": {
             "group": None,
             "allow_multiple_non_active": True,
-            "forbidden_active_duplicates": True,
+            "forbid_active_duplicates": True,
             "suspected_duplicates": [],
         },
-        "related_code": [],
+        "connections": [],
         "replacement": {
             "replaces": None,
             "replaced_by": None,
@@ -58,7 +55,7 @@ def test_suggest_domain_from_source_package_path() -> None:
     block = _responsibility(
         responsibility_id="example",
         purpose="maintain example",
-        lifecycle="active",
+        status="active",
         path="src/bpfw/protection/authority.py",
     )
 
@@ -72,7 +69,7 @@ def test_suggest_domains_returns_list() -> None:
     block = _responsibility(
         responsibility_id="example",
         purpose="maintain example",
-        lifecycle="active",
+        status="active",
         path="src/bpfw/protection/authority.py",
     )
 
@@ -88,7 +85,7 @@ def test_suggest_domains_ignores_package_roots() -> None:
     block = _responsibility(
         responsibility_id="purpose_suggestions",
         purpose="suggest purposes",
-        lifecycle="active",
+        status="active",
         path="src/bpfw/catalog/purpose_suggestions.py",
         symbol="PurposeSuggestion",
     )
@@ -104,7 +101,7 @@ def test_suggest_domain_returns_first_domain_suggestion() -> None:
     block = _responsibility(
         responsibility_id="purpose_suggestions",
         purpose="suggest purposes",
-        lifecycle="active",
+        status="active",
         path="src/bpfw/catalog/purpose_suggestions.py",
         symbol="PurposeSuggestion",
     )
@@ -141,14 +138,14 @@ def test_inspector_domain_shortcuts_use_qwerty_and_y_custom() -> None:
     assert issue["domain"] == "custom_domain"
 
 
-def test_get_incomplete_responsibilities_detects_missing_fields() -> None:
+def test_get_incomplete_blocks_detects_missing_fields() -> None:
     complete = _responsibility("example", "maintain example", "active")
     complete["domain"] = "example"
     incomplete = _responsibility("missing", "maintain example", "active")
     incomplete["domain"] = ""
     blueprint_data = {"blocks": [complete, incomplete]}
 
-    assert get_incomplete_responsibilities(blueprint_data) == [incomplete]
+    assert get_incomplete_blocks(blueprint_data) == [incomplete]
 
 
 def test_apply_automatic_authority_fields_derives_groups() -> None:
@@ -164,9 +161,9 @@ def test_apply_automatic_authority_fields_derives_groups() -> None:
 
     apply_automatic_authority_fields(blueprint_data)
 
-    assert active_one["duplicate_policy"]["group"] == "create_user"
-    assert active_two["duplicate_policy"]["group"] == "create_user"
-    assert active_one["duplicate_policy"]["suspected_duplicates"] == [
+    assert active_one["uniqueness"]["group"] == "create_user"
+    assert active_two["uniqueness"]["group"] == "create_user"
+    assert active_one["uniqueness"]["suspected_duplicates"] == [
         "account_registration"
     ]
 
@@ -175,7 +172,7 @@ def test_text_inspector_renders_expected_sections(tmp_path: Path) -> None:
     block = _responsibility(
         responsibility_id="example",
         purpose="",
-        lifecycle="active",
+        status="active",
         path="src/bpfw/catalog/example.py",
     )
     block["detected"] = {
@@ -186,7 +183,7 @@ def test_text_inspector_renders_expected_sections(tmp_path: Path) -> None:
     purpose_suggestions = suggest_purposes(block)
     domain_suggestions = suggest_domains(block)
 
-    render_text_inspector_screen(
+    render_inspector_screen(
         project_root=tmp_path,
         issue_type="draft",
         block=block,
@@ -218,9 +215,9 @@ def test_text_inspector_renders_expected_sections(tmp_path: Path) -> None:
     assert "[c] legacy" in rendered
     assert "[v] deprecated" in rendered
     assert "[Enter] save + next" in rendered
-    assert "type a command key and press Enter" in rendered
+    assert "Type a command key and press Enter" in rendered
     assert "a + Enter" in rendered
-    assert "esc + Enter" in rendered
+    assert "ctrl+c to quit" in rendered
     commands_section = rendered[rendered.rindex("Commands"):]
     assert "purpose suggestion" not in commands_section
     assert "custom purpose" not in commands_section
@@ -239,7 +236,7 @@ def test_text_inspector_all_view_renders_extended_sections(tmp_path: Path) -> No
     block = _responsibility(
         responsibility_id="example",
         purpose="",
-        lifecycle="active",
+        status="active",
         path="src/bpfw/catalog/example.py",
     )
     block["detected"] = {
@@ -250,7 +247,7 @@ def test_text_inspector_all_view_renders_extended_sections(tmp_path: Path) -> No
     purpose_suggestions = suggest_purposes(block)
     domain_suggestions = suggest_domains(block)
 
-    render_text_inspector_screen(
+    render_inspector_screen(
         project_root=tmp_path,
         issue_type="draft",
         block=block,
@@ -294,12 +291,12 @@ def test_backfill_detected_docstring_from_source(tmp_path: Path) -> None:
     block = _responsibility(
         responsibility_id="resolve_protected_resources",
         purpose="",
-        lifecycle="active",
+        status="active",
         path="src/bpfw/protection/authority.py",
         symbol="resolve_protected_resources",
     )
-    block["location"]["symbol_type"] = "function"
-    block["location"]["start_line"] = 3
+    block["code"]["kind"] = "function"
+    block["code"]["start_line"] = 3
     block["detected"] = {}
 
     backfill_detected_docstring_from_source(project_root=tmp_path, block=block)
@@ -323,13 +320,13 @@ def test_code_preview_includes_blank_lines_after_snippet(tmp_path: Path) -> None
     block = _responsibility(
         responsibility_id="looks_like_absolute_path",
         purpose="absolute_path_checker",
-        lifecycle="active",
+        status="active",
         path="src/bpfw/catalog/security.py",
         symbol="looks_like_absolute_path",
     )
-    block["location"]["symbol_type"] = "function"
-    block["location"]["start_line"] = 1
-    block["location"]["end_line"] = 3
+    block["code"]["kind"] = "function"
+    block["code"]["start_line"] = 1
+    block["code"]["end_line"] = 3
 
     rendered = "\n".join(
         build_code_lines(
@@ -358,13 +355,13 @@ def test_code_preview_includes_blank_lines_before_snippet(tmp_path: Path) -> Non
     block = _responsibility(
         responsibility_id="looks_like_absolute_path",
         purpose="absolute_path_checker",
-        lifecycle="active",
+        status="active",
         path="src/bpfw/catalog/security.py",
         symbol="looks_like_absolute_path",
     )
-    block["location"]["symbol_type"] = "function"
-    block["location"]["start_line"] = 4
-    block["location"]["end_line"] = 5
+    block["code"]["kind"] = "function"
+    block["code"]["start_line"] = 4
+    block["code"]["end_line"] = 5
 
     rendered = "\n".join(
         build_code_lines(
@@ -395,13 +392,13 @@ def test_code_preview_does_not_cross_into_next_top_level_snippet(tmp_path: Path)
     block = _responsibility(
         responsibility_id="looks_like_absolute_path",
         purpose="absolute_path_checker",
-        lifecycle="active",
+        status="active",
         path="src/bpfw/catalog/security.py",
         symbol="looks_like_absolute_path",
     )
-    block["location"]["symbol_type"] = "function"
-    block["location"]["start_line"] = 1
-    block["location"]["end_line"] = 3
+    block["code"]["kind"] = "function"
+    block["code"]["start_line"] = 1
+    block["code"]["end_line"] = 3
 
     rendered = "\n".join(
         build_code_lines(
@@ -429,13 +426,13 @@ def test_code_preview_stops_at_next_same_indent_code(tmp_path: Path) -> None:
     block = _responsibility(
         responsibility_id="looks_like_absolute_path",
         purpose="absolute_path_checker",
-        lifecycle="active",
+        status="active",
         path="src/bpfw/catalog/security.py",
         symbol="looks_like_absolute_path",
     )
-    block["location"]["symbol_type"] = "function"
-    block["location"]["start_line"] = 1
-    block["location"]["end_line"] = 3
+    block["code"]["kind"] = "function"
+    block["code"]["start_line"] = 1
+    block["code"]["end_line"] = 3
 
     rendered = "\n".join(
         build_code_lines(
@@ -462,13 +459,13 @@ def test_code_preview_includes_class_decorator_lines(tmp_path: Path) -> None:
     block = _responsibility(
         responsibility_id="domain_suggestion",
         purpose="suggest domain",
-        lifecycle="active",
+        status="active",
         path="src/bpfw/catalog/domain_suggestions.py",
         symbol="DomainSuggestion",
     )
-    block["location"]["symbol_type"] = "class"
-    block["location"]["start_line"] = 4
-    block["location"]["end_line"] = 5
+    block["code"]["kind"] = "class"
+    block["code"]["start_line"] = 4
+    block["code"]["end_line"] = 5
 
     rendered = "\n".join(
         build_code_lines(
@@ -496,13 +493,13 @@ def test_code_preview_includes_function_decorator_lines(tmp_path: Path) -> None:
     block = _responsibility(
         responsibility_id="normalize_name",
         purpose="normalize name",
-        lifecycle="active",
+        status="active",
         path="src/bpfw/catalog/helpers.py",
         symbol="normalize_name",
     )
-    block["location"]["symbol_type"] = "function"
-    block["location"]["start_line"] = 5
-    block["location"]["end_line"] = 6
+    block["code"]["kind"] = "function"
+    block["code"]["start_line"] = 5
+    block["code"]["end_line"] = 6
 
     rendered = "\n".join(
         build_code_lines(
@@ -536,13 +533,13 @@ def test_code_preview_includes_multiline_decorator_block(tmp_path: Path) -> None
     block = _responsibility(
         responsibility_id="decorated_model",
         purpose="define model",
-        lifecycle="active",
+        status="active",
         path="src/bpfw/catalog/models.py",
         symbol="DecoratedModel",
     )
-    block["location"]["symbol_type"] = "class"
-    block["location"]["start_line"] = 11
-    block["location"]["end_line"] = 12
+    block["code"]["kind"] = "class"
+    block["code"]["start_line"] = 11
+    block["code"]["end_line"] = 12
 
     rendered = "\n".join(
         build_code_lines(
@@ -568,13 +565,13 @@ def test_text_inspector_edits_fields_and_accepts(tmp_path: Path) -> None:
         "  - id: example\n"
         "    name: ExampleService\n"
         "    domain: ''\n"
-        "    lifecycle: ''\n"
+        "    status: ''\n"
         "    purpose: ''\n"
         "    notes: ''\n"
-        "    location:\n"
+        "    code:\n"
         "      path: src/bpfw/catalog/example.py\n"
         "      symbol: ExampleService\n"
-        "      symbol_type: class\n"
+        "      kind: class\n"
         "      start_line: 1\n"
         "      end_line: 1\n",
         encoding="utf-8",
@@ -613,7 +610,7 @@ def test_text_inspector_save_next_persists_partial_fields(tmp_path: Path) -> Non
         "  - id: example\n"
         "    name: ExampleService\n"
         "    domain: catalog\n"
-        "    lifecycle: active\n"
+        "    status: active\n"
         "    purpose: ''\n",
         encoding="utf-8",
     )
@@ -642,12 +639,12 @@ def test_text_inspector_unknown_command_stays_on_current_item(tmp_path: Path) ->
         "  - id: example\n"
         "    name: ExampleService\n"
         "    domain: ''\n"
-        "    lifecycle: active\n"
+        "    status: active\n"
         "    purpose: ''\n"
-        "    location:\n"
+        "    code:\n"
         "      path: src/bpfw/catalog/example.py\n"
         "      symbol: ExampleService\n"
-        "      symbol_type: class\n",
+        "      kind: class\n",
         encoding="utf-8",
     )
     session = load_inspect_session(project_root=tmp_path)
@@ -676,7 +673,7 @@ def test_text_inspector_blocks_when_input_is_unavailable(tmp_path: Path) -> None
         "blocks:\n"
         "  - id: example\n"
         "    name: ExampleService\n"
-        "    lifecycle: ''\n"
+        "    status: ''\n"
         "    purpose: ''\n",
         encoding="utf-8",
     )
@@ -707,12 +704,12 @@ def test_text_inspector_stops_cleanly_on_keyboard_interrupt(tmp_path: Path) -> N
         "  - id: example\n"
         "    name: ExampleService\n"
         "    domain: catalog\n"
-        "    lifecycle: active\n"
+        "    status: active\n"
         "    purpose: ''\n"
-        "    location:\n"
+        "    code:\n"
         "      path: src/bpfw/catalog/example.py\n"
         "      symbol: ExampleService\n"
-        "      symbol_type: class\n",
+        "      kind: class\n",
         encoding="utf-8",
     )
     session = load_inspect_session(project_root=tmp_path)
@@ -744,12 +741,12 @@ def test_text_inspector_keyboard_interrupt_in_interface_editor_returns_to_main(
         "  - id: example\n"
         "    name: ExampleService\n"
         "    domain: catalog\n"
-        "    lifecycle: active\n"
+        "    status: active\n"
         "    purpose: ''\n"
-        "    location:\n"
+        "    code:\n"
         "      path: src/bpfw/catalog/example.py\n"
         "      symbol: ExampleService\n"
-        "      symbol_type: class\n",
+        "      kind: class\n",
         encoding="utf-8",
     )
     session = load_inspect_session(project_root=tmp_path)
@@ -807,12 +804,12 @@ def test_text_inspector_accepts_new_detected_code(tmp_path: Path) -> None:
         "    purpose: maintain declared func\n"
         "    name: declared_func\n"
         "    domain: demo\n"
-        "    lifecycle: active\n"
-        "    location:\n"
+        "    status: active\n"
+        "    code:\n"
         "      path: src/demo/app.py\n"
         "      module: src.demo.app\n"
         "      symbol: declared_func\n"
-        "      symbol_type: function\n",
+        "      kind: function\n",
         encoding="utf-8",
     )
     output: list[str] = []
@@ -847,27 +844,27 @@ def test_text_inspector_back_returns_to_saved_previous_item(tmp_path: Path) -> N
         "  - id: first\n"
         "    name: FirstService\n"
         "    domain: ''\n"
-        "    lifecycle: ''\n"
+        "    status: ''\n"
         "    purpose: ''\n"
-        "    location:\n"
+        "    code:\n"
         "      path: src/bpfw/catalog/first.py\n"
         "      module: src.bpfw.catalog.first\n"
         "      symbol: FirstService\n"
-        "      symbol_type: class\n"
+        "      kind: class\n"
         "  - id: second\n"
         "    name: SecondService\n"
         "    domain: ''\n"
-        "    lifecycle: ''\n"
+        "    status: ''\n"
         "    purpose: ''\n"
-        "    location:\n"
+        "    code:\n"
         "      path: src/bpfw/catalog/second.py\n"
         "      module: src.bpfw.catalog.second\n"
         "      symbol: SecondService\n"
-        "      symbol_type: class\n",
+        "      kind: class\n",
         encoding="utf-8",
     )
     session = load_inspect_session(project_root=tmp_path)
-    answers = iter(["6first purpose", "yfirst_domain", "", "b", "escape"])
+    answers = iter(["6first purpose", "yfirst_domain", "", "b", "quit"])
     output: list[str] = []
 
     exit_code = run_text_inspector_session(
@@ -895,12 +892,12 @@ def test_text_inspector_custom_purpose_uses_slot_six_with_prompt(tmp_path: Path)
         "  - id: example\n"
         "    name: ExampleService\n"
         "    domain: catalog\n"
-        "    lifecycle: active\n"
+        "    status: active\n"
         "    purpose: ''\n"
-        "    location:\n"
+        "    code:\n"
         "      path: src/bpfw/catalog/example.py\n"
         "      symbol: ExampleService\n"
-        "      symbol_type: class\n",
+        "      kind: class\n",
         encoding="utf-8",
     )
     session = load_inspect_session(project_root=tmp_path)
@@ -921,21 +918,21 @@ def test_suggest_domains_uses_previous_domain_for_same_origin_slot_t() -> None:
     previous = _responsibility(
         responsibility_id="previous_error",
         purpose="raise previous error",
-        lifecycle="active",
+        status="active",
         path="src/bpfw/core/errors.py",
         symbol="PreviousError",
     )
     previous["domain"] = "exceptions"
-    previous["location"]["module"] = "src.bpfw.core.errors"
+    previous["code"]["module"] = "src.bpfw.core.errors"
 
     current = _responsibility(
         responsibility_id="blueprint_locked_error",
         purpose="",
-        lifecycle="active",
+        status="active",
         path="src/bpfw/core/errors.py",
         symbol="BlueprintLockedError",
     )
-    current["location"]["module"] = "src.bpfw.core.errors"
+    current["code"]["module"] = "src.bpfw.core.errors"
 
     suggestions = suggest_domains(current, project_blocks=[previous, current])
 
@@ -946,21 +943,21 @@ def test_suggest_domains_previous_origin_slot_ignores_other_modules() -> None:
     previous = _responsibility(
         responsibility_id="previous_error",
         purpose="raise previous error",
-        lifecycle="active",
+        status="active",
         path="src/bpfw/protection/errors.py",
         symbol="PreviousError",
     )
     previous["domain"] = "protection"
-    previous["location"]["module"] = "src.bpfw.protection.errors"
+    previous["code"]["module"] = "src.bpfw.protection.errors"
 
     current = _responsibility(
         responsibility_id="blueprint_locked_error",
         purpose="",
-        lifecycle="active",
+        status="active",
         path="src/bpfw/core/errors.py",
         symbol="BlueprintLockedError",
     )
-    current["location"]["module"] = "src.bpfw.core.errors"
+    current["code"]["module"] = "src.bpfw.core.errors"
 
     suggestions = suggest_domains(current, project_blocks=[previous, current])
 
@@ -986,5 +983,53 @@ def test_inspector_help_explains_suggestion_sources() -> None:
     assert "[e] Module-based domain from the Python module parent." in rendered
     assert "[r] Symbol-based domain from the class/function name." in rendered
     assert "[t] Previous domain used for the same code origin." in rendered
+
+
+def test_compact_inspector_help_omits_full_mode_details() -> None:
+    """Ensure compact inspector help hides full-mode explanations."""
+
+    from bpfw.integrations.inspector.session import _render_help_block
+
+    rendered = "\n".join(_render_help_block(show_all=False))
+
+    assert "Interface modes" not in rendered
+    assert "Why '-' appears" not in rendered
+    assert "Editing" not in rendered
+    assert "Lifecycle" in rendered
+    assert "Two active blocks should not share" in rendered
+    assert "the same purpose." in rendered
+
+
+def test_full_inspector_help_keeps_full_mode_details() -> None:
+    """Ensure full inspector help keeps full-mode explanations."""
+
+    from bpfw.integrations.inspector.session import _render_help_block
+
+    rendered = "\n".join(_render_help_block(show_all=True))
+
+    assert "Interface modes" in rendered
     assert "Why '-' appears" in rendered
     assert "'-' means that source did not have enough evidence." in rendered
+    assert "Editing" in rendered
+    assert "[n]        Edit name" in rendered
+    assert "Lifecycle" in rendered
+    assert "experimental  Being tested or not fully accepted yet." in rendered
+
+
+def test_inspector_input_reader_uses_custom_input_function() -> None:
+    """Inspector input reader must preserve scripted test input functions."""
+
+    from bpfw.integrations.inspector.input_adapter import InspectorInputReader
+
+    received_prompts: list[str] = []
+
+    def fake_input(prompt: str) -> str:
+        """Return a scripted value and keep the prompt for assertions."""
+
+        received_prompts.append(prompt)
+        return "scripted value"
+
+    reader = InspectorInputReader(fake_input)
+
+    assert reader.read("purpose: ") == "scripted value"
+    assert received_prompts == ["purpose: "]

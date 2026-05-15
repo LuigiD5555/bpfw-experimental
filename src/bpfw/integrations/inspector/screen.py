@@ -67,7 +67,7 @@ class CompactInspectorScreenRenderStrategy(InspectorScreenRenderStrategy):
             _format_command_row("[h] help", quit_command_label()),
             _format_command_row("[Enter] save + next", "[b] back", "[a] full view"),
             COMMAND_SEPARATOR,
-            "Note: type a command key and press Enter to run it, for example a + Enter or esc + Enter.",
+            "Note: press ctrl+c to quit. Type a command key and press Enter, for example a + Enter.",
         ]
 
 
@@ -89,7 +89,7 @@ class FullInspectorScreenRenderStrategy(InspectorScreenRenderStrategy):
             _format_command_row("[o] notes", "[h] help", quit_command_label()),
             _format_command_row("[Enter] save + next", "[b] back", "[a] compact view"),
             COMMAND_SEPARATOR,
-            "Note: type a command key and press Enter to run it, for example 1 + Enter or esc + Enter.",
+            "Note: press ctrl+c to quit. Type a command key and press Enter, for example 1 + Enter.",
         ]
 
 
