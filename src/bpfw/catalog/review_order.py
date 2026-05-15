@@ -46,7 +46,7 @@ def _visit_unit(
 
     active_path.add(unit.qualified_name)
 
-    for dependency_name in sorted(dependency_graph[unit.qualified_name]):
+    for dependency_name in dependency_graph[unit.qualified_name]:
         dependency_unit = symbol_index.get(dependency_name)
         if dependency_unit is not None:
             _visit_unit(
@@ -74,6 +74,9 @@ def _build_dependency_graph(
     graph: Dict[str, List[str]] = defaultdict(list)
 
     for unit in units:
+        for child_symbol in [*unit.methods, *unit.functions]:
+            if child_symbol in symbol_index:
+                graph[unit.qualified_name].append(child_symbol)
         for called_symbol in unit.called_symbols:
             if called_symbol in symbol_index:
                 graph[unit.qualified_name].append(called_symbol)
