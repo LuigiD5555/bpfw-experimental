@@ -10,10 +10,10 @@ def test_suggests_token_creation_from_issuer_symbol() -> None:
 
     block = {
         "name": "TokenIssuer",
-        "location": {
+        "code": {
             "path": "src/auth/token.py",
             "symbol": "TokenIssuer",
-            "symbol_type": "class",
+            "kind": "class",
         },
         "detected": {
             "methods": ["issue_token"],
@@ -32,10 +32,10 @@ def test_suggests_blueprint_validation_from_verify_symbol() -> None:
 
     block = {
         "name": "verify_blueprint",
-        "location": {
+        "code": {
             "path": "src/bpfw/catalog/verify.py",
             "symbol": "verify_blueprint",
-            "symbol_type": "function",
+            "kind": "function",
         },
         "detected": {
             "signature": "verify_blueprint(project_root: Path) -> VerificationResult",
@@ -475,10 +475,10 @@ def test_purpose_suggestions_keep_fixed_slot_order() -> None:
     """Purpose suggestions must keep stable inspector slot order."""
 
     block = {
-        "location": {
+        "code": {
             "path": "src/bpfw/protection/authority.py",
             "symbol": "AuthorityValidator",
-            "symbol_type": "class",
+            "kind": "class",
         },
         "detected": {
             "docstring": "Validate blueprint authority declarations.",
@@ -503,10 +503,10 @@ def test_missing_purpose_sources_render_as_placeholders() -> None:
     """Missing purpose sources must render placeholders without changing slot order."""
 
     block = {
-        "location": {
+        "code": {
             "path": "src/example.py",
             "symbol": "Thing",
-            "symbol_type": "class",
+            "kind": "class",
         }
     }
     suggestions = suggest_purposes(block)
@@ -569,8 +569,8 @@ def test_docstring_slot_transforms_raised_when_error_docstring() -> None:
     assert suggestions[3].text == "raise protected blueprint write error"
 
 
-def test_blended_slot_enriches_compatible_learned_history(monkeypatch: Any) -> None:
-    """Blended slot should use compatible learned text before fallback routes."""
+def test_blended_slot_enriches_aligned_learned_history(monkeypatch: Any) -> None:
+    """Blended slot should use aligned learned text before fallback routes."""
 
     monkeypatch.setattr(
         "bpfw.catalog.purpose_suggestions.get_top_learned_purposes",
@@ -655,11 +655,11 @@ def test_docstring_slot_reads_source_when_detected_docstring_missing() -> None:
 
     block = {
         "name": "BlueprintMissingError",
-        "location": {
+        "code": {
             "path": "src/bpfw/core/errors.py",
             "module": "src.bpfw.core.errors",
             "symbol": "BlueprintMissingError",
-            "symbol_type": "class",
+            "kind": "class",
         },
         "detected": {
             "qualified_name": "BlueprintMissingError",
@@ -710,11 +710,11 @@ def _responsibility(
 
     return {
         "name": symbol,
-        "location": {
+        "code": {
             "path": path,
             "module": path.removesuffix(".py").replace("/", "."),
             "symbol": symbol,
-            "symbol_type": symbol_type,
+            "kind": symbol_type,
         },
         "detected": detected,
     }

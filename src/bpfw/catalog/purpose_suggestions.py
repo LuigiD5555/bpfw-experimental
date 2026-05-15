@@ -892,13 +892,13 @@ def _compose_blended_from_learned(
     learned_suggestion: PurposeSuggestion | None,
     facts: _NormalizedFacts,
 ) -> str | None:
-    """Blend a compatible learned phrase with current symbol and docstring evidence."""
+    """Blend a aligned learned phrase with current symbol and docstring evidence."""
 
     if learned_suggestion is None or _is_placeholder_text(learned_suggestion.text):
         return None
     learned_tokens = _tokenize_blended_text(learned_suggestion.text, facts)
     context_tokens = _current_blended_context_tokens(facts)
-    if not _learned_tokens_are_compatible(learned_tokens, context_tokens):
+    if not _learned_tokens_are_aligned(learned_tokens, context_tokens):
         return None
 
     action = _first_blended_action(learned_tokens)
@@ -1032,7 +1032,7 @@ def _current_blended_context_tokens(facts: _NormalizedFacts) -> set[str]:
     }
 
 
-def _learned_tokens_are_compatible(
+def _learned_tokens_are_aligned(
     learned_tokens: list[str],
     context_tokens: set[str],
 ) -> bool:
