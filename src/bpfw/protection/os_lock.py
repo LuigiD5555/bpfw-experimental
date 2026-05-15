@@ -450,83 +450,48 @@ def _get_lock_strategy() -> LockStrategy:
     return _build_lock_strategy(sys.platform)
 
 
-def _resolve_lock_arguments(
-    path: Path | None,
-    project_root: Path | None,
-    relative_path: str | None,
-) -> tuple[Path, str]:
-    """Normalize exact-path and legacy project-relative lock arguments."""
+def _resolve_exact_lock_arguments(path: Path) -> tuple[Path, str]:
+    """Resolve an exact file path into the lock strategy root and resource identifier."""
 
-    if path is not None:
-        resolved_path = path.resolve()
-        return resolved_path.parent, resolved_path.name
-
-    if project_root is None or relative_path is None:
-        raise TypeError("lock_file requires either path or project_root with relative_path")
-
-    return project_root, relative_path
+    resolved_path = path.resolve()
+    if resolved_path.name == "blueprint.yaml" and resolved_path.parent.name == "bpfw":
+        return resolved_path.parent.parent, "bpfw/blueprint.yaml"
+    return resolved_path.parent, resolved_path.name
 
 
-def lock_file(
-    path: Path | None = None,
-    *,
-    project_root: Path | None = None,
-    relative_path: str | None = None,
-) -> str:
+def lock_file(path: Path) -> str:
     """Lock an exact file path against direct local writes."""
 
-    if path is not None and not path.exists():
+    if not path.exists():
         return MISSING
 
-    resolved_root, resolved_relative_path = _resolve_lock_arguments(
-        path=path,
-        project_root=project_root,
-        relative_path=relative_path,
-    )
+    resolved_root, resolved_relative_path = _resolve_exact_lock_arguments(path=path)
     return _get_lock_strategy().lock_file(
         project_root=resolved_root,
         relative_path=resolved_relative_path,
     )
 
 
-def unlock_file(
-    path: Path | None = None,
-    *,
-    project_root: Path | None = None,
-    relative_path: str | None = None,
-) -> str:
+def unlock_file(path: Path) -> str:
     """Unlock an exact file path for local writes."""
 
-    if path is not None and not path.exists():
+    if not path.exists():
         return MISSING
 
-    resolved_root, resolved_relative_path = _resolve_lock_arguments(
-        path=path,
-        project_root=project_root,
-        relative_path=relative_path,
-    )
+    resolved_root, resolved_relative_path = _resolve_exact_lock_arguments(path=path)
     return _get_lock_strategy().unlock_file(
         project_root=resolved_root,
         relative_path=resolved_relative_path,
     )
 
 
-def get_file_lock_state(
-    path: Path | None = None,
-    *,
-    project_root: Path | None = None,
-    relative_path: str | None = None,
-) -> str:
+def get_file_lock_state(path: Path) -> str:
     """Read whether an exact file path is locked against writes."""
 
-    if path is not None and not path.exists():
+    if not path.exists():
         return MISSING
 
-    resolved_root, resolved_relative_path = _resolve_lock_arguments(
-        path=path,
-        project_root=project_root,
-        relative_path=relative_path,
-    )
+    resolved_root, resolved_relative_path = _resolve_exact_lock_arguments(path=path)
     return _get_lock_strategy().get_file_lock_state(
         project_root=resolved_root,
         relative_path=resolved_relative_path,

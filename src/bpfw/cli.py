@@ -11,7 +11,7 @@ from bpfw.core.engine import BlueprintEngine, build_command
 from bpfw.protection.authority import (
     MISSING_BLUEPRINT_STATUS,
     ProtectionResult,
-    get_blueprint_lock_state,
+    get_authority_protection_status,
     lock_authority,
     unlock_authority,
 )
@@ -88,7 +88,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("command", choices=MVP_COMMANDS)
     parser.add_argument("subcommand", nargs="?")
     parser.add_argument("--project-root", default=".", metavar="PATH")
-    parser.add_argument("--ttl", default="10m", help=argparse.SUPPRESS)
     parser.add_argument("--accept-scan", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--force-new", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--json", action="store_true", dest="as_json")
@@ -302,8 +301,8 @@ def main() -> int:
     # unlock is handled directly by the protection authority
     if normalized_command == "unlock":
         project_root = Path(parsed_arguments.project_root).resolve()
-        current_lock_state = get_blueprint_lock_state(project_root=project_root)
-        if current_lock_state == "unknown":
+        current_lock_state = get_authority_protection_status(project_root=project_root).status
+        if current_lock_state == MISSING_BLUEPRINT_STATUS:
             print(
                 "BPFW blueprint does not exist:\n"
                 f"  {CANONICAL_BLUEPRINT_FILE}\n\n"
@@ -334,11 +333,6 @@ def main() -> int:
 
     engine = BlueprintEngine()
     command_arguments: dict[str, str] = {}
-
-    # unlock keeps --ttl accepted for MVP compatibility; logical locks do not expire.
-    if normalized_command == "unlock":
-        command_arguments["resource_id"] = parsed_arguments.subcommand or "blueprint"
-        command_arguments["ttl"] = parsed_arguments.ttl
 
     if normalized_command == "inspector" and parsed_arguments.inspector_all:
         command_arguments["view"] = "all"

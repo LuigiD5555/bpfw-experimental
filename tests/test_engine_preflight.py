@@ -91,7 +91,7 @@ def test_inspector_attempts_unlock_before_running_integration(
         status = "unlocked"
 
     monkeypatch.setattr(core_registry, "run_verify", fake_verify)
-    monkeypatch.setattr(core_registry, "get_blueprint_lock_state", lambda project_root: "locked")
+    monkeypatch.setattr(core_registry, "get_authority_protection_status", lambda project_root: type("ProtectionStatus", (), {"status": "locked"})())
     monkeypatch.setattr(core_registry, "unlock_authority", lambda project_root: UnlockResult())
 
     integration = RecordingIntegration()

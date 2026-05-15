@@ -84,15 +84,6 @@ def resolve_protected_resources(project_root: Path) -> List[ProtectedResource]:
     return resources
 
 
-def _resource_lock_identifier(project_root: Path, resource: ProtectedResource) -> str:
-    """Return the identifier used by the OS lock marker for a protected resource."""
-
-    if resource.resource_type == BLUEPRINT_RESOURCE_TYPE:
-        return CANONICAL_BLUEPRINT_FILE
-
-    return str(resource.path.resolve())
-
-
 def _write_fallback_lock(project_root: Path) -> None:
     """Write a logical-only lock marker when OS enforcement is unavailable."""
 
@@ -137,28 +128,19 @@ def _missing_blueprint_result(operation: str, blueprint_path: Path) -> Protectio
 def _lock_existing_resource(project_root: Path, resource: ProtectedResource) -> str:
     """Lock one existing resource using the OS lock backend."""
 
-    return lock_file(
-        project_root=project_root,
-        relative_path=_resource_lock_identifier(project_root=project_root, resource=resource),
-    )
+    return lock_file(path=resource.path)
 
 
 def _unlock_existing_resource(project_root: Path, resource: ProtectedResource) -> str:
     """Unlock one existing resource using the OS lock backend."""
 
-    return unlock_file(
-        project_root=project_root,
-        relative_path=_resource_lock_identifier(project_root=project_root, resource=resource),
-    )
+    return unlock_file(path=resource.path)
 
 
 def _get_existing_resource_state(project_root: Path, resource: ProtectedResource) -> str:
     """Return the OS lock state for one existing resource."""
 
-    return get_file_lock_state(
-        project_root=project_root,
-        relative_path=_resource_lock_identifier(project_root=project_root, resource=resource),
-    )
+    return get_file_lock_state(path=resource.path)
 
 
 def lock_authority(project_root: Path) -> ProtectionResult:
@@ -322,28 +304,3 @@ def get_authority_protection_status(project_root: Path) -> ProtectionResult:
     )
 
 
-def setup_blueprint_protection(project_root: Path) -> str:
-    """Prepare full authority protection as the hidden compatibility path."""
-
-    return lock_authority(project_root=project_root).status
-
-
-def lock_blueprint(project_root: Path) -> str:
-    """Lock the project blueprint and BPFW internal guard files."""
-
-    return lock_authority(project_root=project_root).status
-
-
-def unlock_blueprint(project_root: Path) -> str:
-    """Unlock the project blueprint and BPFW internal guard files."""
-
-    return unlock_authority(project_root=project_root).status
-
-
-def get_blueprint_lock_state(project_root: Path) -> str:
-    """Return the full authority protection state for compatibility callers."""
-
-    status = get_authority_protection_status(project_root=project_root).status
-    if status == MISSING_BLUEPRINT_STATUS:
-        return "unknown"
-    return status

@@ -21,7 +21,7 @@ from bpfw.integrations.editor.screen import (
 )
 from bpfw.integrations.editor.search import SearchRecord, build_search_records, search_records
 from bpfw.integrations.shared.cli_runtime import is_quit_command, normalize_command
-from bpfw.protection.authority import get_blueprint_lock_state
+from bpfw.protection.authority import get_authority_protection_status
 
 
 class EditorSession:
@@ -46,7 +46,7 @@ class EditorSession:
             return 1
 
         # Check lock status
-        lock_state = get_blueprint_lock_state(project_root=self.project_root)
+        lock_state = get_authority_protection_status(project_root=self.project_root).status
         if lock_state == "locked":
             print("Blueprint is locked.\n\nUnlock before using editor:\n\n  bpfw unlock")
             return 1
@@ -218,7 +218,7 @@ class EditorSession:
     def _open_inspector(self, record: SearchRecord) -> str:
         """Open the inspector in target mode for a given record."""
 
-        from bpfw.integrations.inspector.text import run_inspector_target
+        from bpfw.integrations.inspector.target import run_inspector_target
 
         result = run_inspector_target(
             project_root=self.project_root,

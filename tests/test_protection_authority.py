@@ -9,10 +9,9 @@ from bpfw.catalog.access_control import ensure_blueprint_can_be_written
 from bpfw.core.errors import BlueprintLockedError
 from bpfw.protection.authority import (
     get_authority_protection_status,
-    get_blueprint_lock_state,
-    lock_blueprint,
+    lock_authority,
     resolve_protected_resources,
-    unlock_blueprint,
+    unlock_authority,
 )
 
 RUNS_AS_ROOT = hasattr(os, "geteuid") and os.geteuid() == 0
@@ -40,14 +39,14 @@ def test_blueprint_lock_flow_uses_os_lock(
     monkeypatch.setattr(authority, "resolve_bpfw_package_root", lambda: package_root)
     blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
     blueprint_path.parent.mkdir(parents=True)
-    blueprint_path.write_text("version: 1\nresponsibilities: []\n", encoding="utf-8")
+    blueprint_path.write_text("version: 1\nblocks: []\n", encoding="utf-8")
 
     try:
-        assert get_blueprint_lock_state(project_root=tmp_path) == "unlocked"
-        assert lock_blueprint(project_root=tmp_path) == "locked"
-        assert get_blueprint_lock_state(project_root=tmp_path) == "locked"
+        assert get_authority_protection_status(project_root=tmp_path).status == "unlocked"
+        assert lock_authority(project_root=tmp_path).status == "locked"
+        assert get_authority_protection_status(project_root=tmp_path).status == "locked"
     finally:
-        assert unlock_blueprint(project_root=tmp_path) == "unlocked"
+        assert unlock_authority(project_root=tmp_path).status == "unlocked"
 
 
 def test_access_control_blocks_locked_blueprint(
@@ -58,8 +57,8 @@ def test_access_control_blocks_locked_blueprint(
     monkeypatch.setattr(authority, "resolve_bpfw_package_root", lambda: package_root)
     blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
     blueprint_path.parent.mkdir(parents=True)
-    blueprint_path.write_text("version: 1\nresponsibilities: []\n", encoding="utf-8")
-    lock_blueprint(project_root=tmp_path)
+    blueprint_path.write_text("version: 1\nblocks: []\n", encoding="utf-8")
+    lock_authority(project_root=tmp_path)
 
     try:
         ensure_blueprint_can_be_written(project_root=tmp_path)
@@ -68,7 +67,7 @@ def test_access_control_blocks_locked_blueprint(
     else:
         raise AssertionError("Expected locked blueprint write to be blocked")
     finally:
-        unlock_blueprint(project_root=tmp_path)
+        unlock_authority(project_root=tmp_path)
 
     assert message == "Blueprint is locked. Run bpfw unlock before editing."
 
@@ -76,7 +75,7 @@ def test_access_control_blocks_locked_blueprint(
 def test_resolve_protected_resources_uses_blueprint_and_guard_files(tmp_path: Path) -> None:
     blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
     blueprint_path.parent.mkdir(parents=True)
-    blueprint_path.write_text("version: 1\nresponsibilities: []\n", encoding="utf-8")
+    blueprint_path.write_text("version: 1\nblocks: []\n", encoding="utf-8")
 
     resources = resolve_protected_resources(project_root=tmp_path)
 
@@ -92,10 +91,10 @@ def test_authority_status_degrades_when_a_guard_is_unlocked(
 ) -> None:
     blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
     blueprint_path.parent.mkdir(parents=True)
-    blueprint_path.write_text("version: 1\nresponsibilities: []\n", encoding="utf-8")
+    blueprint_path.write_text("version: 1\nblocks: []\n", encoding="utf-8")
 
-    def fake_lock_state(project_root: Path, relative_path: str) -> str:
-        if relative_path == "bpfw/blueprint.yaml":
+    def fake_lock_state(path: Path) -> str:
+        if path == blueprint_path:
             return "locked"
         return "unlocked"
 
@@ -115,27 +114,27 @@ def test_locked_blueprint_rejects_direct_file_write(
     monkeypatch.setattr(authority, "resolve_bpfw_package_root", lambda: package_root)
     blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
     blueprint_path.parent.mkdir(parents=True)
-    blueprint_path.write_text("version: 1\nresponsibilities: []\n", encoding="utf-8")
+    blueprint_path.write_text("version: 1\nblocks: []\n", encoding="utf-8")
 
-    lock_blueprint(project_root=tmp_path)
+    lock_authority(project_root=tmp_path)
 
     try:
         with pytest.raises(PermissionError):
-            blueprint_path.write_text("version: 2\nresponsibilities: []\n", encoding="utf-8")
+            blueprint_path.write_text("version: 2\nblocks: []\n", encoding="utf-8")
     finally:
-        unlock_blueprint(project_root=tmp_path)
+        unlock_authority(project_root=tmp_path)
 
-    blueprint_path.write_text("version: 2\nresponsibilities: []\n", encoding="utf-8")
+    blueprint_path.write_text("version: 2\nblocks: []\n", encoding="utf-8")
     assert blueprint_path.read_text(encoding="utf-8").startswith("version: 2")
 
 
-def test_lock_blueprint_does_not_claim_os_lock_when_backend_is_unsupported(
+def test_lock_authority_does_not_claim_os_lock_when_backend_is_unsupported(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
     blueprint_path.parent.mkdir(parents=True)
-    blueprint_path.write_text("version: 1\nresponsibilities: []\n", encoding="utf-8")
+    blueprint_path.write_text("version: 1\nblocks: []\n", encoding="utf-8")
 
     fallback_lock_path = tmp_path / "bpfw" / ".lock"
     fallback_lock_path.write_text(
@@ -143,10 +142,10 @@ def test_lock_blueprint_does_not_claim_os_lock_when_backend_is_unsupported(
         encoding="utf-8",
     )
 
-    monkeypatch.setattr(authority, "lock_file", lambda project_root, relative_path: "unsupported")
+    monkeypatch.setattr(authority, "lock_file", lambda path: "unsupported")
 
-    assert lock_blueprint(project_root=tmp_path) == "unsupported"
-    assert get_blueprint_lock_state(project_root=tmp_path) == "unlocked"
+    assert lock_authority(project_root=tmp_path).status == "unsupported"
+    assert get_authority_protection_status(project_root=tmp_path).status == "unlocked"
     assert not fallback_lock_path.exists()
 
 

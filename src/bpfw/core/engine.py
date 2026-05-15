@@ -42,7 +42,7 @@ class BlueprintEngine:
         )
         step_results = []
         if command.command_name in {"inspector", "editor", "planner"}:
-            lock_state = core_registry.get_blueprint_lock_state(project_root=context.project_root)
+            lock_state = core_registry.get_authority_protection_status(project_root=context.project_root).status
             if lock_state in {"locked", "degraded"}:
                 verify_result = VerifyBlueprintStep().run(context)
                 step_results.append(verify_result)
