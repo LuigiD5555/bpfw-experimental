@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-from bpfw.catalog.lifecycle import count_lifecycles
+from bpfw.catalog.status import count_statuses
 from bpfw.catalog.loader import BlueprintLoader
 from bpfw.catalog.models import (
     AUTHORITY_STATE_EMPTY,
@@ -12,7 +12,7 @@ from bpfw.catalog.models import (
     VerificationReport,
 )
 from bpfw.catalog.verify import run_verify
-from bpfw.protection.authority import get_blueprint_lock_state
+from bpfw.protection.authority import get_authority_protection_status
 
 _BLUEPRINT_DISPLAY_PATH = "bpfw/blueprint.yaml"
 
@@ -25,7 +25,7 @@ def _determine_lock_state(project_root: Path, authority_state: str) -> str:
     if authority_state == AUTHORITY_STATE_MISSING:
         return "unknown"
 
-    return get_blueprint_lock_state(project_root=project_root)
+    return get_authority_protection_status(project_root=project_root).status
 
 
 def run_status(project_root: Path) -> Tuple[str, int]:
@@ -67,7 +67,7 @@ def run_status(project_root: Path) -> Tuple[str, int]:
     )
 
     # Status counts from loaded blocks
-    lifecycle_counts = count_lifecycles(load_result.data)
+    lifecycle_counts = count_statuses(load_result.data)
 
     # Step 5: Missing — no scan, execution allowed
     if authority_state == AUTHORITY_STATE_MISSING:

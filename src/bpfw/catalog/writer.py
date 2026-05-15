@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from bpfw.catalog.access_control import ensure_blueprint_can_be_written
-from bpfw.catalog.lifecycle import ALLOWED_LIFECYCLES
+from bpfw.catalog.status import ALLOWED_STATUSES
 from bpfw.catalog.models import DiscoveredCodeUnit
 from bpfw.catalog.paths import resolve_blueprint_path
 from bpfw.catalog.symbol_types import normalize_symbol_type
@@ -97,7 +97,7 @@ def build_initial_blueprint(
             "mode": "catalog",
             "empty_blueprint_allows_execution": True,
             "defined_blueprint_blocks_on_drift": True,
-            "allowed_statuses": list(ALLOWED_LIFECYCLES),
+            "allowed_statuses": list(ALLOWED_STATUSES),
             "one_active_block_per_purpose": True,
             "undeclared_code_blocks": True,
             "missing_declared_code_blocks": True,

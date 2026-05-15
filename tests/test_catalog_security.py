@@ -24,11 +24,11 @@ def test_validate_no_blueprint_secrets_allows_clean_blueprint() -> None:
                 "purpose": "manage_users",
                 "name": "User Service",
                 "domain": "users",
-                "lifecycle": "active",
-                "location": {
+                "status": "active",
+                "code": {
                     "path": "src/users.py",
                     "symbol": "UserService",
-                    "symbol_type": "class",
+                    "kind": "class",
                 },
                 "detected": {
                     "qualified_name": "users.UserService",

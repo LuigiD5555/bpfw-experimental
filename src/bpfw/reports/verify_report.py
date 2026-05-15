@@ -2,7 +2,7 @@
 
 from typing import Dict, List
 
-from bpfw.catalog.lifecycle import ALLOWED_LIFECYCLES
+from bpfw.catalog.status import ALLOWED_STATUSES
 from bpfw.catalog.models import VerificationReport
 from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, Finding
 
@@ -20,10 +20,10 @@ _SUGGESTED_ACTIONS: Dict[str, str] = {
     ),
     "INCOMPLETE_BLOCK": (
         "Sync bpfw/blueprint.yaml by completing: id, purpose, name, domain, status, "
-        "code.path, code.symbol, and code.kind (legacy aliases are accepted)."
+        "code.path, code.symbol, and code.kind."
     ),
     "INVALID_STATUS": (
-        f"Use {', '.join(ALLOWED_LIFECYCLES)}."
+        f"Use {', '.join(ALLOWED_STATUSES)}."
     ),
     "DUPLICATE_BLOCK_ID": (
         "Give every block a unique id."

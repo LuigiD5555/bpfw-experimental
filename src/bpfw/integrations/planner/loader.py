@@ -15,7 +15,6 @@ from bpfw.catalog.schema import (
     get_status,
     get_kind,
     get_uniqueness,
-    normalize_blueprint,
 )
 from bpfw.integrations.planner.connection_detection import detect_connections
 from bpfw.integrations.planner.connection_merge import merge_connections
@@ -118,8 +117,6 @@ class BlueprintStateLoader:
             state.source_mode = "empty_blueprint"
             return state
         
-        blueprint_data = normalize_blueprint(blueprint_data)
-
         # Load project configuration
         project_config = BlueprintStateLoader._load_project_config(blueprint_data)
         

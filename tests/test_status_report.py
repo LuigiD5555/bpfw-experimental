@@ -34,12 +34,12 @@ def test_status_recommends_inspect_for_undeclared_code(tmp_path: Path) -> None:
         "    purpose: maintain declared func\n"
         "    name: declared_func\n"
         "    domain: demo\n"
-        "    lifecycle: active\n"
-        "    location:\n"
+        "    status: active\n"
+        "    code:\n"
         "      path: src/demo/app.py\n"
         "      module: src.demo.app\n"
         "      symbol: declared_func\n"
-        "      symbol_type: function\n",
+        "      kind: function\n",
         encoding="utf-8",
     )
 
@@ -70,12 +70,12 @@ def test_status_recommends_lock_for_valid_unlocked_blueprint(tmp_path: Path) -> 
         "    purpose: maintain declared func\n"
         "    name: declared_func\n"
         "    domain: demo\n"
-        "    lifecycle: active\n"
-        "    location:\n"
+        "    status: active\n"
+        "    code:\n"
         "      path: src/demo/app.py\n"
         "      module: src.demo.app\n"
         "      symbol: declared_func\n"
-        "      symbol_type: function\n",
+        "      kind: function\n",
         encoding="utf-8",
     )
 

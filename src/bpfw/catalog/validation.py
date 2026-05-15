@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, List
 
-from bpfw.catalog.lifecycle import ALLOWED_LIFECYCLES, is_allowed_lifecycle
+from bpfw.catalog.status import ALLOWED_STATUSES, is_allowed_status
 from bpfw.catalog.models import (
     AUTHORITY_STATE_EMPTY,
     AUTHORITY_STATE_INVALID,
@@ -23,7 +23,7 @@ def _is_blank(value: Any) -> bool:
 
 
 def _safe_code_field(block: Dict[str, Any], field_name: str) -> Any:
-    """Safely retrieve a field from canonical or legacy code metadata."""
+    """Safely retrieve a field from canonical code metadata."""
     code = get_code(block)
     if field_name == "kind":
         return get_kind(code)
@@ -95,7 +95,7 @@ def _validate_block_status(block: Any, findings: List[Finding]) -> None:
         return
 
     status = get_status(block)
-    if status is not None and not is_allowed_lifecycle(status):
+    if status is not None and not is_allowed_status(status):
         findings.append(
             Finding(
                 source=_SOURCE,
@@ -106,7 +106,7 @@ def _validate_block_status(block: Any, findings: List[Finding]) -> None:
                 message="The block status is not allowed in the MVP.",
                 evidence={
                     "status": status,
-                    "allowed_statuses": list(ALLOWED_LIFECYCLES),
+                    "allowed_statuses": list(ALLOWED_STATUSES),
                 },
             )
         )

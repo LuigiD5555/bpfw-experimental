@@ -12,7 +12,7 @@ from bpfw.catalog.models import (
     BlueprintLoadResult,
 )
 from bpfw.catalog.paths import resolve_blueprint_path
-from bpfw.catalog.schema import get_blocks, get_code, get_kind, get_purpose, get_status, normalize_blueprint
+from bpfw.catalog.schema import get_blocks, get_code, get_kind, get_purpose, get_status
 from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, FINDING_SEVERITY_INFO, FINDING_SEVERITY_WARNING, Finding
 
 
@@ -114,7 +114,6 @@ class BlueprintLoader:
                 findings=[finding],
             )
 
-        data = normalize_blueprint(data)
         blocks = get_blocks(data)
 
         if not blocks:
@@ -180,7 +179,6 @@ def is_block_complete(block: Dict[str, Any]) -> bool:
     - code.symbol
     - code.kind
 
-    Legacy aliases are accepted while loading old blueprints.
     """
     for key in ("id", "name", "domain"):
         value = block.get(key)
@@ -206,8 +204,3 @@ def is_block_complete(block: Dict[str, Any]) -> bool:
         return False
 
     return True
-
-
-def is_responsibility_complete(block: Dict[str, Any]) -> bool:
-    """Legacy alias for old callers; use is_block_complete instead."""
-    return is_block_complete(block)

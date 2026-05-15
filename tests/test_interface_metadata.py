@@ -306,7 +306,7 @@ def test_classmethod_excludes_cls(tmp_path: Path) -> None:
     assert output is None
 
 
-def test_old_blueprint_no_interface(tmp_path: Path) -> None:
+def test_canonical_blueprint_no_interface(tmp_path: Path) -> None:
     """Test that old blueprint entries without interface still load and work."""
     # This is a basic sanity check that the interface key is optional
     from bpfw.catalog.loader import BlueprintLoader
@@ -330,7 +330,7 @@ def test_old_blueprint_no_interface(tmp_path: Path) -> None:
         "  mode: catalog\n"
         "  empty_blueprint_allows_execution: true\n"
         "  defined_blueprint_blocks_on_drift: true\n"
-        "  allowed_lifecycles:\n"
+        "  allowed_statuses:\n"
         "  - active\n"
         "  - experimental\n"
         "  single_active_per_purpose: true\n"
@@ -345,23 +345,23 @@ def test_old_blueprint_no_interface(tmp_path: Path) -> None:
         "  purpose: test simple_function\n"
         "  name: simple_function\n"
         "  domain: test\n"
-        "  lifecycle: active\n"
-        "  location:\n"
+        "  status: active\n"
+        "  code:\n"
         "    path: src/test.py\n"
         "    module: src.test\n"
         "    symbol: simple_function\n"
-        "    symbol_type: function\n"
+        "    kind: function\n"
         "    start_line: 1\n"
         "    end_line: 3\n"
         "  detected:\n"
         "    qualified_name: src.test.simple_function\n"
         "    kind: function\n"
         "  entrypoints: []\n"
-        "  related_code: []\n"
-        "  duplicate_policy:\n"
+        "  connections: []\n"
+        "  uniqueness:\n"
         "    group: test_simple_function\n"
         "    allow_multiple_non_active: true\n"
-        "    forbidden_active_duplicates: true\n"
+        "    forbid_active_duplicates: true\n"
         "    suspected_duplicates: []\n"
         "  replacement:\n"
         "    replaces: null\n"

@@ -1,11 +1,11 @@
 """Catalog verification support for MVP."""
 
-from bpfw.catalog.lifecycle import (
-    ALLOWED_LIFECYCLES,
-    LIFECYCLE_ACTIVE,
-    LIFECYCLE_DEPRECATED,
-    LIFECYCLE_EXPERIMENTAL,
-    LIFECYCLE_LEGACY,
+from bpfw.catalog.status import (
+    ALLOWED_STATUSES,
+    STATUS_ACTIVE,
+    STATUS_DEPRECATED,
+    STATUS_EXPERIMENTAL,
+    STATUS_LEGACY,
 )
 from bpfw.catalog.models import (
     AUTHORITY_STATE_DEFINED,
@@ -20,7 +20,7 @@ from bpfw.catalog.models import (
 )
 
 __all__ = [
-    "ALLOWED_LIFECYCLES",
+    "ALLOWED_STATUSES",
     "AUTHORITY_STATE_DEFINED",
     "AUTHORITY_STATE_DRAFT",
     "AUTHORITY_STATE_EMPTY",
@@ -28,10 +28,10 @@ __all__ = [
     "AUTHORITY_STATE_MISSING",
     "BlueprintLoadResult",
     "DiscoveredCodeUnit",
-    "LIFECYCLE_ACTIVE",
-    "LIFECYCLE_DEPRECATED",
-    "LIFECYCLE_EXPERIMENTAL",
-    "LIFECYCLE_LEGACY",
+    "STATUS_ACTIVE",
+    "STATUS_DEPRECATED",
+    "STATUS_EXPERIMENTAL",
+    "STATUS_LEGACY",
     "ScanResult",
     "VerificationReport",
 ]
