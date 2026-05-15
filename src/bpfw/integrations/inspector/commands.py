@@ -13,6 +13,12 @@ DOMAIN_SUGGESTION_KEYS = ("q", "w", "e", "r", "t")
 CUSTOM_DOMAIN_KEY = "y"
 
 
+def _normalize_authority_text(value: str) -> str:
+    """Return user-authored authority text in canonical lowercase form."""
+
+    return " ".join(value.strip().lower().split())
+
+
 class InspectorAction:
     """Define action names produced by inspector commands."""
 
@@ -22,6 +28,7 @@ class InspectorAction:
     QUIT = "quit"
     HELP = "help"
     INTERFACE_EDIT = "interface_edit"
+    TOGGLE_FULL_VIEW = "toggle_full_view"
     UNKNOWN = "unknown"
 
 
@@ -43,8 +50,8 @@ def apply_inspector_command(
         suggestion_index = int(stripped_command) - 1
         if suggestion_index < len(purpose_suggestions):
             suggestion_text = purpose_suggestions[suggestion_index].text.strip()
-            if suggestion_text not in {"", "-", "Write custom purpose..."}:
-                set_purpose(issue.block, suggestion_text)
+            if _normalize_authority_text(suggestion_text) not in {"", "-", "write custom purpose", "write custom purpose..."}:
+                set_purpose(issue.block, _normalize_authority_text(suggestion_text))
         return InspectorAction.STAY
 
     if stripped_command.startswith("6"):
@@ -52,7 +59,7 @@ def apply_inspector_command(
         if not value:
             value = input_func("purpose: ").strip()
         if value:
-            set_purpose(issue.block, value)
+            set_purpose(issue.block, _normalize_authority_text(value))
         return InspectorAction.STAY
 
     # Check domain keys before other single-key commands.
@@ -61,7 +68,7 @@ def apply_inspector_command(
         if domain_index < len(domain_suggestions):
             domain_text = domain_suggestions[domain_index].strip()
             if domain_text not in {"", "-", "custom"}:
-                issue.block["domain"] = domain_text
+                issue.block["domain"] = _normalize_authority_text(domain_text)
         return InspectorAction.STAY
 
     # Then check status keys (z, x, c, v)
@@ -80,7 +87,7 @@ def apply_inspector_command(
         if not value:
             value = input_func("domain: ").strip()
         if value:
-            issue.block["domain"] = value
+            issue.block["domain"] = _normalize_authority_text(value)
         return InspectorAction.STAY
 
     if stripped_command.startswith("n"):
@@ -112,6 +119,9 @@ def apply_inspector_command(
 
     if stripped_command == "h":
         return InspectorAction.HELP
+
+    if stripped_command == "a":
+        return InspectorAction.TOGGLE_FULL_VIEW
 
     return InspectorAction.UNKNOWN
 

@@ -41,6 +41,7 @@ def run_text_inspector(
     header_title: str = DEFAULT_INSPECTOR_HEADER_TITLE,
     input_func: InputFunc = input,
     print_func: PrintFunc = print,
+    show_all: bool = False,
 ) -> int:
     """Run the direct MVP inspector UI."""
 
@@ -74,6 +75,7 @@ def run_text_inspector(
         header_title=header_title,
         input_func=input_func,
         print_func=print_func,
+        show_all=show_all,
     )
 
 
@@ -82,6 +84,7 @@ def run_text_inspector_session(
     header_title: str = DEFAULT_INSPECTOR_HEADER_TITLE,
     input_func: InputFunc = input,
     print_func: PrintFunc = print,
+    show_all: bool = False,
 ) -> int:
     """Run text inspector against an already loaded session."""
 
@@ -121,6 +124,7 @@ def run_text_inspector_session(
             domain_suggestions=domain_suggestions,
             header_title=header_title,
             print_func=print_func,
+            show_all=show_all,
         )
         try:
             raw_command = input_func("> ")
@@ -167,6 +171,10 @@ def run_text_inspector_session(
         if action == "quit":
             print_func("Inspector stopped.")
             return 0
+
+        if action == "toggle_full_view":
+            show_all = not show_all
+            continue
 
         if action == "help":
             for line in _render_help_block():
@@ -269,7 +277,7 @@ def _render_unknown_command_notification() -> list[str]:
     from bpfw.integrations.shared.visual_notifications import render_notification_block
 
     lines = [
-        "Use 1/2/3/4/5/6, q/w/e/r/t/y, z/x/c/v, n, i, o(notes), Enter, b, h, or esc."
+        "Use 1/2/3/4/5/6, q/w/e/r/t/y, z/x/c/v, n, i, o(notes), Enter, b, a, h, or esc."
     ]
     return render_notification_block(
         title="Unknown command",
@@ -302,10 +310,41 @@ def _render_help_block() -> list[str]:
         "  Selection",
         "  ─────────",
         "  [1-5]      Choose suggested purpose",
-        "  [6]        Write custom purpose",
+        "  [6]        write custom purpose",
         f"  [{'|'.join(DOMAIN_SUGGESTION_KEYS)}]  Choose suggested domain",
         f"  [{CUSTOM_DOMAIN_KEY}]        Write custom domain",
         "  [z|x|c|v]  Set status",
+        "  [a]        Toggle compact/full interface",
+        "",
+        "  Purpose suggestions",
+        "  ───────────────────",
+        "  [1] Existing purpose from blueprint matches this block.",
+        "  [2] Learned purpose previously accepted by the user.",
+        "  [3] Symbol or block name, such as class/function name.",
+        "  [4] Docstring first sentence or supported docstring pattern.",
+        "  [5] Blended evidence from history, symbol, and docstring.",
+        "  [6] Manual lowercase purpose written by the user.",
+        "",
+        "  Domain suggestions",
+        "  ──────────────────",
+        "  [q] Folder-based domain from the nearest useful folder.",
+        "  [w] File-based domain from the source file name.",
+        "  [e] Module-based domain from the Python module parent.",
+        "  [r] Symbol-based domain from the class/function name.",
+        "  [t] Previous domain used for the same code origin.",
+        "  [y] Manual domain written by the user.",
+        "",
+        "  Interface modes",
+        "  ───────────────",
+        "  bpfw inspector opens the compact interface by default.",
+        "  Use bpfw inspector -a or bpfw inspector --all to open all panels.",
+        "  Inside inspector, press a + Enter to toggle compact/full view.",
+        "",
+        "  Why '-' appears",
+        "  ───────────────",
+        "  '-' means that source did not have enough evidence.",
+        "  Example: [4] needs a usable docstring.",
+        "  Example: [t] needs previous domain history for that origin.",
         "",
         "  Editing",
         "  ───────",
@@ -317,6 +356,7 @@ def _render_help_block() -> list[str]:
         "  ────",
         "  [Enter]    Save and continue",
         "  [b]        Back",
+        "  [a]        Toggle compact/full interface",
         "  [h]        Toggle help",
         f"  {quit_command_label('Quit'):<10}",
         "",

@@ -19,6 +19,7 @@ class ThemeConfig:
 
 DEFAULT_THEME = ThemeConfig()
 COMMAND_LEFT_PADDING = 1
+COMMAND_SEPARATOR = "__BPFW_COMMAND_SEPARATOR__"
 
 
 def compute_panel_width(
@@ -80,14 +81,22 @@ def render_commands_box(
     theme: ThemeConfig = DEFAULT_THEME,
     wrap_mode: str = "safe_wrap",
 ) -> List[str]:
-    """Render commands panel with safe wrapping/truncation."""
+    """Render commands panel with safe wrapping and optional dividers."""
 
     content_width = max(1, width - COMMAND_LEFT_PADDING)
-    wrapped_lines: List[str] = []
+    body_lines: List[str] = []
     for line in lines:
+        if line == COMMAND_SEPARATOR:
+            body_lines.append(f"├{'─' * width}┤")
+            continue
         wrapped = _safe_wrap_line(line=line, width=content_width) if wrap_mode == "safe_wrap" else [fit_text(line, content_width)]
-        wrapped_lines.extend(f"{' ' * COMMAND_LEFT_PADDING}{wrapped_line}" for wrapped_line in wrapped)
-    return render_panel(title="Commands", lines=wrapped_lines, width=width, theme=theme, centered_title=True)
+        for wrapped_line in wrapped:
+            padded_line = f"{' ' * COMMAND_LEFT_PADDING}{wrapped_line}"
+            body_lines.append(f"│{pad_text(padded_line, width)}│")
+
+    label = " Commands "
+    title_bar = _center_fill(label=label, width=width, fill=theme.title_fill)
+    return [f"╭{title_bar}╮", *body_lines, f"╰{'─' * width}╯"]
 
 
 def render_stacked_sections(sections: Sequence[Sequence[str]], spacing: int = 1) -> List[str]:

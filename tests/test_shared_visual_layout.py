@@ -96,3 +96,12 @@ def test_two_column_box_keeps_total_width_when_content_overflows() -> None:
 
     assert any("…" in line for line in rendered)
     assert all(display_width(line) == 32 for line in rendered)
+
+
+def test_render_commands_box_supports_divider_line() -> None:
+    output = render_commands_box(lines=["[q] Quit", "__BPFW_COMMAND_SEPARATOR__", "Note: press Enter"], width=24)
+    text = "\n".join(output)
+
+    assert "├" in text
+    assert "┤" in text
+    assert "Note: press Enter" in text

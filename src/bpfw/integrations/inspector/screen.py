@@ -1,5 +1,6 @@
 """Screen rendering for the inspector integration."""
 
+from abc import ABC, abstractmethod
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Dict, List
@@ -23,6 +24,7 @@ from bpfw.integrations.shared.visual_boxes import (
     render_split_box,
 )
 from bpfw.integrations.shared.visual_theme import (
+    COMMAND_SEPARATOR,
     DEFAULT_THEME,
     compute_panel_width,
     render_commands_box,
@@ -38,6 +40,67 @@ DEFAULT_INSPECTOR_HEADER_TITLE = "Blueprint Framework Inspector"
 COMMAND_COLUMN_WIDTHS = (28, 22)
 
 
+class InspectorScreenRenderStrategy(ABC):
+    """Define view-specific rendering decisions for inspector screens."""
+
+    @abstractmethod
+    def should_render_extended_panels(self) -> bool:
+        """Return whether optional inspector panels should be rendered."""
+
+    @abstractmethod
+    def build_command_lines(self) -> List[str]:
+        """Build the visible command lines for the current inspector view."""
+
+
+class CompactInspectorScreenRenderStrategy(InspectorScreenRenderStrategy):
+    """Render only the essential inspector panels and compact commands."""
+
+    def should_render_extended_panels(self) -> bool:
+        """Return false because compact mode hides optional panels."""
+
+        return False
+
+    def build_command_lines(self) -> List[str]:
+        """Build compact command help with only the core navigation commands."""
+
+        return [
+            _format_command_row("[h] help", quit_command_label()),
+            _format_command_row("[Enter] save + next", "[b] back", "[a] full view"),
+            COMMAND_SEPARATOR,
+            "Note: type a command key and press Enter to run it, for example a + Enter or esc + Enter.",
+        ]
+
+
+class FullInspectorScreenRenderStrategy(InspectorScreenRenderStrategy):
+    """Render every inspector panel and the complete command reference."""
+
+    def should_render_extended_panels(self) -> bool:
+        """Return true because full mode renders every inspector panel."""
+
+        return True
+
+    def build_command_lines(self) -> List[str]:
+        """Build the full command help for every inspector editing action."""
+
+        return [
+            _format_command_row("[1-5] purpose suggestion", "[6] custom purpose"),
+            _format_command_row(f"[{'|'.join(DOMAIN_SUGGESTION_KEYS)}] domain", f"[{CUSTOM_DOMAIN_KEY}] custom domain"),
+            _format_command_row("[z|x|c|v] status", "[n] name", "[i] interface"),
+            _format_command_row("[o] notes", "[h] help", quit_command_label()),
+            _format_command_row("[Enter] save + next", "[b] back", "[a] compact view"),
+            COMMAND_SEPARATOR,
+            "Note: type a command key and press Enter to run it, for example 1 + Enter or esc + Enter.",
+        ]
+
+
+def _resolve_render_strategy(show_all: bool) -> InspectorScreenRenderStrategy:
+    """Return the inspector rendering strategy for the requested view mode."""
+
+    if show_all:
+        return FullInspectorScreenRenderStrategy()
+    return CompactInspectorScreenRenderStrategy()
+
+
 def render_inspector_screen(
     project_root: Path,
     issue_type: str,
@@ -48,6 +111,7 @@ def render_inspector_screen(
     domain_suggestions: List[str],
     header_title: str = DEFAULT_INSPECTOR_HEADER_TITLE,
     print_func: PrintFunc = print,
+    show_all: bool = False,
 ) -> None:
     """Render the direct MVP inspector screen."""
 
@@ -102,13 +166,9 @@ def render_inspector_screen(
             domain_text = domain_suggestions[domain_index]
         domain_lines.append(f" [{domain_label}] {domain_text}")
     domain_lines.append(f" [{CUSTOM_DOMAIN_KEY}] write custom domain")
-    command_lines = [
-        _format_command_row("[1-5] purpose suggestion", "[6] custom purpose"),
-        _format_command_row(f"[{'|'.join(DOMAIN_SUGGESTION_KEYS)}] domain", f"[{CUSTOM_DOMAIN_KEY}] custom domain"),
-        _format_command_row("[z|x|c|v] status", "[n] name", "[i] interface"),
-        _format_command_row("[o] notes", "[h] help", quit_command_label()),
-        _format_command_row("[Enter] save + next", "[b] back"),
-    ]
+    render_strategy = _resolve_render_strategy(show_all=show_all)
+    show_extended_panels = render_strategy.should_render_extended_panels()
+    command_lines = render_strategy.build_command_lines()
     observation_preview_lines = _build_observation_panel_lines(
         block=block,
         content_width=120,
@@ -122,11 +182,11 @@ def render_inspector_screen(
     global_inner_width = _compute_layout_width(
         header_meta=header_meta,
         code_lines=code_lines,
-        hierarchy_lines=hierarchy_lines,
+        hierarchy_lines=hierarchy_lines if show_extended_panels else [],
         authority_lines=authority_lines,
         lifecycle_lines=lifecycle_lines,
-        observation_preview_lines=observation_preview_lines,
-        interface_preview_lines=interface_preview_lines,
+        observation_preview_lines=observation_preview_lines if show_extended_panels else [],
+        interface_preview_lines=interface_preview_lines if show_extended_panels else [],
         domain_lines=domain_lines,
         purpose_lines=purpose_lines,
         command_lines=command_lines,
@@ -145,24 +205,25 @@ def render_inspector_screen(
     for line in render_box(title="Code Block", lines=code_panel_lines, width=global_inner_width):
         print_func(line)
 
-    for line in render_box(
-        title="Hierarchy",
-        lines=hierarchy_lines,
-        width=global_inner_width,
-    ):
-        print_func(line)
+    if show_extended_panels:
+        for line in render_box(
+            title="Hierarchy",
+            lines=hierarchy_lines,
+            width=global_inner_width,
+        ):
+            print_func(line)
 
-    interface_lines = _build_interface_panel_lines(
-        block=block,
-        content_width=global_inner_width,
-        max_lines=6,
-    )
-    for line in render_box(
-        title="Interface",
-        lines=interface_lines,
-        width=global_inner_width,
-    ):
-        print_func(line)
+        interface_lines = _build_interface_panel_lines(
+            block=block,
+            content_width=global_inner_width,
+            max_lines=6,
+        )
+        for line in render_box(
+            title="Interface",
+            lines=interface_lines,
+            width=global_inner_width,
+        ):
+            print_func(line)
 
     for line in render_split_box(
         left_title="Block Status",
@@ -186,17 +247,18 @@ def render_inspector_screen(
     ):
         print_func(line)
 
-    observation_lines = _build_observation_panel_lines(
-        block=block,
-        content_width=global_inner_width,
-        max_lines=3,
-    )
-    for line in render_box(
-        title="Notes",
-        lines=observation_lines,
-        width=global_inner_width,
-    ):
-        print_func(line)
+    if show_extended_panels:
+        observation_lines = _build_observation_panel_lines(
+            block=block,
+            content_width=global_inner_width,
+            max_lines=3,
+        )
+        for line in render_box(
+            title="Notes",
+            lines=observation_lines,
+            width=global_inner_width,
+        ):
+            print_func(line)
 
     for line in render_commands_box(
         lines=command_lines,

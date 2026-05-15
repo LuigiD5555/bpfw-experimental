@@ -209,17 +209,75 @@ def test_text_inspector_renders_expected_sections(tmp_path: Path) -> None:
     assert " [r] " in rendered
     assert " [t] " in rendered
     assert "[y] write custom domain" in rendered
-    assert "Hierarchy" in rendered
-    assert "children:" in rendered
-    assert "ExampleService.run" in rendered
+    assert "Hierarchy" not in rendered
+    assert "Interface" not in rendered
+    assert "Notes" not in rendered
+    assert "[a] full view" in rendered
     assert "[z] active" in rendered
     assert "[x] experimental" in rendered
     assert "[c] legacy" in rendered
     assert "[v] deprecated" in rendered
     assert "[Enter] save + next" in rendered
+    assert "type a command key and press Enter" in rendered
+    assert "a + Enter" in rendered
+    assert "esc + Enter" in rendered
+    commands_section = rendered[rendered.rindex("Commands"):]
+    assert "purpose suggestion" not in commands_section
+    assert "custom purpose" not in commands_section
+    assert "custom domain" not in commands_section
+    assert "[z|x|c|v] status" not in commands_section
+    assert "[n] name" not in commands_section
+    assert "[i] interface" not in commands_section
+    assert "[o] notes" not in commands_section
+    assert "├" in rendered
     assert "s save" not in rendered
     assert "l1" not in rendered
     assert "d1" not in rendered
+
+
+def test_text_inspector_all_view_renders_extended_sections(tmp_path: Path) -> None:
+    block = _responsibility(
+        responsibility_id="example",
+        purpose="",
+        lifecycle="active",
+        path="src/bpfw/catalog/example.py",
+    )
+    block["detected"] = {
+        "methods": ["ExampleService.run"],
+        "functions": ["ExampleService.Helper"],
+    }
+    output: list[str] = []
+    purpose_suggestions = suggest_purposes(block)
+    domain_suggestions = suggest_domains(block)
+
+    render_text_inspector_screen(
+        project_root=tmp_path,
+        issue_type="draft",
+        block=block,
+        index=11,
+        total=82,
+        purpose_suggestions=purpose_suggestions,
+        domain_suggestions=domain_suggestions,
+        print_func=output.append,
+        show_all=True,
+    )
+
+    rendered = "\n".join(output)
+    assert "Hierarchy" in rendered
+    assert "children:" in rendered
+    assert "ExampleService.run" in rendered
+    assert "Interface" in rendered
+    assert "Notes" in rendered
+    assert "[a] compact view" in rendered
+    commands_section = rendered[rendered.rindex("Commands"):]
+    assert "purpose suggestion" in commands_section
+    assert "custom purpose" in commands_section
+    assert "custom domain" in commands_section
+    assert "[z|x|c|v] status" in commands_section
+    assert "[n] name" in commands_section
+    assert "[i] interface" in commands_section
+    assert "[o] notes" in commands_section
+    assert "1 + Enter" in commands_section
 
 
 def test_backfill_detected_docstring_from_source(tmp_path: Path) -> None:
@@ -907,3 +965,26 @@ def test_suggest_domains_previous_origin_slot_ignores_other_modules() -> None:
     suggestions = suggest_domains(current, project_blocks=[previous, current])
 
     assert suggestions[4] == "-"
+
+
+def test_inspector_help_explains_suggestion_sources() -> None:
+    """Ensure inspector help explains purpose and domain suggestion slots."""
+
+    from bpfw.integrations.inspector.session import _render_help_block
+
+    rendered = "\n".join(_render_help_block())
+
+    assert "Purpose suggestions" in rendered
+    assert "[1] Existing purpose from blueprint matches this block." in rendered
+    assert "[2] Learned purpose previously accepted by the user." in rendered
+    assert "[3] Symbol or block name, such as class/function name." in rendered
+    assert "[4] Docstring first sentence or supported docstring pattern." in rendered
+    assert "[5] Blended evidence from history, symbol, and docstring." in rendered
+    assert "Domain suggestions" in rendered
+    assert "[q] Folder-based domain from the nearest useful folder." in rendered
+    assert "[w] File-based domain from the source file name." in rendered
+    assert "[e] Module-based domain from the Python module parent." in rendered
+    assert "[r] Symbol-based domain from the class/function name." in rendered
+    assert "[t] Previous domain used for the same code origin." in rendered
+    assert "Why '-' appears" in rendered
+    assert "'-' means that source did not have enough evidence." in rendered
