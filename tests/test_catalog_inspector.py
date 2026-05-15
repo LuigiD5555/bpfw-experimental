@@ -1000,6 +1000,188 @@ def test_compact_inspector_help_omits_full_mode_details() -> None:
     assert "the same purpose." in rendered
 
 
+def test_custom_purpose_input_cancellation_with_ctrl_c(tmp_path: Path) -> None:
+    """Verify Ctrl+C in custom purpose prompt cancels and returns to inspector."""
+    blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
+    blueprint_path.parent.mkdir(parents=True)
+    blueprint_path.write_text(
+        "version: 1\n"
+        "blocks:\n"
+        "  - id: example\n"
+        "    name: ExampleService\n"
+        "    domain: catalog\n"
+        "    status: active\n"
+        "    purpose: ''\n"
+        "    code:\n"
+        "      path: src/bpfw/catalog/example.py\n"
+        "      symbol: ExampleService\n"
+        "      kind: class\n",
+        encoding="utf-8",
+    )
+    session = load_inspect_session(project_root=tmp_path)
+    output: list[str] = []
+    command_stream: list[object] = [
+        "6",
+        KeyboardInterrupt(),
+        "6valid purpose",
+        "",
+    ]
+
+    def scripted_input(prompt: str) -> str:
+        next_value = command_stream.pop(0)
+        if isinstance(next_value, BaseException):
+            raise next_value
+        return str(next_value)
+
+    exit_code = run_text_inspector_session(
+        session=session,
+        input_func=scripted_input,
+        print_func=output.append,
+    )
+
+    rendered = "\n".join(output)
+    saved = blueprint_path.read_text(encoding="utf-8")
+    assert exit_code == 0
+    assert "valid purpose" in saved
+    assert rendered.count("Blueprint Framework Inspector") >= 2
+    # Purpose field should be empty after first cancellation
+    # Then filled after second successful input
+
+
+def test_custom_domain_input_cancellation_with_ctrl_c(tmp_path: Path) -> None:
+    """Verify Ctrl+C in custom domain prompt cancels and returns to inspector."""
+    blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
+    blueprint_path.parent.mkdir(parents=True)
+    blueprint_path.write_text(
+        "version: 1\n"
+        "blocks:\n"
+        "  - id: example\n"
+        "    name: ExampleService\n"
+        "    domain: ''\n"
+        "    status: active\n"
+        "    purpose: maintain example\n"
+        "    code:\n"
+        "      path: src/bpfw/catalog/example.py\n"
+        "      symbol: ExampleService\n"
+        "      kind: class\n",
+        encoding="utf-8",
+    )
+    session = load_inspect_session(project_root=tmp_path)
+    output: list[str] = []
+    command_stream: list[object] = [
+        "y",
+        KeyboardInterrupt(),
+        "yvalid_domain",
+        "",
+    ]
+
+    def scripted_input(prompt: str) -> str:
+        next_value = command_stream.pop(0)
+        if isinstance(next_value, BaseException):
+            raise next_value
+        return str(next_value)
+
+    exit_code = run_text_inspector_session(
+        session=session,
+        input_func=scripted_input,
+        print_func=output.append,
+    )
+
+    rendered = "\n".join(output)
+    saved = blueprint_path.read_text(encoding="utf-8")
+    assert exit_code == 0
+    assert "valid_domain" in saved
+    assert rendered.count("Blueprint Framework Inspector") >= 2
+
+
+def test_main_inspector_ctrl_c_still_exits(tmp_path: Path) -> None:
+    """Verify Ctrl+C at main inspector level exits the inspector."""
+    blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
+    blueprint_path.parent.mkdir(parents=True)
+    blueprint_path.write_text(
+        "version: 1\n"
+        "blocks:\n"
+        "  - id: example\n"
+        "    name: ExampleService\n"
+        "    domain: ''\n"
+        "    status: active\n"
+        "    purpose: ''\n"
+        "    code:\n"
+        "      path: src/bpfw/catalog/example.py\n"
+        "      symbol: ExampleService\n"
+        "      kind: class\n",
+        encoding="utf-8",
+    )
+    session = load_inspect_session(project_root=tmp_path)
+    output: list[str] = []
+
+    def interrupting_input(_prompt: str) -> str:
+        raise KeyboardInterrupt
+
+    exit_code = run_text_inspector_session(
+        session=session,
+        input_func=interrupting_input,
+        print_func=output.append,
+    )
+
+    rendered = "\n".join(output)
+    saved = blueprint_path.read_text(encoding="utf-8")
+    assert exit_code == 0
+    assert "Inspector stopped." in rendered
+    assert "purpose: ''" in saved
+
+
+def test_cancelled_custom_input_does_not_persist_partial_data(
+    tmp_path: Path,
+) -> None:
+    """Verify cancelled custom input does not save partial data to blueprint."""
+    blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
+    blueprint_path.parent.mkdir(parents=True)
+    blueprint_path.write_text(
+        "version: 1\n"
+        "blocks:\n"
+        "  - id: example\n"
+        "    name: ExampleService\n"
+        "    domain: ''\n"
+        "    status: active\n"
+        "    purpose: ''\n"
+        "    code:\n"
+        "      path: src/bpfw/catalog/example.py\n"
+        "      symbol: ExampleService\n"
+        "      kind: class\n",
+        encoding="utf-8",
+    )
+    session = load_inspect_session(project_root=tmp_path)
+    output: list[str] = []
+    command_stream: list[object] = [
+        "6",
+        KeyboardInterrupt(),
+        "y",
+        KeyboardInterrupt(),
+        "quit",
+    ]
+
+    def scripted_input(prompt: str) -> str:
+        next_value = command_stream.pop(0)
+        if isinstance(next_value, BaseException):
+            raise next_value
+        return str(next_value)
+
+    exit_code = run_text_inspector_session(
+        session=session,
+        input_func=scripted_input,
+        print_func=output.append,
+    )
+
+    rendered = "\n".join(output)
+    saved = blueprint_path.read_text(encoding="utf-8")
+    assert exit_code == 0
+    assert "Inspector stopped." in rendered
+    # Both purpose and domain should remain empty
+    assert "purpose: ''" in saved
+    assert "domain: ''" in saved
+
+
 def test_full_inspector_help_keeps_full_mode_details() -> None:
     """Ensure full inspector help keeps full-mode explanations."""
 
