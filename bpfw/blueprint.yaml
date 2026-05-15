@@ -32,10 +32,10 @@ policy:
     detected_detail_level: minimal
 blocks:
 - id: blueprint_locked_error
-  purpose: Declare blueprint locked error
+  purpose: null
   name: BlueprintLockedError
-  domain: lock system
-  status: active
+  domain: null
+  status: null
   code:
     path: src/bpfw/core/errors.py
     module: src.bpfw.core.errors
@@ -48,11 +48,10 @@ blocks:
     kind: class
     methods: []
     functions: []
-    docstring: Raised when a protected blueprint write is attempted while locked.
   entrypoints: []
   connections: []
   uniqueness:
-    group: declare_blueprint_locked_error
+    group: null
     allow_multiple_non_active: true
     forbid_active_duplicates: true
     suspected_duplicates: []
@@ -62,10 +61,10 @@ blocks:
     reason: null
   notes: null
 - id: protection_result
-  purpose: Declare Protection result
+  purpose: null
   name: ProtectionResult
-  domain: lock system
-  status: active
+  domain: null
+  status: null
   code:
     path: src/bpfw/protection/authority.py
     module: src.bpfw.protection.authority
@@ -78,11 +77,10 @@ blocks:
     kind: class
     methods: []
     functions: []
-    docstring: Represent the result of a BPFW authority protection operation.
   entrypoints: []
   connections: []
   uniqueness:
-    group: declare_protection_result
+    group: null
     allow_multiple_non_active: true
     forbid_active_duplicates: true
     suspected_duplicates: []
@@ -92,10 +90,10 @@ blocks:
     reason: null
   notes: null
 - id: resolve_project_blueprint_path
-  purpose: Return project blueprint path
+  purpose: null
   name: resolve_project_blueprint_path
-  domain: utils
-  status: active
+  domain: null
+  status: null
   code:
     path: src/bpfw/protection/authority.py
     module: src.bpfw.protection.authority
@@ -108,11 +106,10 @@ blocks:
     kind: function
     methods: []
     functions: []
-    docstring: Return the project blueprint authority file path.
   entrypoints: []
   connections: []
   uniqueness:
-    group: return_project_blueprint_path
+    group: null
     allow_multiple_non_active: true
     forbid_active_duplicates: true
     suspected_duplicates: []
@@ -132,10 +129,10 @@ blocks:
       type: Path
       description: null
 - id: protected_resource
-  purpose: Declare file protected
+  purpose: null
   name: ProtectedResource
-  domain: lock system
-  status: active
+  domain: null
+  status: null
   code:
     path: src/bpfw/protection/authority.py
     module: src.bpfw.protection.authority
@@ -148,11 +145,10 @@ blocks:
     kind: class
     methods: []
     functions: []
-    docstring: Represent a file protected by BPFW.
   entrypoints: []
   connections: []
   uniqueness:
-    group: declare_file_protected
+    group: null
     allow_multiple_non_active: true
     forbid_active_duplicates: true
     suspected_duplicates: []
@@ -162,10 +158,10 @@ blocks:
     reason: null
   notes: null
 - id: resolve_bpfw_package_root
-  purpose: Return bpfw package root
+  purpose: null
   name: resolve_bpfw_package_root
-  domain: utils
-  status: active
+  domain: null
+  status: null
   code:
     path: src/bpfw/protection/authority.py
     module: src.bpfw.protection.authority
@@ -178,11 +174,10 @@ blocks:
     kind: function
     methods: []
     functions: []
-    docstring: Return the installed BPFW package root directory.
   entrypoints: []
   connections: []
   uniqueness:
-    group: return_bpfw_package_root
+    group: null
     allow_multiple_non_active: true
     forbid_active_duplicates: true
     suspected_duplicates: []
@@ -196,10 +191,10 @@ blocks:
       type: Path
       description: null
 - id: resolve_guard_files
-  purpose: Return protection mechanism file paths
+  purpose: null
   name: resolve_guard_files
-  domain: utils
-  status: active
+  domain: null
+  status: null
   code:
     path: src/bpfw/protection/authority.py
     module: src.bpfw.protection.authority
@@ -212,11 +207,10 @@ blocks:
     kind: function
     methods: []
     functions: []
-    docstring: Return paths to BPFW package files that implement the protection mechanism.
   entrypoints: []
   connections: []
   uniqueness:
-    group: return_protection_mechanism_file_paths
+    group: null
     allow_multiple_non_active: true
     forbid_active_duplicates: true
     suspected_duplicates: []
@@ -230,10 +224,10 @@ blocks:
       type: List[Path]
       description: null
 - id: resolve_protected_resources
-  purpose: Build protection resource list
+  purpose: null
   name: resolve_protected_resources
-  domain: lock system
-  status: active
+  domain: null
+  status: null
   code:
     path: src/bpfw/protection/authority.py
     module: src.bpfw.protection.authority
@@ -246,12 +240,10 @@ blocks:
     kind: function
     methods: []
     functions: []
-    docstring: Build the full protection resource list for a project, including its
-      blueprint and BPFW guard files.
   entrypoints: []
   connections: []
   uniqueness:
-    group: build_protection_resource_list
+    group: null
     allow_multiple_non_active: true
     forbid_active_duplicates: true
     suspected_duplicates: []
@@ -271,10 +263,10 @@ blocks:
       type: List[ProtectedResource]
       description: null
 - id: get_authority_protection_status
-  purpose: Get protection status
+  purpose: null
   name: get_authority_protection_status
-  domain: lock system
-  status: active
+  domain: null
+  status: null
   code:
     path: src/bpfw/protection/authority.py
     module: src.bpfw.protection.authority
@@ -287,11 +279,10 @@ blocks:
     kind: function
     methods: []
     functions: []
-    docstring: Return the protection status for the blueprint and guard files.
   entrypoints: []
   connections: []
   uniqueness:
-    group: get_protection_status
+    group: null
     allow_multiple_non_active: true
     forbid_active_duplicates: true
     suspected_duplicates: []
