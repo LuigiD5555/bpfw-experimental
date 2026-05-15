@@ -142,7 +142,6 @@ def read_key() -> str:
     Special keys:
         - 'up', 'down', 'left', 'right' for arrow keys
         - 'enter' for Enter/Return key
-        - 'escape' for Esc key
         - 'space' for Space key
         - 'tab' for Tab key
     """
@@ -157,7 +156,7 @@ def read_key() -> str:
             ch = sys.stdin.read(1)
 
             # Handle special keys (arrow keys, etc.)
-            if ch == '\x1b':  # ESC sequence
+            if ch == '\x1b':  # ANSI sequence
                 ch2 = sys.stdin.read(1) if sys.stdin.read(1) else ''
                 if ch2 == '[':
                     ch3 = sys.stdin.read(1) if sys.stdin.read(1) else ''
@@ -171,9 +170,9 @@ def read_key() -> str:
                         return 'left'
                     elif ch3 == 'Z':  # Shift+Tab
                         return 'shift_tab'
-                elif ch2 == '\x1b':  # Double ESC - actual ESC key
-                    return 'escape'
-                return 'escape'
+                elif ch2 == '\x1b':
+                    return ''
+                return ''
             elif ch == '\r' or ch == '\n':
                 return 'enter'
             elif ch == ' ':

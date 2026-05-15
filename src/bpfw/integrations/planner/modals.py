@@ -55,11 +55,11 @@ class AddBoxModal:
             return None
         
         print("│                                 │")
-        print("│ [enter] Create  [esc] Cancel    │")
+        print("│ [enter] Create  [q] Cancel    │")
         print("╰─────────────────────────────────╯")
         
         choice = input("> ").strip().lower()
-        if choice == "q" or choice == "esc":
+        if choice == "q":
             return None
         
         return AddBoxInput(
@@ -82,7 +82,7 @@ class AddBoxModal:
             print(f"│ {field_name:<32}│")
             value = read_input("> ")
             
-            if value.lower() == "q" or value.lower() == "esc":
+            if value.lower() == "q":
                 return None
             
             if value.strip():
@@ -105,7 +105,7 @@ class AddBoxModal:
                 print(f"│   [{index}] {symbol_type:<23}│")
             choice = read_input("> ").strip().lower()
             
-            if choice in ["q", "esc"]:
+            if choice in ["q"]:
                 return None
             
             if choice.isdigit() and 1 <= int(choice) <= len(visible_symbol_types):
@@ -163,11 +163,11 @@ class ConnectionModal:
             return None
         
         print("│                                   │")
-        print("│ [enter] Connect  [esc] Cancel     │")
+        print("│ [enter] Connect  [q] Cancel     │")
         print("╰───────────────────────────────────╯")
         
         choice = input("> ").strip().lower()
-        if choice == "q" or choice == "esc":
+        if choice == "q":
             return None
         
         return ConnectionInput(
@@ -186,7 +186,7 @@ class ConnectionModal:
         self._print_box_list()
         
         value = read_input("> ").strip().lower()
-        if value in ["q", "esc"]:
+        if value in ["q"]:
             return None
         
         # Try to find by index or ID
@@ -205,7 +205,7 @@ class ConnectionModal:
         self._print_box_list(exclude_id=source_id)
         
         value = read_input("> ").strip().lower()
-        if value in ["q", "esc"]:
+        if value in ["q"]:
             return None
         
         # Try to find by index or ID
@@ -223,7 +223,7 @@ class ConnectionModal:
                 print(f"│   [{idx}] {rel:<28}│")
             
             value = read_input("> ").strip().lower()
-            if value in ["q", "esc"]:
+            if value in ["q"]:
                 return None
             
             # Check by index

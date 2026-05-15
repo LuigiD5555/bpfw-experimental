@@ -214,10 +214,6 @@ class PlannerController:
 
     def _handle_pieces_filter_input(self, key: str) -> None:
         """Handle filter input while workspace filter mode is active."""
-        if key == "escape":
-            self.state.pieces_filter_mode = False
-            self.state.pieces_filter = ""
-            return
         if key == "enter":
             self.state.pieces_filter_mode = False
             return
@@ -848,7 +844,7 @@ class PlannerController:
             key: Key pressed by user.
         """
         command = key.strip().lower()
-        if command in {'', 'b', 'escape', 'enter', 'back'}:
+        if command in {'', 'b', 'enter', 'back'}:
             self.modal_data.pop("yaml_preview_full", None)
             self.state.screen = "review"
         elif command == 'f':
@@ -881,7 +877,7 @@ class PlannerController:
             key: Key pressed by user.
         """
         command = key.strip().lower()
-        if command == '' or command in {'b', 'escape', 'enter', 'back'}:
+        if command == '' or command in {'b', 'enter', 'back'}:
             self.state.screen = "workspace"
     
     # ---------------------------------------------------------------------------
@@ -895,7 +891,7 @@ class PlannerController:
             key: Key pressed by user.
         """
         command = key.strip().lower()
-        if command in {'', 'escape', 'back'} or is_back_command(command):
+        if command in {'', 'back'} or is_back_command(command):
             self.state.screen = "workspace"
             self.modal_data = {}
             return
@@ -909,7 +905,7 @@ class PlannerController:
     def _handle_removed_connection_key(self, key: str) -> None:
         """Handle key input on removed connection confirmation modal."""
         command = key.strip().lower()
-        if command in {"", "b", "enter", "escape", "back"}:
+        if command in {"", "b", "enter", "back"}:
             self.state.screen = "workspace"
             self.modal_data = {}
     
@@ -962,7 +958,7 @@ class PlannerController:
             key: Key pressed by user.
         """
         command = key.strip().lower()
-        if command in {'', 'escape', 'back'} or is_back_command(command):
+        if command in {'', 'back'} or is_back_command(command):
             self.state.screen = "workspace"
             self.modal_data = {}
         elif command in {'d', 'delete'}:
@@ -1008,7 +1004,7 @@ class PlannerController:
             key: Key pressed by user.
         """
         command = key.strip().lower()
-        if command in {'', 'b', 'escape', 'back'}:
+        if command in {'', 'b', 'back'}:
             self.state.screen = "workspace"
         elif command == 's':
             # Save and quit
@@ -1103,7 +1099,7 @@ class PlannerController:
         if command == 'a':
             # Add block
             self.state.screen = "add_block"
-        elif command in {'', 'enter', 'escape', 'back'} or is_back_command(command):
+        elif command in {'', 'enter', 'back'} or is_back_command(command):
             self.state.screen = "workspace"
     
     def _handle_duplicate_connection_key(self, key: str) -> None:
@@ -1113,7 +1109,7 @@ class PlannerController:
             key: Key pressed by user.
         """
         command = key.strip().lower()
-        if command in {'', 'enter', 'escape', 'back'} or is_back_command(command):
+        if command in {'', 'enter', 'back'} or is_back_command(command):
             self.state.screen = "workspace"
     
     def _handle_self_connection_key(self, key: str) -> None:
@@ -1126,7 +1122,7 @@ class PlannerController:
         if command in {'', 'enter'}:
             # Go back to target selection
             self.state.screen = "connect_target"
-        elif command in {'escape', 'back'} or is_back_command(command):
+        elif command in {'back'} or is_back_command(command):
             self.state.screen = "workspace"
     
     def _handle_cannot_save_empty_key(self, key: str) -> None:
@@ -1139,7 +1135,7 @@ class PlannerController:
         if command == 'a':
             # Add block
             self.state.screen = "add_block"
-        elif command in {'', 'enter', 'escape', 'back'} or is_back_command(command):
+        elif command in {'', 'enter', 'back'} or is_back_command(command):
             self.state.screen = "workspace"
 
     def _handle_path_already_used_key(self, key: str) -> None:
@@ -1168,7 +1164,7 @@ class PlannerController:
             current_path = str(self.modal_data.get("path") or "")
             self.state.screen = "edit_field"
             self.modal_data = {"field": "path", "value": current_path}
-        elif command in {"b", "escape", "back"}:
+        elif command in {"b", "back"}:
             self.state.screen = "edit_block"
             self.modal_data = {}
 
@@ -1209,7 +1205,7 @@ class PlannerController:
             self._apply_box_updates(selected_box, {"domain": pending_domain})
             self.state.screen = "edit_field"
             self.modal_data = {"field": "path", "value": suggested_path}
-        elif command in {"b", "escape", "back"}:
+        elif command in {"b", "back"}:
             self.state.screen = "edit_block"
             self.modal_data = {}
 

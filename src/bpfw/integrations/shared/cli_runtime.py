@@ -10,9 +10,9 @@ PromptResolver = Callable[[str], str]
 ScreenHandler = Callable[[str], None]
 ExitChecker = Callable[[], bool]
 
-QUIT_COMMAND_KEY = "esc"
-QUIT_COMMAND = "escape"
-QUIT_COMMAND_ALIASES = frozenset({QUIT_COMMAND, "quit"})
+QUIT_COMMAND_KEY = "ctrl+c"
+QUIT_COMMAND = "quit"
+QUIT_COMMAND_ALIASES = frozenset({QUIT_COMMAND, QUIT_COMMAND_KEY, "ctrl + c"})
 
 
 def command_label(shortcut: str, description: str) -> str:
@@ -31,9 +31,7 @@ def normalize_command(raw_value: str) -> str:
     """Return normalized command text for dispatch."""
 
     command = raw_value.strip().lower()
-    if command in {QUIT_COMMAND_KEY, QUIT_COMMAND}:
-        return QUIT_COMMAND
-    if command and all(character == "\x1b" for character in command):
+    if command in {QUIT_COMMAND_KEY, "ctrl + c", QUIT_COMMAND}:
         return QUIT_COMMAND
     return command
 
