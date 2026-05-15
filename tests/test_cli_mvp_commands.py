@@ -50,3 +50,25 @@ def test_unknown_command_is_rejected() -> None:
 def test_resolve_cli_command_is_case_and_whitespace_insensitive() -> None:
     assert resolve_cli_command("  VERIFY  ", None) == "verify"
     assert resolve_cli_command(" unlock ", "  BLUEPRINT  ") == "unlock"
+
+
+def test_main_help_uses_curated_bpfw_format() -> None:
+    """Ensure top-level CLI help renders the curated command overview."""
+
+    from bpfw.cli import MAIN_HELP_TEXT, build_parser
+
+    assert build_parser().format_help() == f"{MAIN_HELP_TEXT}\n"
+
+
+def test_main_help_hides_internal_and_inspector_specific_options() -> None:
+    """Ensure top-level CLI help hides non-global implementation options."""
+
+    from bpfw.cli import build_parser
+
+    rendered_help = build_parser().format_help()
+
+    assert "--ttl" not in rendered_help
+    assert "--accept-scan" not in rendered_help
+    assert "--force-new" not in rendered_help
+    assert "-a, --all" not in rendered_help
+    assert "bpfw inspector --all" in rendered_help

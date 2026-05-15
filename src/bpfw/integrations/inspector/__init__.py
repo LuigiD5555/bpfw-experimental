@@ -14,7 +14,7 @@ def can_use_interactive_terminal() -> bool:
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
-def run_inspector(project_root: Path) -> int:
+def run_inspector(project_root: Path, show_all: bool = False) -> int:
     """Run the direct MVP inspector integration."""
 
     if not can_use_interactive_terminal():
@@ -28,7 +28,7 @@ def run_inspector(project_root: Path) -> int:
         )
         return 1
 
-    return run_text_inspector(project_root=project_root)
+    return run_text_inspector(project_root=project_root, show_all=show_all)
 
 
 class InspectorIntegration(OptionalIntegration):
@@ -41,10 +41,16 @@ class InspectorIntegration(OptionalIntegration):
 
         return True
 
-    def run(self, project_root: Path) -> OptionalIntegrationResult:
+    def run(
+        self,
+        project_root: Path,
+        command_arguments: dict[str, str] | None = None,
+    ) -> OptionalIntegrationResult:
         """Run inspector against the given project root."""
 
-        exit_code = run_inspector(project_root=project_root)
+        arguments = command_arguments or {}
+        show_all = arguments.get("view") == "all"
+        exit_code = run_inspector(project_root=project_root, show_all=show_all)
         return OptionalIntegrationResult(message="", exit_code=exit_code)
 
 

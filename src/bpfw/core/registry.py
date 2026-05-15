@@ -66,6 +66,7 @@ class IntegrationStep(PipelineStep):
         result = self.integration_registry.run(
             name=self.integration_name,
             project_root=context.project_root,
+            command_arguments=context.command_arguments,
         )
         return StepResult(
             status=ResultStatus.OK if result.success else ResultStatus.BLOCK,

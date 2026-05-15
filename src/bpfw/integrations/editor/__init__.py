@@ -63,16 +63,22 @@ class EditorIntegration(OptionalIntegration):
 
         return True
 
-    def run(self, project_root: Path) -> OptionalIntegrationResult:
+    def run(
+        self,
+        project_root: Path,
+        command_arguments: dict[str, str] | None = None,
+    ) -> OptionalIntegrationResult:
         """Run editor against the given project root.
 
         Args:
             project_root: Root directory of the project being edited.
+            command_arguments: Runtime options forwarded from the CLI command.
 
         Returns:
             Integration result containing the editor exit code.
         """
 
+        _ = command_arguments
         exit_code = run_editor(project_root=project_root)
         return OptionalIntegrationResult(message="", exit_code=exit_code)
 

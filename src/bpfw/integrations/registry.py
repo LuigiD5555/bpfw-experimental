@@ -1,6 +1,7 @@
 """Registry for optional BPFW integrations."""
 
 from importlib import import_module
+from inspect import signature
 from pathlib import Path
 
 from bpfw.integrations.base import OptionalIntegration
@@ -56,12 +57,18 @@ class IntegrationRegistry:
 
         return self._integrations.get(name)
 
-    def run(self, name: str, project_root: Path) -> OptionalIntegrationResult:
+    def run(
+        self,
+        name: str,
+        project_root: Path,
+        command_arguments: dict[str, str] | None = None,
+    ) -> OptionalIntegrationResult:
         """Run one optional integration or return a clear unavailable result.
 
         Args:
             name: Integration name to run.
             project_root: Project root where the integration should run.
+            command_arguments: Runtime options forwarded from the CLI command.
 
         Returns:
             Integration result with the integration output or a clear loading error.
@@ -93,7 +100,13 @@ class IntegrationRegistry:
                 exit_code=1,
             )
 
-        return integration.run(project_root=project_root)
+        run_signature = signature(integration.run)
+        if "command_arguments" not in run_signature.parameters:
+            return integration.run(project_root=project_root)
+        return integration.run(
+            project_root=project_root,
+            command_arguments=command_arguments or {},
+        )
 
 
 def build_default_integration_registry() -> IntegrationRegistry:

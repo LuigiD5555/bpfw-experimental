@@ -36,9 +36,14 @@ class PlannerIntegration(OptionalIntegration):
 
         return True
 
-    def run(self, project_root: Path) -> OptionalIntegrationResult:
+    def run(
+        self,
+        project_root: Path,
+        command_arguments: dict[str, str] | None = None,
+    ) -> OptionalIntegrationResult:
         """Run planner against the given project root."""
 
+        _ = command_arguments
         exit_code = run_planner(project_root=project_root)
         return OptionalIntegrationResult(message="", exit_code=exit_code)
 

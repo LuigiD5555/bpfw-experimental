@@ -32,18 +32,67 @@ MVP_COMMANDS = (
 )
 
 
+MAIN_HELP_TEXT = """Blueprint Framework
+
+Usage:
+  bpfw <command> [options]
+
+Commands:
+  init        Create or update bpfw/blueprint.yaml from the current project.
+  inspector   Review code blocks and assign purpose, domain, lifecycle, and metadata.
+  editor      Edit existing blueprint authority entries.
+  planner     Plan authority entries before code exists.
+  verify      Check blueprint.yaml against the real code.
+  lock        Lock protected authority files.
+  unlock      Unlock protected authority files.
+  status      Show project authority, drift, and lock status.
+
+Global options:
+  -h, --help              Show this help message.
+  --project-root PATH     Run BPFW from a specific project root.
+  --json                  Print machine-readable output when supported.
+
+Inspector:
+  bpfw inspector          Open compact view.
+  bpfw inspector -a       Open full view with all panels.
+  bpfw inspector --all    Open full view with all panels.
+
+Examples:
+  bpfw init
+  bpfw inspector
+  bpfw inspector --all
+  bpfw verify
+  bpfw status
+"""
+
+
+class BpfwArgumentParser(argparse.ArgumentParser):
+    """Argument parser that renders the curated BPFW command help."""
+
+    def format_help(self) -> str:
+        """Return the curated top-level BPFW help text."""
+
+        return f"{MAIN_HELP_TEXT}\n"
+
+    def format_usage(self) -> str:
+        """Return concise command usage for parser errors."""
+
+        return "Usage:\n  bpfw <command> [options]\n"
+
+
 
 def build_parser() -> argparse.ArgumentParser:
     """Create CLI parser for BPFW MVP commands."""
 
-    parser = argparse.ArgumentParser(prog="bpfw")
+    parser = BpfwArgumentParser(prog="bpfw")
     parser.add_argument("command", choices=MVP_COMMANDS)
     parser.add_argument("subcommand", nargs="?")
-    parser.add_argument("--project-root", default=".")
-    parser.add_argument("--ttl", default="10m")
-    parser.add_argument("--accept-scan", action="store_true")
-    parser.add_argument("--force-new", action="store_true")
+    parser.add_argument("--project-root", default=".", metavar="PATH")
+    parser.add_argument("--ttl", default="10m", help=argparse.SUPPRESS)
+    parser.add_argument("--accept-scan", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--force-new", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--json", action="store_true", dest="as_json")
+    parser.add_argument("-a", "--all", action="store_true", dest="inspector_all", help=argparse.SUPPRESS)
     return parser
 
 
@@ -290,6 +339,9 @@ def main() -> int:
     if normalized_command == "unlock":
         command_arguments["resource_id"] = parsed_arguments.subcommand or "blueprint"
         command_arguments["ttl"] = parsed_arguments.ttl
+
+    if normalized_command == "inspector" and parsed_arguments.inspector_all:
+        command_arguments["view"] = "all"
 
     result = engine.run(
         build_command(

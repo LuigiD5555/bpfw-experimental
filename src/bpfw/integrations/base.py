@@ -16,5 +16,9 @@ class OptionalIntegration(ABC):
         """Return True when the optional integration can run."""
 
     @abstractmethod
-    def run(self, project_root: Path) -> OptionalIntegrationResult:
+    def run(
+        self,
+        project_root: Path,
+        command_arguments: dict[str, str] | None = None,
+    ) -> OptionalIntegrationResult:
         """Run the optional integration against a project root."""
