@@ -190,7 +190,7 @@ def test_suggests_richer_purpose_for_suggest_purposes_function() -> None:
     suggestions = suggest_purposes(block)
 
     # Docstring slot contains the purpose-focused suggestion
-    assert suggestions[3].text == "Suggest purpose"
+    assert suggestions[3].text == "suggest purpose"
 
 
 def test_docstring_slot_prefers_docstring_sentence_over_keyword_stems() -> None:
@@ -203,7 +203,7 @@ def test_docstring_slot_prefers_docstring_sentence_over_keyword_stems() -> None:
 
     suggestions = suggest_purposes(block)
 
-    assert suggestions[3].text == "Return protection mechanism file paths"
+    assert suggestions[3].text == "return protection mechanism file paths"
     assert "file" in suggestions[3].text.lower()
 
 
@@ -217,7 +217,7 @@ def test_name_slot_preserves_symbol_token_order() -> None:
 
     suggestions = suggest_purposes(block)
 
-    assert suggestions[2].text == "Resolve guard file"
+    assert suggestions[2].text == "resolve guard file"
 
 
 def test_build_docstring_slot_drops_secondary_clauses() -> None:
@@ -230,7 +230,7 @@ def test_build_docstring_slot_drops_secondary_clauses() -> None:
 
     suggestions = suggest_purposes(block)
 
-    assert suggestions[3].text == "Build protection resource list"
+    assert suggestions[3].text == "build protection resource list"
 
 
 def test_suggests_collecting_responsibility_evidence() -> None:
@@ -245,8 +245,8 @@ def test_suggests_collecting_responsibility_evidence() -> None:
 
     suggestions = suggest_purposes(block)
 
-    # "Collect evidence text" now appears in name_based slot (2)
-    assert suggestions[2].text == "Collect evidence text"
+    # "collect evidence text" now appears in name_based slot (2)
+    assert suggestions[2].text == "collect evidence text"
     assert all("Scan evidence text" != suggestion.text for suggestion in suggestions)
 
 
@@ -295,7 +295,7 @@ def test_returns_empty_slots_for_generic_low_evidence_symbol() -> None:
 
     assert len(suggestions) == 6
     assert suggestions[0].text == "-"
-    assert suggestions[5].text == "Write custom purpose..."
+    assert suggestions[5].text == "write custom purpose..."
 
 
 def test_suggestions_do_not_duplicate_action_words() -> None:
@@ -337,8 +337,8 @@ def test_suggest_purposes_returns_fixed_slots_when_evidence_is_sufficient() -> N
     suggestions = suggest_purposes(block)
 
     assert len(suggestions) == 6
-    # Docstring slot contains "Suggest purpose", blended may be "-" after quality filter
-    assert any("Suggest" in s.text for s in suggestions if s.text != "-")
+    # Docstring slot contains "suggest purpose", blended may be "-" after quality filter
+    assert any("suggest" in s.text for s in suggestions if s.text != "-")
 
 
 def test_suggest_purposes_keeps_specific_template_as_first_option() -> None:
@@ -350,8 +350,8 @@ def test_suggest_purposes_keeps_specific_template_as_first_option() -> None:
     )
 
     suggestions = suggest_purposes(block)
-    # "Collect evidence text" is now in name_based slot (2), not blended_based (4)
-    assert suggestions[2].text == "Collect evidence text"
+    # "collect evidence text" is now in name_based slot (2), not blended_based (4)
+    assert suggestions[2].text == "collect evidence text"
 
 
 def test_suggest_purposes_does_not_return_duplicate_variants() -> None:
@@ -371,14 +371,14 @@ def test_suggest_purposes_does_not_return_duplicate_variants() -> None:
 def test_compact_purpose_text_removes_responsibility_evidence_context() -> None:
     assert (
         compact_purpose_text("Suggest natural-language purposes from block evidence")
-        == "Suggest purposes"
+        == "suggest purposes"
     )
 
 
 def test_compact_purpose_text_compacts_purpose_suggestion_text() -> None:
     assert (
         compact_purpose_text("Suggest purpose suggestions from block evidence")
-        == "Suggest purposes"
+        == "suggest purposes"
     )
 
 
@@ -400,8 +400,8 @@ def test_suggest_purposes_returns_compact_options() -> None:
     )
     suggestions = suggest_purposes(block)
     texts = [suggestion.text for suggestion in suggestions]
-    # The docstring slot now gives "Suggest purpose" (singular)
-    assert any("Suggest purpose" in text for text in texts)
+    # The docstring slot now gives "suggest purpose" (singular)
+    assert any("suggest purpose" in text for text in texts)
     assert all(len(text.split()) <= 5 for text in texts)
     assert all("block evidence" not in text.lower() for text in texts)
 
@@ -444,7 +444,7 @@ def test_purpose_suggestions_include_distinct_sources_when_evidence_is_sufficien
     )
     suggestions = suggest_purposes(
         block,
-        existing_purposes=("Suggest purposes", "Collect evidence text"),
+        existing_purposes=("suggest purposes", "collect evidence text"),
     )
     # Verify all 6 slots are present with correct source types
     assert len(suggestions) == 6
@@ -466,9 +466,9 @@ def test_existing_purpose_based_candidate_appears_when_similar_purpose_exists() 
         signature="collect_evidence_text(block: dict[str, Any]) -> str",
         docstring="Collect deterministic text evidence from one block dictionary.",
     )
-    existing = ("Collect evidence text", "Run project verification")
+    existing = ("collect evidence text", "Run project verification")
     suggestions = suggest_purposes(block, existing_purposes=existing)
-    assert any(suggestion.text == "Collect evidence text" for suggestion in suggestions)
+    assert any(suggestion.text == "collect evidence text" for suggestion in suggestions)
 
 
 def test_purpose_suggestions_keep_fixed_slot_order() -> None:
@@ -566,7 +566,7 @@ def test_docstring_slot_transforms_raised_when_error_docstring() -> None:
     suggestions = suggest_purposes(block)
 
     assert suggestions[3].source == "docstring_based"
-    assert suggestions[3].text == "Raise protected blueprint write error"
+    assert suggestions[3].text == "raise protected blueprint write error"
 
 
 def test_blended_slot_enriches_compatible_learned_history(monkeypatch: Any) -> None:
@@ -574,7 +574,7 @@ def test_blended_slot_enriches_compatible_learned_history(monkeypatch: Any) -> N
 
     monkeypatch.setattr(
         "bpfw.catalog.purpose_suggestions.get_top_learned_purposes",
-        lambda limit=20: [("Declare Blueprintlockederror Class", 5)],
+        lambda limit=20: [("declare blueprintlockederror class", 5)],
     )
     block = _responsibility(
         symbol="BlueprintLockedError",
@@ -585,9 +585,9 @@ def test_blended_slot_enriches_compatible_learned_history(monkeypatch: Any) -> N
 
     suggestions = suggest_purposes(block)
 
-    assert suggestions[1].text == "Declare Blueprintlockederror Class"
+    assert suggestions[1].text == "declare blueprintlockederror class"
     assert suggestions[4].source == "blended_based"
-    assert suggestions[4].text == "Declare protected blueprint locked error"
+    assert suggestions[4].text == "declare protected blueprint locked error"
 
 
 def test_blended_slot_uses_available_evidence_without_learned_history(monkeypatch: Any) -> None:
@@ -607,7 +607,7 @@ def test_blended_slot_uses_available_evidence_without_learned_history(monkeypatc
     suggestions = suggest_purposes(block)
 
     assert suggestions[4].source == "blended_based"
-    assert suggestions[4].text == "Protect blueprint write lock"
+    assert suggestions[4].text == "protect blueprint write lock"
 
 
 def test_error_symbol_fallback_works_with_poor_docstring() -> None:
@@ -732,6 +732,6 @@ def test_represent_result_docstring_fills_docstring_and_blended_slots() -> None:
     suggestions = suggest_purposes(block)
 
     assert suggestions[3].source == "docstring_based"
-    assert suggestions[3].text == "Represent authority protection result"
+    assert suggestions[3].text == "represent authority protection result"
     assert suggestions[4].source == "blended_based"
-    assert suggestions[4].text == "Represent protection result"
+    assert suggestions[4].text == "represent protection result"

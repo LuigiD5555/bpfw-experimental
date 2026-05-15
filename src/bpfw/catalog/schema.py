@@ -63,6 +63,9 @@ def get_purpose(block: Dict[str, Any]) -> Any:
 
 def set_purpose(block: Dict[str, Any], value: Any) -> None:
     """Set the canonical purpose key and remove the legacy intent key."""
+
+    if isinstance(value, str):
+        value = " ".join(value.strip().lower().split())
     block[CANONICAL_PURPOSE_KEY] = value
     block.pop(LEGACY_PURPOSE_KEY, None)
 

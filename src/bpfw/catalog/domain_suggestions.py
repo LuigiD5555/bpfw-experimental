@@ -78,11 +78,11 @@ def suggest_domains(
         previous_origin_result = get_last_domain_for_origin(evidence.origin_key)
 
     return [
-        folder_result or "-",
-        file_result or "-",
-        module_result or "-",
-        symbol_result or "-",
-        previous_origin_result or "-",
+        _normalize_domain_suggestion_output(folder_result),
+        _normalize_domain_suggestion_output(file_result),
+        _normalize_domain_suggestion_output(module_result),
+        _normalize_domain_suggestion_output(symbol_result),
+        _normalize_domain_suggestion_output(previous_origin_result),
         "custom",
     ]
 
@@ -272,6 +272,17 @@ def _is_valid_suggestion_value(value: str) -> bool:
 
     normalized = value.strip()
     return bool(normalized and normalized != "-" and normalized != "custom")
+
+
+def _normalize_domain_suggestion_output(value: str | None) -> str:
+    """Return domain suggestion text in canonical lowercase form."""
+
+    if not isinstance(value, str):
+        return "-"
+    normalized = " ".join(value.strip().lower().split())
+    if not normalized or normalized in {"-", "custom"}:
+        return "-"
+    return normalized
 
 
 def _is_domain_token(token: str) -> bool:

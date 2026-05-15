@@ -91,7 +91,7 @@ def compact_purpose_text(text: str) -> str:
     if len(words) > 5:
         text = " ".join(words[:5])
 
-    return text
+    return text.lower()
 
 
 def _apply_quality_filters(
@@ -108,7 +108,7 @@ def _apply_quality_filters(
     - "raised when" patterns
 
     Passes through:
-    - Placeholders ("-", "Write custom purpose...")
+    - Placeholders ("-", "write custom purpose...")
     - Suggestions with valid action verbs
 
     Args:
@@ -127,7 +127,7 @@ def _apply_quality_filters(
         text = suggestion.text
 
         # Pass through placeholders
-        if text in {"-", "Write custom purpose..."}:
+        if text in {"-", "write custom purpose..."}:
             filtered.append(suggestion)
             continue
 
@@ -143,7 +143,7 @@ def _apply_quality_filters(
             continue
 
         # Reject "Raise" for non-error blocks
-        if text.startswith("Raise") and not is_error:
+        if text.lower().startswith("raise") and not is_error:
             continue
 
         # Reject noisy "raised when" patterns
@@ -267,7 +267,7 @@ def _empty_purpose_slots() -> list[PurposeSuggestion]:
         PurposeSuggestion("-", "name_based", ("source: name_based",)),
         PurposeSuggestion("-", "docstring_based", ("source: docstring_based",)),
         PurposeSuggestion("-", "blended_based", ("source: blended_based",)),
-        PurposeSuggestion("Write custom purpose...", "custom_purpose", ("source: custom_purpose",)),
+        PurposeSuggestion("write custom purpose...", "custom_purpose", ("source: custom_purpose",)),
     ]
 
 
@@ -305,7 +305,7 @@ def _compose_suggestions(
         _placeholder("docstring_based") if docstring_based is None else docstring_based,
         _placeholder("blended_based") if blended is None else blended,
         PurposeSuggestion(
-            text="Write custom purpose...",
+            text="write custom purpose...",
             source="custom_purpose",
             evidence=("source: custom_purpose",),
         ),
@@ -321,7 +321,30 @@ def _placeholder(source: str) -> PurposeSuggestion:
 def _is_placeholder_text(text: str) -> bool:
     """Return True when text is an inspector placeholder, not a real value."""
 
-    return text.strip() in {"", "-", "Write custom purpose..."}
+    normalized = " ".join(text.strip().lower().split())
+    return normalized in {"", "-", "write custom purpose", "write custom purpose..."}
+
+
+def _normalize_purpose_output_text(text: str) -> str:
+    """Return suggestion text in the canonical lowercase display form."""
+
+    normalized = " ".join(text.strip().split())
+    normalized_lower = normalized.lower()
+    if normalized_lower in {"", "-"}:
+        return "-"
+    if normalized_lower in {"write custom purpose", "write custom purpose..."}:
+        return "write custom purpose..."
+    return normalized_lower
+
+
+def _with_normalized_purpose_text(suggestion: PurposeSuggestion) -> PurposeSuggestion:
+    """Return a copy of one suggestion with canonical lowercase text."""
+
+    return PurposeSuggestion(
+        text=_normalize_purpose_output_text(suggestion.text),
+        source=suggestion.source,
+        evidence=suggestion.evidence,
+    )
 
 
 def _finalize_suggestion(
@@ -405,10 +428,11 @@ def _ensure_six_slots(suggestions: list[PurposeSuggestion]) -> list[PurposeSugge
                 break
 
         if found is None:
-            text = "Write custom purpose..." if source == "custom_purpose" else "-"
+            text = "write custom purpose..." if source == "custom_purpose" else "-"
             result.append(PurposeSuggestion(text=text, source=source, evidence=(f"source: {source}",)))
             continue
 
+        found = _with_normalized_purpose_text(found)
         normalized_text = " ".join(found.text.strip().lower().split())
         if (
             source != "custom_purpose"
