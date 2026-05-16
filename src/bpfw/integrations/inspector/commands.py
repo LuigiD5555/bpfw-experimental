@@ -13,33 +13,6 @@ DOMAIN_SUGGESTION_KEYS = ("q", "w", "e", "r", "t")
 CUSTOM_DOMAIN_KEY = "y"
 
 
-def _get_cancellable_text_input(
-    prompt: str,
-    input_func: InputFunc,
-) -> str | None:
-    """Get user text input that can be cancelled with Ctrl+C.
-
-    This helper provides a cancellable nested text prompt that:
-    - Catches KeyboardInterrupt and returns None instead of propagating it
-    - Returns None for empty input (treating it as cancelled)
-    - Returns the stripped string when valid text is submitted
-
-    Args:
-        prompt: The prompt text to display to the user.
-        input_func: Function for reading user input.
-
-    Returns:
-        The stripped user input string, or None if cancelled (Ctrl+C or empty).
-    """
-    try:
-        value = input_func(prompt).strip()
-        if not value:
-            return None
-        return value
-    except KeyboardInterrupt:
-        return None
-
-
 def _normalize_authority_text(value: str) -> str:
     """Return user-authored authority text in canonical lowercase form."""
 
@@ -77,20 +50,14 @@ def apply_inspector_command(
         suggestion_index = int(stripped_command) - 1
         if suggestion_index < len(purpose_suggestions):
             suggestion_text = purpose_suggestions[suggestion_index].text.strip()
-            invalid_texts = {
-                "",
-                "-",
-                "write custom purpose",
-                "write custom purpose...",
-            }
-            if _normalize_authority_text(suggestion_text) not in invalid_texts:
+            if _normalize_authority_text(suggestion_text) not in {"", "-", "write custom purpose", "write custom purpose..."}:
                 set_purpose(issue.block, _normalize_authority_text(suggestion_text))
         return InspectorAction.STAY
 
     if stripped_command.startswith("6"):
         value = stripped_command[1:].strip()
         if not value:
-            value = _get_cancellable_text_input("purpose: ", input_func)
+            value = input_func("purpose: ").strip()
         if value:
             set_purpose(issue.block, _normalize_authority_text(value))
         return InspectorAction.STAY
@@ -118,7 +85,7 @@ def apply_inspector_command(
     if stripped_command.startswith(CUSTOM_DOMAIN_KEY):
         value = stripped_command[len(CUSTOM_DOMAIN_KEY):].strip()
         if not value:
-            value = _get_cancellable_text_input("domain: ", input_func)
+            value = input_func("domain: ").strip()
         if value:
             issue.block["domain"] = _normalize_authority_text(value)
         return InspectorAction.STAY

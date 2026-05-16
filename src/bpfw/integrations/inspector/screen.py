@@ -1,6 +1,5 @@
 """Screen rendering for the inspector integration."""
 
-from abc import ABC, abstractmethod
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Dict, List
@@ -17,6 +16,8 @@ from bpfw.integrations.inspector.base import (
     display_value,
 )
 from bpfw.integrations.inspector.commands import CUSTOM_DOMAIN_KEY, DOMAIN_SUGGESTION_KEYS
+from bpfw.integrations.inspector.view_modes import resolve_inspector_view_mode_from_flag
+from bpfw.integrations.inspector.view_modes.base import InspectorViewMode
 from bpfw.integrations.shared.visual_width import display_width, fit_text, measure_lines, pad_text
 from bpfw.integrations.shared.visual_boxes import (
     render_box,
@@ -24,81 +25,17 @@ from bpfw.integrations.shared.visual_boxes import (
     render_split_box,
 )
 from bpfw.integrations.shared.visual_theme import (
-    COMMAND_SEPARATOR,
     DEFAULT_THEME,
     compute_panel_width,
     render_commands_box,
     render_header,
 )
-from bpfw.integrations.shared.cli_runtime import quit_command_label
 from bpfw.integrations.shared.screen_control import refresh_screen
 
 PrintFunc = Callable[[str], None]
 MIN_TOTAL_WIDTH = 72
 HORIZONTAL_PADDING = 1
 DEFAULT_INSPECTOR_HEADER_TITLE = "Blueprint Framework Inspector"
-COMMAND_COLUMN_WIDTHS = (28, 22)
-
-
-class InspectorScreenRenderStrategy(ABC):
-    """Define view-specific rendering decisions for inspector screens."""
-
-    @abstractmethod
-    def should_render_extended_panels(self) -> bool:
-        """Return whether optional inspector panels should be rendered."""
-
-    @abstractmethod
-    def build_command_lines(self) -> List[str]:
-        """Build the visible command lines for the current inspector view."""
-
-
-class CompactInspectorScreenRenderStrategy(InspectorScreenRenderStrategy):
-    """Render only the essential inspector panels and compact commands."""
-
-    def should_render_extended_panels(self) -> bool:
-        """Return false because compact mode hides optional panels."""
-
-        return False
-
-    def build_command_lines(self) -> List[str]:
-        """Build compact command help with only the core navigation commands."""
-
-        return [
-            _format_command_row("[h] help", quit_command_label()),
-            _format_command_row("[Enter] save + next", "[b] back", "[a] full view"),
-            COMMAND_SEPARATOR,
-            "Note: press ctrl+c to quit. Type a command key and press Enter, for example a + Enter.",
-        ]
-
-
-class FullInspectorScreenRenderStrategy(InspectorScreenRenderStrategy):
-    """Render every inspector panel and the complete command reference."""
-
-    def should_render_extended_panels(self) -> bool:
-        """Return true because full mode renders every inspector panel."""
-
-        return True
-
-    def build_command_lines(self) -> List[str]:
-        """Build the full command help for every inspector editing action."""
-
-        return [
-            _format_command_row("[1-5] purpose suggestion", "[6] custom purpose"),
-            _format_command_row(f"[{'|'.join(DOMAIN_SUGGESTION_KEYS)}] domain", f"[{CUSTOM_DOMAIN_KEY}] custom domain"),
-            _format_command_row("[z|x|c|v] status", "[n] name", "[i] interface"),
-            _format_command_row("[o] notes", "[h] help", quit_command_label()),
-            _format_command_row("[Enter] save + next", "[b] back", "[a] compact view"),
-            COMMAND_SEPARATOR,
-            "Note: press ctrl+c to quit. Type a command key and press Enter, for example 1 + Enter.",
-        ]
-
-
-def _resolve_render_strategy(show_all: bool) -> InspectorScreenRenderStrategy:
-    """Return the inspector rendering strategy for the requested view mode."""
-
-    if show_all:
-        return FullInspectorScreenRenderStrategy()
-    return CompactInspectorScreenRenderStrategy()
 
 
 def render_inspector_screen(
@@ -112,6 +49,7 @@ def render_inspector_screen(
     header_title: str = DEFAULT_INSPECTOR_HEADER_TITLE,
     print_func: PrintFunc = print,
     show_all: bool = False,
+    view_mode: InspectorViewMode | None = None,
 ) -> None:
     """Render the direct MVP inspector screen."""
 
@@ -166,9 +104,9 @@ def render_inspector_screen(
             domain_text = domain_suggestions[domain_index]
         domain_lines.append(f" [{domain_label}] {domain_text}")
     domain_lines.append(f" [{CUSTOM_DOMAIN_KEY}] write custom domain")
-    render_strategy = _resolve_render_strategy(show_all=show_all)
-    show_extended_panels = render_strategy.should_render_extended_panels()
-    command_lines = render_strategy.build_command_lines()
+    resolved_view_mode = view_mode or resolve_inspector_view_mode_from_flag(show_all=show_all)
+    show_extended_panels = resolved_view_mode.should_render_extended_panels()
+    command_lines = resolved_view_mode.build_command_lines()
     observation_preview_lines = _build_observation_panel_lines(
         block=block,
         content_width=120,
@@ -268,18 +206,6 @@ def render_inspector_screen(
     ):
         print_func(line)
     print_func("")
-
-
-def _format_command_row(*commands: str) -> str:
-    """Format command labels into stable visual columns."""
-
-    if not commands:
-        return ""
-    formatted_parts: list[str] = []
-    for command, column_width in zip(commands[:-1], COMMAND_COLUMN_WIDTHS):
-        formatted_parts.append(pad_text(command, column_width))
-    formatted_parts.append(commands[-1])
-    return "".join(formatted_parts)
 
 
 def _build_header(title: str, meta: str, width: int) -> List[str]:
