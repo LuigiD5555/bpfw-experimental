@@ -66,6 +66,9 @@ def run_status(project_root: Path) -> Tuple[str, int]:
         authority_state=authority_state,
     )
 
+    # Extract authority config from blueprint data
+    authority_config = load_result.data.get("authority", {})
+
     # Status counts from loaded blocks
     lifecycle_counts = count_statuses(load_result.data)
 
@@ -81,6 +84,7 @@ def run_status(project_root: Path) -> Tuple[str, int]:
             blueprint_path=_BLUEPRINT_DISPLAY_PATH,
             lock_state=lock_state,
             lifecycle_counts=lifecycle_counts,
+            authority_config=authority_config,
         )
         return output, 0
 
@@ -96,6 +100,7 @@ def run_status(project_root: Path) -> Tuple[str, int]:
             blueprint_path=_BLUEPRINT_DISPLAY_PATH,
             lock_state=lock_state,
             lifecycle_counts=lifecycle_counts,
+            authority_config=authority_config,
         )
         return output, 0
 
@@ -111,6 +116,7 @@ def run_status(project_root: Path) -> Tuple[str, int]:
             blueprint_path=_BLUEPRINT_DISPLAY_PATH,
             lock_state=lock_state,
             lifecycle_counts=lifecycle_counts,
+            authority_config=authority_config,
         )
         return output, 1
 
@@ -121,6 +127,7 @@ def run_status(project_root: Path) -> Tuple[str, int]:
         blueprint_path=_BLUEPRINT_DISPLAY_PATH,
         lock_state=lock_state,
         lifecycle_counts=lifecycle_counts,
+        authority_config=authority_config,
     )
     return output, verify_exit_code
 
@@ -130,6 +137,7 @@ def render_status_report(
     blueprint_path: str,
     lock_state: str,
     lifecycle_counts: Dict[str, int],
+    authority_config: Dict[str, Any] | None = None,
 ) -> str:
     """Render a VerificationReport and status context into a human-readable string.
 
@@ -154,6 +162,16 @@ def render_status_report(
 
     lines.append("BPFW STATUS")
     lines.append("")
+
+    # Authority section
+    if authority_config and authority_config.get("layout") == "sharded":
+        lines.append("Authority:")
+        lines.append(f"  layout: {authority_config.get('layout', 'unknown')}")
+        lines.append(f"  shard strategy: {authority_config.get('shard_strategy', 'unknown')}")
+        lines.append(f"  default shard: {authority_config.get('default_shard', 'unknown')}")
+        includes = load_result.data.get("includes", [])
+        lines.append(f"  included shards: {len(includes)}")
+        lines.append("")
 
     # Blueprint section
     lines.append("Blueprint:")
