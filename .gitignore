@@ -15,4 +15,6 @@ docs/
 .conda/
 .cache/
 .bpfw/
+bpfw/.locks/
 .lock
+scripts/

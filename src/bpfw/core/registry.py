@@ -136,7 +136,7 @@ class AuthorityLockStep(PipelineStep):
                 message=(
                     "BPFW could not enforce an OS lock for "
                     "authority resources. Run with sudo on a filesystem "
-                    "that supports ownership changes or immutable flags."
+                    "that supports ownership changes, immutable flags, or read-only permissions."
                 ),
                 source=self.name,
                 details={"lock_state": lock_result.status, "resource_id": "authority"},

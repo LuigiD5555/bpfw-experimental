@@ -10,6 +10,7 @@ import subprocess
 import sys
 
 LOCKED = "locked"
+DEGRADED = "degraded"
 UNLOCKED = "unlocked"
 UNKNOWN = "unknown"
 UNSUPPORTED = "unsupported"
@@ -34,10 +35,14 @@ def _lock_content(
     directory_gid: int,
     immutable: bool,
     root_owned: bool,
+    backend: str,
+    strong: bool,
 ) -> str:
     return (
         "locked: true\n"
         f"resource: {relative_path}\n"
+        f"backend: {backend}\n"
+        f"strong: {str(strong).lower()}\n"
         f"file_mode: {file_mode:o}\n"
         f"directory_mode: {directory_mode:o}\n"
         f"file_uid: {file_uid}\n"
@@ -77,6 +82,22 @@ def _read_recorded_int(lock_path: Path, key: str) -> int | None:
     return None
 
 
+def _read_recorded_text(lock_path: Path, key: str) -> str | None:
+    if not lock_path.exists():
+        return None
+
+    for line in lock_path.read_text(encoding="utf-8").splitlines():
+        field_name, separator, value = line.partition(":")
+        if separator and field_name.strip() == key:
+            return value.strip()
+    return None
+
+
+def _read_recorded_bool(lock_path: Path, key: str) -> bool:
+    value = _read_recorded_text(lock_path=lock_path, key=key)
+    return value == "true"
+
+
 class LockStrategy(ABC):
     """Platform-specific locking strategy."""
 
@@ -103,8 +124,9 @@ class PosixLockStrategy(LockStrategy):
         target_path = project_root / relative_path
         if not target_path.exists():
             return UNKNOWN
-        if self.get_file_lock_state(project_root=project_root, relative_path=relative_path) == LOCKED:
-            return LOCKED
+        existing_state = self.get_file_lock_state(project_root=project_root, relative_path=relative_path)
+        if existing_state in {LOCKED, DEGRADED}:
+            return existing_state
 
         lock_path = _lock_path(project_root=project_root, relative_path=relative_path)
         lock_path.parent.mkdir(parents=True, exist_ok=True)
@@ -126,6 +148,8 @@ class PosixLockStrategy(LockStrategy):
                 directory_gid=directory_stat.st_gid,
                 immutable=file_immutable,
                 root_owned=self._is_root() or self._can_use_sudo(),
+                backend="strong",
+                strong=True,
             ),
             encoding="utf-8",
         )
@@ -144,7 +168,16 @@ class PosixLockStrategy(LockStrategy):
         self._restore_mode(target_path.parent, directory_mode)
         self._restore_mode(target_path, file_mode)
         self._remove_lock_marker(lock_path)
-        return UNSUPPORTED
+        return self._try_readonly_weak_lock(
+            project_root=project_root,
+            target_path=target_path,
+            relative_path=relative_path,
+            lock_path=lock_path,
+            file_stat=file_stat,
+            directory_stat=directory_stat,
+            file_mode=file_mode,
+            directory_mode=directory_mode,
+        )
 
     def unlock_file(self, project_root: Path, relative_path: str) -> str:
         target_path = project_root / relative_path
@@ -180,20 +213,27 @@ class PosixLockStrategy(LockStrategy):
 
         content = lock_path.read_text(encoding="utf-8")
         expected_resource_line = f"resource: {relative_path}"
-        if (
-            "locked: true" in content
-            and expected_resource_line in content
-            and (
-                (
-                    not self._has_any_write_bit(target_path)
-                    and not self._has_any_write_bit(target_path.parent)
-                )
-                or (
-                    self._is_root_owned(target_path)
-                    and self._is_root_owned(target_path.parent)
-                )
-            )
-        ):
+        if "locked: true" not in content or expected_resource_line not in content:
+            return UNLOCKED
+
+        backend = _read_recorded_text(lock_path=lock_path, key="backend")
+        if backend == "readonly_weak":
+            if (
+                not self._has_any_write_bit(target_path)
+                and not self._has_any_write_bit(target_path.parent)
+            ):
+                return DEGRADED
+            return UNLOCKED
+
+        immutable_recorded = _read_recorded_bool(lock_path=lock_path, key="immutable")
+        root_owned_recorded = _read_recorded_bool(lock_path=lock_path, key="root_owned")
+        immutable_state_matches = immutable_recorded and not self._has_any_write_bit(target_path)
+        root_owned_state_matches = (
+            root_owned_recorded
+            and self._is_root_owned(target_path)
+            and self._is_root_owned(target_path.parent)
+        )
+        if immutable_state_matches or root_owned_state_matches:
             return LOCKED
         return UNLOCKED
 
@@ -213,7 +253,15 @@ class PosixLockStrategy(LockStrategy):
         if not self._can_use_sudo():
             return False
 
-        result = subprocess.run(["sudo", *command], check=False)
+        try:
+            result = subprocess.run(
+                ["sudo", *command],
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except OSError:
+            return False
         return result.returncode == 0
 
     def _remove_write_bits(self, path: Path) -> None:
@@ -307,6 +355,45 @@ class PosixLockStrategy(LockStrategy):
 
         return self._run_privileged(command)
 
+    def _try_readonly_weak_lock(
+        self,
+        project_root: Path,
+        target_path: Path,
+        relative_path: str,
+        lock_path: Path,
+        file_stat: os.stat_result,
+        directory_stat: os.stat_result,
+        file_mode: int,
+        directory_mode: int,
+    ) -> str:
+        lock_path.write_text(
+            _lock_content(
+                relative_path=relative_path,
+                file_mode=file_mode,
+                directory_mode=directory_mode,
+                file_uid=file_stat.st_uid,
+                file_gid=file_stat.st_gid,
+                directory_uid=directory_stat.st_uid,
+                directory_gid=directory_stat.st_gid,
+                immutable=False,
+                root_owned=False,
+                backend="readonly_weak",
+                strong=False,
+            ),
+            encoding="utf-8",
+        )
+        self._remove_write_bits(target_path)
+        self._remove_write_bits(target_path.parent)
+        self._remove_write_bits(lock_path)
+
+        if self.get_file_lock_state(project_root=project_root, relative_path=relative_path) == DEGRADED:
+            return DEGRADED
+
+        self._restore_mode(target_path.parent, directory_mode)
+        self._restore_mode(target_path, file_mode)
+        self._remove_lock_marker(lock_path)
+        return UNSUPPORTED
+
     def _remove_lock_marker(self, lock_path: Path) -> None:
         if not lock_path.exists():
             return
@@ -342,6 +429,8 @@ class WindowsLockStrategy(LockStrategy):
                 directory_gid=directory_stat.st_gid,
                 immutable=True,
                 root_owned=self._is_admin(),
+                backend="windows_readonly",
+                strong=True,
             ),
             encoding="utf-8",
         )
@@ -459,6 +548,18 @@ def _resolve_exact_lock_arguments(path: Path) -> tuple[Path, str]:
     return resolved_path.parent, resolved_path.name
 
 
+def _resolve_project_lock_arguments(project_root: Path, path: Path) -> tuple[Path, str]:
+    """Resolve a file path into a project-rooted lock resource identifier."""
+
+    resolved_root = project_root.resolve()
+    resolved_path = path.resolve()
+    try:
+        relative_path = resolved_path.relative_to(resolved_root)
+    except ValueError:
+        return resolved_root, resolved_path.as_posix()
+    return resolved_root, relative_path.as_posix()
+
+
 def lock_file(path: Path) -> str:
     """Lock an exact file path against direct local writes."""
 
@@ -466,6 +567,22 @@ def lock_file(path: Path) -> str:
         return MISSING
 
     resolved_root, resolved_relative_path = _resolve_exact_lock_arguments(path=path)
+    return _get_lock_strategy().lock_file(
+        project_root=resolved_root,
+        relative_path=resolved_relative_path,
+    )
+
+
+def lock_project_file(project_root: Path, path: Path) -> str:
+    """Lock a file while storing its marker under the project bpfw directory."""
+
+    if not path.exists():
+        return MISSING
+
+    resolved_root, resolved_relative_path = _resolve_project_lock_arguments(
+        project_root=project_root,
+        path=path,
+    )
     return _get_lock_strategy().lock_file(
         project_root=resolved_root,
         relative_path=resolved_relative_path,
@@ -485,6 +602,22 @@ def unlock_file(path: Path) -> str:
     )
 
 
+def unlock_project_file(project_root: Path, path: Path) -> str:
+    """Unlock a file whose marker is stored under the project bpfw directory."""
+
+    if not path.exists():
+        return MISSING
+
+    resolved_root, resolved_relative_path = _resolve_project_lock_arguments(
+        project_root=project_root,
+        path=path,
+    )
+    return _get_lock_strategy().unlock_file(
+        project_root=resolved_root,
+        relative_path=resolved_relative_path,
+    )
+
+
 def get_file_lock_state(path: Path) -> str:
     """Read whether an exact file path is locked against writes."""
 
@@ -492,6 +625,22 @@ def get_file_lock_state(path: Path) -> str:
         return MISSING
 
     resolved_root, resolved_relative_path = _resolve_exact_lock_arguments(path=path)
+    return _get_lock_strategy().get_file_lock_state(
+        project_root=resolved_root,
+        relative_path=resolved_relative_path,
+    )
+
+
+def get_project_file_lock_state(project_root: Path, path: Path) -> str:
+    """Read a file lock state from the project bpfw marker directory."""
+
+    if not path.exists():
+        return MISSING
+
+    resolved_root, resolved_relative_path = _resolve_project_lock_arguments(
+        project_root=project_root,
+        path=path,
+    )
     return _get_lock_strategy().get_file_lock_state(
         project_root=resolved_root,
         relative_path=resolved_relative_path,

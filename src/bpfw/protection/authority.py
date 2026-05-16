@@ -6,13 +6,17 @@ from typing import List
 
 import bpfw
 from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
-from bpfw.protection.os_lock import get_file_lock_state, lock_file, unlock_file
+from bpfw.protection.os_lock import (
+    DEGRADED,
+    LOCKED,
+    get_project_file_lock_state,
+    lock_project_file,
+    unlock_project_file,
+)
 
 BLUEPRINT_RESOURCE_TYPE = "blueprint"
 GUARD_RESOURCE_TYPE = "guard"
 MISSING_BLUEPRINT_STATUS = "missing_blueprint"
-
-_FALLBACK_LOCK_PATH = "bpfw/.lock"
 
 
 @dataclass(frozen=True)
@@ -84,36 +88,6 @@ def resolve_protected_resources(project_root: Path) -> List[ProtectedResource]:
     return resources
 
 
-def _write_fallback_lock(project_root: Path) -> None:
-    """Write a logical-only lock marker when OS enforcement is unavailable."""
-
-    lock_path = project_root / _FALLBACK_LOCK_PATH
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
-    lock_path.write_text(
-        f"locked: true\nresource: {CANONICAL_BLUEPRINT_FILE}\n",
-        encoding="utf-8",
-    )
-
-
-def _remove_fallback_lock(project_root: Path) -> None:
-    """Remove the logical-only lock marker if it exists."""
-
-    lock_path = project_root / _FALLBACK_LOCK_PATH
-    if lock_path.exists():
-        lock_path.unlink()
-
-
-def _is_fallback_locked(project_root: Path) -> bool:
-    """Check whether the fallback logical lock marker is present."""
-
-    lock_path = project_root / _FALLBACK_LOCK_PATH
-    if not lock_path.exists():
-        return False
-
-    content = lock_path.read_text(encoding="utf-8")
-    return "locked: true" in content and CANONICAL_BLUEPRINT_FILE in content
-
-
 def _missing_blueprint_result(operation: str, blueprint_path: Path) -> ProtectionResult:
     """Build the shared missing-blueprint protection result."""
 
@@ -128,19 +102,19 @@ def _missing_blueprint_result(operation: str, blueprint_path: Path) -> Protectio
 def _lock_existing_resource(project_root: Path, resource: ProtectedResource) -> str:
     """Lock one existing resource using the OS lock backend."""
 
-    return lock_file(path=resource.path)
+    return lock_project_file(project_root=project_root, path=resource.path)
 
 
 def _unlock_existing_resource(project_root: Path, resource: ProtectedResource) -> str:
     """Unlock one existing resource using the OS lock backend."""
 
-    return unlock_file(path=resource.path)
+    return unlock_project_file(project_root=project_root, path=resource.path)
 
 
 def _get_existing_resource_state(project_root: Path, resource: ProtectedResource) -> str:
     """Return the OS lock state for one existing resource."""
 
-    return get_file_lock_state(path=resource.path)
+    return get_project_file_lock_state(project_root=project_root, path=resource.path)
 
 
 def lock_authority(project_root: Path) -> ProtectionResult:
@@ -170,22 +144,23 @@ def lock_authority(project_root: Path) -> ProtectionResult:
 
         lock_state = _lock_existing_resource(project_root=project_root, resource=resource)
         lock_states.append(lock_state)
-        if lock_state == "locked":
+        if lock_state in {LOCKED, DEGRADED}:
             protected_resources.append(resource)
 
-    if lock_states and all(lock_state == "locked" for lock_state in lock_states):
-        status = "locked"
+    if lock_states and all(lock_state == LOCKED for lock_state in lock_states):
+        status = LOCKED
     elif "unsupported" in lock_states:
         status = "unsupported"
     elif "unknown" in lock_states:
         status = "unknown"
+    elif lock_states and all(lock_state in {LOCKED, DEGRADED} for lock_state in lock_states):
+        status = DEGRADED
     else:
-        status = "degraded"
+        status = DEGRADED
 
-    if status != "locked":
+    if status in {"unsupported", "unknown"}:
         for protected_resource in reversed(protected_resources):
             _unlock_existing_resource(project_root=project_root, resource=protected_resource)
-        _remove_fallback_lock(project_root=project_root)
 
     return ProtectionResult(
         operation="lock",
@@ -226,8 +201,6 @@ def unlock_authority(project_root: Path) -> ProtectionResult:
         unlock_states.append(unlock_state)
         if unlock_state == "unlocked":
             protected_resources.append(resource)
-
-    _remove_fallback_lock(project_root=project_root)
 
     if unlock_states and all(unlock_state == "unlocked" for unlock_state in unlock_states):
         status = "unlocked"
@@ -270,7 +243,7 @@ def get_authority_protection_status(project_root: Path) -> ProtectionResult:
 
         lock_state = _get_existing_resource_state(project_root=project_root, resource=resource)
         resource_states.append((resource, lock_state))
-        if lock_state == "locked":
+        if lock_state in {LOCKED, DEGRADED}:
             protected_resources.append(resource)
 
     blueprint_state = resource_states[0][1] if resource_states else "unknown"
@@ -280,19 +253,16 @@ def get_authority_protection_status(project_root: Path) -> ProtectionResult:
         if resource.resource_type == GUARD_RESOURCE_TYPE
     ]
 
-    if blueprint_state == "locked" and not skipped_resources and all(
-        guard_state == "locked" for guard_state in guard_states
+    if blueprint_state == LOCKED and not skipped_resources and all(
+        guard_state == LOCKED for guard_state in guard_states
     ):
-        status = "locked"
-    elif blueprint_state == "locked":
-        status = "degraded"
+        status = LOCKED
+    elif blueprint_state in {LOCKED, DEGRADED}:
+        status = DEGRADED
     elif blueprint_state == "unlocked":
         status = "unlocked"
     else:
         status = "unknown"
-
-    if blueprint_state != "locked" and _is_fallback_locked(project_root=project_root):
-        _remove_fallback_lock(project_root=project_root)
 
     return ProtectionResult(
         operation="status",
@@ -302,5 +272,3 @@ def get_authority_protection_status(project_root: Path) -> ProtectionResult:
         warnings=warnings,
         status=status,
     )
-
-

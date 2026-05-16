@@ -90,6 +90,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--project-root", default=".", metavar="PATH")
     parser.add_argument("--accept-scan", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--force-new", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--allow-unprotected",
+        action="store_true",
+        help="Allow init to complete without OS authority protection.",
+    )
     parser.add_argument("--json", action="store_true", dest="as_json")
     parser.add_argument("-a", "--all", action="store_true", dest="inspector_all", help=argparse.SUPPRESS)
     return parser
@@ -240,7 +245,10 @@ def main() -> int:
     # init is handled directly by the catalog writer
     if normalized_command == "init":
         project_root = Path(parsed_arguments.project_root).resolve()
-        _success, message, exit_code = run_init(project_root=project_root)
+        _success, message, exit_code = run_init(
+            project_root=project_root,
+            allow_unprotected=parsed_arguments.allow_unprotected,
+        )
         print(message)
         return exit_code
 
@@ -280,6 +288,17 @@ def main() -> int:
                 "Try running from a terminal where file permissions can be changed."
             )
             return 1
+        if lock_result.status == "degraded":
+            print(
+                "Blueprint partially locked.\n\n"
+                "Protected:\n"
+                f"{_format_protected_resources(result=lock_result)}\n\n"
+                "Status:\n"
+                "  DEGRADED\n\n"
+                "Reason:\n"
+                "  Strong OS protection is unavailable, but read-only protection was applied."
+            )
+            return 0
         if lock_result.status != "locked":
             print(
                 "BPFW authority protection is incomplete.\n\n"

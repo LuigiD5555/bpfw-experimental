@@ -22,6 +22,7 @@ def build_initial_blueprint(
     
     Args:
         project_root: Root directory of the project.
+        allow_unprotected: Whether init may succeed without OS authority protection.
         source_roots: List of source root directories.
         ignored_paths: List of ignored path patterns.
         discovered_units: List of discovered code units.
@@ -135,11 +136,12 @@ def write_blueprint(blueprint_path: Path, blueprint_data: Dict[str, Any]) -> Non
 BLUEPRINT_RELATIVE_PATH = "bpfw/blueprint.yaml"
 
 
-def run_init(project_root: Path) -> tuple[bool, str, int]:
+def run_init(project_root: Path, allow_unprotected: bool = False) -> tuple[bool, str, int]:
     """Run the init command to create initial blueprint.
     
     Args:
         project_root: Root directory of the project.
+        allow_unprotected: Whether init may succeed without OS authority protection.
     
     Returns:
         Tuple of (success, message, exit_code).
@@ -150,7 +152,7 @@ def run_init(project_root: Path) -> tuple[bool, str, int]:
     
     # Step 3: If blueprint already exists, do not overwrite
     if blueprint_path.exists():
-        setup_result = run_protection_setup(project_root=project_root)
+        setup_result = run_protection_setup(project_root=project_root, allow_unprotected=allow_unprotected)
         message = format_init_setup_summary(result=setup_result)
         return setup_result.allowed, message, 0 if setup_result.allowed else 1
     
@@ -195,7 +197,7 @@ def run_init(project_root: Path) -> tuple[bool, str, int]:
     # Step 9: Write bpfw/blueprint.yaml
     write_blueprint(blueprint_path=blueprint_path, blueprint_data=blueprint_data)
 
-    setup_result = run_protection_setup(project_root=project_root)
+    setup_result = run_protection_setup(project_root=project_root, allow_unprotected=allow_unprotected)
     
     # Step 10: Print init summary
     total_units = len(scan_result.discovered_units)
