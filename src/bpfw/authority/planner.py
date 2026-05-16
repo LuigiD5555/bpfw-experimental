@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from bpfw.authority.document import AuthorityDocument
-from bpfw.authority.persistence import BlockMove
+from bpfw.authority.reshard.models import BlockMove
 from bpfw.authority.sharding import ShardDecisionEngine
 
 

@@ -22,9 +22,10 @@ from bpfw.authority.errors import (
     ShardDriftError,
 )
 from bpfw.authority.index import AuthorityIndex
-from bpfw.authority.persistence import AuthorityPersistenceEngine, AuthorityPersistenceResult, BlockMove
+from bpfw.authority.persistence import AuthorityPersistenceEngine, AuthorityPersistenceResult
 from bpfw.authority.planner import AuthorityReshardPlanner, ReshardPlan
 from bpfw.authority.repository import AuthorityRepository
+from bpfw.authority.reshard.models import BlockMove
 from bpfw.authority.shard import AuthorityShard, BlockOrigin
 from bpfw.authority.sharding import ShardDecisionEngine
 

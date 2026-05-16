@@ -5,8 +5,7 @@ from typing import Any
 
 from bpfw.authority.document import AuthorityDocument
 from bpfw.authority.index import AuthorityIndex
-from bpfw.authority.persistence import AuthorityPersistenceEngine
-from bpfw.authority.planner import AuthorityReshardPlanner
+from bpfw.authority.persistence import AuthorityPersistenceEngine, AuthorityPersistenceResult
 from bpfw.authority.shard import AuthorityShard
 from bpfw.authority.sharding import ShardDecisionEngine
 from bpfw.reports.finding import Finding, FINDING_SEVERITY_BLOCK, FINDING_SEVERITY_WARNING
@@ -130,7 +129,7 @@ class AuthorityRepository:
 
         return self._document
 
-    def save(self, document: AuthorityDocument) -> None:
+    def save(self, document: AuthorityDocument) -> AuthorityPersistenceResult:
         """Save the authority document to shards.
         
         Args:
@@ -139,7 +138,7 @@ class AuthorityRepository:
         if self._persistence_engine is None:
             self._persistence_engine = AuthorityPersistenceEngine(self.project_root)
 
-        self._persistence_engine.save_document(document)
+        return self._persistence_engine.save_document(document)
 
     def validate(self, document: AuthorityDocument) -> list[Finding]:
         """Validate the authority document for issues.
@@ -304,11 +303,3 @@ class AuthorityRepository:
                 ))
 
         return findings
-
-    def get_reshard_planner(self) -> AuthorityReshardPlanner:
-        """Get a reshard planner for this repository.
-        
-        Returns:
-            AuthorityReshardPlanner instance.
-        """
-        return AuthorityReshardPlanner(self.project_root)

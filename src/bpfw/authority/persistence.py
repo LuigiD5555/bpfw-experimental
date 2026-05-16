@@ -5,18 +5,10 @@ from pathlib import Path
 from typing import Any
 
 from bpfw.authority.document import AuthorityDocument
+from bpfw.authority.reshard import ReshardCoordinator
+from bpfw.authority.reshard.models import BlockMove
 from bpfw.authority.sharding import ShardDecisionEngine
 from bpfw.authority.shard import AuthorityShard
-
-
-@dataclass
-class BlockMove:
-    """Represent a block move between shards."""
-    
-    block_id: str
-    from_shard: Path
-    to_shard: Path
-    reason: str
 
 
 @dataclass
@@ -50,6 +42,7 @@ class AuthorityPersistenceEngine:
             project_root: The project root directory.
         """
         self.project_root = project_root
+        self._reshard_coordinator = ReshardCoordinator(project_root=project_root)
 
     def save_document(self, document: AuthorityDocument) -> AuthorityPersistenceResult:
         """Save a document, moving blocks to correct shards as needed.
@@ -77,9 +70,11 @@ class AuthorityPersistenceEngine:
             result.warnings.append("No blocks to save")
             return result
 
+        # Build plan from internal reshard coordinator.
+        reshard_plan = self._reshard_coordinator.build_sync_plan(document=document)
+
         # Group blocks by expected shard
         shard_blocks: dict[Path, list[dict[str, Any]]] = {}
-        moves: list[tuple[str, Path, Path, str]] = []  # (block_id, from, to, reason)
 
         for block in blocks:
             block_id = block.get("id")
@@ -97,23 +92,13 @@ class AuthorityPersistenceEngine:
                 # New block, just assign to expected shard
                 current_shard = expected_shard
 
-            # Check if move is needed
-            if current_shard != expected_shard:
-                reason = self._determine_move_reason(block, current_shard, expected_shard, decision_engine)
-                moves.append((block_id, current_shard, expected_shard, reason))
-
             # Add to expected shard group
             shard_blocks.setdefault(expected_shard, []).append(block)
 
         # Apply moves to block_origins
-        for block_id, from_shard, to_shard, reason in moves:
-            document.block_origins[block_id] = to_shard
-            result.moved_blocks.append(BlockMove(
-                block_id=block_id,
-                from_shard=from_shard,
-                to_shard=to_shard,
-                reason=reason,
-            ))
+        for move in reshard_plan.moves:
+            document.block_origins[move.block_id] = move.to_shard
+            result.moved_blocks.append(move)
 
         # Collect all shards that need to be written
         shards_to_write = set()
