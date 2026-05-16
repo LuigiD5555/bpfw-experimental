@@ -1,6 +1,8 @@
 """Blueprint writer for BPFW MVP Catalog Mode initial blueprint generation."""
 
 from pathlib import Path
+import subprocess
+import sys
 from typing import Any, Dict, List
 
 from bpfw.catalog.access_control import (
@@ -95,10 +97,15 @@ def build_core_shard(discovered_units: List[DiscoveredCodeUnit]) -> Dict[str, An
         Dictionary containing shard data with blocks.
     """
     blocks = []
+    seen_block_ids: dict[str, int] = {}
     for unit in discovered_units:
         normalized_symbol_type = normalize_symbol_type(unit.symbol_type)
+        base_block_id = to_snake_case(f"{unit.module}_{unit.symbol}")
+        next_sequence = seen_block_ids.get(base_block_id, 0)
+        seen_block_ids[base_block_id] = next_sequence + 1
+        block_id = base_block_id if next_sequence == 0 else f"{base_block_id}_{next_sequence + 1}"
         block: Dict[str, Any] = {
-            "id": to_snake_case(unit.symbol),
+            "id": block_id,
             "purpose": None,
             "name": unit.symbol,
             "domain": None,
@@ -255,6 +262,36 @@ def write_blueprint(
 BLUEPRINT_RELATIVE_PATH = "bpfw/blueprint.yaml"
 
 
+def _extract_repair_command(reason: str) -> str | None:
+    """Extract ownership repair command from protection setup reason text."""
+
+    marker = "Repair with: "
+    if marker not in reason:
+        return None
+    command = reason.split(marker, maxsplit=1)[1].strip()
+    return command or None
+
+
+def _try_interactive_permission_repair(setup_result) -> bool:  # noqa: ANN001
+    """Run ownership repair as an interactive fallback when available."""
+
+    if not sys.stdin.isatty():
+        return False
+    if setup_result.support is None:
+        return False
+
+    repair_command = _extract_repair_command(reason=setup_result.support.reason)
+    if repair_command is None:
+        return False
+
+    print("BPFW needs elevated permissions to repair project ownership before lock setup.")
+    print("This will run:")
+    print(f"  {repair_command}")
+
+    command_result = subprocess.run(repair_command, shell=True, check=False)
+    return command_result.returncode == 0
+
+
 def run_init(project_root: Path, allow_unprotected: bool = False) -> tuple[bool, str, int]:
     """Run the init command to create initial blueprint.
     
@@ -272,6 +309,13 @@ def run_init(project_root: Path, allow_unprotected: bool = False) -> tuple[bool,
     # Step 3: If blueprint already exists, do not overwrite
     if blueprint_path.exists():
         setup_result = run_protection_setup(project_root=project_root, allow_unprotected=allow_unprotected)
+        if (
+            not allow_unprotected
+            and not setup_result.allowed
+            and setup_result.lock_state == "unsupported"
+            and _try_interactive_permission_repair(setup_result=setup_result)
+        ):
+            setup_result = run_protection_setup(project_root=project_root, allow_unprotected=allow_unprotected)
         message = format_init_setup_summary(result=setup_result)
         return setup_result.allowed, message, 0 if setup_result.allowed else 1
     
@@ -324,6 +368,13 @@ def run_init(project_root: Path, allow_unprotected: bool = False) -> tuple[bool,
     )
 
     setup_result = run_protection_setup(project_root=project_root, allow_unprotected=allow_unprotected)
+    if (
+        not allow_unprotected
+        and not setup_result.allowed
+        and setup_result.lock_state == "unsupported"
+        and _try_interactive_permission_repair(setup_result=setup_result)
+    ):
+        setup_result = run_protection_setup(project_root=project_root, allow_unprotected=allow_unprotected)
     
     # Step 11: Print init summary
     total_units = len(scan_result.discovered_units)

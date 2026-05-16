@@ -10,6 +10,23 @@ from bpfw.core.result import EngineResult, ResultStatus, StepResult, aggregate_s
 from bpfw.integrations.registry import IntegrationRegistry
 
 
+def _is_incomplete_only_verify_block(verify_result: StepResult) -> bool:
+    """Return whether verify is blocked only by incomplete metadata in draft authority."""
+
+    if verify_result.status not in {ResultStatus.BLOCK, ResultStatus.CRITICAL}:
+        return False
+
+    details = verify_result.details
+    return (
+        details.get("authority_state") == "draft"
+        and details.get("incomplete_blocks") not in {None, "", "0"}
+        and details.get("missing_declared_code") in {None, "", "0"}
+        and details.get("undeclared_code") in {None, "", "0"}
+        and details.get("duplicate_active_purposes") in {None, "", "0"}
+        and details.get("invalid_statuses") in {None, "", "0"}
+    )
+
+
 class BlueprintEngine:
     """Minimal engine implementation for MVP catalog mode."""
 
@@ -45,6 +62,15 @@ class BlueprintEngine:
             lock_state = core_registry.get_authority_protection_status(project_root=context.project_root).status
             if lock_state in {"locked", "degraded"}:
                 verify_result = VerifyBlueprintStep().run(context)
+                if _is_incomplete_only_verify_block(verify_result=verify_result):
+                    verify_result = StepResult(
+                        status=ResultStatus.WARNING,
+                        message=verify_result.message,
+                        source=verify_result.source,
+                        details=verify_result.details,
+                        affected_resources=verify_result.affected_resources,
+                        suggested_actions=verify_result.suggested_actions,
+                    )
                 step_results.append(verify_result)
                 if verify_result.status in {ResultStatus.BLOCK, ResultStatus.CRITICAL}:
                     return EngineResult(

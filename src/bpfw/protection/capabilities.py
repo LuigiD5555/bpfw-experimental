@@ -8,6 +8,10 @@ import shutil
 import stat
 import subprocess
 import sys
+try:
+    import pwd
+except ImportError:  # pragma: no cover - not available on Windows
+    pwd = None
 
 from bpfw.protection.os_lock import DEGRADED, LOCKED, UNSUPPORTED
 
@@ -149,6 +153,48 @@ def _format_unsupported_reason(project_root: Path) -> str:
         f"{mount_context.filesystem_type} filesystem mounted at {mount_context.mount_point}. "
         "This mount does not support strong POSIX authority protection, and read-only "
         "permission protection did not block normal writes."
+    )
+
+
+def _resolve_username(uid: int) -> str:
+    """Resolve a username for a uid and fall back to the numeric uid."""
+
+    if pwd is None:
+        return str(uid)
+    try:
+        return pwd.getpwuid(uid).pw_name
+    except (KeyError, OSError):
+        return str(uid)
+
+
+def _format_not_writable_reason(check_directory: Path) -> str:
+    """Return a specific reason when the probe directory cannot be written."""
+
+    base_reason = (
+        "BPFW cannot probe lock support because the project path is not writable: "
+        f"{check_directory}"
+    )
+    if not hasattr(os, "geteuid"):
+        return base_reason
+
+    check_parent = check_directory.parent
+    try:
+        parent_uid = check_parent.stat().st_uid
+    except OSError:
+        return base_reason
+
+    current_uid = os.geteuid()
+    if parent_uid == current_uid:
+        return base_reason
+
+    current_username = _resolve_username(uid=current_uid)
+    owner_username = _resolve_username(uid=parent_uid)
+    return (
+        f"{base_reason}. "
+        f"The directory {check_parent} is owned by {owner_username} while the current user is "
+        f"{current_username}. "
+        f"Repair with: sudo chown -R {current_username}:{current_username} {check_parent} && "
+        f"chmod -R u+rwX {check_parent}"
     )
 
 
@@ -297,8 +343,17 @@ def _check_posix_lock_support(project_root: Path, platform_name: str) -> LockSup
     check_parent = project_root / "bpfw"
     check_directory = check_parent / ".lock_support_check_dir"
     check_path = check_directory / "resource.txt"
-    check_directory.mkdir(parents=True, exist_ok=True)
-    check_path.write_text("lock support check\n", encoding="utf-8")
+    try:
+        check_directory.mkdir(parents=True, exist_ok=True)
+        check_path.write_text("lock support check\n", encoding="utf-8")
+    except OSError:
+        return LockSupportResult(
+            supported=False,
+            status=UNSUPPORTED,
+            reason=_format_not_writable_reason(check_directory=check_directory),
+            checked_path=check_directory,
+            backend=UNSUPPORTED_BACKEND,
+        )
     immutable_attempted = False
 
     try:
@@ -390,8 +445,17 @@ def _check_windows_lock_support(project_root: Path) -> LockSupportResult:
 
     check_directory = project_root / "bpfw"
     check_path = check_directory / ".lock_support_check"
-    check_directory.mkdir(parents=True, exist_ok=True)
-    check_path.write_text("lock support check\n", encoding="utf-8")
+    try:
+        check_directory.mkdir(parents=True, exist_ok=True)
+        check_path.write_text("lock support check\n", encoding="utf-8")
+    except OSError:
+        return LockSupportResult(
+            supported=False,
+            status=UNSUPPORTED,
+            reason=_format_not_writable_reason(check_directory=check_directory),
+            checked_path=check_directory,
+            backend=UNSUPPORTED_BACKEND,
+        )
 
     try:
         current_mode = stat.S_IMODE(check_path.stat().st_mode)
