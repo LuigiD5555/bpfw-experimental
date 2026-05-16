@@ -1,8 +1,9 @@
 """Catalog Mode verify pipeline for BPFW MVP."""
 
 from pathlib import Path
-from typing import List, Tuple
+from typing import Any, List, Tuple
 
+from bpfw.authority import AuthorityRepository
 from bpfw.catalog.drift import compare_declared_to_discovered
 from bpfw.catalog.loader import BlueprintLoader
 from bpfw.catalog.models import (
@@ -15,7 +16,7 @@ from bpfw.catalog.scanner import scan_python_project
 from bpfw.catalog.security import validate_no_blueprint_secrets
 from bpfw.catalog.validation import validate_blueprint_structure
 from bpfw.catalog.schema import get_blocks
-from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, Finding
+from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, FINDING_SEVERITY_WARNING, Finding
 
 # Finding codes used for counting.
 CODE_MISSING_DECLARED = "MISSING_DECLARED_CODE"
@@ -59,6 +60,157 @@ def _read_ignored_paths(blueprint_data: dict) -> List[str]:
         if isinstance(ignored_paths, list) and ignored_paths:
             return [str(path) for path in ignored_paths]
     return list(_DEFAULT_IGNORED_PATHS)
+
+
+def _validate_sharded_authority(project_root: Path, load_result: Any) -> List[Finding]:
+    """Validate sharded authority structure and detect shard drift.
+    
+    Args:
+        project_root: Project root directory.
+        load_result: BlueprintLoader load result.
+    
+    Returns:
+        List of shard validation findings.
+    """
+    findings = []
+    
+    # Check if authority section exists
+    authority = load_result.data.get("authority")
+    if not isinstance(authority, dict):
+        findings.append(
+            Finding(
+                source="verify_sharded_authority",
+                code="MISSING_AUTHORITY_SECTION",
+                severity=FINDING_SEVERITY_BLOCK,
+                message="Missing 'authority' section in blueprint.yaml",
+                evidence={"file": "bpfw/blueprint.yaml"},
+            )
+        )
+        return findings
+    
+    # Validate layout is sharded
+    layout = authority.get("layout")
+    if layout != "sharded":
+        findings.append(
+            Finding(
+                source="verify_sharded_authority",
+                code="INVALID_AUTHORITY_LAYOUT",
+                severity=FINDING_SEVERITY_BLOCK,
+                message=f"Invalid authority layout: '{layout}'. Expected 'sharded'",
+                evidence={"file": "bpfw/blueprint.yaml", "current": layout, "expected": "sharded"},
+            )
+        )
+        return findings
+    
+    # Validate includes exists and is a list
+    includes = load_result.data.get("includes")
+    if not isinstance(includes, list) or not includes:
+        findings.append(
+            Finding(
+                source="verify_sharded_authority",
+                code="MISSING_OR_INVALID_INCLUDES",
+                severity=FINDING_SEVERITY_BLOCK,
+                message="Missing or invalid 'includes' in blueprint.yaml. Must be a non-empty list.",
+                evidence={"file": "bpfw/blueprint.yaml"},
+            )
+        )
+        return findings
+    
+    # Validate each include
+    for include_path in includes:
+        if not isinstance(include_path, str):
+            findings.append(
+                Finding(
+                    source="verify_sharded_authority",
+                    code="INVALID_INCLUDE_TYPE",
+                    severity=FINDING_SEVERITY_BLOCK,
+                    message=f"Include must be a string, got {type(include_path).__name__}",
+                    evidence={"include": include_path},
+                )
+            )
+            continue
+        
+        # Check for glob patterns
+        if "*" in include_path or "?" in include_path:
+            findings.append(
+                Finding(
+                    source="verify_sharded_authority",
+                    code="GLOB_INCLUDE_NOT_ALLOWED",
+                    severity=FINDING_SEVERITY_BLOCK,
+                    message=f"Glob patterns not allowed in includes: '{include_path}'",
+                    evidence={"include": include_path},
+                )
+            )
+            continue
+        
+        # Check include is under bpfw/blocks
+        if not include_path.startswith("bpfw/blocks/"):
+            findings.append(
+                Finding(
+                    source="verify_sharded_authority",
+                    code="INCLUDE_OUTSIDE_BLOCKS_DIR",
+                    severity=FINDING_SEVERITY_BLOCK,
+                    message=f"Include must be under bpfw/blocks/: '{include_path}'",
+                    evidence={"include": include_path},
+                )
+            )
+            continue
+        
+        # Check include file exists
+        full_path = project_root / include_path
+        if not full_path.exists():
+            findings.append(
+                Finding(
+                    source="verify_sharded_authority",
+                    code="INCLUDE_FILE_MISSING",
+                    severity=FINDING_SEVERITY_BLOCK,
+                    message=f"Included shard file does not exist: '{include_path}'",
+                    evidence={"include": include_path, "full_path": str(full_path)},
+                )
+            )
+    
+    # Check for root-level blocks (should not exist in sharded authority)
+    blocks = load_result.data.get("blocks")
+    if isinstance(blocks, list) and blocks:
+        findings.append(
+            Finding(
+                source="verify_sharded_authority",
+                code="ROOT_LEVEL_BLOCKS_NOT_ALLOWED",
+                severity=FINDING_SEVERITY_BLOCK,
+                message=f"Root blueprint.yaml contains {len(blocks)} block(s). Blocks must be in shard files only.",
+                evidence={"file": "bpfw/blueprint.yaml", "block_count": len(blocks)},
+            )
+        )
+    
+    # Use AuthorityRepository to validate for duplicates and drift
+    try:
+        repository = AuthorityRepository(project_root)
+        document = repository.load()
+        validation_findings = repository.validate(document)
+        
+        # Convert authority validation findings to verify findings
+        for vf in validation_findings:
+            findings.append(
+                Finding(
+                    source="verify_sharded_authority",
+                    code=vf.code,
+                    severity=FINDING_SEVERITY_BLOCK if vf.severity == "error" else FINDING_SEVERITY_WARNING,
+                    message=vf.message,
+                    evidence=vf.details if hasattr(vf, 'details') else {},
+                )
+            )
+    except Exception as e:
+        findings.append(
+            Finding(
+                source="verify_sharded_authority",
+                code="AUTHORITY_REPOSITORY_ERROR",
+                severity=FINDING_SEVERITY_BLOCK,
+                message=f"Failed to validate authority repository: {str(e)}",
+                evidence={"error": str(e)},
+            )
+        )
+    
+    return findings
 
 
 def _build_report(
@@ -113,6 +265,9 @@ def run_verify(project_root: Path) -> Tuple[VerificationReport, int]:
     loader = BlueprintLoader(project_root=resolved_root)
     load_result = loader.load()
 
+    # Step 2.5: Validate sharded authority structure
+    shard_findings = _validate_sharded_authority(resolved_root, load_result)
+
     # Step 3: Missing blueprint: allowed with info.
     if load_result.state == AUTHORITY_STATE_MISSING:
         report = _build_report(
@@ -165,6 +320,7 @@ def run_verify(project_root: Path) -> Tuple[VerificationReport, int]:
     # Combine all findings
     all_findings: List[Finding] = []
     all_findings.extend(load_result.findings)
+    all_findings.extend(shard_findings)
     all_findings.extend(scan_result.findings)
     all_findings.extend(validation_findings)
     all_findings.extend(security_findings)
