@@ -4,7 +4,8 @@ import argparse
 import json
 from pathlib import Path
 
-from bpfw.authority import AuthorityRepository, AuthorityReshardPlanner
+from bpfw.authority import AuthorityRepository
+from bpfw.authority.reshard import ReshardCoordinator, ReshardMode
 from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
 from bpfw.catalog.verify import run_verify
 from bpfw.catalog.writer import run_init
@@ -48,7 +49,7 @@ Commands:
   lock        Lock protected authority files.
   unlock      Unlock protected authority files.
   status      Show project authority, drift, and lock status.
-  reshard     Preview and apply block moves between shards.
+  reshard     Repair and synchronize block shards.
 
 Global options:
   -h, --help              Show this help message.
@@ -100,7 +101,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--json", action="store_true", dest="as_json")
     parser.add_argument("-a", "--all", action="store_true", dest="inspector_all", help=argparse.SUPPRESS)
-    parser.add_argument("--apply", action="store_true", help="Apply reshard plan (default: preview only)")
     return parser
 
 
@@ -275,19 +275,19 @@ def main() -> int:
         print(output)
         return exit_code
 
-    # reshard is handled by the authority reshard planner
+    # reshard is handled as one-shot synchronization and repair
     if normalized_command == "reshard":
         project_root = Path(parsed_arguments.project_root).resolve()
         try:
             repository = AuthorityRepository(project_root=project_root)
             document = repository.load()
-            planner = AuthorityReshardPlanner(project_root=project_root)
-            plan = planner.build_plan(document=document)
+            coordinator = ReshardCoordinator(project_root=project_root)
+            plan = coordinator.build_sync_plan(document=document)
 
             if parsed_arguments.as_json:
                 plan_dict = {
                     "strategy": plan.strategy,
-                    "default_shard": str(plan.default_shard),
+                    "mode": plan.mode,
                     "moves": [
                         {
                             "block_id": move.block_id,
@@ -297,95 +297,36 @@ def main() -> int:
                         }
                         for move in plan.moves
                     ],
-                    "shards_to_create": [str(shard) for shard in plan.shards_to_create],
-                    "shards_to_remove": [str(shard) for shard in plan.shards_to_remove],
-                    "includes_to_add": [str(include) for include in plan.includes_to_add],
-                    "includes_to_remove": [str(include) for include in plan.includes_to_remove],
-                    "duplicate_block_ids": [
-                        {
-                            "block_id": block_id,
-                            "shard_a": str(shard_a),
-                            "shard_b": str(shard_b),
-                        }
-                        for block_id, shard_a, shard_b in plan.duplicate_block_ids
-                    ],
-                    "duplicate_code_declarations": [
-                        {
-                            "block_id_a": block_id_a,
-                            "shard_a": str(shard_a),
-                            "block_id_b": block_id_b,
-                            "shard_b": str(shard_b),
-                        }
-                        for block_id_a, shard_a, block_id_b, shard_b in plan.duplicate_code_declarations
-                    ],
+                    "blocks_affected": plan.move_count(),
+                    "shards_affected": plan.affected_shard_count(),
                 }
                 print(json.dumps(plan_dict, indent=2))
                 return 0
 
-            authority_config = document.index.get_authority_config()
-            shard_strategy = authority_config.get("shard_strategy", "domain")
-
-            print("BPFW reshard plan.")
-            print()
-            print(f"Strategy:")
-            print(f"  {plan.strategy}")
-            print()
-
-            if plan.moves:
-                print("Moves:")
-                for move in plan.moves:
-                    print(f"  block: {move.block_id}")
-                    print(f"  from: {move.from_shard}")
-                    print(f"  to: {move.to_shard}")
-                    print(f"  reason: {move.reason}")
-                    print()
-            else:
-                print("Moves:")
-                print("  none")
-                print()
-
-            if plan.shards_to_create or plan.shards_to_remove:
-                print("Shards:")
-                if plan.shards_to_create:
-                    print("  create:")
-                    for shard in plan.shards_to_create:
-                        print(f"    - {shard}")
-                else:
-                    print("  create: none")
-                if plan.shards_to_remove:
-                    print("  remove:")
-                    for shard in plan.shards_to_remove:
-                        print(f"    - {shard}")
-                else:
-                    print("  remove: none")
-                print()
-            else:
-                print("Shards:")
-                print("  create: none")
-                print("  remove: none")
-                print()
-
-            if plan.duplicate_block_ids:
-                print("Duplicate block IDs:")
-                for block_id, shard_a, shard_b in plan.duplicate_block_ids:
-                    print(f"  {block_id}: found in {shard_a} and {shard_b}")
-                print()
-
-            if plan.duplicate_code_declarations:
-                print("Duplicate code declarations:")
-                for block_id_a, shard_a, block_id_b, shard_b in plan.duplicate_code_declarations:
-                    print(f"  {block_id_a} in {shard_a} and {block_id_b} in {shard_b}")
-                print()
-
-            if parsed_arguments.apply:
-                print("Applying reshard plan...")
-                planner.apply_plan(document=document, plan=plan)
-                print("Reshard complete.")
+            if plan.mode == ReshardMode.NO_DRIFT:
+                print("No shard drift detected. Blueprint structure is already synchronized.")
                 return 0
-            else:
-                print("Next:")
-                print("  bpfw reshard --apply")
+
+            if plan.requires_confirmation():
+                print("Detected large structural migration.")
+                print()
+                print(f"Blocks affected: {plan.move_count()}")
+                print(f"Shards affected: {plan.affected_shard_count()}")
+                print()
+                if input("Continue? [y/N] ").strip().lower() not in {"y", "yes"}:
+                    print("Reshard cancelled.")
+                    return 1
+
+            result = repository.save(document)
+
+            if plan.mode == ReshardMode.SMALL:
                 return 0
+
+            print("Reshard synchronization complete.")
+            print(f"Moved {len(result.moved_blocks)} blocks across {plan.affected_shard_count()} shards.")
+            if result.updated_includes:
+                print("Updated shard includes.")
+            return 0
         except Exception as error:
             print(f"Reshard error: {error}")
             return 1

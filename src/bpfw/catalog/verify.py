@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import Any, List, Tuple
 
+from bpfw.authority.index import AuthorityIndex
 from bpfw.authority import AuthorityRepository
 from bpfw.catalog.drift import compare_declared_to_discovered
 from bpfw.catalog.loader import BlueprintLoader
@@ -169,8 +170,13 @@ def _validate_sharded_authority(project_root: Path, load_result: Any) -> List[Fi
                 )
             )
     
-    # Check for root-level blocks (should not exist in sharded authority)
-    blocks = load_result.data.get("blocks")
+    # Check for root-level blocks in the raw authority index only.
+    # load_result.data is unified and intentionally includes shard blocks.
+    try:
+        root_index_data = AuthorityIndex.load(project_root).data
+    except Exception:
+        root_index_data = load_result.data
+    blocks = root_index_data.get("blocks")
     if isinstance(blocks, list) and blocks:
         findings.append(
             Finding(

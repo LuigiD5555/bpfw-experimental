@@ -1,7 +1,7 @@
 """Status report rendering for BPFW MVP Catalog Mode."""
 
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from bpfw.catalog.status import count_statuses
 from bpfw.catalog.loader import BlueprintLoader
@@ -85,6 +85,7 @@ def run_status(project_root: Path) -> Tuple[str, int]:
             lock_state=lock_state,
             lifecycle_counts=lifecycle_counts,
             authority_config=authority_config,
+            included_shards_count=len(load_result.data.get("includes", [])),
         )
         return output, 0
 
@@ -101,6 +102,7 @@ def run_status(project_root: Path) -> Tuple[str, int]:
             lock_state=lock_state,
             lifecycle_counts=lifecycle_counts,
             authority_config=authority_config,
+            included_shards_count=len(load_result.data.get("includes", [])),
         )
         return output, 0
 
@@ -117,6 +119,7 @@ def run_status(project_root: Path) -> Tuple[str, int]:
             lock_state=lock_state,
             lifecycle_counts=lifecycle_counts,
             authority_config=authority_config,
+            included_shards_count=len(load_result.data.get("includes", [])),
         )
         return output, 1
 
@@ -128,6 +131,7 @@ def run_status(project_root: Path) -> Tuple[str, int]:
         lock_state=lock_state,
         lifecycle_counts=lifecycle_counts,
         authority_config=authority_config,
+        included_shards_count=len(load_result.data.get("includes", [])),
     )
     return output, verify_exit_code
 
@@ -138,6 +142,7 @@ def render_status_report(
     lock_state: str,
     lifecycle_counts: Dict[str, int],
     authority_config: Dict[str, Any] | None = None,
+    included_shards_count: int | None = None,
 ) -> str:
     """Render a VerificationReport and status context into a human-readable string.
 
@@ -169,8 +174,7 @@ def render_status_report(
         lines.append(f"  layout: {authority_config.get('layout', 'unknown')}")
         lines.append(f"  shard strategy: {authority_config.get('shard_strategy', 'unknown')}")
         lines.append(f"  default shard: {authority_config.get('default_shard', 'unknown')}")
-        includes = load_result.data.get("includes", [])
-        lines.append(f"  included shards: {len(includes)}")
+        lines.append(f"  included shards: {included_shards_count or 0}")
         lines.append("")
 
     # Blueprint section
