@@ -7,6 +7,7 @@ from bpfw.catalog.domain_suggestions import resolve_domain_origin_key
 from bpfw.catalog.learning import record_domain_for_origin, record_domain_value, record_purpose_phrase
 from bpfw.catalog.purpose_suggestions import PurposeSuggestion
 from bpfw.catalog.schema import get_blocks, get_purpose, set_blocks
+from bpfw.core.errors import BlueprintLockedError
 from bpfw.integrations.inspector.base import InspectIssue, InspectLoadResult, save_blueprint
 from bpfw.integrations.inspector.commands import (
     CUSTOM_DOMAIN_KEY,
@@ -120,7 +121,13 @@ class InspectorController:
             purpose_suggestions=purpose_suggestions,
             domain_suggestions=domain_suggestions,
         )
-        if not save_issue(session=self._session, issue=issue):
+        try:
+            persisted = save_issue(session=self._session, issue=issue)
+        except BlueprintLockedError as error:
+            self._print_func(str(error))
+            return InspectorControllerResult(exit_code=1)
+
+        if not persisted:
             self._print_func("Blueprint path is unavailable.")
             return InspectorControllerResult(exit_code=1)
 

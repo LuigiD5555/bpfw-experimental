@@ -3,12 +3,21 @@
 from pathlib import Path
 from typing import Any, Dict, List
 
-from bpfw.catalog.access_control import ensure_blueprint_can_be_written
+from bpfw.catalog.access_control import (
+    ensure_blueprint_can_be_written,
+    has_temporary_blueprint_unlock_authorization,
+)
 from bpfw.catalog.status import ALLOWED_STATUSES
 from bpfw.catalog.models import DiscoveredCodeUnit
 from bpfw.catalog.paths import resolve_blueprint_path
 from bpfw.catalog.symbol_types import normalize_symbol_type
+from bpfw.core.errors import BlueprintLockedError
 from bpfw.protection.setup import format_init_setup_summary, run_protection_setup
+from bpfw.protection.authority import (
+    get_authority_protection_status,
+    lock_authority,
+    unlock_authority,
+)
 from bpfw.shared.text import to_snake_case
 
 
@@ -127,10 +136,37 @@ def write_blueprint(blueprint_path: Path, blueprint_data: Dict[str, Any]) -> Non
         raise ImportError("PyYAML is required but not installed")
     
     project_root = blueprint_path.parent.parent
-    ensure_blueprint_can_be_written(project_root=project_root)
+    lock_state = get_authority_protection_status(project_root=project_root).status
+    requires_temporary_unlock = lock_state in {"locked", "degraded"}
+    temporarily_unlocked = False
+
+    if requires_temporary_unlock and not has_temporary_blueprint_unlock_authorization():
+        ensure_blueprint_can_be_written(project_root=project_root)
+
+    if requires_temporary_unlock and has_temporary_blueprint_unlock_authorization():
+        unlock_result = unlock_authority(project_root=project_root)
+        if unlock_result.status != "unlocked":
+            raise BlueprintLockedError(
+                "Blueprint is locked and temporary unlock failed. Run bpfw unlock before editing authority data."
+            )
+        temporarily_unlocked = True
+
     blueprint_path.parent.mkdir(parents=True, exist_ok=True)
     rendered = yaml.safe_dump(blueprint_data, sort_keys=False, allow_unicode=True)
-    blueprint_path.write_text(rendered, encoding="utf-8")
+    try:
+        blueprint_path.write_text(rendered, encoding="utf-8")
+    except PermissionError as error:
+        raise BlueprintLockedError(
+            "Blueprint write failed due to OS-level permission protection."
+        ) from error
+    finally:
+        if temporarily_unlocked:
+            relock_result = lock_authority(project_root=project_root)
+            if relock_result.status not in {"locked", "degraded"}:
+                raise BlueprintLockedError(
+                    "Blueprint was written, but automatic re-lock failed. "
+                    f"Current lock status: {relock_result.status}."
+                )
 
 
 BLUEPRINT_RELATIVE_PATH = "bpfw/blueprint.yaml"

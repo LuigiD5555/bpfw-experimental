@@ -3,8 +3,7 @@
 from pathlib import Path
 from typing import Any, Dict, List
 
-from bpfw.catalog.access_control import ensure_blueprint_can_be_written
-from bpfw.catalog.paths import resolve_blueprint_path
+from bpfw.catalog.writer import write_blueprint
 from bpfw.integrations.planner.models import PlannerBox, PlannerConnection, PlannerState
 
 
@@ -218,18 +217,4 @@ class BlueprintYamlWriter:
             blueprint_path: Path to the blueprint file.
             blueprint_data: Blueprint data to write.
         """
-        try:
-            import yaml
-        except ImportError:
-            raise ImportError("PyYAML is required but not installed")
-        
-        # Ensure blueprint can be written
-        project_root = blueprint_path.parent.parent
-        ensure_blueprint_can_be_written(project_root=project_root)
-        
-        # Create directory if needed
-        blueprint_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        # Render and write YAML
-        rendered = yaml.safe_dump(blueprint_data, sort_keys=False, allow_unicode=True)
-        blueprint_path.write_text(rendered, encoding="utf-8")
+        write_blueprint(blueprint_path=blueprint_path, blueprint_data=blueprint_data)

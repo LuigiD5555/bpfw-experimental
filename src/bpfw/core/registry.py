@@ -7,6 +7,7 @@ from bpfw.catalog.verify import run_verify
 from bpfw.catalog.writer import run_init
 from bpfw.core.pipeline import Pipeline, PipelineStep
 from bpfw.core.result import ResultStatus, StepResult
+from bpfw.core.errors import BlueprintLockedError
 from bpfw.integrations.registry import (
     IntegrationRegistry,
     build_default_integration_registry,
@@ -17,6 +18,7 @@ from bpfw.protection.authority import (
     lock_authority,
     unlock_authority,
 )
+from bpfw.protection.runtime_lease import runtime_blueprint_write_lease
 
 
 @dataclass(slots=True)
@@ -44,33 +46,38 @@ class IntegrationStep(PipelineStep):
     name: str
 
     def run(self, context) -> StepResult:  # noqa: ANN001
-        lock_state = get_authority_protection_status(project_root=context.project_root).status
-        if self.integration_name in {"inspector", "editor", "planner"} and lock_state in {"locked", "degraded"}:
-            unlock_result = unlock_authority(project_root=context.project_root)
-            if unlock_result.status != "unlocked":
-                return StepResult(
-                    status=ResultStatus.BLOCK,
-                    message=(
-                        "BLOCK: Blueprint is locked and automatic unlock failed. "
-                        "Run bpfw unlock before editing authority data."
-                    ),
-                    source=self.name,
-                    details={
-                        "error_code": "AUTHORITY_LOCKED",
-                        "lock_state": lock_state,
-                        "unlock_status": unlock_result.status,
-                    },
-                    suggested_actions=["Run bpfw unlock"],
+        try:
+            with runtime_blueprint_write_lease(
+                project_root=context.project_root,
+                tool_name=self.integration_name,
+            ) as lease:
+                result = self.integration_registry.run(
+                    name=self.integration_name,
+                    project_root=context.project_root,
+                    command_arguments=context.command_arguments,
                 )
+        except BlueprintLockedError as error:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=f"BLOCK: {error}",
+                source=self.name,
+                details={
+                    "error_code": "AUTHORITY_LOCKED",
+                    "integration": self.integration_name,
+                },
+                suggested_actions=[
+                    "Run in an interactive terminal and approve temporary unlock",
+                    "or run bpfw unlock manually before editing authority data",
+                ],
+            )
 
-        result = self.integration_registry.run(
-            name=self.integration_name,
-            project_root=context.project_root,
-            command_arguments=context.command_arguments,
-        )
+        message = result.message
+        if lease.relock_warning:
+            message = f"{message}\n\n{lease.relock_warning}"
+
         return StepResult(
             status=ResultStatus.OK if result.success else ResultStatus.BLOCK,
-            message=result.message,
+            message=message,
             source=self.name,
             details={"integration": self.integration_name},
         )

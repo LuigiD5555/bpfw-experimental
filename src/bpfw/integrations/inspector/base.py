@@ -4,8 +4,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List
 
-import yaml
-
 from bpfw.catalog.access_control import ensure_blueprint_can_be_written
 from bpfw.catalog.loader import BlueprintLoader
 from bpfw.catalog.models import (
@@ -25,6 +23,7 @@ from bpfw.catalog.schema import (
 )
 from bpfw.catalog.verify import _read_ignored_paths, _read_source_roots
 from bpfw.catalog.verify import run_verify
+from bpfw.catalog.writer import write_blueprint
 from bpfw.core.errors import BlueprintLockedError
 from bpfw.reports.finding import Finding
 from bpfw.shared.text import to_snake_case
@@ -665,5 +664,4 @@ def save_blueprint(
     """Save blueprint data to the YAML file."""
 
     apply_automatic_authority_fields(blueprint_data)
-    rendered = yaml.dump(blueprint_data, sort_keys=False, allow_unicode=True)
-    blueprint_path.write_text(rendered, encoding="utf-8")
+    write_blueprint(blueprint_path=blueprint_path, blueprint_data=blueprint_data)
