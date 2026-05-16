@@ -70,8 +70,8 @@ blocks:
     module: src.bpfw.protection.authority
     symbol: ProtectionResult
     kind: class
-    start_line: 28
-    end_line: 36
+    start_line: 32
+    end_line: 40
   detected:
     qualified_name: src.bpfw.protection.authority.ProtectionResult
     kind: class
@@ -99,8 +99,8 @@ blocks:
     module: src.bpfw.protection.authority
     symbol: resolve_project_blueprint_path
     kind: function
-    start_line: 39
-    end_line: 42
+    start_line: 43
+    end_line: 46
   detected:
     qualified_name: src.bpfw.protection.authority.resolve_project_blueprint_path
     kind: function
@@ -138,8 +138,8 @@ blocks:
     module: src.bpfw.protection.authority
     symbol: ProtectedResource
     kind: class
-    start_line: 19
-    end_line: 24
+    start_line: 23
+    end_line: 28
   detected:
     qualified_name: src.bpfw.protection.authority.ProtectedResource
     kind: class
@@ -167,8 +167,8 @@ blocks:
     module: src.bpfw.protection.authority
     symbol: resolve_bpfw_package_root
     kind: function
-    start_line: 45
-    end_line: 48
+    start_line: 49
+    end_line: 52
   detected:
     qualified_name: src.bpfw.protection.authority.resolve_bpfw_package_root
     kind: function
@@ -200,8 +200,8 @@ blocks:
     module: src.bpfw.protection.authority
     symbol: resolve_guard_files
     kind: function
-    start_line: 51
-    end_line: 60
+    start_line: 55
+    end_line: 64
   detected:
     qualified_name: src.bpfw.protection.authority.resolve_guard_files
     kind: function
@@ -233,8 +233,8 @@ blocks:
     module: src.bpfw.protection.authority
     symbol: resolve_protected_resources
     kind: function
-    start_line: 63
-    end_line: 84
+    start_line: 67
+    end_line: 88
   detected:
     qualified_name: src.bpfw.protection.authority.resolve_protected_resources
     kind: function
@@ -272,8 +272,8 @@ blocks:
     module: src.bpfw.protection.authority
     symbol: get_authority_protection_status
     kind: function
-    start_line: 251
-    end_line: 304
+    start_line: 224
+    end_line: 274
   detected:
     qualified_name: src.bpfw.protection.authority.get_authority_protection_status
     kind: function
@@ -3593,7 +3593,7 @@ blocks:
     symbol: build_initial_blueprint
     kind: function
     start_line: 15
-    end_line: 113
+    end_line: 114
   detected:
     qualified_name: src.bpfw.catalog.writer.build_initial_blueprint
     kind: function
@@ -3646,8 +3646,8 @@ blocks:
     module: src.bpfw.catalog.writer
     symbol: write_blueprint
     kind: function
-    start_line: 116
-    end_line: 132
+    start_line: 117
+    end_line: 133
   detected:
     qualified_name: src.bpfw.catalog.writer.write_blueprint
     kind: function
@@ -3690,8 +3690,8 @@ blocks:
     module: src.bpfw.protection.setup
     symbol: format_setup_summary
     kind: function
-    start_line: 58
-    end_line: 61
+    start_line: 142
+    end_line: 145
   detected:
     qualified_name: src.bpfw.protection.setup.format_setup_summary
     kind: function
@@ -3717,9 +3717,9 @@ blocks:
       required: true
       description: null
     - name: action
-      type: str
+      type: str | None
       default: null
-      required: true
+      required: false
       description: null
     output:
       type: str
@@ -3734,8 +3734,8 @@ blocks:
     module: src.bpfw.protection.setup
     symbol: format_init_setup_summary
     kind: function
-    start_line: 75
-    end_line: 78
+    start_line: 171
+    end_line: 174
   detected:
     qualified_name: src.bpfw.protection.setup.format_init_setup_summary
     kind: function
@@ -3773,8 +3773,8 @@ blocks:
     module: src.bpfw.protection.setup
     symbol: ProtectionSetupResult.allowed
     kind: method
-    start_line: 18
-    end_line: 19
+    start_line: 23
+    end_line: 30
   detected:
     qualified_name: src.bpfw.protection.setup.ProtectionSetupResult.allowed
     kind: method
@@ -3806,8 +3806,8 @@ blocks:
     module: src.bpfw.protection.setup
     symbol: ProtectionSetupResult
     kind: class
-    start_line: 11
-    end_line: 19
+    start_line: 14
+    end_line: 30
   detected:
     qualified_name: src.bpfw.protection.setup.ProtectionSetupResult
     kind: class
@@ -3826,6 +3826,74 @@ blocks:
     replaced_by: null
     reason: null
   notes: null
+- id: lock_support_result
+  purpose: null
+  name: LockSupportResult
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/protection/capabilities.py
+    module: src.bpfw.protection.capabilities
+    symbol: LockSupportResult
+    kind: class
+    start_line: 32
+    end_line: 39
+  detected:
+    qualified_name: src.bpfw.protection.capabilities.LockSupportResult
+    kind: class
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: check_lock_support
+  purpose: null
+  name: check_lock_support
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/protection/capabilities.py
+    module: src.bpfw.protection.capabilities
+    symbol: check_lock_support
+    kind: function
+    start_line: 438
+    end_line: 467
+  detected:
+    qualified_name: src.bpfw.protection.capabilities.check_lock_support
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    output:
+      type: LockSupportResult
+      description: null
 - id: lock_authority
   purpose: null
   name: lock_authority
@@ -3836,8 +3904,8 @@ blocks:
     module: src.bpfw.protection.authority
     symbol: lock_authority
     kind: function
-    start_line: 146
-    end_line: 197
+    start_line: 120
+    end_line: 172
   detected:
     qualified_name: src.bpfw.protection.authority.lock_authority
     kind: function
@@ -3875,8 +3943,8 @@ blocks:
     module: src.bpfw.protection.setup
     symbol: run_protection_setup
     kind: function
-    start_line: 64
-    end_line: 72
+    start_line: 148
+    end_line: 168
   detected:
     qualified_name: src.bpfw.protection.setup.run_protection_setup
     kind: function
@@ -3901,6 +3969,11 @@ blocks:
       default: null
       required: true
       description: null
+    - name: allow_unprotected
+      type: bool
+      default: false
+      required: false
+      description: null
     output:
       type: ProtectionSetupResult
       description: null
@@ -3914,8 +3987,8 @@ blocks:
     module: src.bpfw.catalog.writer
     symbol: run_init
     kind: function
-    start_line: 138
-    end_line: 226
+    start_line: 139
+    end_line: 228
   detected:
     qualified_name: src.bpfw.catalog.writer.run_init
     kind: function
@@ -3939,6 +4012,11 @@ blocks:
       type: Path
       default: null
       required: true
+      description: null
+    - name: allow_unprotected
+      type: bool
+      default: false
+      required: false
       description: null
     output:
       type: tuple[bool, str, int]
@@ -4051,7 +4129,7 @@ blocks:
     symbol: build_parser
     kind: function
     start_line: 84
-    end_line: 95
+    end_line: 100
   detected:
     qualified_name: src.bpfw.cli.build_parser
     kind: function
@@ -4122,8 +4200,8 @@ blocks:
     module: src.bpfw.cli
     symbol: resolve_cli_command
     kind: function
-    start_line: 99
-    end_line: 138
+    start_line: 104
+    end_line: 143
   detected:
     qualified_name: src.bpfw.cli.resolve_cli_command
     kind: function
@@ -4626,8 +4704,8 @@ blocks:
     module: src.bpfw.protection.authority
     symbol: unlock_authority
     kind: function
-    start_line: 200
-    end_line: 248
+    start_line: 175
+    end_line: 221
   detected:
     qualified_name: src.bpfw.protection.authority.unlock_authority
     kind: function
@@ -5528,8 +5606,8 @@ blocks:
     module: src.bpfw.cli
     symbol: main
     kind: function
-    start_line: 226
-    end_line: 354
+    start_line: 231
+    end_line: 373
   detected:
     qualified_name: src.bpfw.cli.main
     kind: function
@@ -7289,6 +7367,678 @@ blocks:
     output:
       type: InspectLoadResult
       description: null
+- id: inspector_controller_result
+  purpose: null
+  name: InspectorControllerResult
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/controller.py
+    module: src.bpfw.integrations.inspector.controller
+    symbol: InspectorControllerResult
+    kind: class
+    start_line: 25
+    end_line: 29
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.controller.InspectorControllerResult
+    kind: class
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: compute_notification_width
+  purpose: null
+  name: compute_notification_width
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/controller.py
+    module: src.bpfw.integrations.inspector.controller
+    symbol: compute_notification_width
+    kind: function
+    start_line: 329
+    end_line: 336
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.controller.compute_notification_width
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: int
+      description: null
+- id: render_notification_block
+  purpose: null
+  name: render_notification_block
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/shared/visual_notifications.py
+    module: src.bpfw.integrations.shared.visual_notifications
+    symbol: render_notification_block
+    kind: function
+    start_line: 7
+    end_line: 17
+  detected:
+    qualified_name: src.bpfw.integrations.shared.visual_notifications.render_notification_block
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: title
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: lines
+      type: list[str]
+      default: null
+      required: true
+      description: null
+    - name: width
+      type: int
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: render_unknown_command_notification
+  purpose: null
+  name: render_unknown_command_notification
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/controller.py
+    module: src.bpfw.integrations.inspector.controller
+    symbol: render_unknown_command_notification
+    kind: function
+    start_line: 208
+    end_line: 220
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.controller.render_unknown_command_notification
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: list[str]
+      description: null
+- id: run_interface_edit_submode
+  purpose: null
+  name: run_interface_edit_submode
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/commands.py
+    module: src.bpfw.integrations.inspector.commands
+    symbol: run_interface_edit_submode
+    kind: function
+    start_line: 129
+    end_line: 315
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.commands.run_interface_edit_submode
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    - name: input_func
+      type: InputFunc
+      default: null
+      required: true
+      description: null
+    - name: print_func
+      type: Callable[[str], None]
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: inspector_controller_handle_action
+  purpose: null
+  name: InspectorController.handle_action
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/controller.py
+    module: src.bpfw.integrations.inspector.controller
+    symbol: InspectorController.handle_action
+    kind: method
+    start_line: 53
+    end_line: 101
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.controller.InspectorController.handle_action
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: action
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: state
+      type: InspectorViewState
+      default: null
+      required: true
+      description: null
+    - name: issue
+      type: InspectIssue
+      default: null
+      required: true
+      description: null
+    - name: purpose_suggestions
+      type: List[PurposeSuggestion]
+      default: null
+      required: true
+      description: null
+    - name: domain_suggestions
+      type: List[str]
+      default: null
+      required: true
+      description: null
+    - name: view_mode
+      type: InspectorViewMode
+      default: null
+      required: true
+      description: null
+    output:
+      type: InspectorControllerResult
+      description: null
+- id: record_learning_feedback
+  purpose: null
+  name: record_learning_feedback
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/controller.py
+    module: src.bpfw.integrations.inspector.controller
+    symbol: record_learning_feedback
+    kind: function
+    start_line: 169
+    end_line: 192
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.controller.record_learning_feedback
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: issue
+      type: InspectIssue
+      default: null
+      required: true
+      description: null
+    - name: purpose_suggestions
+      type: List[PurposeSuggestion]
+      default: null
+      required: true
+      description: null
+    - name: domain_suggestions
+      type: List[str]
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: measure_lines
+  purpose: null
+  name: measure_lines
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/shared/visual_width.py
+    module: src.bpfw.integrations.shared.visual_width
+    symbol: measure_lines
+    kind: function
+    start_line: 50
+    end_line: 55
+  detected:
+    qualified_name: src.bpfw.integrations.shared.visual_width.measure_lines
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: lines
+      type: list[str]
+      default: null
+      required: true
+      description: null
+    output:
+      type: int
+      description: null
+- id: compute_help_width
+  purpose: null
+  name: compute_help_width
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/controller.py
+    module: src.bpfw.integrations.inspector.controller
+    symbol: compute_help_width
+    kind: function
+    start_line: 311
+    end_line: 326
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.controller.compute_help_width
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: int
+      description: null
+- id: render_help_block
+  purpose: null
+  name: render_help_block
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/controller.py
+    module: src.bpfw.integrations.inspector.controller
+    symbol: render_help_block
+    kind: function
+    start_line: 223
+    end_line: 308
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.controller.render_help_block
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: view_mode
+      type: InspectorViewMode
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: render_missing_fields_notification
+  purpose: null
+  name: render_missing_fields_notification
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/controller.py
+    module: src.bpfw.integrations.inspector.controller
+    symbol: render_missing_fields_notification
+    kind: function
+    start_line: 195
+    end_line: 205
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.controller.render_missing_fields_notification
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: missing_fields
+      type: list[str]
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: apply_automatic_authority_fields
+  purpose: null
+  name: apply_automatic_authority_fields
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: apply_automatic_authority_fields
+    kind: function
+    start_line: 623
+    end_line: 658
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.apply_automatic_authority_fields
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: blueprint_data
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: save_blueprint
+  purpose: null
+  name: save_blueprint
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: save_blueprint
+    kind: function
+    start_line: 661
+    end_line: 669
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.save_blueprint
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: blueprint_path
+      type: Path
+      default: null
+      required: true
+      description: null
+    - name: blueprint_data
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: save_issue
+  purpose: null
+  name: save_issue
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/controller.py
+    module: src.bpfw.integrations.inspector.controller
+    symbol: save_issue
+    kind: function
+    start_line: 147
+    end_line: 166
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.controller.save_issue
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: session
+      type: InspectLoadResult
+      default: null
+      required: true
+      description: null
+    - name: issue
+      type: InspectIssue
+      default: null
+      required: true
+      description: null
+    output:
+      type: bool
+      description: null
+- id: validate_required_fields
+  purpose: null
+  name: validate_required_fields
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/validation.py
+    module: src.bpfw.integrations.inspector.validation
+    symbol: validate_required_fields
+    kind: function
+    start_line: 10
+    end_line: 30
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.validation.validate_required_fields
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: List[str]
+      description: null
+- id: inspector_controller
+  purpose: null
+  name: InspectorController
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/controller.py
+    module: src.bpfw.integrations.inspector.controller
+    symbol: InspectorController
+    kind: class
+    start_line: 32
+    end_line: 144
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.controller.InspectorController
+    kind: class
+    methods:
+    - InspectorController.handle_action
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: session
+      type: InspectLoadResult
+      default: null
+      required: true
+      description: null
+    - name: input_reader
+      type: InspectorInputReader
+      default: null
+      required: true
+      description: null
+    - name: print_func
+      type: null
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
 - id: inspector_input_reader_read
   purpose: null
   name: InspectorInputReader.read
@@ -7891,45 +8641,6 @@ blocks:
     output:
       type: List[str]
       description: null
-- id: measure_lines
-  purpose: null
-  name: measure_lines
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/integrations/shared/visual_width.py
-    module: src.bpfw.integrations.shared.visual_width
-    symbol: measure_lines
-    kind: function
-    start_line: 50
-    end_line: 55
-  detected:
-    qualified_name: src.bpfw.integrations.shared.visual_width.measure_lines
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: lines
-      type: list[str]
-      default: null
-      required: true
-      description: null
-    output:
-      type: int
-      description: null
 - id: render_split_box
   purpose: null
   name: render_split_box
@@ -8068,6 +8779,375 @@ blocks:
     output:
       type: List[str]
       description: null
+- id: compact_inspector_view_mode_get_name
+  purpose: null
+  name: CompactInspectorViewMode.get_name
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/compact.py
+    module: src.bpfw.integrations.inspector.view_modes.compact
+    symbol: CompactInspectorViewMode.get_name
+    kind: method
+    start_line: 16
+    end_line: 19
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.compact.CompactInspectorViewMode.get_name
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: str
+      description: null
+- id: compact_inspector_view_mode_get_next_mode_name
+  purpose: null
+  name: CompactInspectorViewMode.get_next_mode_name
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/compact.py
+    module: src.bpfw.integrations.inspector.view_modes.compact
+    symbol: CompactInspectorViewMode.get_next_mode_name
+    kind: method
+    start_line: 21
+    end_line: 24
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.compact.CompactInspectorViewMode.get_next_mode_name
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: str
+      description: null
+- id: compact_inspector_view_mode_should_render_extended_panels
+  purpose: null
+  name: CompactInspectorViewMode.should_render_extended_panels
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/compact.py
+    module: src.bpfw.integrations.inspector.view_modes.compact
+    symbol: CompactInspectorViewMode.should_render_extended_panels
+    kind: method
+    start_line: 26
+    end_line: 29
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.compact.CompactInspectorViewMode.should_render_extended_panels
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: bool
+      description: null
+- id: compact_inspector_view_mode_build_command_lines
+  purpose: null
+  name: CompactInspectorViewMode.build_command_lines
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/compact.py
+    module: src.bpfw.integrations.inspector.view_modes.compact
+    symbol: CompactInspectorViewMode.build_command_lines
+    kind: method
+    start_line: 31
+    end_line: 39
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.compact.CompactInspectorViewMode.build_command_lines
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: List[str]
+      description: null
+- id: compact_inspector_view_mode
+  purpose: null
+  name: CompactInspectorViewMode
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/compact.py
+    module: src.bpfw.integrations.inspector.view_modes.compact
+    symbol: CompactInspectorViewMode
+    kind: class
+    start_line: 13
+    end_line: 39
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.compact.CompactInspectorViewMode
+    kind: class
+    methods:
+    - CompactInspectorViewMode.get_name
+    - CompactInspectorViewMode.get_next_mode_name
+    - CompactInspectorViewMode.should_render_extended_panels
+    - CompactInspectorViewMode.build_command_lines
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: full_inspector_view_mode_get_name
+  purpose: null
+  name: FullInspectorViewMode.get_name
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/full.py
+    module: src.bpfw.integrations.inspector.view_modes.full
+    symbol: FullInspectorViewMode.get_name
+    kind: method
+    start_line: 17
+    end_line: 20
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.full.FullInspectorViewMode.get_name
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: str
+      description: null
+- id: full_inspector_view_mode_get_next_mode_name
+  purpose: null
+  name: FullInspectorViewMode.get_next_mode_name
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/full.py
+    module: src.bpfw.integrations.inspector.view_modes.full
+    symbol: FullInspectorViewMode.get_next_mode_name
+    kind: method
+    start_line: 22
+    end_line: 25
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.full.FullInspectorViewMode.get_next_mode_name
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: str
+      description: null
+- id: full_inspector_view_mode_should_render_extended_panels
+  purpose: null
+  name: FullInspectorViewMode.should_render_extended_panels
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/full.py
+    module: src.bpfw.integrations.inspector.view_modes.full
+    symbol: FullInspectorViewMode.should_render_extended_panels
+    kind: method
+    start_line: 27
+    end_line: 30
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.full.FullInspectorViewMode.should_render_extended_panels
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: bool
+      description: null
+- id: full_inspector_view_mode_build_command_lines
+  purpose: null
+  name: FullInspectorViewMode.build_command_lines
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/full.py
+    module: src.bpfw.integrations.inspector.view_modes.full
+    symbol: FullInspectorViewMode.build_command_lines
+    kind: method
+    start_line: 32
+    end_line: 43
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.full.FullInspectorViewMode.build_command_lines
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: List[str]
+      description: null
+- id: full_inspector_view_mode
+  purpose: null
+  name: FullInspectorViewMode
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/full.py
+    module: src.bpfw.integrations.inspector.view_modes.full
+    symbol: FullInspectorViewMode
+    kind: class
+    start_line: 14
+    end_line: 43
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.full.FullInspectorViewMode
+    kind: class
+    methods:
+    - FullInspectorViewMode.get_name
+    - FullInspectorViewMode.get_next_mode_name
+    - FullInspectorViewMode.should_render_extended_panels
+    - FullInspectorViewMode.build_command_lines
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: resolve_inspector_view_mode_from_flag
+  purpose: null
+  name: resolve_inspector_view_mode_from_flag
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/__init__.py
+    module: src.bpfw.integrations.inspector.view_modes.__init__
+    symbol: resolve_inspector_view_mode_from_flag
+    kind: function
+    start_line: 20
+    end_line: 25
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.__init__.resolve_inspector_view_mode_from_flag
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: show_all
+      type: bool
+      default: null
+      required: true
+      description: null
+    output:
+      type: InspectorViewMode
+      description: null
 - id: render_inspector_screen
   purpose: null
   name: render_inspector_screen
@@ -8078,8 +9158,8 @@ blocks:
     module: src.bpfw.integrations.inspector.screen
     symbol: render_inspector_screen
     kind: function
-    start_line: 104
-    end_line: 270
+    start_line: 41
+    end_line: 208
   detected:
     qualified_name: src.bpfw.integrations.inspector.screen.render_inspector_screen
     kind: function
@@ -8149,23 +9229,28 @@ blocks:
       default: false
       required: false
       description: null
+    - name: view_mode
+      type: InspectorViewMode | None
+      default: null
+      required: false
+      description: null
     output:
       type: None
       description: null
-- id: run_interface_edit_submode
+- id: resolve_inspector_view_mode
   purpose: null
-  name: run_interface_edit_submode
+  name: resolve_inspector_view_mode
   domain: null
   status: null
   code:
-    path: src/bpfw/integrations/inspector/commands.py
-    module: src.bpfw.integrations.inspector.commands
-    symbol: run_interface_edit_submode
+    path: src/bpfw/integrations/inspector/view_modes/__init__.py
+    module: src.bpfw.integrations.inspector.view_modes.__init__
+    symbol: resolve_inspector_view_mode
     kind: function
-    start_line: 129
-    end_line: 315
+    start_line: 11
+    end_line: 17
   detected:
-    qualified_name: src.bpfw.integrations.inspector.commands.run_interface_edit_submode
+    qualified_name: src.bpfw.integrations.inspector.view_modes.__init__.resolve_inspector_view_mode
     kind: function
     methods: []
     functions: []
@@ -8183,62 +9268,13 @@ blocks:
   notes: null
   interface:
     inputs:
-    - name: block
-      type: Dict[str, Any]
-      default: null
-      required: true
-      description: null
-    - name: input_func
-      type: InputFunc
-      default: null
-      required: true
-      description: null
-    - name: print_func
-      type: Callable[[str], None]
+    - name: mode_name
+      type: str
       default: null
       required: true
       description: null
     output:
-      type: None
-      description: null
-- id: validate_required_fields
-  purpose: null
-  name: validate_required_fields
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/integrations/inspector/validation.py
-    module: src.bpfw.integrations.inspector.validation
-    symbol: validate_required_fields
-    kind: function
-    start_line: 10
-    end_line: 30
-  detected:
-    qualified_name: src.bpfw.integrations.inspector.validation.validate_required_fields
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: block
-      type: Dict[str, Any]
-      default: null
-      required: true
-      description: null
-    output:
-      type: List[str]
+      type: InspectorViewMode
       description: null
 - id: run_text_inspector_session
   purpose: null
@@ -8250,8 +9286,8 @@ blocks:
     module: src.bpfw.integrations.inspector.session
     symbol: run_text_inspector_session
     kind: function
-    start_line: 83
-    end_line: 212
+    start_line: 84
+    end_line: 172
   detected:
     qualified_name: src.bpfw.integrations.inspector.session.run_text_inspector_session
     kind: function
@@ -9114,8 +10150,8 @@ blocks:
     module: src.bpfw.integrations.inspector.session
     symbol: run_text_inspector
     kind: function
-    start_line: 40
-    end_line: 80
+    start_line: 41
+    end_line: 81
   detected:
     qualified_name: src.bpfw.integrations.inspector.session.run_text_inspector
     kind: function
@@ -9393,89 +10429,6 @@ blocks:
     output:
       type: list[str]
       description: null
-- id: apply_automatic_authority_fields
-  purpose: null
-  name: apply_automatic_authority_fields
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/integrations/inspector/base.py
-    module: src.bpfw.integrations.inspector.base
-    symbol: apply_automatic_authority_fields
-    kind: function
-    start_line: 623
-    end_line: 658
-  detected:
-    qualified_name: src.bpfw.integrations.inspector.base.apply_automatic_authority_fields
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: blueprint_data
-      type: Dict[str, Any]
-      default: null
-      required: true
-      description: null
-    output:
-      type: None
-      description: null
-- id: save_blueprint
-  purpose: null
-  name: save_blueprint
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/integrations/inspector/base.py
-    module: src.bpfw.integrations.inspector.base
-    symbol: save_blueprint
-    kind: function
-    start_line: 661
-    end_line: 669
-  detected:
-    qualified_name: src.bpfw.integrations.inspector.base.save_blueprint
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: blueprint_path
-      type: Path
-      default: null
-      required: true
-      description: null
-    - name: blueprint_data
-      type: Dict[str, Any]
-      default: null
-      required: true
-      description: null
-    output:
-      type: None
-      description: null
 - id: inspector_action
   purpose: null
   name: InspectorAction
@@ -9505,20 +10458,297 @@ blocks:
     replaced_by: null
     reason: null
   notes: null
-- id: inspector_screen_render_strategy_should_render_extended_panels
+- id: inspector_view_state_from_show_all
   purpose: null
-  name: InspectorScreenRenderStrategy.should_render_extended_panels
+  name: InspectorViewState.from_show_all
   domain: null
   status: null
   code:
-    path: src/bpfw/integrations/inspector/screen.py
-    module: src.bpfw.integrations.inspector.screen
-    symbol: InspectorScreenRenderStrategy.should_render_extended_panels
+    path: src/bpfw/integrations/inspector/state.py
+    module: src.bpfw.integrations.inspector.state
+    symbol: InspectorViewState.from_show_all
     kind: method
-    start_line: 47
-    end_line: 48
+    start_line: 18
+    end_line: 22
   detected:
-    qualified_name: src.bpfw.integrations.inspector.screen.InspectorScreenRenderStrategy.should_render_extended_panels
+    qualified_name: src.bpfw.integrations.inspector.state.InspectorViewState.from_show_all
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: show_all
+      type: bool
+      default: null
+      required: true
+      description: null
+    output:
+      type: '''InspectorViewState'''
+      description: null
+- id: inspector_view_state_advance
+  purpose: null
+  name: InspectorViewState.advance
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/state.py
+    module: src.bpfw.integrations.inspector.state
+    symbol: InspectorViewState.advance
+    kind: method
+    start_line: 24
+    end_line: 27
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.state.InspectorViewState.advance
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: None
+      description: null
+- id: inspector_view_state_move_back
+  purpose: null
+  name: InspectorViewState.move_back
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/state.py
+    module: src.bpfw.integrations.inspector.state
+    symbol: InspectorViewState.move_back
+    kind: method
+    start_line: 29
+    end_line: 32
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.state.InspectorViewState.move_back
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: None
+      description: null
+- id: inspector_view_state_stop
+  purpose: null
+  name: InspectorViewState.stop
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/state.py
+    module: src.bpfw.integrations.inspector.state
+    symbol: InspectorViewState.stop
+    kind: method
+    start_line: 34
+    end_line: 37
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.state.InspectorViewState.stop
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: None
+      description: null
+- id: inspector_view_state_toggle_mode
+  purpose: null
+  name: InspectorViewState.toggle_mode
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/state.py
+    module: src.bpfw.integrations.inspector.state
+    symbol: InspectorViewState.toggle_mode
+    kind: method
+    start_line: 39
+    end_line: 42
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.state.InspectorViewState.toggle_mode
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: current_view_mode
+      type: InspectorViewMode
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: inspector_view_state
+  purpose: null
+  name: InspectorViewState
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/state.py
+    module: src.bpfw.integrations.inspector.state
+    symbol: InspectorViewState
+    kind: class
+    start_line: 10
+    end_line: 42
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.state.InspectorViewState
+    kind: class
+    methods:
+    - InspectorViewState.from_show_all
+    - InspectorViewState.advance
+    - InspectorViewState.move_back
+    - InspectorViewState.stop
+    - InspectorViewState.toggle_mode
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: inspector_view_mode_get_name
+  purpose: null
+  name: InspectorViewMode.get_name
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/base.py
+    module: src.bpfw.integrations.inspector.view_modes.base
+    symbol: InspectorViewMode.get_name
+    kind: method
+    start_line: 11
+    end_line: 12
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.base.InspectorViewMode.get_name
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: str
+      description: null
+- id: inspector_view_mode_get_next_mode_name
+  purpose: null
+  name: InspectorViewMode.get_next_mode_name
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/base.py
+    module: src.bpfw.integrations.inspector.view_modes.base
+    symbol: InspectorViewMode.get_next_mode_name
+    kind: method
+    start_line: 15
+    end_line: 16
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.base.InspectorViewMode.get_next_mode_name
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: str
+      description: null
+- id: inspector_view_mode_should_render_extended_panels
+  purpose: null
+  name: InspectorViewMode.should_render_extended_panels
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/base.py
+    module: src.bpfw.integrations.inspector.view_modes.base
+    symbol: InspectorViewMode.should_render_extended_panels
+    kind: method
+    start_line: 19
+    end_line: 20
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.base.InspectorViewMode.should_render_extended_panels
     kind: method
     methods: []
     functions: []
@@ -9538,20 +10768,20 @@ blocks:
     output:
       type: bool
       description: null
-- id: inspector_screen_render_strategy_build_command_lines
+- id: inspector_view_mode_build_command_lines
   purpose: null
-  name: InspectorScreenRenderStrategy.build_command_lines
+  name: InspectorViewMode.build_command_lines
   domain: null
   status: null
   code:
-    path: src/bpfw/integrations/inspector/screen.py
-    module: src.bpfw.integrations.inspector.screen
-    symbol: InspectorScreenRenderStrategy.build_command_lines
+    path: src/bpfw/integrations/inspector/view_modes/base.py
+    module: src.bpfw.integrations.inspector.view_modes.base
+    symbol: InspectorViewMode.build_command_lines
     kind: method
-    start_line: 51
-    end_line: 52
+    start_line: 23
+    end_line: 24
   detected:
-    qualified_name: src.bpfw.integrations.inspector.screen.InspectorScreenRenderStrategy.build_command_lines
+    qualified_name: src.bpfw.integrations.inspector.view_modes.base.InspectorViewMode.build_command_lines
     kind: method
     methods: []
     functions: []
@@ -9571,218 +10801,26 @@ blocks:
     output:
       type: List[str]
       description: null
-- id: inspector_screen_render_strategy
+- id: inspector_view_mode
   purpose: null
-  name: InspectorScreenRenderStrategy
+  name: InspectorViewMode
   domain: null
   status: null
   code:
-    path: src/bpfw/integrations/inspector/screen.py
-    module: src.bpfw.integrations.inspector.screen
-    symbol: InspectorScreenRenderStrategy
+    path: src/bpfw/integrations/inspector/view_modes/base.py
+    module: src.bpfw.integrations.inspector.view_modes.base
+    symbol: InspectorViewMode
     kind: class
-    start_line: 43
-    end_line: 52
+    start_line: 7
+    end_line: 24
   detected:
-    qualified_name: src.bpfw.integrations.inspector.screen.InspectorScreenRenderStrategy
-    kind: class
-    methods:
-    - InspectorScreenRenderStrategy.should_render_extended_panels
-    - InspectorScreenRenderStrategy.build_command_lines
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-- id: compact_inspector_screen_render_strategy_should_render_extended_panels
-  purpose: null
-  name: CompactInspectorScreenRenderStrategy.should_render_extended_panels
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/integrations/inspector/screen.py
-    module: src.bpfw.integrations.inspector.screen
-    symbol: CompactInspectorScreenRenderStrategy.should_render_extended_panels
-    kind: method
-    start_line: 58
-    end_line: 61
-  detected:
-    qualified_name: src.bpfw.integrations.inspector.screen.CompactInspectorScreenRenderStrategy.should_render_extended_panels
-    kind: method
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    output:
-      type: bool
-      description: null
-- id: compact_inspector_screen_render_strategy_build_command_lines
-  purpose: null
-  name: CompactInspectorScreenRenderStrategy.build_command_lines
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/integrations/inspector/screen.py
-    module: src.bpfw.integrations.inspector.screen
-    symbol: CompactInspectorScreenRenderStrategy.build_command_lines
-    kind: method
-    start_line: 63
-    end_line: 71
-  detected:
-    qualified_name: src.bpfw.integrations.inspector.screen.CompactInspectorScreenRenderStrategy.build_command_lines
-    kind: method
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    output:
-      type: List[str]
-      description: null
-- id: compact_inspector_screen_render_strategy
-  purpose: null
-  name: CompactInspectorScreenRenderStrategy
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/integrations/inspector/screen.py
-    module: src.bpfw.integrations.inspector.screen
-    symbol: CompactInspectorScreenRenderStrategy
-    kind: class
-    start_line: 55
-    end_line: 71
-  detected:
-    qualified_name: src.bpfw.integrations.inspector.screen.CompactInspectorScreenRenderStrategy
+    qualified_name: src.bpfw.integrations.inspector.view_modes.base.InspectorViewMode
     kind: class
     methods:
-    - CompactInspectorScreenRenderStrategy.should_render_extended_panels
-    - CompactInspectorScreenRenderStrategy.build_command_lines
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-- id: full_inspector_screen_render_strategy_should_render_extended_panels
-  purpose: null
-  name: FullInspectorScreenRenderStrategy.should_render_extended_panels
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/integrations/inspector/screen.py
-    module: src.bpfw.integrations.inspector.screen
-    symbol: FullInspectorScreenRenderStrategy.should_render_extended_panels
-    kind: method
-    start_line: 77
-    end_line: 80
-  detected:
-    qualified_name: src.bpfw.integrations.inspector.screen.FullInspectorScreenRenderStrategy.should_render_extended_panels
-    kind: method
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    output:
-      type: bool
-      description: null
-- id: full_inspector_screen_render_strategy_build_command_lines
-  purpose: null
-  name: FullInspectorScreenRenderStrategy.build_command_lines
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/integrations/inspector/screen.py
-    module: src.bpfw.integrations.inspector.screen
-    symbol: FullInspectorScreenRenderStrategy.build_command_lines
-    kind: method
-    start_line: 82
-    end_line: 93
-  detected:
-    qualified_name: src.bpfw.integrations.inspector.screen.FullInspectorScreenRenderStrategy.build_command_lines
-    kind: method
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    output:
-      type: List[str]
-      description: null
-- id: full_inspector_screen_render_strategy
-  purpose: null
-  name: FullInspectorScreenRenderStrategy
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/integrations/inspector/screen.py
-    module: src.bpfw.integrations.inspector.screen
-    symbol: FullInspectorScreenRenderStrategy
-    kind: class
-    start_line: 74
-    end_line: 93
-  detected:
-    qualified_name: src.bpfw.integrations.inspector.screen.FullInspectorScreenRenderStrategy
-    kind: class
-    methods:
-    - FullInspectorScreenRenderStrategy.should_render_extended_panels
-    - FullInspectorScreenRenderStrategy.build_command_lines
+    - InspectorViewMode.get_name
+    - InspectorViewMode.get_next_mode_name
+    - InspectorViewMode.should_render_extended_panels
+    - InspectorViewMode.build_command_lines
     functions: []
   entrypoints: []
   connections: []
@@ -13484,55 +14522,6 @@ blocks:
     replaced_by: null
     reason: null
   notes: null
-- id: render_notification_block
-  purpose: null
-  name: render_notification_block
-  domain: null
-  status: null
-  code:
-    path: src/bpfw/integrations/shared/visual_notifications.py
-    module: src.bpfw.integrations.shared.visual_notifications
-    symbol: render_notification_block
-    kind: function
-    start_line: 7
-    end_line: 17
-  detected:
-    qualified_name: src.bpfw.integrations.shared.visual_notifications.render_notification_block
-    kind: function
-    methods: []
-    functions: []
-  entrypoints: []
-  connections: []
-  uniqueness:
-    group: null
-    allow_multiple_non_active: true
-    forbid_active_duplicates: true
-    suspected_duplicates: []
-  replacement:
-    replaces: null
-    replaced_by: null
-    reason: null
-  notes: null
-  interface:
-    inputs:
-    - name: title
-      type: str
-      default: null
-      required: true
-      description: null
-    - name: lines
-      type: list[str]
-      default: null
-      required: true
-      description: null
-    - name: width
-      type: int
-      default: null
-      required: true
-      description: null
-    output:
-      type: list[str]
-      description: null
 - id: theme_config
   purpose: null
   name: ThemeConfig
@@ -13665,6 +14654,35 @@ blocks:
     output:
       type: List[str]
       description: null
+- id: mount_context
+  purpose: null
+  name: MountContext
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/protection/capabilities.py
+    module: src.bpfw.protection.capabilities
+    symbol: MountContext
+    kind: class
+    start_line: 43
+    end_line: 47
+  detected:
+    qualified_name: src.bpfw.protection.capabilities.MountContext
+    kind: class
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
 - id: lock_strategy_lock_file
   purpose: null
   name: LockStrategy.lock_file
@@ -13675,8 +14693,8 @@ blocks:
     module: src.bpfw.protection.os_lock
     symbol: LockStrategy.lock_file
     kind: method
-    start_line: 84
-    end_line: 85
+    start_line: 105
+    end_line: 106
   detected:
     qualified_name: src.bpfw.protection.os_lock.LockStrategy.lock_file
     kind: method
@@ -13719,8 +14737,8 @@ blocks:
     module: src.bpfw.protection.os_lock
     symbol: LockStrategy.unlock_file
     kind: method
-    start_line: 88
-    end_line: 89
+    start_line: 109
+    end_line: 110
   detected:
     qualified_name: src.bpfw.protection.os_lock.LockStrategy.unlock_file
     kind: method
@@ -13763,8 +14781,8 @@ blocks:
     module: src.bpfw.protection.os_lock
     symbol: LockStrategy.get_file_lock_state
     kind: method
-    start_line: 92
-    end_line: 93
+    start_line: 113
+    end_line: 114
   detected:
     qualified_name: src.bpfw.protection.os_lock.LockStrategy.get_file_lock_state
     kind: method
@@ -13807,8 +14825,8 @@ blocks:
     module: src.bpfw.protection.os_lock
     symbol: LockStrategy
     kind: class
-    start_line: 80
-    end_line: 93
+    start_line: 101
+    end_line: 114
   detected:
     qualified_name: src.bpfw.protection.os_lock.LockStrategy
     kind: class
@@ -13839,8 +14857,8 @@ blocks:
     module: src.bpfw.protection.os_lock
     symbol: get_file_lock_state
     kind: function
-    start_line: 488
-    end_line: 498
+    start_line: 621
+    end_line: 631
   detected:
     qualified_name: src.bpfw.protection.os_lock.get_file_lock_state
     kind: function
@@ -13878,8 +14896,8 @@ blocks:
     module: src.bpfw.protection.os_lock
     symbol: PosixLockStrategy.lock_file
     kind: method
-    start_line: 102
-    end_line: 147
+    start_line: 123
+    end_line: 180
   detected:
     qualified_name: src.bpfw.protection.os_lock.PosixLockStrategy.lock_file
     kind: method
@@ -13922,8 +14940,8 @@ blocks:
     module: src.bpfw.protection.os_lock
     symbol: PosixLockStrategy.unlock_file
     kind: method
-    start_line: 149
-    end_line: 170
+    start_line: 182
+    end_line: 203
   detected:
     qualified_name: src.bpfw.protection.os_lock.PosixLockStrategy.unlock_file
     kind: method
@@ -13966,8 +14984,8 @@ blocks:
     module: src.bpfw.protection.os_lock
     symbol: PosixLockStrategy.get_file_lock_state
     kind: method
-    start_line: 172
-    end_line: 198
+    start_line: 205
+    end_line: 238
   detected:
     qualified_name: src.bpfw.protection.os_lock.PosixLockStrategy.get_file_lock_state
     kind: method
@@ -14010,8 +15028,8 @@ blocks:
     module: src.bpfw.protection.os_lock
     symbol: PosixLockStrategy
     kind: class
-    start_line: 96
-    end_line: 317
+    start_line: 117
+    end_line: 404
   detected:
     qualified_name: src.bpfw.protection.os_lock.PosixLockStrategy
     kind: class
@@ -14052,8 +15070,8 @@ blocks:
     module: src.bpfw.protection.os_lock
     symbol: WindowsLockStrategy.lock_file
     kind: method
-    start_line: 323
-    end_line: 362
+    start_line: 410
+    end_line: 451
   detected:
     qualified_name: src.bpfw.protection.os_lock.WindowsLockStrategy.lock_file
     kind: method
@@ -14096,8 +15114,8 @@ blocks:
     module: src.bpfw.protection.os_lock
     symbol: WindowsLockStrategy.unlock_file
     kind: method
-    start_line: 364
-    end_line: 373
+    start_line: 453
+    end_line: 462
   detected:
     qualified_name: src.bpfw.protection.os_lock.WindowsLockStrategy.unlock_file
     kind: method
@@ -14140,8 +15158,8 @@ blocks:
     module: src.bpfw.protection.os_lock
     symbol: WindowsLockStrategy.get_file_lock_state
     kind: method
-    start_line: 375
-    end_line: 390
+    start_line: 464
+    end_line: 479
   detected:
     qualified_name: src.bpfw.protection.os_lock.WindowsLockStrategy.get_file_lock_state
     kind: method
@@ -14184,8 +15202,8 @@ blocks:
     module: src.bpfw.protection.os_lock
     symbol: WindowsLockStrategy
     kind: class
-    start_line: 320
-    end_line: 420
+    start_line: 407
+    end_line: 509
   detected:
     qualified_name: src.bpfw.protection.os_lock.WindowsLockStrategy
     kind: class
@@ -14216,8 +15234,8 @@ blocks:
     module: src.bpfw.protection.os_lock
     symbol: UnsupportedLockStrategy.lock_file
     kind: method
-    start_line: 426
-    end_line: 428
+    start_line: 515
+    end_line: 517
   detected:
     qualified_name: src.bpfw.protection.os_lock.UnsupportedLockStrategy.lock_file
     kind: method
@@ -14260,8 +15278,8 @@ blocks:
     module: src.bpfw.protection.os_lock
     symbol: UnsupportedLockStrategy.unlock_file
     kind: method
-    start_line: 430
-    end_line: 432
+    start_line: 519
+    end_line: 521
   detected:
     qualified_name: src.bpfw.protection.os_lock.UnsupportedLockStrategy.unlock_file
     kind: method
@@ -14304,8 +15322,8 @@ blocks:
     module: src.bpfw.protection.os_lock
     symbol: UnsupportedLockStrategy.get_file_lock_state
     kind: method
-    start_line: 434
-    end_line: 436
+    start_line: 523
+    end_line: 525
   detected:
     qualified_name: src.bpfw.protection.os_lock.UnsupportedLockStrategy.get_file_lock_state
     kind: method
@@ -14348,8 +15366,8 @@ blocks:
     module: src.bpfw.protection.os_lock
     symbol: UnsupportedLockStrategy
     kind: class
-    start_line: 423
-    end_line: 436
+    start_line: 512
+    end_line: 525
   detected:
     qualified_name: src.bpfw.protection.os_lock.UnsupportedLockStrategy
     kind: class
@@ -14380,8 +15398,8 @@ blocks:
     module: src.bpfw.protection.os_lock
     symbol: lock_file
     kind: function
-    start_line: 462
-    end_line: 472
+    start_line: 563
+    end_line: 573
   detected:
     qualified_name: src.bpfw.protection.os_lock.lock_file
     kind: function
@@ -14409,6 +15427,50 @@ blocks:
     output:
       type: str
       description: null
+- id: lock_project_file
+  purpose: null
+  name: lock_project_file
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/protection/os_lock.py
+    module: src.bpfw.protection.os_lock
+    symbol: lock_project_file
+    kind: function
+    start_line: 576
+    end_line: 589
+  detected:
+    qualified_name: src.bpfw.protection.os_lock.lock_project_file
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    - name: path
+      type: Path
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
 - id: unlock_file
   purpose: null
   name: unlock_file
@@ -14419,8 +15481,8 @@ blocks:
     module: src.bpfw.protection.os_lock
     symbol: unlock_file
     kind: function
-    start_line: 475
-    end_line: 485
+    start_line: 592
+    end_line: 602
   detected:
     qualified_name: src.bpfw.protection.os_lock.unlock_file
     kind: function
@@ -14440,6 +15502,94 @@ blocks:
   notes: null
   interface:
     inputs:
+    - name: path
+      type: Path
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: unlock_project_file
+  purpose: null
+  name: unlock_project_file
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/protection/os_lock.py
+    module: src.bpfw.protection.os_lock
+    symbol: unlock_project_file
+    kind: function
+    start_line: 605
+    end_line: 618
+  detected:
+    qualified_name: src.bpfw.protection.os_lock.unlock_project_file
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    - name: path
+      type: Path
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: get_project_file_lock_state
+  purpose: null
+  name: get_project_file_lock_state
+  domain: null
+  status: null
+  code:
+    path: src/bpfw/protection/os_lock.py
+    module: src.bpfw.protection.os_lock
+    symbol: get_project_file_lock_state
+    kind: function
+    start_line: 634
+    end_line: 647
+  detected:
+    qualified_name: src.bpfw.protection.os_lock.get_project_file_lock_state
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
     - name: path
       type: Path
       default: null
