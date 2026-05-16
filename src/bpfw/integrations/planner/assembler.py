@@ -211,10 +211,27 @@ class BlueprintYamlWriter:
     
     @staticmethod
     def write(blueprint_path: Path, blueprint_data: Dict[str, Any]) -> None:
-        """Write blueprint data to YAML file.
+        """Write blueprint data to YAML file using AuthorityRepository.
         
         Args:
             blueprint_path: Path to the blueprint file.
             blueprint_data: Blueprint data to write.
         """
-        write_blueprint(blueprint_path=blueprint_path, blueprint_data=blueprint_data)
+        from bpfw.authority import AuthorityRepository
+        
+        # Get project root from blueprint path
+        project_root = blueprint_path.parent.parent
+        
+        # Use AuthorityRepository to save sharded authority
+        repository = AuthorityRepository(project_root)
+        
+        # Load current document to preserve authority config
+        try:
+            document = repository.load()
+            # Update blueprint_data while preserving authority metadata
+            document.blueprint_data = blueprint_data
+            repository.save(document)
+        except Exception:
+            # Fallback: if authority doesn't exist, this is likely init
+            # Use regular write_blueprint for init case
+            write_blueprint(blueprint_path=blueprint_path, blueprint_data=blueprint_data)

@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Optional
 
 CANONICAL_BLUEPRINT_FILE = "bpfw/blueprint.yaml"
+CANONICAL_BLOCKS_DIR = "bpfw/blocks"
+DEFAULT_CORE_SHARD = "bpfw/blocks/core.yaml"
 
 
 def resolve_project_root(explicit_project_root: Optional[Path] = None) -> Path:
@@ -30,3 +32,28 @@ def resolve_blueprint_path(project_root: Path) -> Path:
         Path to bpfw/blueprint.yaml relative to project root.
     """
     return project_root / CANONICAL_BLUEPRINT_FILE
+
+
+def resolve_blocks_directory(project_root: Path) -> Path:
+    """Resolve the path to bpfw/blocks directory.
+    
+    Args:
+        project_root: The project root directory.
+    
+    Returns:
+        Path to bpfw/blocks directory relative to project root.
+    """
+    return project_root / CANONICAL_BLOCKS_DIR
+
+
+def resolve_shard_path(project_root: Path, shard_name: str) -> Path:
+    """Resolve the path to a specific shard file.
+    
+    Args:
+        project_root: The project root directory.
+        shard_name: Name of the shard file (e.g., "core.yaml").
+    
+    Returns:
+        Path to the shard file relative to project root.
+    """
+    return project_root / CANONICAL_BLOCKS_DIR / shard_name

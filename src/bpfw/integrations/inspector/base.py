@@ -53,6 +53,7 @@ class InspectLoadResult:
     incomplete: List[Dict[str, Any]]
     issues: list[InspectIssue]
     authority_state: str
+    authority_document: Any | None = None
     discovered_count: int = 0
     undeclared_count: int = 0
     missing_declared_count: int = 0
@@ -69,6 +70,8 @@ class InspectLoadResult:
 
 def load_inspect_session(project_root: Path) -> InspectLoadResult:
     """Load blueprint data and return the inspect work set."""
+
+    from bpfw.authority import AuthorityRepository
 
     resolved_root = project_root.resolve()
     loader = BlueprintLoader(project_root=resolved_root)
@@ -112,7 +115,11 @@ def load_inspect_session(project_root: Path) -> InspectLoadResult:
             exit_code=1,
         )
 
-    blueprint_data = load_result.data
+    # Load authority document for sharded saves
+    repository = AuthorityRepository(resolved_root)
+    authority_document = repository.load()
+
+    blueprint_data = authority_document.blueprint_data
     report, _exit_code = run_verify(project_root=resolved_root)
     drift_findings = [
         finding
@@ -132,6 +139,7 @@ def load_inspect_session(project_root: Path) -> InspectLoadResult:
         incomplete=incomplete,
         issues=issues,
         authority_state=load_result.state,
+        authority_document=authority_document,
         discovered_count=report.discovered_count,
         undeclared_count=report.undeclared_count,
         missing_declared_count=report.missing_declared_count,
@@ -660,8 +668,31 @@ def apply_automatic_authority_fields(blueprint_data: Dict[str, Any]) -> None:
 def save_blueprint(
     blueprint_path: Path,
     blueprint_data: Dict[str, Any],
+    authority_document: Any | None = None,
 ) -> None:
-    """Save blueprint data to the YAML file."""
+    """Save blueprint data to the sharded authority using AuthorityRepository.
+
+    Args:
+        blueprint_path: Path to the blueprint index file.
+        blueprint_data: Unified blueprint data with blocks.
+        authority_document: Optional AuthorityDocument from load_inspect_session.
+    """
 
     apply_automatic_authority_fields(blueprint_data)
-    write_blueprint(blueprint_path=blueprint_path, blueprint_data=blueprint_data)
+
+    from bpfw.authority import AuthorityRepository
+
+    project_root = blueprint_path.parent.parent
+    repository = AuthorityRepository(project_root)
+
+    # If we have an authority document from load, use it
+    if authority_document is not None:
+        # Update the blueprint_data in the existing document
+        authority_document.blueprint_data = blueprint_data
+        repository.save(authority_document)
+    else:
+        # Fallback: load current document and update it
+        # This shouldn't happen in normal inspector flow
+        document = repository.load()
+        document.blueprint_data = blueprint_data
+        repository.save(document)
