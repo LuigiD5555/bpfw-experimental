@@ -283,3 +283,22 @@ def test_ntfs3_support_is_checked_by_real_capabilities(
     assert result.status == "unsupported"
     assert "read-only permission protection did not block normal writes" in result.reason
     assert immutable_enable_called is True
+
+
+def test_not_writable_reason_includes_owner_repair_command(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Verify non-writable probe reason includes a concrete ownership repair command."""
+
+    check_directory = tmp_path / "bpfw" / ".lock_support_check_dir"
+    check_directory.parent.mkdir(parents=True)
+    current_owner_uid = check_directory.parent.stat().st_uid
+    monkeypatch.setattr(capabilities.os, "geteuid", lambda: current_owner_uid + 1)
+
+    reason = capabilities._format_not_writable_reason(check_directory=check_directory)
+
+    assert "project path is not writable" in reason
+    assert "Repair with: sudo chown -R " in reason
+    assert str(check_directory.parent) in reason
+    assert "chmod -R u+rwX" in reason

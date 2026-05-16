@@ -13,6 +13,7 @@ def test_public_command_surface_is_mvp_only() -> None:
         "lock",
         "unlock",
         "status",
+        "reshard",
     )
 
 

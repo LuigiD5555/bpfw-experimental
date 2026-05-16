@@ -581,7 +581,7 @@ def test_reshard_plan_has_changes():
     assert plan.move_count() == 0
     
     # Add a move
-    from bpfw.authority.persistence import BlockMove
+    from bpfw.authority.reshard.models import BlockMove
     plan.moves.append(BlockMove(
         block_id="test",
         from_shard=Path("a.yaml"),

@@ -109,3 +109,50 @@ def test_inspector_attempts_unlock_before_running_integration(
     assert result.status == ResultStatus.OK
     assert [step.source for step in result.steps] == ["catalog.verify", "integrations.inspector"]
     assert integration.was_run is True
+
+
+def test_inspector_allows_draft_incomplete_preflight_without_blocking(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Verify inspector is not blocked when verify only reports incomplete draft metadata."""
+
+    def fake_verify(project_root: Path) -> tuple[VerificationReport, int]:
+        return (
+            VerificationReport(
+                authority_state="draft",
+                allowed=False,
+                findings=[],
+                missing_declared_count=0,
+                undeclared_count=0,
+                duplicate_active_purpose_count=0,
+                invalid_lifecycle_count=0,
+                incomplete_responsibility_count=12,
+            ),
+            1,
+        )
+
+    class LockState:
+        status = "locked"
+
+    monkeypatch.setattr(core_registry, "run_verify", fake_verify)
+    monkeypatch.setattr(core_registry, "get_authority_protection_status", lambda project_root: LockState())
+    monkeypatch.setattr(core_registry, "unlock_authority", lambda project_root: type("UnlockResult", (), {"status": "unlocked"})())
+
+    integration = RecordingIntegration()
+    registry = IntegrationRegistry()
+    registry.register(integration)
+
+    result = BlueprintEngine(integration_registry=registry).run(
+        build_command(
+            command_name="inspector",
+            project_root=tmp_path,
+            arguments={},
+        )
+    )
+
+    assert result.status in {ResultStatus.OK, ResultStatus.WARNING}
+    assert result.steps[0].source == "catalog.verify"
+    assert result.steps[0].status == ResultStatus.WARNING
+    assert result.steps[1].source == "integrations.inspector"
+    assert integration.was_run is True
