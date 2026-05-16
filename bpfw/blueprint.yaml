@@ -1,30 +1,28 @@
 version: 1
-
 project:
   id: blueprint_framework_experimental
   name: blueprint-framework-experimental
   root: .
   language: python
   source_roots:
-    - src
+  - src
   ignored_paths:
-    - .git
-    - .venv
-    - venv
-    - __pycache__
-    - node_modules
-    - tests
-    - migrations
-
+  - .git
+  - .venv
+  - venv
+  - __pycache__
+  - node_modules
+  - tests
+  - migrations
 policy:
   mode: catalog
   empty_blueprint_allows_execution: true
   defined_blueprint_blocks_on_drift: true
   allowed_statuses:
-    - active
-    - experimental
-    - legacy
-    - deprecated
+  - active
+  - experimental
+  - legacy
+  - deprecated
   one_active_block_per_purpose: true
   undeclared_code_blocks: true
   missing_declared_code_blocks: true
@@ -32,7 +30,6 @@ policy:
     no_secrets_in_blueprint: true
     public_safe_mode: true
     detected_detail_level: minimal
-
 authority:
   layout: sharded
   shard_strategy: domain
@@ -41,6 +38,5 @@ authority:
   auto_create_shards: true
   auto_move_blocks_on_save: true
   remove_empty_shards: false
-
 includes:
-  - bpfw/blocks/core.yaml
+- bpfw/blocks/core.yaml
