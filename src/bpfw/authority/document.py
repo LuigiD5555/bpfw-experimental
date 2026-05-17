@@ -94,9 +94,34 @@ class AuthorityDocument:
             AuthorityShard instance, or None if block not found.
         """
         shard_path = self.get_origin(block_id)
-        if shard_path:
-            return self.shards.get(shard_path)
-        return None
+        if shard_path is None:
+            return None
+        return self.get_shard(shard_path)
+
+    def get_shard(self, shard_path: Path) -> AuthorityShard | None:
+        """Get an authority shard by its project-relative path.
+        
+        Args:
+            shard_path: Project-relative shard path.
+        
+        Returns:
+            AuthorityShard instance, or None if shard is not loaded.
+        """
+        return self.shards.get(shard_path)
+
+    def get_blocks_from_shard(self, shard_path: Path) -> list[dict[str, Any]]:
+        """Get all blocks from a specific shard.
+        
+        Args:
+            shard_path: Project-relative shard path.
+        
+        Returns:
+            List of block dictionaries from the shard.
+        """
+        shard = self.get_shard(shard_path)
+        if shard is None:
+            return []
+        return shard.get_blocks()
 
     def get_shard_blocks(self, shard_path: Path) -> list[dict[str, Any]]:
         """Get all blocks from a specific shard.
@@ -107,10 +132,7 @@ class AuthorityDocument:
         Returns:
             List of block dictionaries from the shard.
         """
-        shard = self.shards.get(shard_path)
-        if shard:
-            return shard.get_blocks()
-        return []
+        return self.get_blocks_from_shard(shard_path)
 
     def get_block_count(self) -> int:
         """Get the total number of blocks.
