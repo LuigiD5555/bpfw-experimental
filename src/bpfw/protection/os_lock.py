@@ -499,15 +499,6 @@ class WindowsLockStrategy(LockStrategy):
         except (AttributeError, OSError):
             return False
 
-    def _remove_lock_marker(self, lock_path: Path) -> None:
-        if not lock_path.exists():
-            return
-
-        try:
-            lock_path.unlink()
-        except OSError:
-            pass
-
 
 class UnsupportedLockStrategy(LockStrategy):
     """Fallback strategy for unsupported platforms."""
