@@ -30,6 +30,15 @@ def _is_incomplete_only_verify_block(verify_result: StepResult) -> bool:
     )
 
 
+def _is_root_blocks_only_verify_block(verify_result: StepResult) -> bool:
+    """Return whether verify is blocked only by root-level blocks in blueprint.yaml."""
+
+    if verify_result.status not in {ResultStatus.BLOCK, ResultStatus.CRITICAL}:
+        return False
+    message = (verify_result.message or "").strip()
+    return message.startswith("Root blueprint.yaml contains ") and "Blocks must be in shard files only." in message
+
+
 class BlueprintEngine:
     """Minimal engine implementation for MVP catalog mode."""
 
@@ -68,6 +77,15 @@ class BlueprintEngine:
                 with _profiler.measure("engine.verify_for_interactive"):
                     verify_result = VerifyBlueprintStep().run(context)
                 if _is_incomplete_only_verify_block(verify_result=verify_result):
+                    verify_result = StepResult(
+                        status=ResultStatus.WARNING,
+                        message=verify_result.message,
+                        source=verify_result.source,
+                        details=verify_result.details,
+                        affected_resources=verify_result.affected_resources,
+                        suggested_actions=verify_result.suggested_actions,
+                    )
+                elif _is_root_blocks_only_verify_block(verify_result=verify_result):
                     verify_result = StepResult(
                         status=ResultStatus.WARNING,
                         message=verify_result.message,
