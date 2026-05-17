@@ -46,7 +46,15 @@ class IntegrationStep(PipelineStep):
     name: str
 
     def run(self, context) -> StepResult:  # noqa: ANN001
+        from bpfw.integrations.shared.runtime_context import (
+            set_integration_runtime_cache,
+            clear_integration_runtime_cache,
+        )
+        
         try:
+            # Pass runtime cache to integration
+            set_integration_runtime_cache(context.runtime_cache)
+            
             with runtime_blueprint_write_lease(
                 project_root=context.project_root,
                 tool_name=self.integration_name,
@@ -56,6 +64,9 @@ class IntegrationStep(PipelineStep):
                     project_root=context.project_root,
                     command_arguments=context.command_arguments,
                 )
+                
+            # Clear runtime cache after integration completes
+            clear_integration_runtime_cache()
         except BlueprintLockedError as error:
             return StepResult(
                 status=ResultStatus.BLOCK,
@@ -90,7 +101,40 @@ class VerifyBlueprintStep(PipelineStep):
     name: str = "catalog.verify"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
-        report, exit_code = run_verify(project_root=context.project_root)
+        from bpfw.catalog.loader import BlueprintLoader
+        from bpfw.catalog.verify import scan_project_from_blueprint
+        from bpfw.core.profiling import RuntimeProfiler
+        
+        profiler = RuntimeProfiler()
+        
+        with profiler.measure("engine.load_blueprint"):
+            # Load blueprint data for scan
+            loader = BlueprintLoader(project_root=context.project_root)
+            load_result = loader.load()
+        
+        with profiler.measure("engine.scan_project"):
+            # Cache scan result in context runtime_cache
+            if load_result.state not in {"missing", "invalid"}:
+                scan_result = scan_project_from_blueprint(
+                    project_root=context.project_root,
+                    blueprint_data=load_result.data,
+                )
+                context.runtime_cache["scan_result"] = scan_result
+                context.runtime_cache["blueprint_data"] = load_result.data
+            else:
+                scan_result = None
+                context.runtime_cache["scan_result"] = None
+                context.runtime_cache["blueprint_data"] = None
+        
+        with profiler.measure("engine.run_verify"):
+            report, exit_code = run_verify(
+                project_root=context.project_root,
+                precomputed_scan_result=scan_result,
+            )
+        
+        # Cache the verification report
+        context.runtime_cache["verify_report"] = report
+        
         block_findings = [finding for finding in report.findings if finding.severity == "block"]
         details = {
             "authority_state": report.authority_state,
@@ -188,7 +232,13 @@ class AuthorityStatusStep(PipelineStep):
     name: str = "catalog.status"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
-        report, _exit_code = run_verify(project_root=context.project_root)
+        from bpfw.core.profiling import RuntimeProfiler
+        
+        profiler = RuntimeProfiler()
+        
+        with profiler.measure("status.run_verify"):
+            report, _exit_code = run_verify(project_root=context.project_root)
+        
         lock_state = get_authority_protection_status(project_root=context.project_root).status
         drift_state = "drift" if report.missing_declared_count or report.undeclared_count else "clean"
         status_state = "invalid" if report.invalid_lifecycle_count else "valid"

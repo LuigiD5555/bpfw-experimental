@@ -8,6 +8,9 @@ from bpfw.core import registry as core_registry
 from bpfw.core.registry import VerifyBlueprintStep, build_default_registry
 from bpfw.core.result import EngineResult, ResultStatus, StepResult, aggregate_status
 from bpfw.integrations.registry import IntegrationRegistry
+from bpfw.core.profiling import RuntimeProfiler
+
+_profiler = RuntimeProfiler()
 
 
 def _is_incomplete_only_verify_block(verify_result: StepResult) -> bool:
@@ -59,9 +62,11 @@ class BlueprintEngine:
         )
         step_results = []
         if command.command_name in {"inspector", "editor", "planner"}:
-            lock_state = core_registry.get_authority_protection_status(project_root=context.project_root).status
+            with _profiler.measure("engine.preflight_lock_check"):
+                lock_state = core_registry.get_authority_protection_status(project_root=context.project_root).status
             if lock_state in {"locked", "degraded"}:
-                verify_result = VerifyBlueprintStep().run(context)
+                with _profiler.measure("engine.verify_for_interactive"):
+                    verify_result = VerifyBlueprintStep().run(context)
                 if _is_incomplete_only_verify_block(verify_result=verify_result):
                     verify_result = StepResult(
                         status=ResultStatus.WARNING,
@@ -78,7 +83,8 @@ class BlueprintEngine:
                         status=aggregate_status(step_results),
                         steps=step_results,
                     )
-        step_results.extend(execute_pipeline(pipeline=pipeline, context=context))
+        with _profiler.measure("engine.integration_dispatch"):
+            step_results.extend(execute_pipeline(pipeline=pipeline, context=context))
         return EngineResult(
             command_name=command.command_name,
             status=aggregate_status(step_results),

@@ -22,6 +22,7 @@ class ProjectContext:
     project_root: Path
     blueprint_file: Path
     command_arguments: dict[str, str] = field(default_factory=dict)
+    runtime_cache: dict[str, object] = field(default_factory=dict)
 
 
 def build_project_context(project_root: Path, command_arguments: dict[str, str] | None = None) -> ProjectContext:
