@@ -12,6 +12,7 @@ from bpfw.catalog.models import (
     AUTHORITY_STATE_INVALID,
     AUTHORITY_STATE_MISSING,
     VerificationReport,
+    ScanResult,
 )
 from bpfw.catalog.scanner import scan_python_project
 from bpfw.catalog.security import validate_no_blueprint_secrets
@@ -26,8 +27,8 @@ CODE_DUPLICATE_ACTIVE_PURPOSE = "DUPLICATE_ACTIVE_PURPOSE"
 CODE_INVALID_LIFECYCLE = "INVALID_STATUS"
 CODE_INCOMPLETE_RESPONSIBILITY = "INCOMPLETE_BLOCK"
 
-_DEFAULT_SOURCE_ROOTS = ["src", "app"]
-_DEFAULT_IGNORED_PATHS = [
+DEFAULT_SOURCE_ROOTS = ["src", "app"]
+DEFAULT_IGNORED_PATHS = [
     ".git",
     ".venv",
     "venv",
@@ -43,24 +44,36 @@ def _count_by_code(findings: List[Finding], code: str) -> int:
     return sum(1 for finding in findings if finding.code == code)
 
 
-def _read_source_roots(blueprint_data: dict) -> List[str]:
+def read_source_roots(blueprint_data: dict) -> List[str]:
     """Read project.source_roots from blueprint, or return defaults."""
     project = blueprint_data.get("project")
     if isinstance(project, dict):
         source_roots = project.get("source_roots")
         if isinstance(source_roots, list) and source_roots:
             return [str(root) for root in source_roots]
-    return list(_DEFAULT_SOURCE_ROOTS)
+    return list(DEFAULT_SOURCE_ROOTS)
 
 
-def _read_ignored_paths(blueprint_data: dict) -> List[str]:
+def read_ignored_paths(blueprint_data: dict) -> List[str]:
     """Read project.ignored_paths from blueprint, or return defaults."""
     project = blueprint_data.get("project")
     if isinstance(project, dict):
         ignored_paths = project.get("ignored_paths")
         if isinstance(ignored_paths, list) and ignored_paths:
             return [str(path) for path in ignored_paths]
-    return list(_DEFAULT_IGNORED_PATHS)
+    return list(DEFAULT_IGNORED_PATHS)
+
+
+def scan_project_from_blueprint(project_root: Path, blueprint_data: dict) -> ScanResult:
+    """Run one AST scan using source and ignore settings from blueprint data."""
+
+    source_roots = read_source_roots(blueprint_data)
+    ignored_paths = read_ignored_paths(blueprint_data)
+    return scan_python_project(
+        project_root=project_root,
+        source_roots=source_roots,
+        ignored_paths=ignored_paths,
+    )
 
 
 def _validate_sharded_authority(project_root: Path, load_result: Any) -> List[Finding]:
@@ -251,7 +264,10 @@ def _build_report(
     )
 
 
-def run_verify(project_root: Path) -> Tuple[VerificationReport, int]:
+def run_verify(
+    project_root: Path,
+    precomputed_scan_result: ScanResult | None = None,
+) -> Tuple[VerificationReport, int]:
     """Execute the complete MVP verify pipeline.
 
     Parameters
@@ -299,14 +315,13 @@ def run_verify(project_root: Path) -> Tuple[VerificationReport, int]:
         return report, 1
 
     # Step 6: Draft or defined — run scan, validation, drift
-    source_roots = _read_source_roots(load_result.data)
-    ignored_paths = _read_ignored_paths(load_result.data)
-
-    scan_result = scan_python_project(
-        project_root=resolved_root,
-        source_roots=source_roots,
-        ignored_paths=ignored_paths,
-    )
+    if precomputed_scan_result is None:
+        scan_result = scan_project_from_blueprint(
+            project_root=resolved_root,
+            blueprint_data=load_result.data,
+        )
+    else:
+        scan_result = precomputed_scan_result
 
     validation_findings = validate_blueprint_structure(
         blueprint_data=load_result.data,

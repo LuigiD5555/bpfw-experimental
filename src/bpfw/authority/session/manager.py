@@ -15,10 +15,9 @@ from bpfw.authority.session.temporary_blueprint import read_unified_blueprint, w
 from bpfw.catalog.access_control import has_temporary_blueprint_unlock_authorization
 from bpfw.catalog.drift import compare_declared_to_discovered
 from bpfw.catalog.models import AUTHORITY_STATE_DEFINED, AUTHORITY_STATE_DRAFT, AUTHORITY_STATE_EMPTY
-from bpfw.catalog.scanner import scan_python_project
 from bpfw.catalog.security import validate_no_blueprint_secrets
 from bpfw.catalog.validation import validate_blueprint_structure
-from bpfw.catalog.verify import _read_ignored_paths, _read_source_roots
+from bpfw.catalog.verify import scan_project_from_blueprint
 from bpfw.catalog.schema import get_blocks
 from bpfw.core.errors import BlueprintLockedError
 from bpfw.protection.authority import (
@@ -276,12 +275,9 @@ class AuthoritySessionManager:
             None when validation is allowed; otherwise a blocking message.
         """
 
-        source_roots = _read_source_roots(blueprint_data)
-        ignored_paths = _read_ignored_paths(blueprint_data)
-        scan_result = scan_python_project(
+        scan_result = scan_project_from_blueprint(
             project_root=self.project_root,
-            source_roots=source_roots,
-            ignored_paths=ignored_paths,
+            blueprint_data=blueprint_data,
         )
         blocks = get_blocks(blueprint_data)
         if not isinstance(blocks, list) or not blocks:

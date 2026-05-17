@@ -11,7 +11,7 @@ from bpfw.catalog.models import (
     AUTHORITY_STATE_MISSING,
     DiscoveredCodeUnit,
 )
-from bpfw.catalog.scanner import scan_python_project
+from bpfw.catalog.models import ScanResult
 from bpfw.catalog.schema import (
     get_blocks,
     get_code,
@@ -21,8 +21,7 @@ from bpfw.catalog.schema import (
     get_uniqueness,
     set_blocks,
 )
-from bpfw.catalog.verify import _read_ignored_paths, _read_source_roots
-from bpfw.catalog.verify import run_verify
+from bpfw.catalog.verify import run_verify, scan_project_from_blueprint
 from bpfw.catalog.writer import write_blueprint
 from bpfw.core.errors import BlueprintLockedError
 from bpfw.reports.finding import Finding
@@ -120,7 +119,14 @@ def load_inspect_session(project_root: Path) -> InspectLoadResult:
     authority_document = repository.load()
 
     blueprint_data = authority_document.blueprint_data
-    report, _exit_code = run_verify(project_root=resolved_root)
+    scan_result = scan_project_from_blueprint(
+        project_root=resolved_root,
+        blueprint_data=blueprint_data,
+    )
+    report, _exit_code = run_verify(
+        project_root=resolved_root,
+        precomputed_scan_result=scan_result,
+    )
     drift_findings = [
         finding
         for finding in report.findings
@@ -128,9 +134,9 @@ def load_inspect_session(project_root: Path) -> InspectLoadResult:
     ]
     incomplete = get_incomplete_blocks(blueprint_data)
     issues = build_inspect_issues(
-        project_root=resolved_root,
         blueprint_data=blueprint_data,
         incomplete=incomplete,
+        scan_result=scan_result,
     )
     return InspectLoadResult(
         project_root=resolved_root,
@@ -225,9 +231,9 @@ def build_new_detected_responsibility(unit: DiscoveredCodeUnit) -> Dict[str, Any
 
 
 def build_inspect_issues(
-    project_root: Path,
     blueprint_data: Dict[str, Any],
     incomplete: List[Dict[str, Any]],
+    scan_result: ScanResult,
 ) -> list[InspectIssue]:
     """Build ordered inspect issues from incomplete and newly detected code."""
 
@@ -235,14 +241,6 @@ def build_inspect_issues(
         InspectIssue(issue_type=ISSUE_DRAFT, block=block)
         for block in incomplete
     ]
-
-    source_roots = _read_source_roots(blueprint_data)
-    ignored_paths = _read_ignored_paths(blueprint_data)
-    scan_result = scan_python_project(
-        project_root=project_root,
-        source_roots=source_roots,
-        ignored_paths=ignored_paths,
-    )
 
     blocks = get_blocks(blueprint_data)
     if not isinstance(blocks, list):
