@@ -25,7 +25,6 @@ from bpfw.integrations.editor.search import (
     search_records,
 )
 from bpfw.integrations.shared.cli_runtime import is_quit_command, normalize_command
-from bpfw.protection.authority import get_authority_protection_status
 
 
 class EditorSession:
@@ -47,12 +46,6 @@ class EditorSession:
 
         if load_result.state == "invalid":
             print("Blueprint is invalid.\n\nFix bpfw/blueprint.yaml before using editor.")
-            return 1
-
-        # Check lock status
-        lock_state = get_authority_protection_status(project_root=self.project_root).status
-        if lock_state == "locked":
-            print("Blueprint is locked.\n\nUnlock before using editor:\n\n  bpfw unlock")
             return 1
 
         # Check has blocks
