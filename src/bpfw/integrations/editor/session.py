@@ -8,7 +8,6 @@ inspector in target mode.
 from pathlib import Path
 
 from bpfw.catalog.loader import BlueprintLoader
-from bpfw.catalog.schema import get_blocks
 from bpfw.integrations.editor.filters import FilterState, apply_filters, parse_filter_input
 from bpfw.integrations.editor.screen import (
     read_input,
@@ -19,7 +18,12 @@ from bpfw.integrations.editor.screen import (
     render_results_table,
     render_search_screen,
 )
-from bpfw.integrations.editor.search import SearchRecord, build_search_records, search_records
+from bpfw.integrations.editor.search import (
+    SearchRecord,
+    build_search_records,
+    build_search_records_from_document,
+    search_records,
+)
 from bpfw.integrations.shared.cli_runtime import is_quit_command, normalize_command
 from bpfw.protection.authority import get_authority_protection_status
 
@@ -53,7 +57,7 @@ class EditorSession:
 
         # Check has blocks
         blueprint_data = load_result.data
-        blocks = get_blocks(blueprint_data)
+        blocks = blueprint_data.get("blocks", [])
         if not isinstance(blocks, list) or len(blocks) == 0:
             print(
                 "Blueprint has no blocks.\n\n"
@@ -63,7 +67,10 @@ class EditorSession:
             return 1
 
         # Build search records and start session
-        records = build_search_records(blueprint_data)
+        if load_result.domain_document is not None:
+            records = build_search_records_from_document(load_result.domain_document)
+        else:
+            records = build_search_records(blueprint_data)
         if not records:
             print(
                 "Blueprint has no searchable blocks.\n\n"
@@ -222,7 +229,7 @@ class EditorSession:
 
         result = run_inspector_target(
             project_root=self.project_root,
-            responsibility_id=record.responsibility_id,
+            block_id=record.responsibility_id,
             header_title="Blueprint Framework Editor · Inspect",
         )
 
@@ -244,6 +251,8 @@ class EditorSession:
         if load_result.state in {"missing", "invalid"}:
             return None
 
+        if load_result.domain_document is not None:
+            return build_search_records_from_document(load_result.domain_document)
         return build_search_records(load_result.data)
 
 

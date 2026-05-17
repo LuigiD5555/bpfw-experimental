@@ -19,11 +19,6 @@ from bpfw.integrations.shared.visual_theme import (
 DEFAULT_INPUT_PROMPT = "> "
 
 
-def clear_screen() -> None:
-    """Clear the terminal screen using ANSI escape codes."""
-    refresh_screen()
-
-
 def get_terminal_width() -> int:
     """Return terminal width with a safe minimum."""
 
@@ -260,7 +255,7 @@ def render_editor_banner(ratio: float = 0.70) -> None:
 def render_search_screen() -> None:
     """Render the initial search prompt screen."""
 
-    clear_screen()
+    refresh_screen()
     render_editor_banner()
     print()
     _render_search_scope_box(
@@ -295,7 +290,7 @@ def render_results_table(
     """
 
     block_ratio = _results_block_ratio(results)
-    clear_screen()
+    refresh_screen()
     render_editor_banner(ratio=block_ratio)
     print()
     print(" Search:")
@@ -422,7 +417,7 @@ def _render_editor_commands_box(lines: list[str], ratio: float = 0.70) -> None:
 def render_filter_screen() -> None:
     """Render the filter input screen."""
 
-    clear_screen()
+    refresh_screen()
     render_editor_banner()
     print()
     print(" Add Filter")
@@ -495,7 +490,7 @@ def render_filter_error(message: str) -> None:
 def render_editor_help_screen() -> None:
     """Render the editor help screen."""
 
-    clear_screen()
+    refresh_screen()
     print("╭───────────────────────────── Editor help ──────────────────────────────╮")
     print("│                                                                         │")
     print("│  Search                                                                 │")

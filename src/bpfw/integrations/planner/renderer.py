@@ -28,7 +28,8 @@ from bpfw.integrations.shared.visual_layout import (
     render_visual_screen,
     resolve_uniform_width,
 )
-from bpfw.integrations.editor.screen import get_terminal_width, clear_screen
+from bpfw.integrations.editor.screen import get_terminal_width
+from bpfw.integrations.shared.screen_control import refresh_screen
 
 
 PLANNER_TITLE = "Blueprint Planner"
@@ -134,7 +135,7 @@ def render_welcome(state: PlannerState) -> None:
     Args:
         state: Current planner state.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     if state.source_mode == "new_plan":
@@ -204,7 +205,7 @@ def render_welcome(state: PlannerState) -> None:
 
 def render_workspace(state: PlannerState) -> None:
     """Render command-driven planner board."""
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
     warnings_count = len(state.broken_connections)
     status = "unsaved" if state.dirty else "saved"
@@ -470,7 +471,7 @@ def render_add_block_modal(state: PlannerState) -> None:
     Args:
         state: Current planner state.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     lines = [
@@ -503,7 +504,7 @@ def render_connect_target_modal(state: PlannerState) -> None:
     Args:
         state: Current planner state.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     ordered_boxes = sorted(state.boxes, key=lambda box: box.name)
@@ -526,7 +527,7 @@ def render_connect_meaning_modal(state: PlannerState) -> None:
     Args:
         state: Current planner state.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     source_id = state.selected_box_id
@@ -555,7 +556,7 @@ def render_connect_feedback_modal(state: PlannerState) -> None:
     Args:
         state: Current planner state.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     source_id = state.modal_data.get("source_id")
@@ -589,7 +590,7 @@ def render_edit_block_modal(state: PlannerState) -> None:
     Args:
         state: Current planner state.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     ordered_boxes = sorted(state.boxes, key=lambda box: (box.domain, box.name))
@@ -617,7 +618,7 @@ def render_edit_inputs_modal(state: PlannerState) -> None:
     Args:
         state: Current planner state.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     selected_box = next((b for b in state.boxes if b.id == state.selected_box_id), None)
@@ -681,7 +682,7 @@ def render_edit_inputs_modal(state: PlannerState) -> None:
 
 def render_edit_input_modal(state: PlannerState) -> None:
     """Render add input prompt for a block interface."""
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
     selected_box = next((box for box in state.boxes if box.id == state.selected_box_id), None)
     block_name = selected_box.name if selected_box else "selected block"
@@ -710,7 +711,7 @@ def render_edit_output_modal(state: PlannerState) -> None:
     Args:
         state: Current planner state.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     selected_box = next((b for b in state.boxes if b.id == state.selected_box_id), None)
@@ -748,7 +749,7 @@ def render_project_settings_modal(state: PlannerState) -> None:
     Args:
         state: Current planner state.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     config = state.project_config
@@ -785,7 +786,7 @@ def render_review_modal(state: PlannerState) -> None:
     Args:
         state: Current planner state.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     domains = len(set(b.domain for b in state.boxes))
@@ -827,7 +828,7 @@ def render_yaml_preview_modal(state: PlannerState) -> None:
     Args:
         state: Current planner state.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     if state.modal_data.get("yaml_preview_full"):
@@ -885,7 +886,7 @@ def render_saved_modal(state: PlannerState) -> None:
     Args:
         state: Current planner state.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     lines = [
@@ -913,7 +914,7 @@ def render_graph_overview(state: PlannerState) -> None:
     Args:
         state: Current planner state.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     lines = []
@@ -941,7 +942,7 @@ def render_disconnect_modal(state: PlannerState) -> None:
     Args:
         state: Current planner state.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     selected_box = next((b for b in state.boxes if b.id == state.selected_box_id), None)
@@ -1003,7 +1004,7 @@ def render_delete_block_modal(state: PlannerState) -> None:
     Args:
         state: Current planner state.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     selected_box = next((b for b in state.boxes if b.id == state.selected_box_id), None)
@@ -1059,7 +1060,7 @@ def render_unsaved_changes_modal(state: PlannerState) -> None:
     Args:
         state: Current planner state.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     # Build change summary
@@ -1095,7 +1096,7 @@ def render_unsaved_changes_modal(state: PlannerState) -> None:
 
 def render_removed_connection_modal(state: PlannerState) -> None:
     """Render confirmation after removing a connection."""
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     source_name = str(state.modal_data.get("source_name") or "source")
@@ -1119,7 +1120,7 @@ def render_broken_connections_modal(state: PlannerState) -> None:
     Args:
         state: Current planner state with broken connections.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     lines = [
@@ -1156,7 +1157,7 @@ def render_no_blocks_to_connect_modal(state: PlannerState) -> None:
     Args:
         state: Current planner state.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     selected_box = next((b for b in state.boxes if b.id == state.selected_box_id), None)
@@ -1185,7 +1186,7 @@ def render_duplicate_connection_modal(state: PlannerState, existing_conn: Planne
         state: Current planner state.
         existing_conn: The existing duplicate connection.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     source_box = next((b for b in state.boxes if b.id == existing_conn.source_box_id), None)
@@ -1217,7 +1218,7 @@ def render_self_connection_modal(state: PlannerState) -> None:
     Args:
         state: Current planner state.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     lines = [
@@ -1240,7 +1241,7 @@ def render_cannot_save_empty_modal(state: PlannerState) -> None:
     Args:
         state: Current planner state.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     lines = [
@@ -1266,7 +1267,7 @@ def render_duplicate_name_modal(state: PlannerState, existing_box: PlannerBox, s
         existing_box: Existing box with duplicate name.
         suggested_names: List of suggested alternative names.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     lines = [
@@ -1299,7 +1300,7 @@ def render_active_purpose_conflict_modal(state: PlannerState, existing_box: Plan
         existing_box: Existing active box with same purpose.
         new_purpose: The conflicting purpose.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     lines = [
@@ -1338,7 +1339,7 @@ def render_path_already_used_modal(state: PlannerState, path: str, existing_box:
         path: The duplicate path.
         existing_box: Existing box using this path.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     # Generate suggested alternative path
@@ -1377,7 +1378,7 @@ def render_domain_changed_modal(state: PlannerState, old_domain: str, new_domain
         current_path: Current path.
         suggested_path: Suggested new path.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     lines = [
@@ -1407,7 +1408,7 @@ def render_no_connections_warning_modal(state: PlannerState) -> None:
     Args:
         state: Current planner state.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     blocks_count = len(state.boxes)
@@ -1438,7 +1439,7 @@ def render_experimental_to_active_warning_modal(state: PlannerState, experimenta
         experimental_box: The experimental block being connected.
         active_box: The active block being connected to.
     """
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     lines = [
@@ -1465,7 +1466,7 @@ def render_experimental_to_active_warning_modal(state: PlannerState, experimenta
 
 def render_blueprint_locked_modal(state: PlannerState) -> None:
     """Render modal when blueprint is locked and cannot be saved."""
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     lines = [
@@ -1489,7 +1490,7 @@ def render_blueprint_locked_modal(state: PlannerState) -> None:
 
 def render_invalid_blueprint_modal(state: PlannerState) -> None:
     """Render modal when blueprint.yaml cannot be parsed."""
-    clear_screen()
+    refresh_screen()
     terminal_width = get_terminal_width()
 
     reason = str(state.modal_data.get("invalid_reason") or "invalid YAML")

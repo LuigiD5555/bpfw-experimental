@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any
 
-from bpfw.catalog.schema import get_blocks, get_code, get_purpose, get_status
+from bpfw.catalog.domain import BlueprintDocument
 
 
 @dataclass(slots=True)
@@ -33,7 +33,7 @@ class SearchRecord:
 def build_search_records(blueprint_data: dict[str, Any]) -> list[SearchRecord]:
     """Build searchable records from blueprint blocks."""
 
-    blocks = get_blocks(blueprint_data)
+    blocks = blueprint_data.get("blocks", [])
     if not isinstance(blocks, list):
         return []
 
@@ -48,16 +48,30 @@ def build_search_records(blueprint_data: dict[str, Any]) -> list[SearchRecord]:
     return records
 
 
+def build_search_records_from_document(document: BlueprintDocument) -> list[SearchRecord]:
+    """Build searchable records from domain document blocks."""
+
+    records: list[SearchRecord] = []
+    for responsibility in document.blocks:
+        block = responsibility.model_dump(by_alias=True, exclude_none=True)
+        if not isinstance(block, dict):
+            continue
+        records.append(_build_single_record(block))
+    return records
+
+
 def _build_single_record(block: dict[str, Any]) -> SearchRecord:
     """Build one search record from a block dict."""
 
     block_id = _str_or_empty(block.get("id"))
-    status = _str_or_empty(get_status(block))
+    status = _str_or_empty(block.get("status"))
     domain = _str_or_empty(block.get("domain"))
     name = _str_or_empty(block.get("name") or block.get("canonical_name"))
-    purpose = _str_or_empty(get_purpose(block))
+    purpose = _str_or_empty(block.get("purpose"))
 
-    code_data = get_code(block)
+    code_data = block.get("code", {})
+    if not isinstance(code_data, dict):
+        code_data = {}
     raw_path = _str_or_empty(code_data.get("path"))
     symbol = _str_or_empty(code_data.get("symbol"))
 

@@ -3,19 +3,8 @@
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from bpfw.catalog.domain import BlueprintRepository
 from bpfw.catalog.paths import resolve_blueprint_path
-from bpfw.catalog.schema import (
-    get_allowed_statuses,
-    get_blocks,
-    get_code,
-    get_connection_meaning,
-    get_connections,
-    get_one_active_block_per_purpose,
-    get_purpose,
-    get_status,
-    get_kind,
-    get_uniqueness,
-)
 from bpfw.integrations.planner.connection_detection import detect_connections
 from bpfw.integrations.planner.connection_merge import merge_connections
 from bpfw.integrations.planner.models import (
@@ -91,11 +80,6 @@ class BlueprintStateLoader:
         Raises:
             ValueError: If YAML is invalid.
         """
-        try:
-            import yaml
-        except ImportError:
-            raise ImportError("PyYAML is required but not installed")
-        
         # Check if file is empty
         if blueprint_path.stat().st_size == 0:
             state = BlueprintStateLoader._create_new_state(project_root, blueprint_path)
@@ -103,9 +87,10 @@ class BlueprintStateLoader:
             return state
         
         try:
-            with open(blueprint_path, "r", encoding="utf-8") as f:
-                blueprint_data = yaml.safe_load(f)
-        except yaml.YAMLError as e:
+            repository = BlueprintRepository(project_root=project_root)
+            repository_load_result = repository.load()
+            blueprint_data = repository_load_result.raw_data
+        except Exception as e:
             raise ValueError(
                 f"Invalid YAML in {blueprint_path}: {e}\n"
                 f"Planner cannot overwrite invalid YAML. Fix the file or restore a valid blueprint first."
@@ -183,8 +168,8 @@ class BlueprintStateLoader:
             policy_mode=policy.get("mode", "catalog"),
             empty_blueprint_allows_execution=policy.get("empty_blueprint_allows_execution", True),
             defined_blueprint_blocks_on_drift=policy.get("defined_blueprint_blocks_on_drift", True),
-            allowed_lifecycles=get_allowed_statuses(policy),
-            single_active_per_purpose=get_one_active_block_per_purpose(policy),
+            allowed_lifecycles=[str(status) for status in policy.get("allowed_statuses", ["active", "experimental", "legacy", "deprecated"])],
+            single_active_per_purpose=bool(policy.get("one_active_block_per_purpose", True)),
             undeclared_code_blocks=policy.get("undeclared_code_blocks", True),
             missing_declared_code_blocks=policy.get("missing_declared_code_blocks", True),
             security=security,
@@ -200,7 +185,7 @@ class BlueprintStateLoader:
         Returns:
             List of PlannerBox instances.
         """
-        blocks = get_blocks(blueprint_data)
+        blocks = blueprint_data.get("blocks", [])
         boxes = []
         
         for resp in blocks:
@@ -229,14 +214,16 @@ class BlueprintStateLoader:
                 interface = PlannerInterface(inputs=inputs, output=output)
             
             # Get code data
-            code = get_code(resp)
+            code = resp.get("code", {})
+            if not isinstance(code, dict):
+                code = {}
             
             box = PlannerBox(
                 name=resp.get("name", ""),
                 domain=resp.get("domain", ""),
-                purpose=get_purpose(resp) or "",
-                symbol_type=get_kind(code) or "class",
-                lifecycle=get_status(resp) or "active",
+                purpose=resp.get("purpose") or "",
+                symbol_type=code.get("kind") or "class",
+                lifecycle=resp.get("status") or "active",
                 path=code.get("path"),
                 symbol=code.get("symbol"),
                 interface=interface,
@@ -254,7 +241,9 @@ class BlueprintStateLoader:
             if isinstance(detected, dict) and detected.get("qualified_name"):
                 box.qualified_name = detected.get("qualified_name")
             
-            uniqueness = get_uniqueness(resp)
+            uniqueness = resp.get("uniqueness", {})
+            if not isinstance(uniqueness, dict):
+                uniqueness = {}
             if uniqueness.get("group"):
                 box.duplicate_group = uniqueness.get("group")
             
@@ -273,7 +262,7 @@ class BlueprintStateLoader:
         Returns:
             Tuple of (valid_connections, broken_connections).
         """
-        blocks = get_blocks(blueprint_data)
+        blocks = blueprint_data.get("blocks", [])
         connections = []
         broken_connections = []
         
@@ -281,11 +270,13 @@ class BlueprintStateLoader:
 
         for resp in blocks:
             resp_id = resp.get("id")
-            block_connections = get_connections(resp)
+            block_connections = resp.get("connections", [])
+            if not isinstance(block_connections, list):
+                block_connections = []
             
             for rel in block_connections:
                 target_id = rel.get("target")
-                relationship = get_connection_meaning(rel)
+                relationship = rel.get("meaning") if isinstance(rel, dict) else None
                 
                 if not resp_id or not target_id or not relationship:
                     continue
