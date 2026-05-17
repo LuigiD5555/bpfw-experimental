@@ -194,6 +194,7 @@ class BlueprintSchema:
 
 schema = BlueprintSchema()
 
+
 # ---------------------------------------------------------------------------
 # Convenience module-level functions (deprecated, kept for backward compatibility)
 # ---------------------------------------------------------------------------
