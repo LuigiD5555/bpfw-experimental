@@ -1,0 +1,36 @@
+blocks:
+- id: src_bpfw_authority_document_authority_document_get_blocks
+  purpose: get blocks
+  name: AuthorityDocument.get_blocks
+  domain: view system
+  status: active
+  code:
+    path: src/bpfw/authority/document.py
+    module: src.bpfw.authority.document
+    symbol: AuthorityDocument.get_blocks
+    kind: method
+    start_line: 43
+    end_line: 52
+  detected:
+    qualified_name: src.bpfw.authority.document.AuthorityDocument.get_blocks
+    kind: method
+    methods: []
+    functions: []
+    docstring: "Get all blocks from the unified blueprint data.\n\nReturns:\n    List\
+      \ of block dictionaries."
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: get_blocks
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: list[dict[str, Any]]
+      description: null
