@@ -40,4 +40,3 @@ authority:
   remove_empty_shards: false
 includes:
 - bpfw/blocks/core.yaml
-- bpfw/blocks/blueprint.yaml
