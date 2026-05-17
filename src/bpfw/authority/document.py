@@ -123,17 +123,6 @@ class AuthorityDocument:
             return []
         return shard.get_blocks()
 
-    def get_shard_blocks(self, shard_path: Path) -> list[dict[str, Any]]:
-        """Get all blocks from a specific shard.
-        
-        Args:
-            shard_path: Project-relative shard path.
-        
-        Returns:
-            List of block dictionaries from the shard.
-        """
-        return self.get_blocks_from_shard(shard_path)
-
     def get_block_count(self) -> int:
         """Get the total number of blocks.
         
