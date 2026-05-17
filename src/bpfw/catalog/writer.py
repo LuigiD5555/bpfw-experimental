@@ -27,6 +27,80 @@ from bpfw.protection.authority import (
 from bpfw.shared.text import to_snake_case
 
 
+class BlockFactory:
+    """Centralized factory for creating blueprint block dictionaries.
+
+    Ensures every block has a consistent schema with all required keys,
+    avoiding scattered dict-literal construction across the codebase.
+    """
+
+    @staticmethod
+    def create(
+        block_id: str,
+        name: str,
+        code: Dict[str, Any],
+        detected: Dict[str, Any],
+        *,
+        purpose: Any = None,
+        domain: Any = None,
+        status: Any = None,
+        interface: Dict[str, Any] | None = None,
+        entrypoints: List[Any] | None = None,
+        connections: List[Any] | None = None,
+        uniqueness: Dict[str, Any] | None = None,
+        replacement: Dict[str, Any] | None = None,
+        notes: Any = None,
+    ) -> Dict[str, Any]:
+        """Create a fully populated block dictionary.
+
+        Args:
+            block_id: Unique block identifier.
+            name: Human-readable block name.
+            code: Code metadata dict (path, module, symbol, kind, start_line, end_line).
+            detected: Detection metadata dict (qualified_name, kind, methods, functions).
+            purpose: Block purpose (default None).
+            domain: Block domain (default None).
+            status: Block status (default None).
+            interface: Optional interface metadata.
+            entrypoints: Optional entrypoints list.
+            connections: Optional connections list.
+            uniqueness: Optional uniqueness metadata.
+            replacement: Optional replacement metadata.
+            notes: Optional notes string.
+
+        Returns:
+            Complete block dictionary with all canonical keys.
+        """
+        block: Dict[str, Any] = {
+            "id": block_id,
+            "purpose": purpose,
+            "name": name,
+            "domain": domain,
+            "status": status,
+            "code": code,
+            "detected": detected,
+            "entrypoints": entrypoints if entrypoints is not None else [],
+            "connections": connections if connections is not None else [],
+            "uniqueness": uniqueness if uniqueness is not None else {
+                "group": None,
+                "allow_multiple_non_active": True,
+                "forbid_active_duplicates": True,
+                "suspected_duplicates": [],
+            },
+            "replacement": replacement if replacement is not None else {
+                "replaces": None,
+                "replaced_by": None,
+                "reason": None,
+            },
+            "notes": notes,
+        }
+
+        if interface is not None:
+            block["interface"] = interface
+
+        return block
+
+
 def build_initial_blueprint(
     project_root: Path,
     source_roots: List[str],
@@ -104,13 +178,22 @@ def build_core_shard(discovered_units: List[DiscoveredCodeUnit]) -> Dict[str, An
         next_sequence = seen_block_ids.get(base_block_id, 0)
         seen_block_ids[base_block_id] = next_sequence + 1
         block_id = base_block_id if next_sequence == 0 else f"{base_block_id}_{next_sequence + 1}"
-        block: Dict[str, Any] = {
-            "id": block_id,
-            "purpose": None,
-            "name": unit.symbol,
-            "domain": None,
-            "status": None,
-            "code": {
+
+        # Build optional interface metadata
+        interface_data: Dict[str, Any] | None = None
+        if unit.interface_inputs or unit.interface_output:
+            interface_data = {}
+            if unit.interface_inputs:
+                interface_data["inputs"] = unit.interface_inputs
+            if unit.interface_output:
+                interface_data["output"] = unit.interface_output
+            if not interface_data:
+                interface_data = None
+
+        block = BlockFactory.create(
+            block_id=block_id,
+            name=unit.symbol,
+            code={
                 "path": unit.path,
                 "module": unit.module,
                 "symbol": unit.symbol,
@@ -118,37 +201,14 @@ def build_core_shard(discovered_units: List[DiscoveredCodeUnit]) -> Dict[str, An
                 "start_line": unit.start_line,
                 "end_line": unit.end_line,
             },
-            "detected": {
+            detected={
                 "qualified_name": unit.qualified_name,
                 "kind": normalized_symbol_type,
                 "methods": unit.methods,
                 "functions": unit.functions,
             },
-            "entrypoints": [],
-            "connections": [],
-            "uniqueness": {
-                "group": None,
-                "allow_multiple_non_active": True,
-                "forbid_active_duplicates": True,
-                "suspected_duplicates": [],
-            },
-            "replacement": {
-                "replaces": None,
-                "replaced_by": None,
-                "reason": None,
-            },
-            "notes": None,
-        }
-
-        # Add interface metadata if available
-        if unit.interface_inputs or unit.interface_output:
-            interface_data: Dict[str, Any] = {}
-            if unit.interface_inputs:
-                interface_data["inputs"] = unit.interface_inputs
-            if unit.interface_output:
-                interface_data["output"] = unit.interface_output
-            if interface_data:
-                block["interface"] = interface_data
+            interface=interface_data,
+        )
 
         blocks.append(block)
     
