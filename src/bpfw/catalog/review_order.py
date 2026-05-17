@@ -64,22 +64,64 @@ def _visit_unit(
 
 
 def _build_symbol_index(units: List[DiscoveredCodeUnit]) -> Dict[str, DiscoveredCodeUnit]:
-    return {unit.symbol: unit for unit in units}
+    """Build symbol index mapping both qualified names and bare symbol names.
+    
+    This allows dependency resolution when called_symbols contain simple names
+    (e.g., "get_origin") while units are identified by qualified names 
+    (e.g., "AuthorityRepository.get_origin").
+    """
+    index: Dict[str, DiscoveredCodeUnit] = {}
+    for unit in units:
+        index[unit.symbol] = unit
+        # Also index by bare name (last component) for called_symbols matching
+        bare_name = unit.symbol.split(".")[-1]
+        if bare_name not in index:
+            index[bare_name] = unit
+    return index
 
 
 def _build_dependency_graph(
     units: List[DiscoveredCodeUnit],
     symbol_index: Dict[str, DiscoveredCodeUnit],
 ) -> Dict[str, List[str]]:
+    """Build dependency graph with intelligent same-class preference for collisions.
+    
+    For called_symbols that match multiple units (e.g., "process" could be 
+    ClassA.process or ClassB.process), prefer the one in the same class as the caller.
+    """
     graph: Dict[str, List[str]] = defaultdict(list)
 
     for unit in units:
+        # Handle containment dependencies (children)
         for child_symbol in [*unit.methods, *unit.functions]:
             if child_symbol in symbol_index:
                 graph[unit.qualified_name].append(child_symbol)
+        
+        # Handle call/reference dependencies with collision resolution
         for called_symbol in unit.called_symbols:
             if called_symbol in symbol_index:
-                graph[unit.qualified_name].append(called_symbol)
+                dependency_unit = symbol_index[called_symbol]
+                
+                # Check if there's a same-class version of this symbol
+                # e.g., if caller is "ClassA.method" and called symbol is "helper",
+                # prefer "ClassA.helper" over "OtherClass.helper"
+                if "." in unit.symbol:
+                    caller_class = unit.symbol.rsplit(".", 1)[0]
+                    same_class_symbol = f"{caller_class}.{called_symbol}"
+                    
+                    # If the called symbol is already same-class, use it as-is
+                    if dependency_unit.symbol == same_class_symbol:
+                        graph[unit.qualified_name].append(dependency_unit.qualified_name)
+                    # If not, check if there exists a same-class version
+                    elif same_class_symbol in symbol_index:
+                        same_class_unit = symbol_index[same_class_symbol]
+                        graph[unit.qualified_name].append(same_class_unit.qualified_name)
+                    # Otherwise use the bare-name match (could be different class)
+                    else:
+                        graph[unit.qualified_name].append(dependency_unit.qualified_name)
+                else:
+                    # Top-level function or method, use direct match
+                    graph[unit.qualified_name].append(dependency_unit.qualified_name)
 
     return graph
 
