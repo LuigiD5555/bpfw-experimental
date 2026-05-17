@@ -283,7 +283,7 @@ def _is_tiny_nested_function(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bo
     """
     Check if a nested function is too small to be a separate block.
 
-    A nested function is considered tiny if it has less than 5 lines of code.
+    A nested function is considered tiny if it has less than 1 line of code.
     Args:
         node: AST FunctionDef or AsyncFunctionDef node.
         Returns:
@@ -296,7 +296,7 @@ def _is_tiny_nested_function(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bo
         if total_lines == 0 and isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant):
             if isinstance(stmt.value.value, str):
                 continue
-            total_lines += 1
+        total_lines += 1
     # Consider tiny if empty (no actual code, only docstring)
     return total_lines < 1
 
@@ -418,13 +418,15 @@ def _extract_class_unit(
     Returns:
         DiscoveredCodeUnit or None.
     """
-    methods = _extract_direct_child_function_symbols(
+    methods = _extract_direct_child_function_qualified_names(
         nodes=node.body,
+        module=module,
         parent_symbol=symbol,
         skip_dunder=True,
     )
-    functions = _extract_direct_child_class_symbols(
+    functions = _extract_direct_child_class_qualified_names(
         nodes=node.body,
+        module=module,
         parent_symbol=symbol,
     )
 
@@ -434,8 +436,8 @@ def _extract_class_unit(
     # Extract docstring
     docstring = ast.get_docstring(node)
 
-    # Extract local calls made by class methods and nested code.
-    called_symbols = _extract_called_symbols_from_node(node)
+    # Extract structured calls from this class
+    calls = _extract_structured_calls_from_node(node)
 
     # Extract interface metadata
     interface_inputs, interface_output = extract_interface_metadata(
@@ -460,7 +462,7 @@ def _extract_class_unit(
         signature=None,
         interface_inputs=interface_inputs,
         interface_output=interface_output,
-        called_symbols=called_symbols,
+        calls=calls,
     )
 
 
@@ -492,11 +494,13 @@ def _extract_function_unit(
 
     # Extract signature
     signature = _extract_function_signature(node)
-    functions = _extract_direct_child_symbols(
+    functions = _extract_direct_child_qualified_names(
         nodes=node.body,
+        module=module,
         parent_symbol=symbol,
     )
-    called_symbols = _extract_called_symbols_from_node(node)
+    # Extract structured calls from this function
+    calls = _extract_structured_calls_from_node(node)
 
     # Extract interface metadata
     interface_inputs, interface_output = extract_interface_metadata(
@@ -521,7 +525,7 @@ def _extract_function_unit(
         signature=signature,
         interface_inputs=interface_inputs,
         interface_output=interface_output,
-        called_symbols=called_symbols,
+        calls=calls,
     )
 
 
@@ -543,6 +547,70 @@ def _extract_direct_child_symbols(nodes: List[ast.stmt], parent_symbol: str) -> 
         )
     )
     return child_symbols
+
+
+def _extract_direct_child_qualified_names(
+    nodes: List[ast.stmt],
+    module: str,
+    parent_symbol: str,
+) -> List[str]:
+    """Return direct nested block qualified names for a code unit."""
+
+    child_qualified: List[str] = []
+    child_qualified.extend(
+        _extract_direct_child_function_qualified_names(
+            nodes=nodes,
+            module=module,
+            parent_symbol=parent_symbol,
+            skip_dunder=False,
+        )
+    )
+    child_qualified.extend(
+        _extract_direct_child_class_qualified_names(
+            nodes=nodes,
+            module=module,
+            parent_symbol=parent_symbol,
+        )
+    )
+    return child_qualified
+
+
+def _extract_direct_child_function_qualified_names(
+    nodes: List[ast.stmt],
+    module: str,
+    parent_symbol: str,
+    skip_dunder: bool,
+) -> List[str]:
+    """Return direct nested function-like qualified names for a code unit."""
+
+    child_qualified: List[str] = []
+    for node in nodes:
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if node.name.startswith("_") and not (
+            node.name.startswith("__") and node.name.endswith("__")
+        ):
+            continue
+        if skip_dunder and node.name.startswith("__") and node.name.endswith("__"):
+            continue
+        child_symbol = f"{parent_symbol}.{node.name}"
+        child_qualified.append(f"{module}.{child_symbol}")
+    return child_qualified
+
+
+def _extract_direct_child_class_qualified_names(
+    nodes: List[ast.stmt],
+    module: str,
+    parent_symbol: str,
+) -> List[str]:
+    """Return direct nested class qualified names for a code unit."""
+
+    child_qualified: List[str] = []
+    for node in nodes:
+        if isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
+            child_symbol = f"{parent_symbol}.{node.name}"
+            child_qualified.append(f"{module}.{child_symbol}")
+    return child_qualified
 
 
 def _extract_direct_child_function_symbols(
@@ -639,21 +707,104 @@ def _get_attribute_name(node: ast.Attribute) -> str:
     return ".".join(reversed(parts))
 
 
-def _extract_called_symbols_from_node(node: ast.AST) -> List[str]:
-    """Extract locally called symbol names from an AST subtree."""
-
-    called_symbols: List[str] = []
-
+def _extract_structured_calls_from_node(
+    node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+) -> List[Dict[str, Any]]:
+    """Extract structured call references from an AST node.
+    
+    Returns a list of dicts, each with 'context' and 'name' keys.
+    
+    Examples:
+        - self.get_origin() → {"context": "self", "name": "get_origin"}
+        - shard.get_blocks() → {"context": "shard", "name": "get_blocks"}
+        - helper() → {"context": None, "name": "helper"}
+        - Service() → {"context": None, "name": "Service"}
+        - self.index.get_authority_config() → {"context": None, "name": "get_authority_config"} (chained, not resolved)
+    
+    Args:
+        node: AST ClassDef, FunctionDef, or AsyncFunctionDef node.
+        
+    Returns:
+        List of structured call dicts.
+    """
+    calls: List[Dict[str, Any]] = []
+    
     for child in ast.walk(node):
         if not isinstance(child, ast.Call):
             continue
+        
+        call_info = _analyze_call(child.func)
+        if call_info:
+            calls.append(call_info)
+    
+    # Remove duplicates while preserving order
+    unique_calls: List[Dict[str, Any]] = []
+    seen = set()
+    for call in calls:
+        key = (call.get("context"), call.get("name"))
+        if key not in seen:
+            seen.add(key)
+            unique_calls.append(call)
+    
+    return unique_calls
 
-        if isinstance(child.func, ast.Name):
-            called_symbols.append(child.func.id)
-        elif isinstance(child.func, ast.Attribute):
-            called_symbols.append(child.func.attr)
 
-    return sorted(set(called_symbols))
+def _analyze_call(func_node: ast.expr) -> Dict[str, Any] | None:
+    """Analyze a call function node to extract context and name.
+    
+    Args:
+        func_node: The AST expression representing the function being called.
+        
+    Returns:
+        Dict with 'context' and 'name' keys, or None if not a local call.
+    """
+    # Case 1: self.method_name() or cls.method_name()
+    if isinstance(func_node, ast.Attribute):
+        # Check if the object being accessed is 'self' or 'cls'
+        if isinstance(func_node.value, ast.Name):
+            if func_node.value.id in ("self", "cls"):
+                return {"context": func_node.value.id, "name": func_node.attr}
+        # Otherwise it's shard.get_blocks(), self.index.get_config(), etc.
+        # These require runtime type info, so we only capture the tail name
+        # but context will indicate it's not self/cls
+        return {"context": _extract_context_prefix(func_node.value), "name": func_node.attr}
+    
+    # Case 2: bare_name() - could be function or class constructor
+    if isinstance(func_node, ast.Name):
+        return {"context": None, "name": func_node.id}
+    
+    # Case 3: Other complex expressions - ignore for dependency resolution
+    return None
+
+
+def _extract_context_prefix(node: ast.expr) -> str | None:
+    """Extract context prefix from an attribute chain.
+    
+    Examples:
+        - self.index.get_config → "self.index"
+        - shard.get_blocks → "shard"
+        - obj.prop.method → "obj.prop"
+    
+    Args:
+        node: AST expression node.
+        
+    Returns:
+        Context prefix as string, or None.
+    """
+    if isinstance(node, ast.Name):
+        return node.id
+    
+    if isinstance(node, ast.Attribute):
+        parts = [node.attr]
+        current = node.value
+        while isinstance(current, ast.Attribute):
+            parts.append(current.attr)
+            current = current.value
+        if isinstance(current, ast.Name):
+            parts.append(current.id)
+        return ".".join(reversed(parts))
+    
+    return None
 
 
 def _extract_function_signature(

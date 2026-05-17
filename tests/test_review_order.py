@@ -23,7 +23,7 @@ def test_simple_dependency_ordering():
             signature=None,
             interface_inputs=[],
             interface_output=None,
-            called_symbols=["helper"],
+            calls=[{"context": "self", "name": "helper"}],
         ),
         DiscoveredCodeUnit(
             path="test.py",
@@ -41,7 +41,7 @@ def test_simple_dependency_ordering():
             signature=None,
             interface_inputs=[],
             interface_output=None,
-            called_symbols=[],
+            calls=[],
         ),
     ]
     
@@ -71,7 +71,7 @@ def test_same_class_preference_for_collision():
             signature=None,
             interface_inputs=[],
             interface_output=None,
-            called_symbols=["helper"],
+            calls=[{"context": "self", "name": "helper"}],
         ),
         DiscoveredCodeUnit(
             path="test.py",
@@ -89,7 +89,7 @@ def test_same_class_preference_for_collision():
             signature=None,
             interface_inputs=[],
             interface_output=None,
-            called_symbols=[],
+            calls=[],
         ),
         DiscoveredCodeUnit(
             path="test.py",
@@ -107,7 +107,7 @@ def test_same_class_preference_for_collision():
             signature=None,
             interface_inputs=[],
             interface_output=None,
-            called_symbols=[],
+            calls=[],
         ),
     ]
     
@@ -146,7 +146,7 @@ def test_chain_of_dependencies():
             signature=None,
             interface_inputs=[],
             interface_output=None,
-            called_symbols=["middle"],
+            calls=[{"context": "self", "name": "middle"}],
         ),
         DiscoveredCodeUnit(
             path="test.py",
@@ -164,7 +164,7 @@ def test_chain_of_dependencies():
             signature=None,
             interface_inputs=[],
             interface_output=None,
-            called_symbols=["bottom"],
+            calls=[{"context": "self", "name": "bottom"}],
         ),
         DiscoveredCodeUnit(
             path="test.py",
@@ -182,7 +182,7 @@ def test_chain_of_dependencies():
             signature=None,
             interface_inputs=[],
             interface_output=None,
-            called_symbols=[],
+            calls=[],
         ),
     ]
     
@@ -217,7 +217,7 @@ def test_real_world_authority_repository_scenario():
             signature="get_shard_for_block(block_id: str) -> AuthorityShard | None",
             interface_inputs=[{"name": "block_id", "type": "str"}],
             interface_output={"type": "AuthorityShard | None"},
-            called_symbols=["get", "get_origin"],
+            calls=[{"context": "self", "name": "get_origin"}, {"context": None, "name": "get"}],
         ),
         DiscoveredCodeUnit(
             path="authority/repository.py",
@@ -235,7 +235,7 @@ def test_real_world_authority_repository_scenario():
             signature="get_origin(block_id: str) -> str | None",
             interface_inputs=[{"name": "block_id", "type": "str"}],
             interface_output={"type": "str | None"},
-            called_symbols=["get_shards"],
+            calls=[{"context": "self", "name": "get_shards"}],
         ),
         DiscoveredCodeUnit(
             path="authority/repository.py",
@@ -253,7 +253,7 @@ def test_real_world_authority_repository_scenario():
             signature="get_shards() -> dict[str, AuthorityShard]",
             interface_inputs=[],
             interface_output={"type": "dict[str, AuthorityShard]"},
-            called_symbols=[],
+            calls=[],
         ),
     ]
     
@@ -288,7 +288,7 @@ def test_no_circular_dependencies_cause_infinite_loop():
             signature=None,
             interface_inputs=[],
             interface_output=None,
-            called_symbols=["method_b"],
+            calls=[{"context": None, "name": "method_b"}],
         ),
         DiscoveredCodeUnit(
             path="test.py",
@@ -306,7 +306,7 @@ def test_no_circular_dependencies_cause_infinite_loop():
             signature=None,
             interface_inputs=[],
             interface_output=None,
-            called_symbols=["method_a"],
+            calls=[{"context": None, "name": "method_a"}],
         ),
     ]
     

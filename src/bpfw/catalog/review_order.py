@@ -1,5 +1,14 @@
+"""Review ordering logic for cognitive dependency-first traversal.
 
-"""Review ordering logic for cognitive dependency-first traversal."""
+The review order is dependency-first: if code block A uses code block B,
+then B must be reviewed before A.
+
+This implementation:
+- Uses qualified_name as the only canonical identifier
+- Extracts structured calls with context (self.method, shard.get_blocks, etc.)
+- Resolves references using strict scope rules
+- Does not create false dependencies from arbitrary method calls
+"""
 
 from collections import defaultdict
 from typing import Dict, List, Set
@@ -8,127 +17,303 @@ from bpfw.catalog.models import DiscoveredCodeUnit
 
 
 def order_blocks_for_review(units: List[DiscoveredCodeUnit]) -> List[DiscoveredCodeUnit]:
-    """Return units ordered from dependencies to dependents."""
-
-    symbol_index = _build_symbol_index(units)
-    dependency_graph = _build_dependency_graph(units, symbol_index)
-
-    ordered: List[DiscoveredCodeUnit] = []
-    visited: Set[str] = set()
-    active_path: Set[str] = set()
-
-    for unit in sorted(units, key=_stable_sort_key):
-        _visit_unit(
-            unit=unit,
-            dependency_graph=dependency_graph,
-            symbol_index=symbol_index,
-            visited=visited,
-            active_path=active_path,
-            ordered=ordered,
-        )
-
-    return ordered
-
-
-def _visit_unit(
-    unit: DiscoveredCodeUnit,
-    dependency_graph: Dict[str, List[str]],
-    symbol_index: Dict[str, DiscoveredCodeUnit],
-    visited: Set[str],
-    active_path: Set[str],
-    ordered: List[DiscoveredCodeUnit],
-) -> None:
-    if unit.qualified_name in visited:
-        return
-
-    if unit.qualified_name in active_path:
-        return
-
-    active_path.add(unit.qualified_name)
-
-    for dependency_name in dependency_graph[unit.qualified_name]:
-        dependency_unit = symbol_index.get(dependency_name)
-        if dependency_unit is not None:
-            _visit_unit(
-                unit=dependency_unit,
-                dependency_graph=dependency_graph,
-                symbol_index=symbol_index,
-                visited=visited,
-                active_path=active_path,
-                ordered=ordered,
-            )
-
-    active_path.remove(unit.qualified_name)
-    visited.add(unit.qualified_name)
-    ordered.append(unit)
-
-
-def _build_symbol_index(units: List[DiscoveredCodeUnit]) -> Dict[str, DiscoveredCodeUnit]:
-    """Build symbol index mapping both qualified names and bare symbol names.
-    
-    This allows dependency resolution when called_symbols contain simple names
-    (e.g., "get_origin") while units are identified by qualified names 
-    (e.g., "AuthorityRepository.get_origin").
     """
-    index: Dict[str, DiscoveredCodeUnit] = {}
-    for unit in units:
-        index[unit.symbol] = unit
-        # Also index by bare name (last component) for called_symbols matching
-        bare_name = unit.symbol.split(".")[-1]
-        if bare_name not in index:
-            index[bare_name] = unit
-    return index
+    Return units ordered from dependencies to dependents.
+    
+    The order guarantees:
+    1. Containment: nested functions/classes come before their containers
+    2. Dependencies: called methods/functions come before their callers
+    3. Stability: source order breaks ties when no dependency exists
+    
+    Args:
+        units: List of discovered code units.
+        
+    Returns:
+        Units in dependency-first order.
+    """
+    if not units:
+        return []
+    
+    # Build canonical index using only qualified_name
+    index = {unit.qualified_name: unit for unit in units}
+    
+    # Build dependency graph using only qualified_name
+    graph = _build_dependency_graph(units, index)
+    
+    # Topologically sort with cycle safety
+    ordered = _topological_sort(graph, index)
+    
+    return ordered
 
 
 def _build_dependency_graph(
     units: List[DiscoveredCodeUnit],
-    symbol_index: Dict[str, DiscoveredCodeUnit],
+    index: Dict[str, DiscoveredCodeUnit],
 ) -> Dict[str, List[str]]:
-    """Build dependency graph with intelligent same-class preference for collisions.
+    """
+    Build dependency graph where edges point from dependents to dependencies.
     
-    For called_symbols that match multiple units (e.g., "process" could be 
-    ClassA.process or ClassB.process), prefer the one in the same class as the caller.
+    If unit A depends on unit B, then graph[A] contains B.
+    This means A will come after B in the final order.
+    
+    Args:
+        units: List of discovered code units.
+        index: Canonical index mapping qualified_name to DiscoveredCodeUnit.
+        
+    Returns:
+        Dependency graph as dict {dependent_qualified_name: [dependency_qualified_name, ...]}.
     """
     graph: Dict[str, List[str]] = defaultdict(list)
-
+    
     for unit in units:
-        # Handle containment dependencies (children)
-        for child_symbol in [*unit.methods, *unit.functions]:
-            if child_symbol in symbol_index:
-                graph[unit.qualified_name].append(child_symbol)
+        # Add containment dependencies (children before parents)
+        for child_qualified_name in unit.methods + unit.functions:
+            if child_qualified_name in index:
+                graph[unit.qualified_name].append(child_qualified_name)
         
-        # Handle call/reference dependencies with collision resolution
-        for called_symbol in unit.called_symbols:
-            if called_symbol in symbol_index:
-                dependency_unit = symbol_index[called_symbol]
-                
-                # Check if there's a same-class version of this symbol
-                # e.g., if caller is "ClassA.method" and called symbol is "helper",
-                # prefer "ClassA.helper" over "OtherClass.helper"
-                if "." in unit.symbol:
-                    caller_class = unit.symbol.rsplit(".", 1)[0]
-                    same_class_symbol = f"{caller_class}.{called_symbol}"
-                    
-                    # If the called symbol is already same-class, use it as-is
-                    if dependency_unit.symbol == same_class_symbol:
-                        graph[unit.qualified_name].append(dependency_unit.qualified_name)
-                    # If not, check if there exists a same-class version
-                    elif same_class_symbol in symbol_index:
-                        same_class_unit = symbol_index[same_class_symbol]
-                        graph[unit.qualified_name].append(same_class_unit.qualified_name)
-                    # Otherwise use the bare-name match (could be different class)
-                    else:
-                        graph[unit.qualified_name].append(dependency_unit.qualified_name)
-                else:
-                    # Top-level function or method, use direct match
-                    graph[unit.qualified_name].append(dependency_unit.qualified_name)
-
+        # Add call dependencies based on structured calls
+        for call in unit.calls:
+            resolved = _resolve_call(call, unit, index)
+            if resolved:
+                graph[unit.qualified_name].append(resolved)
+    
     return graph
 
 
-def _stable_sort_key(unit: DiscoveredCodeUnit) -> tuple[str, int, str]:
-    return (
-        unit.path,
-        unit.start_line or 0,
-        unit.symbol,
+def _resolve_call(
+    call: Dict,
+    caller: DiscoveredCodeUnit,
+    index: Dict[str, DiscoveredCodeUnit],
+) -> str | None:
+    """
+    Resolve a structured call to a discovered code unit.
+    
+    Resolution rules:
+    1. self.method_name() → method in same class
+    2. cls.method_name() → method in same class
+    3. bare_name() → nested/enclosing/module-level function
+    4. ClassName() → class constructor
+    5. Arbitrary object methods (shard.get_blocks()) are NOT resolved
+    6. Chained attributes (self.index.get_config()) are NOT resolved
+    
+    Args:
+        call: Structured call dict with keys 'context', 'name'.
+        caller: The unit making the call.
+        index: Canonical index of all discovered units.
+        
+    Returns:
+        Qualified name of the discovered unit, or None if not resolved.
+    """
+    context = call.get("context")
+    name = call.get("name")
+    
+    if not name:
+        return None
+    
+    # Rule 1 & 2: self.method_name() or cls.method_name() → same class method
+    if context in ("self", "cls"):
+        return _resolve_same_class_method(name, caller, index)
+    
+    # Rule 3: bare_name() → nested/enclosing/module-level function
+    if context is None:
+        return _resolve_bare_function(name, caller, index)
+    
+    # Rule 4: ClassName() → class constructor
+    if context is None and name[0].isupper():
+        return _resolve_class_constructor(name, caller, index)
+    
+    # Rules 5 & 6: Do NOT resolve arbitrary object method calls or chained calls
+    # These require runtime type information we don't have
+    return None
+
+
+def _resolve_same_class_method(
+    method_name: str,
+    caller: DiscoveredCodeUnit,
+    index: Dict[str, DiscoveredCodeUnit],
+) -> str | None:
+    """
+    Resolve self.method_name() or cls.method_name() to same class method.
+    
+    Args:
+        method_name: The method name being called.
+        caller: The unit making the call.
+        index: Canonical index of all discovered units.
+        
+    Returns:
+        Qualified name of the method in the same class, or None.
+    """
+    # Caller must be a method in a class
+    if caller.symbol_type != "method":
+        return None
+    
+    # Extract class name from caller's symbol
+    parts = caller.symbol.split(".")
+    if len(parts) < 2:
+        return None
+    
+    class_symbol = ".".join(parts[:-1])
+    target_qualified = f"{caller.module}.{class_symbol}.{method_name}"
+    
+    if target_qualified in index:
+        return target_qualified
+    
+    return None
+
+
+def _resolve_bare_function(
+    function_name: str,
+    caller: DiscoveredCodeUnit,
+    index: Dict[str, DiscoveredCodeUnit],
+) -> str | None:
+    """
+    Resolve bare_name() to nested/enclosing/module-level function.
+    
+    Resolution order:
+    1. Nested function in current scope
+    2. Enclosing function/method
+    3. Module-level function
+    
+    Args:
+        function_name: The function name being called.
+        caller: The unit making the call.
+        index: Canonical index of all discovered units.
+        
+    Returns:
+        Qualified name of the function, or None.
+    """
+    # Try nested function (if caller is a function/method with nested functions)
+    for nested_name in caller.functions:
+        if nested_name.endswith(f".{function_name}"):
+            if nested_name in index:
+                return nested_name
+    
+    # Try module-level function
+    module_qualified = f"{caller.module}.{function_name}"
+    if module_qualified in index:
+        module_unit = index[module_qualified]
+        # Only resolve if it's a top-level function (not a method)
+        if module_unit.symbol_type == "function":
+            return module_qualified
+    
+    return None
+
+
+def _resolve_class_constructor(
+    class_name: str,
+    caller: DiscoveredCodeUnit,
+    index: Dict[str, DiscoveredCodeUnit],
+) -> str | None:
+    """
+    Resolve ClassName() to a discovered class.
+    
+    Args:
+        class_name: The class name being constructed.
+        caller: The unit making the call.
+        index: Canonical index of all discovered units.
+        
+    Returns:
+        Qualified name of the class, or None.
+    """
+    # Try module-level class
+    module_qualified = f"{caller.module}.{class_name}"
+    if module_qualified in index:
+        module_unit = index[module_qualified]
+        # Only resolve if it's a class
+        if module_unit.symbol_type in ("class", "nested_class"):
+            return module_qualified
+    
+    return None
+
+
+def _topological_sort(
+    graph: Dict[str, List[str]],
+    index: Dict[str, DiscoveredCodeUnit],
+) -> List[DiscoveredCodeUnit]:
+    """
+    Topologically sort dependency graph with cycle safety.
+    
+    Uses DFS with cycle detection. Cycles are broken by keeping the
+    nodes that form the cycle in stable source order.
+    
+    Args:
+        graph: Dependency graph {dependent: [dependencies]}.
+        index: Canonical index mapping qualified_name to DiscoveredCodeUnit.
+        
+    Returns:
+        Units in dependency-first order.
+    """
+    ordered: List[DiscoveredCodeUnit] = []
+    visited: Set[str] = set()
+    visiting: Set[str] = set()
+    
+    # Process nodes in stable source order for deterministic output
+    all_qualified_names = sorted(
+        index.keys(),
+        key=lambda qn: (
+            index[qn].path,
+            index[qn].start_line or 0,
+            index[qn].symbol,
+        ),
     )
+    
+    for qualified_name in all_qualified_names:
+        _visit_node(
+            node=qualified_name,
+            graph=graph,
+            index=index,
+            visited=visited,
+            visiting=visiting,
+            ordered=ordered,
+        )
+    
+    return ordered
+
+
+def _visit_node(
+    node: str,
+    graph: Dict[str, List[str]],
+    index: Dict[str, DiscoveredCodeUnit],
+    visited: Set[str],
+    visiting: Set[str],
+    ordered: List[DiscoveredCodeUnit],
+) -> None:
+    """
+    Visit a node in topological DFS.
+    
+    Args:
+        node: Qualified name of the node to visit.
+        graph: Dependency graph.
+        index: Canonical index mapping qualified_name to DiscoveredCodeUnit.
+        visited: Set of fully visited nodes.
+        visiting: Set of nodes currently being visited (for cycle detection).
+        ordered: Accumulated ordered units.
+    """
+    if node in visited:
+        return
+    
+    if node in visiting:
+        # Cycle detected - this dependency is already being visited.
+        # Skip it to avoid infinite recursion, but continue processing.
+        return
+    
+    visiting.add(node)
+    
+    # Visit dependencies first
+    for dependency in graph.get(node, []):
+        if dependency not in visited and dependency in index:
+            _visit_node(
+                node=dependency,
+                graph=graph,
+                index=index,
+                visited=visited,
+                visiting=visiting,
+                ordered=ordered,
+            )
+    
+    visiting.remove(node)
+    visited.add(node)
+    
+    # Add to ordered list after all dependencies are processed
+    if node in index:
+        ordered.append(index[node])

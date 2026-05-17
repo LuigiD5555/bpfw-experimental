@@ -32,7 +32,8 @@ class DiscoveredCodeUnit:
     signature: Optional[str] = None
     interface_inputs: List[Dict[str, Any]] = field(default_factory=list)
     interface_output: Optional[Dict[str, Any]] = None
-    called_symbols: List[str] = field(default_factory=list)
+    calls: List[Dict[str, Any]] = field(default_factory=list)
+    """Structured call references extracted from AST. Each dict has 'context' and 'name' keys."""
 
 
 @dataclass(frozen=True)

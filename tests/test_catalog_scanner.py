@@ -112,7 +112,7 @@ def test_scanner_discovers_nested_code_units_child_before_parent(tmp_path: Path)
             3,
             6,
             [],
-            ["Service.method.nested_in_method.nested_deeper"],
+            ["src.demo.Service.method.nested_in_method.nested_deeper"],
         ),
         (
             "Service.method",
@@ -120,7 +120,7 @@ def test_scanner_discovers_nested_code_units_child_before_parent(tmp_path: Path)
             2,
             7,
             [],
-            ["Service.method.nested_in_method"],
+            ["src.demo.Service.method.nested_in_method"],
         ),
         (
             "Service.InnerClass.inner_method",
@@ -135,7 +135,7 @@ def test_scanner_discovers_nested_code_units_child_before_parent(tmp_path: Path)
             "nested_class",
             9,
             11,
-            ["Service.InnerClass.inner_method"],
+            ["src.demo.Service.InnerClass.inner_method"],
             [],
         ),
         (
@@ -143,8 +143,8 @@ def test_scanner_discovers_nested_code_units_child_before_parent(tmp_path: Path)
             "class",
             1,
             11,
-            ["Service.method"],
-            ["Service.InnerClass"],
+            ["src.demo.Service.method"],
+            ["src.demo.Service.InnerClass"],
         ),
         (
             "top_function.nested_function",
@@ -160,6 +160,6 @@ def test_scanner_discovers_nested_code_units_child_before_parent(tmp_path: Path)
             14,
             17,
             [],
-            ["top_function.nested_function"],
+            ["src.demo.top_function.nested_function"],
         ),
     ]
