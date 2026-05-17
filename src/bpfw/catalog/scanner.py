@@ -173,6 +173,14 @@ def _extract_code_units(
         if isinstance(node, ast.ClassDef):
             if node.name.startswith("_"):
                 continue
+            
+            # Filter out data classes (classes with no instance methods)
+            if _is_data_class(node):
+                continue
+            
+            # Filter out protocols and abstract classes
+            if _is_protocol_or_abstract_class(node):
+                continue
 
             symbol_parts = parent_symbols + [node.name]
             unit = _extract_class_unit(
@@ -198,13 +206,30 @@ def _extract_code_units(
             continue
 
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            # Filter out private methods (except dunder methods)
             if node.name.startswith("_") and not (
                 node.name.startswith("__") and node.name.endswith("__")
             ):
                 continue
+            
+            # Filter out nested functions in decorators
+            if _is_decorator_nested_function(node, parent_kind, parent_symbols):
+                continue
+            
+            # Filter out tiny nested functions (< 5 lines of code)
+            if parent_kind == "function" and _is_tiny_nested_function(node):
+                continue
+            
+            # Filter out trivial methods (getters/setters with minimal logic)
+            if parent_kind == "class" and _is_trivial_method(node):
+                continue
+            
+            # Filter out property-like methods in schema.py
+            if _is_schema_wrapper_function(node, module):
+                continue
 
             symbol_parts = parent_symbols + [node.name]
-            if _should_discover_function(node=node, parent_kind=parent_kind):
+            if _should_discover_function(node=node, parent_kind=parent_kind, module=module):
                 unit = _extract_function_unit(
                     node=node,
                     file_path=file_path,
@@ -232,6 +257,64 @@ def _extract_code_units(
     return discovered_units
 
 
+def _is_trivial_method(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """
+    Check if a method is trivial (getter/setter with minimal logic).
+    
+    A method is considered trivial if:
+    - It has less than 3 lines of actual code (excluding decorators and docstring)
+    - It doesn't contain complex logic (loops, conditions, try/except)
+    
+    Args:
+        node: AST FunctionDef or AsyncFunctionDef node.
+        
+    Returns:
+        True if the method is trivial, False otherwise.
+    """
+    # Count actual code lines (excluding decorators and docstring)
+    code_lines = 0
+    for stmt in node.body:
+        # Skip docstring if it's the first statement
+        if code_lines == 0 and isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant):
+            if isinstance(stmt.value.value, str):
+                continue
+        
+        code_lines += 1
+        
+        # Check for complex structures
+        if isinstance(stmt, (ast.For, ast.While, ast.If, ast.Try, ast.With)):
+            return False  # Has complex control flow
+    
+    # Consider trivial if less than 3 lines of code
+    return code_lines < 3
+
+
+def _is_tiny_nested_function(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """
+    Check if a nested function is too small to be a separate block.
+    
+    A nested function is considered tiny if it has less than 5 lines of code.
+    
+    Args:
+        node: AST FunctionDef or AsyncFunctionDef node.
+        
+    Returns:
+        True if the nested function is tiny, False otherwise.
+    """
+    # Count total lines in body
+    total_lines = 0
+    for stmt in node.body:
+        # Skip docstring if it's the first statement
+        if total_lines == 0 and isinstance(stmt, ast.Expr) and isinstance(stmt.value, ast.Constant):
+            if isinstance(stmt.value.value, str):
+                continue
+        
+        total_lines += 1
+    
+    # Consider tiny if less than 5 lines
+    return total_lines < 5
+
+
 def _class_symbol_type(parent_symbols: List[str]) -> str:
     """Return the catalog symbol type for a class node."""
 
@@ -253,11 +336,28 @@ def _function_symbol_type(parent_symbols: List[str], parent_kind: str | None) ->
 def _should_discover_function(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
     parent_kind: str | None,
+    module: str,
 ) -> bool:
-    """Return whether a function-like node should become a block."""
-
+    """
+    Return whether a function-like node should become a block.
+    
+    Filters out:
+    - All dunder methods in classes (__init__, __str__, etc.)
+    - Trivial getters/setters (less than 3 lines of actual code)
+    - Very small nested functions (less than 5 lines)
+    """
+    # Exclude all dunder methods in classes
     if parent_kind == "class" and node.name.startswith("__") and node.name.endswith("__"):
         return False
+    
+    # Exclude trivial getters/setters in classes (less than 3 lines of actual code)
+    if parent_kind == "class" and _is_trivial_method(node):
+        return False
+    
+    # Exclude very small nested functions (less than 5 lines)
+    if parent_kind == "function" and _is_tiny_nested_function(node):
+        return False
+    
     return True
 
 
@@ -971,3 +1071,134 @@ def _build_defaults_map(
     # They're always required in different ways
 
     return defaults_map
+
+
+def _is_data_class(node: ast.ClassDef) -> bool:
+    """
+    Check if a class is a data class (no instance methods).
+    
+    A data class is a class that:
+    - Has no methods (except __init__ and __init_subclass__)
+    - Only has attributes/properties
+    - Is typically a simple data container
+    
+    Args:
+        node: AST ClassDef node.
+        
+    Returns:
+        True if it's a data class, False otherwise.
+    """
+    # Count instance methods (excluding __init__ and __init_subclass__)
+    instance_methods = 0
+    for stmt in node.body:
+        if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if stmt.name not in ("__init__", "__init_subclass__"):
+                # Check if it's an instance method (not @staticmethod or @classmethod)
+                is_static = any(
+                    isinstance(d, ast.Name) and d.id == "staticmethod"
+                    for d in stmt.decorator_list
+                )
+                is_class = any(
+                    isinstance(d, ast.Name) and d.id == "classmethod"
+                    for d in stmt.decorator_list
+                )
+                if not is_static and not is_class:
+                    instance_methods += 1
+    
+    # If no instance methods, it's a data class
+    return instance_methods == 0
+
+
+def _is_protocol_or_abstract_class(node: ast.ClassDef) -> bool:
+    """
+    Check if a class is a protocol or abstract class.
+    
+    Args:
+        node: AST ClassDef node.
+        
+    Returns:
+        True if it's a protocol or abstract class, False otherwise.
+    """
+    # Check for @protocol decorator
+    for decorator in node.decorator_list:
+        if isinstance(decorator, ast.Name) and decorator.id == "protocol":
+            return True
+        # Handle typing.Protocol
+        if isinstance(decorator, ast.Attribute) and decorator.attr == "Protocol":
+            return True
+    
+    # Check for ABC base classes
+    for base in node.bases:
+        if isinstance(base, ast.Name):
+            if base.id in ("ABC", "ABCMeta"):
+                return True
+        elif isinstance(base, ast.Attribute):
+            # Check for abc.ABC, typing.Protocol, etc.
+            attr_name = _get_attribute_name(base)
+            if any(x in attr_name for x in ("ABC", "Protocol")):
+                return True
+    
+    return False
+
+
+def _is_decorator_nested_function(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+    parent_kind: str | None,
+    parent_symbols: List[str],
+) -> bool:
+    """
+    Check if this is a nested function inside a decorator factory.
+    
+    Args:
+        node: AST FunctionDef or AsyncFunctionDef node.
+        parent_kind: Kind of parent node.
+        parent_symbols: List of parent symbol names.
+        
+    Returns:
+        True if it's a decorator nested function, False otherwise.
+    """
+    if parent_kind != "function":
+        return False
+    
+    # Check if parent function name suggests it's a decorator factory
+    if parent_symbols:
+        parent_name = parent_symbols[-1]
+        return "decorator" in parent_name.lower()
+    
+    return False
+
+
+def _is_schema_wrapper_function(
+    node: ast.FunctionDef | ast.AsyncFunctionDef,
+    module: str,
+) -> bool:
+    """
+    Check if a function is a schema.py wrapper function.
+    
+    These are trivial getter/setter functions that just access
+    dictionary keys and don't contain business logic.
+    
+    Args:
+        node: AST FunctionDef or AsyncFunctionDef node.
+        module: Module name.
+        
+    Returns:
+        True if it's a schema wrapper, False otherwise.
+    """
+    # Only check schema.py
+    if module != "src.bpfw.catalog.schema":
+        return False
+    
+    # If function body is just a return with .get() or dict access
+    if len(node.body) == 1 and isinstance(node.body[0], ast.Return):
+        return_expr = node.body[0].value
+        # Check if it's a .get() call or direct dict access
+        if isinstance(return_expr, ast.Call):
+            if isinstance(return_expr.func, ast.Attribute):
+                if return_expr.func.attr == "get":
+                    return True
+        elif isinstance(return_expr, ast.Attribute):
+            # Direct attribute access like blueprint_data.blocks
+            return True
+    
+    return False
