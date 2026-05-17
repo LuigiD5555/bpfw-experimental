@@ -4,21 +4,12 @@ from collections.abc import Callable
 from typing import Any, Dict, List
 
 from bpfw.catalog.purpose_suggestions import PurposeSuggestion
-from bpfw.catalog.schema import set_purpose, set_status
 from bpfw.integrations.inspector.base import InspectIssue
 from bpfw.integrations.shared.cli_runtime import is_quit_command, normalize_command
 
 InputFunc = Callable[[str], str]
 DOMAIN_SUGGESTION_KEYS = ("q", "w", "e", "r", "t")
 CUSTOM_DOMAIN_KEY = "y"
-
-
-def _normalize_authority_text(value: str) -> str:
-    """Return user-authored authority text in canonical lowercase form."""
-
-    return " ".join(value.strip().lower().split())
-
-
 class InspectorAction:
     """Define action names produced by inspector commands."""
 
@@ -50,8 +41,9 @@ def apply_inspector_command(
         suggestion_index = int(stripped_command) - 1
         if suggestion_index < len(purpose_suggestions):
             suggestion_text = purpose_suggestions[suggestion_index].text.strip()
-            if _normalize_authority_text(suggestion_text) not in {"", "-", "write custom purpose", "write custom purpose..."}:
-                set_purpose(issue.block, _normalize_authority_text(suggestion_text))
+            normalized_text = " ".join(suggestion_text.strip().lower().split())
+            if normalized_text not in {"", "-", "write custom purpose", "write custom purpose..."}:
+                issue.block["purpose"] = normalized_text
         return InspectorAction.STAY
 
     if stripped_command.startswith("6"):
@@ -59,7 +51,7 @@ def apply_inspector_command(
         if not value:
             value = input_func("purpose: ").strip()
         if value:
-            set_purpose(issue.block, _normalize_authority_text(value))
+            issue.block["purpose"] = " ".join(value.strip().lower().split())
         return InspectorAction.STAY
 
     # Check domain keys before other single-key commands.
@@ -68,17 +60,17 @@ def apply_inspector_command(
         if domain_index < len(domain_suggestions):
             domain_text = domain_suggestions[domain_index].strip()
             if domain_text not in {"", "-", "custom"}:
-                issue.block["domain"] = _normalize_authority_text(domain_text)
+                issue.block["domain"] = " ".join(domain_text.strip().lower().split())
         return InspectorAction.STAY
 
     # Then check status keys (z, x, c, v)
     if stripped_command in {"z", "x", "c", "v"}:
-        set_status(issue.block, {
+        issue.block["status"] = {
             "z": "active",
             "x": "experimental",
             "c": "legacy",
             "v": "deprecated",
-        }[stripped_command])
+        }[stripped_command]
         return InspectorAction.STAY
 
     # Custom domain input.
@@ -87,7 +79,7 @@ def apply_inspector_command(
         if not value:
             value = input_func("domain: ").strip()
         if value:
-            issue.block["domain"] = _normalize_authority_text(value)
+            issue.block["domain"] = " ".join(value.strip().lower().split())
         return InspectorAction.STAY
 
     if stripped_command.startswith("n"):

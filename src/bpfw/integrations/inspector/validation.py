@@ -2,8 +2,6 @@
 
 from typing import Any, Dict, List
 
-from bpfw.catalog.schema import get_purpose, get_status
-
 REQUIRED_SAVE_FIELDS = ("purpose", "name", "domain", "status")
 
 
@@ -13,10 +11,10 @@ def validate_required_fields(
     """Return list of missing required field names."""
 
     values = {
-        "purpose": get_purpose(block),
+        "purpose": block.get("purpose"),
         "name": block.get("name"),
         "domain": block.get("domain"),
-        "status": get_status(block),
+        "status": block.get("status"),
     }
 
     missing: List[str] = []

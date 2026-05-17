@@ -967,9 +967,10 @@ def test_suggest_domains_previous_origin_slot_ignores_other_modules() -> None:
 def test_inspector_help_explains_suggestion_sources() -> None:
     """Ensure inspector help explains purpose and domain suggestion slots."""
 
-    from bpfw.integrations.inspector.session import _render_help_block
+    from bpfw.integrations.inspector.controller import render_help_block
+    from bpfw.integrations.inspector.view_modes import resolve_inspector_view_mode_from_flag
 
-    rendered = "\n".join(_render_help_block())
+    rendered = "\n".join(render_help_block(resolve_inspector_view_mode_from_flag(show_all=False)))
 
     assert "Purpose suggestions" in rendered
     assert "[1] Existing purpose from blueprint matches this block." in rendered
@@ -988,9 +989,10 @@ def test_inspector_help_explains_suggestion_sources() -> None:
 def test_compact_inspector_help_omits_full_mode_details() -> None:
     """Ensure compact inspector help hides full-mode explanations."""
 
-    from bpfw.integrations.inspector.session import _render_help_block
+    from bpfw.integrations.inspector.controller import render_help_block
+    from bpfw.integrations.inspector.view_modes import resolve_inspector_view_mode_from_flag
 
-    rendered = "\n".join(_render_help_block(show_all=False))
+    rendered = "\n".join(render_help_block(resolve_inspector_view_mode_from_flag(show_all=False)))
 
     assert "Interface modes" not in rendered
     assert "Why '-' appears" not in rendered
@@ -1003,9 +1005,10 @@ def test_compact_inspector_help_omits_full_mode_details() -> None:
 def test_full_inspector_help_keeps_full_mode_details() -> None:
     """Ensure full inspector help keeps full-mode explanations."""
 
-    from bpfw.integrations.inspector.session import _render_help_block
+    from bpfw.integrations.inspector.controller import render_help_block
+    from bpfw.integrations.inspector.view_modes import resolve_inspector_view_mode_from_flag
 
-    rendered = "\n".join(_render_help_block(show_all=True))
+    rendered = "\n".join(render_help_block(resolve_inspector_view_mode_from_flag(show_all=True)))
 
     assert "Interface modes" in rendered
     assert "Why '-' appears" in rendered

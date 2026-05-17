@@ -4,7 +4,6 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from bpfw.catalog.schema import get_blocks, get_code
 from bpfw.integrations.inspector.base import InspectIssue, clean_string, load_inspect_session
 from bpfw.integrations.inspector.session import run_text_inspector_session
 
@@ -61,7 +60,7 @@ def run_inspector_target(
     print_func("")
 
     block = session.issues[0].block
-    code_data = get_code(block)
+    code_data = block.get("code", {})
     if isinstance(code_data, dict):
         code_path = clean_string(code_data.get("path")) or "unknown"
         code_symbol = clean_string(code_data.get("symbol")) or "unknown"
@@ -110,7 +109,7 @@ def _find_block_in_blueprint(
         The matching block dictionary, or None when no block matches.
     """
 
-    blocks = get_blocks(blueprint_data)
+    blocks = blueprint_data.get("blocks", [])
 
     for block in blocks:
         if not isinstance(block, dict):

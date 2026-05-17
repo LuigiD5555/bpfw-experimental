@@ -6,7 +6,6 @@ from typing import List
 from bpfw.catalog.domain_suggestions import resolve_domain_origin_key
 from bpfw.catalog.learning import record_domain_for_origin, record_domain_value, record_purpose_phrase
 from bpfw.catalog.purpose_suggestions import PurposeSuggestion
-from bpfw.catalog.schema import get_blocks, get_purpose, set_blocks
 from bpfw.core.errors import BlueprintLockedError
 from bpfw.integrations.inspector.base import InspectIssue, InspectLoadResult, save_blueprint
 from bpfw.integrations.inspector.commands import (
@@ -158,12 +157,12 @@ def save_issue(session: InspectLoadResult, issue: InspectIssue) -> bool:
         return False
 
     if issue.add_on_accept:
-        blocks = get_blocks(session.blueprint_data)
+        blocks = session.blueprint_data.get("blocks", [])
         if not isinstance(blocks, list):
             return False
         if issue.block not in blocks:
             blocks.append(issue.block)
-        set_blocks(session.blueprint_data, blocks)
+        session.blueprint_data["blocks"] = blocks
         issue.add_on_accept = False
 
     save_blueprint(
@@ -181,7 +180,7 @@ def record_learning_feedback(
 ) -> None:
     """Record accepted purpose and domain values for incremental learning."""
 
-    purpose_value = get_purpose(issue.block)
+    purpose_value = issue.block.get("purpose")
     if isinstance(purpose_value, str) and purpose_value.strip():
         normalized_purpose = " ".join(purpose_value.strip().split()).lower()
         suggested_purposes = {

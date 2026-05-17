@@ -5,7 +5,6 @@ from pathlib import Path
 
 from bpfw.catalog.domain_suggestions import suggest_domains
 from bpfw.catalog.models import AUTHORITY_STATE_EMPTY
-from bpfw.catalog.schema import get_blocks
 from bpfw.integrations.inspector.base import (
     ISSUE_NEW_DETECTED,
     InspectLoadResult,
@@ -17,11 +16,6 @@ from bpfw.integrations.inspector.base import (
 from bpfw.integrations.inspector.commands import apply_inspector_command
 from bpfw.integrations.inspector.controller import (
     InspectorController,
-    compute_help_width,
-    compute_notification_width,
-    render_help_block,
-    render_missing_fields_notification,
-    render_unknown_command_notification,
 )
 from bpfw.integrations.inspector.input_adapter import InspectorInputReader
 from bpfw.integrations.inspector.screen import (
@@ -29,7 +23,7 @@ from bpfw.integrations.inspector.screen import (
     render_inspector_screen,
 )
 from bpfw.integrations.inspector.state import InspectorViewState
-from bpfw.integrations.inspector.view_modes import resolve_inspector_view_mode, resolve_inspector_view_mode_from_flag
+from bpfw.integrations.inspector.view_modes import resolve_inspector_view_mode
 from bpfw.integrations.shared.cli_runtime import normalize_command
 from bpfw.catalog.purpose_suggestions import suggest_purposes
 from bpfw.core.profiling import RuntimeProfiler
@@ -113,7 +107,7 @@ def run_text_inspector_session(
             project_root=session.project_root,
             block=block,
         )
-        project_blocks = get_blocks(session.blueprint_data)
+        project_blocks = session.blueprint_data.get("blocks", [])
         purpose_suggestions = suggest_purposes(
             block,
             project_blocks=project_blocks,
@@ -173,34 +167,3 @@ def run_text_inspector_session(
     print_func("  bpfw verify")
     print_func("  bpfw lock")
     return 0
-
-
-def _render_missing_fields_notification(missing_fields: list[str]) -> list[str]:
-    """Render notification for missing required fields."""
-
-    return render_missing_fields_notification(missing_fields)
-
-
-def _render_unknown_command_notification() -> list[str]:
-    """Render notification for an unknown inspector command."""
-
-    return render_unknown_command_notification()
-
-
-def _render_help_block(show_all: bool = False) -> list[str]:
-    """Render inspector help for field meaning and command options."""
-
-    view_mode = resolve_inspector_view_mode_from_flag(show_all=show_all)
-    return render_help_block(view_mode=view_mode)
-
-
-def _compute_help_width() -> int:
-    """Compute compact dynamic width for the help panel."""
-
-    return compute_help_width()
-
-
-def _compute_notification_width() -> int:
-    """Compute standard inner width for standalone notification panels."""
-
-    return compute_notification_width()

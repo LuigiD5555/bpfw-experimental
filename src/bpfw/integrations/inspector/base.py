@@ -12,15 +12,6 @@ from bpfw.catalog.models import (
     DiscoveredCodeUnit,
 )
 from bpfw.catalog.models import ScanResult
-from bpfw.catalog.schema import (
-    get_blocks,
-    get_code,
-    get_kind,
-    get_purpose,
-    get_status,
-    get_uniqueness,
-    set_blocks,
-)
 from bpfw.catalog.verify import run_verify, scan_project_from_blueprint
 from bpfw.core.errors import BlueprintLockedError
 from bpfw.reports.finding import Finding
@@ -209,13 +200,13 @@ def load_inspect_session(
 def _responsibility_key(block: Dict[str, Any]) -> tuple[str, str, str] | None:
     """Return the path, symbol, and kind key for a block."""
 
-    location = get_code(block)
+    location = block.get("code", {})
     if not isinstance(location, dict):
         return None
 
     path = clean_string(location.get("path"))
     symbol = clean_string(location.get("symbol"))
-    symbol_type = clean_string(get_kind(location))
+    symbol_type = clean_string(location.get("kind"))
     if path is None or symbol is None or symbol_type is None:
         return None
     return path, symbol, symbol_type
@@ -295,7 +286,7 @@ def build_inspect_issues(
         for block in incomplete
     ]
 
-    blocks = get_blocks(blueprint_data)
+    blocks = blueprint_data.get("blocks", [])
     if not isinstance(blocks, list):
         blocks = []
 
@@ -326,7 +317,7 @@ def get_incomplete_blocks(
 ) -> List[Dict[str, Any]]:
     """Return blocks that are missing required human fields."""
 
-    blocks = get_blocks(blueprint_data)
+    blocks = blueprint_data.get("blocks", [])
     if not isinstance(blocks, list):
         return []
 
@@ -335,10 +326,10 @@ def get_incomplete_blocks(
         if not isinstance(block, dict):
             continue
         values = {
-            "purpose": get_purpose(block),
+            "purpose": block.get("purpose"),
             "name": block.get("name"),
             "domain": block.get("domain"),
-            "status": get_status(block),
+            "status": block.get("status"),
         }
         for field_name in REQUIRED_HUMAN_FIELDS:
             value = values.get(field_name)
@@ -377,14 +368,14 @@ def suggest_domain(block: Dict[str, Any]) -> str | None:
 def collect_existing_purposes(blueprint_data: Dict[str, Any]) -> tuple[str, ...]:
     """Collect existing declared purposes from blueprint blocks."""
 
-    blocks = get_blocks(blueprint_data)
+    blocks = blueprint_data.get("blocks", [])
     if not isinstance(blocks, list):
         return ()
     values: list[str] = []
     for block in blocks:
         if not isinstance(block, dict):
             continue
-        purpose_value = clean_string(get_purpose(block))
+        purpose_value = clean_string(block.get("purpose"))
         if purpose_value is not None and purpose_value not in values:
             values.append(purpose_value)
     return tuple(values)
@@ -403,7 +394,7 @@ def apply_suggestions(block: Dict[str, Any]) -> None:
         domain = suggest_domain(block)
         if domain is not None:
             block["domain"] = domain
-    if clean_string(get_status(block)) is None:
+    if clean_string(block.get("status")) is None:
         block["status"] = suggest_lifecycle(block)
 
 
@@ -417,12 +408,12 @@ def backfill_detected_docstring_from_source(project_root: Path, block: Dict[str,
     if clean_string(detected.get("docstring")) is not None:
         return
 
-    location = get_code(block)
+    location = block.get("code", {})
     if not isinstance(location, dict):
         return
     relative_path = clean_string(location.get("path"))
     symbol = clean_string(location.get("symbol"))
-    symbol_type = clean_string(get_kind(location))
+    symbol_type = clean_string(location.get("kind"))
     if relative_path is None or symbol is None or symbol_type is None:
         return
 
@@ -455,7 +446,7 @@ def build_code_lines(
 ) -> list[str]:
     """Build numbered source lines for the block code location."""
 
-    location = get_code(block)
+    location = block.get("code", {})
     if not isinstance(location, dict):
         return ["  -  No source location detected."]
 
@@ -500,7 +491,7 @@ def _resolve_snippet_start_line(
     """Return decorator-aware block start line when source node can be resolved."""
 
     symbol = clean_string(location.get("symbol"))
-    symbol_type = clean_string(get_kind(location))
+    symbol_type = clean_string(location.get("kind"))
     if symbol is None or symbol_type is None:
         return fallback_start_line
 
@@ -602,10 +593,10 @@ def build_authority_lines(block: Dict[str, Any]) -> list[str]:
 
     return [
         f"  id              {display_value(block.get('id'))}",
-        f"  purpose         {display_value(get_purpose(block))}",
+        f"  purpose         {display_value(block.get("purpose"))}",
         f"  name            {display_value(block.get('name'))}",
         f"  domain          {display_value(block.get('domain'))}",
-        f"  status          {display_value(get_status(block))}",
+        f"  status          {display_value(block.get("status"))}",
         f"  observations    {display_value(block.get('notes'))}",
     ]
 
@@ -642,14 +633,14 @@ def build_nested_snippet_lines(block: Dict[str, Any]) -> list[str]:
 def build_hierarchy_lines(block: Dict[str, Any]) -> list[str]:
     """Build contained-to-container hierarchy lines for inspector display."""
 
-    location = get_code(block)
+    location = block.get("code", {})
     if not isinstance(location, dict):
         return ["  -  No hierarchy detected."]
 
     path_value = clean_string(location.get("path"))
     module_value = clean_string(location.get("module"))
     symbol_value = clean_string(location.get("symbol"))
-    symbol_type_value = clean_string(get_kind(location)) or "symbol"
+    symbol_type_value = clean_string(location.get("kind")) or "symbol"
 
     hierarchy_lines: list[str] = []
 
@@ -681,7 +672,7 @@ def build_hierarchy_lines(block: Dict[str, Any]) -> list[str]:
 def apply_automatic_authority_fields(blueprint_data: Dict[str, Any]) -> None:
     """Derive authority fields that do not require interactive review."""
 
-    blocks = get_blocks(blueprint_data)
+    blocks = blueprint_data.get("blocks", [])
     if not isinstance(blocks, list):
         return
 
@@ -689,11 +680,11 @@ def apply_automatic_authority_fields(blueprint_data: Dict[str, Any]) -> None:
     for block in blocks:
         if not isinstance(block, dict):
             continue
-        purpose = clean_string(get_purpose(block))
+        purpose = clean_string(block.get("purpose"))
         if purpose is None:
             continue
         group = to_snake_case(purpose)
-        uniqueness = get_uniqueness(block)
+        uniqueness = block.get("uniqueness", {})
         if not uniqueness:
             uniqueness = block.setdefault("uniqueness", {})
         if uniqueness.get("group") is None:
@@ -701,11 +692,11 @@ def apply_automatic_authority_fields(blueprint_data: Dict[str, Any]) -> None:
         grouped_blocks.setdefault(group, []).append(block)
 
     for grouped in grouped_blocks.values():
-        active = [item for item in grouped if get_status(item) == "active"]
+        active = [item for item in grouped if item.get("status") == "active"]
         if len(active) > 1:
             active_ids = [str(item.get("id")) for item in active if item.get("id")]
             for item in active:
-                uniqueness = get_uniqueness(item)
+                uniqueness = item.get("uniqueness", {})
                 if not uniqueness:
                     uniqueness = item.setdefault("uniqueness", {})
                 duplicates = uniqueness.setdefault("suspected_duplicates", [])
@@ -713,7 +704,7 @@ def apply_automatic_authority_fields(blueprint_data: Dict[str, Any]) -> None:
                     if identifier != str(item.get("id")) and identifier not in duplicates:
                         duplicates.append(identifier)
 
-    set_blocks(blueprint_data, [block for block in blocks if isinstance(block, dict)])
+    blueprint_data["blocks"] = [block for block in blocks if isinstance(block, dict)]
 
 
 def save_blueprint(

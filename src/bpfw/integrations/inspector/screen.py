@@ -7,7 +7,6 @@ import shutil
 import textwrap
 
 from bpfw.catalog.purpose_suggestions import PurposeSuggestion
-from bpfw.catalog.schema import get_code, get_purpose, get_status
 from bpfw.integrations.inspector.base import (
     build_hierarchy_lines,
     build_nested_snippet_lines,
@@ -56,7 +55,7 @@ def render_inspector_screen(
     refresh_screen()
     print_func("")
     header_meta = f"{index + 1}/{total} {issue_type} "
-    file_path = get_code(block).get("path", "")
+    file_path = block.get("code", {}).get("path", "")
     snippet_lines = build_code_lines(project_root, block)[:26]
     nested_lines = build_nested_snippet_lines(block)
     hierarchy_lines = build_hierarchy_lines(block)
@@ -71,14 +70,14 @@ def render_inspector_screen(
 
     authority_lines = [
         "",
-        f"  PURPOSE    {display_value(get_purpose(block))}",
+        f"  PURPOSE    {display_value(block.get('purpose'))}",
         f"  DOMAIN     {display_value(block.get('domain'))}",
         f"  NAME       {display_value(block.get('name'))}",
-        f"  STATUS     {display_value(get_status(block))}",
+        f"  STATUS     {display_value(block.get('status'))}",
         "",
     ]
 
-    current_lifecycle = clean_string(get_status(block)) or ""
+    current_lifecycle = clean_string(block.get("status")) or ""
     lifecycle_lines = []
     for lifecycle_value, lifecycle_label in (
         ("active", " [z] active"),
