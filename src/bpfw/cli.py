@@ -1,11 +1,14 @@
 """Command line interface for Blueprint Framework MVP Catalog Mode."""
 
 import argparse
+import getpass
 import json
+import subprocess
 from pathlib import Path
 
 from bpfw.authority import AuthorityRepository
 from bpfw.authority.reshard import ReshardCoordinator, ReshardMode
+from bpfw.authority.shard import AuthorityShard
 from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
 from bpfw.catalog.verify import run_verify
 from bpfw.catalog.writer import run_init
@@ -235,6 +238,131 @@ def _print_human(payload: dict) -> None:
     print(payload.get("status", "").upper())
 
 
+def _migrate_root_blocks_to_default_shard(project_root: Path) -> dict[str, int]:
+    """Move legacy root-level blocks into shard storage for sharded authority."""
+    def _declaration_key(block: dict) -> str | None:
+        code_data = block.get("code")
+        if not isinstance(code_data, dict):
+            return None
+        code_path = code_data.get("path")
+        code_symbol = code_data.get("symbol")
+        code_kind = code_data.get("kind")
+        if not all(isinstance(value, str) and value.strip() for value in (code_path, code_symbol, code_kind)):
+            return None
+        return f"{code_path}:{code_symbol}:{code_kind}"
+
+    try:
+        import yaml
+    except ImportError as error:
+        raise ImportError("PyYAML is required to migrate root blueprint blocks.") from error
+
+    blueprint_path = project_root / "bpfw" / "blueprint.yaml"
+    if not blueprint_path.exists():
+        return {"migrated": 0, "skipped": 0, "shard_total": 0}
+
+    data = yaml.safe_load(blueprint_path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        return {"migrated": 0, "skipped": 0, "shard_total": 0}
+
+    authority = data.get("authority")
+    if not isinstance(authority, dict) or authority.get("layout") != "sharded":
+        return {"migrated": 0, "skipped": 0, "shard_total": 0}
+
+    root_blocks = data.get("blocks")
+    if not isinstance(root_blocks, list) or not root_blocks:
+        return {"migrated": 0, "skipped": 0, "shard_total": 0}
+
+    includes = data.get("includes")
+    include_values = includes if isinstance(includes, list) else []
+    default_shard_value = authority.get("default_shard")
+    if isinstance(default_shard_value, str) and default_shard_value.strip():
+        default_shard_path = Path(default_shard_value)
+    elif include_values:
+        default_shard_path = Path(str(include_values[0]))
+    else:
+        default_shard_path = Path("bpfw/blocks/core.yaml")
+
+    try:
+        target_shard = AuthorityShard.load(project_root=project_root, shard_path=default_shard_path)
+    except FileNotFoundError:
+        target_shard = AuthorityShard(path=default_shard_path, blocks=[])
+
+    shard_blocks = target_shard.get_blocks()
+    existing_block_ids = {
+        str(block_id)
+        for block in shard_blocks
+        if isinstance(block, dict)
+        for block_id in [block.get("id")]
+        if block_id
+    }
+    existing_declaration_keys = {
+        declaration_key
+        for block in shard_blocks
+        if isinstance(block, dict)
+        for declaration_key in [_declaration_key(block)]
+        if declaration_key is not None
+    }
+
+    migrated_count = 0
+    skipped_count = 0
+    for root_block in root_blocks:
+        if not isinstance(root_block, dict):
+            skipped_count += 1
+            continue
+        root_block_id = root_block.get("id")
+        if isinstance(root_block_id, str) and root_block_id in existing_block_ids:
+            skipped_count += 1
+            continue
+        root_declaration_key = _declaration_key(root_block)
+        if root_declaration_key is not None and root_declaration_key in existing_declaration_keys:
+            skipped_count += 1
+            continue
+        shard_blocks.append(root_block)
+        if isinstance(root_block_id, str):
+            existing_block_ids.add(root_block_id)
+        if root_declaration_key is not None:
+            existing_declaration_keys.add(root_declaration_key)
+        migrated_count += 1
+
+    target_shard.set_blocks(shard_blocks)
+    target_shard.sort_blocks()
+    target_shard.save(project_root=project_root)
+
+    if not isinstance(includes, list):
+        data["includes"] = [str(default_shard_path)]
+    elif str(default_shard_path) not in includes:
+        includes.append(str(default_shard_path))
+
+    data.pop("blocks", None)
+    blueprint_path.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding="utf-8")
+    return {"migrated": migrated_count, "skipped": skipped_count, "shard_total": len(shard_blocks)}
+
+
+def _attempt_permission_repair(project_root: Path, error: PermissionError) -> bool:
+    """Try to repair authority file ownership/permissions via sudo."""
+    target_path = Path(error.filename) if error.filename else (project_root / "bpfw" / "blueprint.yaml")
+    blocks_path = project_root / "bpfw" / "blocks"
+    current_user = getpass.getuser()
+
+    print("Reshard requires elevated permission repair.")
+    print("Authorizing sudo will continue automatically after repair.")
+
+    commands = [
+        ["sudo", "-v"],
+        ["sudo", "chown", f"{current_user}:{current_user}", str(target_path)],
+        ["sudo", "chmod", "u+rw", str(target_path)],
+    ]
+
+    if blocks_path.exists():
+        commands.append(["sudo", "chown", "-R", f"{current_user}:{current_user}", str(blocks_path)])
+        commands.append(["sudo", "chmod", "-R", "u+rw", str(blocks_path)])
+
+    for command in commands:
+        completed = subprocess.run(command, cwd=project_root, check=False)
+        if completed.returncode != 0:
+            return False
+    return True
+
 
 def main() -> int:
     """Entry point for BPFW MVP CLI."""
@@ -278,58 +406,76 @@ def main() -> int:
     # reshard is handled as one-shot synchronization and repair
     if normalized_command == "reshard":
         project_root = Path(parsed_arguments.project_root).resolve()
-        try:
-            repository = AuthorityRepository(project_root=project_root)
-            document = repository.load()
-            coordinator = ReshardCoordinator(project_root=project_root)
-            plan = coordinator.build_sync_plan(document=document)
+        permission_repair_attempted = False
+        while True:
+            try:
+                migration_summary = _migrate_root_blocks_to_default_shard(project_root=project_root)
+                if migration_summary["migrated"] or migration_summary["skipped"]:
+                    print(
+                        "Migrated root-level blocks into shard storage: "
+                        f"{migration_summary['migrated']} moved, "
+                        f"{migration_summary['skipped']} skipped."
+                    )
+                repository = AuthorityRepository(project_root=project_root)
+                document = repository.load()
+                coordinator = ReshardCoordinator(project_root=project_root)
+                plan = coordinator.build_sync_plan(document=document)
 
-            if parsed_arguments.as_json:
-                plan_dict = {
-                    "strategy": plan.strategy,
-                    "mode": plan.mode,
-                    "moves": [
-                        {
-                            "block_id": move.block_id,
-                            "from_shard": str(move.from_shard),
-                            "to_shard": str(move.to_shard),
-                            "reason": move.reason,
-                        }
-                        for move in plan.moves
-                    ],
-                    "blocks_affected": plan.move_count(),
-                    "shards_affected": plan.affected_shard_count(),
-                }
-                print(json.dumps(plan_dict, indent=2))
+                if parsed_arguments.as_json:
+                    plan_dict = {
+                        "strategy": plan.strategy,
+                        "mode": plan.mode,
+                        "moves": [
+                            {
+                                "block_id": move.block_id,
+                                "from_shard": str(move.from_shard),
+                                "to_shard": str(move.to_shard),
+                                "reason": move.reason,
+                            }
+                            for move in plan.moves
+                        ],
+                        "blocks_affected": plan.move_count(),
+                        "shards_affected": plan.affected_shard_count(),
+                    }
+                    print(json.dumps(plan_dict, indent=2))
+                    return 0
+
+                if plan.mode == ReshardMode.NO_DRIFT:
+                    print("No shard drift detected. Blueprint structure is already synchronized.")
+                    return 0
+
+                if plan.requires_confirmation():
+                    print("Detected large structural migration.")
+                    print()
+                    print(f"Blocks affected: {plan.move_count()}")
+                    print(f"Shards affected: {plan.affected_shard_count()}")
+                    print()
+                    if input("Continue? [y/N] ").strip().lower() not in {"y", "yes"}:
+                        print("Reshard cancelled.")
+                        return 1
+
+                result = repository.save(document)
+
+                if plan.mode == ReshardMode.SMALL:
+                    return 0
+
+                print("Reshard synchronization complete.")
+                print(f"Moved {len(result.moved_blocks)} blocks across {plan.affected_shard_count()} shards.")
+                if result.updated_includes:
+                    print("Updated shard includes.")
                 return 0
-
-            if plan.mode == ReshardMode.NO_DRIFT:
-                print("No shard drift detected. Blueprint structure is already synchronized.")
-                return 0
-
-            if plan.requires_confirmation():
-                print("Detected large structural migration.")
-                print()
-                print(f"Blocks affected: {plan.move_count()}")
-                print(f"Shards affected: {plan.affected_shard_count()}")
-                print()
-                if input("Continue? [y/N] ").strip().lower() not in {"y", "yes"}:
-                    print("Reshard cancelled.")
+            except PermissionError as error:
+                if permission_repair_attempted:
+                    print(f"Reshard error: {error}")
                     return 1
-
-            result = repository.save(document)
-
-            if plan.mode == ReshardMode.SMALL:
-                return 0
-
-            print("Reshard synchronization complete.")
-            print(f"Moved {len(result.moved_blocks)} blocks across {plan.affected_shard_count()} shards.")
-            if result.updated_includes:
-                print("Updated shard includes.")
-            return 0
-        except Exception as error:
-            print(f"Reshard error: {error}")
-            return 1
+                permission_repair_attempted = True
+                if not _attempt_permission_repair(project_root=project_root, error=error):
+                    print(f"Reshard error: {error}")
+                    return 1
+                print("Permission repair completed. Retrying reshard...")
+            except Exception as error:
+                print(f"Reshard error: {error}")
+                return 1
 
     # lock is handled directly by the protection authority
     if normalized_command == "lock":
