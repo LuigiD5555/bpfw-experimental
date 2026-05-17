@@ -13,6 +13,17 @@ This repository contains only the framework code (no application/domain code fro
 - Inspector for interactive authority completion
 - Human-readable `verify` and `status` reports
 
+## Internal architecture
+
+BPFW catalog runtime uses a `Repository + Mapper + Domain Model` flow:
+
+- `BlueprintRepository`: single entry point for authority load/save
+- `BlueprintMapper`: conversion between raw YAML data and domain models
+- `BlueprintDocument` domain model (Pydantic): typed authority structure
+
+Catalog and integration flows consume repository/domain outputs instead of
+direct YAML-structure wrappers.
+
 ## Install (editable)
 
 ```bash
