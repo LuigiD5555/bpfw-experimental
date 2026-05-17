@@ -2,7 +2,7 @@
 import ast
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, TYPE_CHECKING
 
 from bpfw.catalog.access_control import ensure_blueprint_can_be_written
 from bpfw.catalog.loader import BlueprintLoader
@@ -22,10 +22,15 @@ from bpfw.catalog.schema import (
     set_blocks,
 )
 from bpfw.catalog.verify import run_verify, scan_project_from_blueprint
-from bpfw.catalog.writer import write_blueprint
 from bpfw.core.errors import BlueprintLockedError
 from bpfw.reports.finding import Finding
 from bpfw.shared.text import to_snake_case
+from bpfw.core.profiling import RuntimeProfiler
+
+if TYPE_CHECKING:
+    from bpfw.reports.verify_report import VerificationReport
+
+_profiler = RuntimeProfiler()
 
 ALLOWED_STATUSES = ("active", "experimental", "legacy", "deprecated")
 REQUIRED_HUMAN_FIELDS = ("purpose", "name", "domain", "status")
@@ -67,14 +72,40 @@ class InspectLoadResult:
         return self.exit_code != 0
 
 
-def load_inspect_session(project_root: Path) -> InspectLoadResult:
-    """Load blueprint data and return the inspect work set."""
+def load_inspect_session(
+    project_root: Path,
+    precomputed_scan_result: ScanResult | None = None,
+    precomputed_verify_report: "VerificationReport | None" = None,
+) -> InspectLoadResult:
+    """Load blueprint data and return the inspect work set.
+
+    Args:
+        project_root: Root directory of the project.
+        precomputed_scan_result: Optional scan result from engine to reuse.
+        precomputed_verify_report: Optional verify report from engine to reuse.
+
+    Returns:
+        InspectLoadResult with loaded session data.
+    """
 
     from bpfw.authority import AuthorityRepository
+    from bpfw.integrations.shared.runtime_context import get_integration_runtime_cache
 
-    resolved_root = project_root.resolve()
-    loader = BlueprintLoader(project_root=resolved_root)
-    load_result = loader.load()
+    with _profiler.measure("inspector.load_blueprint"):
+        resolved_root = project_root.resolve()
+        loader = BlueprintLoader(project_root=resolved_root)
+        load_result = loader.load()
+
+        # Try to get precomputed data from runtime cache first
+        runtime_cache = get_integration_runtime_cache()
+        cached_scan_result = runtime_cache.get("scan_result")
+        cached_blueprint_data = runtime_cache.get("blueprint_data")
+        cached_verify_report = runtime_cache.get("verify_report")
+
+        # Use cached data if available, otherwise use parameters or scan fresh
+        scan_result = cached_scan_result or precomputed_scan_result
+        blueprint_data = cached_blueprint_data
+        report = cached_verify_report or precomputed_verify_report
 
     if load_result.state == AUTHORITY_STATE_MISSING:
         return InspectLoadResult(
@@ -114,30 +145,52 @@ def load_inspect_session(project_root: Path) -> InspectLoadResult:
             exit_code=1,
         )
 
-    # Load authority document for sharded saves
-    repository = AuthorityRepository(resolved_root)
-    authority_document = repository.load()
+    with _profiler.measure("inspector.load_authority_document"):
+        # Load authority document only for sharded authority
+        authority_dir = resolved_root / "bpfw" / "authority"
+        authority_document = None
+        
+        if authority_dir.exists():
+            repository = AuthorityRepository(resolved_root)
+            authority_document = repository.load()
+            
+            # Use blueprint data from authority document if not already loaded
+            if blueprint_data is None:
+                blueprint_data = authority_document.blueprint_data
+        elif blueprint_data is None:
+            # Simple blueprint.yaml - use data from loader
+            blueprint_data = load_result.data
 
-    blueprint_data = authority_document.blueprint_data
-    scan_result = scan_project_from_blueprint(
-        project_root=resolved_root,
-        blueprint_data=blueprint_data,
-    )
-    report, _exit_code = run_verify(
-        project_root=resolved_root,
-        precomputed_scan_result=scan_result,
-    )
+    with _profiler.measure("inspector.scan_project"):
+        # Only scan if we don't have a precomputed result
+        if scan_result is None:
+            scan_result = scan_project_from_blueprint(
+                project_root=resolved_root,
+                blueprint_data=blueprint_data,
+            )
+
+    with _profiler.measure("inspector.run_verify"):
+        # Only run verify if we don't have a precomputed report
+        if report is None:
+            report, _exit_code = run_verify(
+                project_root=resolved_root,
+                precomputed_scan_result=scan_result,
+            )
+
     drift_findings = [
         finding
         for finding in report.findings
         if finding.code in {"UNDECLARED_CODE", "MISSING_DECLARED_CODE"}
     ]
-    incomplete = get_incomplete_blocks(blueprint_data)
-    issues = build_inspect_issues(
-        blueprint_data=blueprint_data,
-        incomplete=incomplete,
-        scan_result=scan_result,
-    )
+    
+    with _profiler.measure("inspector.build_issues"):
+        incomplete = get_incomplete_blocks(blueprint_data)
+        issues = build_inspect_issues(
+            blueprint_data=blueprint_data,
+            incomplete=incomplete,
+            scan_result=scan_result,
+        )
+    
     return InspectLoadResult(
         project_root=resolved_root,
         blueprint_path=Path(load_result.path),
@@ -668,7 +721,7 @@ def save_blueprint(
     blueprint_data: Dict[str, Any],
     authority_document: Any | None = None,
 ) -> None:
-    """Save blueprint data to the sharded authority using AuthorityRepository.
+    """Save blueprint data to authority using the appropriate method.
 
     Args:
         blueprint_path: Path to the blueprint index file.
@@ -678,19 +731,23 @@ def save_blueprint(
 
     apply_automatic_authority_fields(blueprint_data)
 
-    from bpfw.authority import AuthorityRepository
-
     project_root = blueprint_path.parent.parent
-    repository = AuthorityRepository(project_root)
-
-    # If we have an authority document from load, use it
-    if authority_document is not None:
-        # Update the blueprint_data in the existing document
-        authority_document.blueprint_data = blueprint_data
-        repository.save(authority_document)
+    authority_dir = project_root / "bpfw" / "authority"
+    
+    # If authority directory exists, use sharded authority
+    if authority_dir.exists():
+        from bpfw.authority import AuthorityRepository
+        
+        repository = AuthorityRepository(project_root)
+        
+        if authority_document is not None:
+            authority_document.blueprint_data = blueprint_data
+            repository.save(authority_document)
+        else:
+            document = repository.load()
+            document.blueprint_data = blueprint_data
+            repository.save(document)
     else:
-        # Fallback: load current document and update it
-        # This shouldn't happen in normal inspector flow
-        document = repository.load()
-        document.blueprint_data = blueprint_data
-        repository.save(document)
+        # Simple blueprint.yaml file - save directly using writer
+        from bpfw.catalog.writer import write_blueprint
+        write_blueprint(blueprint_path, blueprint_data)

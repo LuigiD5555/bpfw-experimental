@@ -169,6 +169,7 @@ def save_issue(session: InspectLoadResult, issue: InspectIssue) -> bool:
     save_blueprint(
         blueprint_path=session.blueprint_path,
         blueprint_data=session.blueprint_data,
+        authority_document=session.authority_document,
     )
     return True
 

@@ -2,7 +2,6 @@
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import List
 
 from bpfw.catalog.domain_suggestions import suggest_domains
 from bpfw.catalog.models import AUTHORITY_STATE_EMPTY
@@ -32,7 +31,10 @@ from bpfw.integrations.inspector.screen import (
 from bpfw.integrations.inspector.state import InspectorViewState
 from bpfw.integrations.inspector.view_modes import resolve_inspector_view_mode, resolve_inspector_view_mode_from_flag
 from bpfw.integrations.shared.cli_runtime import normalize_command
-from bpfw.catalog.purpose_suggestions import PurposeSuggestion, suggest_purposes
+from bpfw.catalog.purpose_suggestions import suggest_purposes
+from bpfw.core.profiling import RuntimeProfiler
+
+_profiler = RuntimeProfiler()
 
 InputFunc = Callable[[str], str]
 PrintFunc = Callable[[str], None]
@@ -47,38 +49,39 @@ def run_text_inspector(
 ) -> int:
     """Run the direct MVP inspector UI."""
 
-    session = load_inspect_session(project_root=project_root)
-    if session.blocked:
-        print_func(session.message or "Inspector blocked.")
-        return session.exit_code
+    with _profiler.measure("inspector.open_ui_total"):
+        session = load_inspect_session(project_root=project_root)
+        if session.blocked:
+            print_func(session.message or "Inspector blocked.")
+            return session.exit_code
 
-    if not session.issues:
-        if session.missing_declared_count:
-            print_func("BPFW Inspector")
-            print_func("")
-            print_func("Code drift needs inspection.")
-            print_func("")
-            print_func("Code:")
-            print_func(f"  discovered: {session.discovered_count}")
-            print_func(f"  undeclared: {session.undeclared_count}")
-            print_func(f"  missing declared: {session.missing_declared_count}")
-            print_func("")
-            print_func("Next:")
-            print_func("  Run bpfw verify for the full drift list.")
-            return 1
-        if session.authority_state == AUTHORITY_STATE_EMPTY:
-            print_func("No blocks to complete.")
-        else:
-            print_func("All blocks are already complete.")
-        return 0
+        if not session.issues:
+            if session.missing_declared_count:
+                print_func("BPFW Inspector")
+                print_func("")
+                print_func("Code drift needs inspection.")
+                print_func("")
+                print_func("Code:")
+                print_func(f"  discovered: {session.discovered_count}")
+                print_func(f"  undeclared: {session.undeclared_count}")
+                print_func(f"  missing declared: {session.missing_declared_count}")
+                print_func("")
+                print_func("Next:")
+                print_func("  Run bpfw verify for the full drift list.")
+                return 1
+            if session.authority_state == AUTHORITY_STATE_EMPTY:
+                print_func("No blocks to complete.")
+            else:
+                print_func("All blocks are already complete.")
+            return 0
 
-    return run_text_inspector_session(
-        session=session,
-        header_title=header_title,
-        input_func=input_func,
-        print_func=print_func,
-        show_all=show_all,
-    )
+        return run_text_inspector_session(
+            session=session,
+            header_title=header_title,
+            input_func=input_func,
+            print_func=print_func,
+            show_all=show_all,
+        )
 
 
 def run_text_inspector_session(
