@@ -526,10 +526,6 @@ def _build_lock_strategy(platform_name: str) -> LockStrategy:
     return UnsupportedLockStrategy()
 
 
-def _get_lock_strategy() -> LockStrategy:
-    return _build_lock_strategy(sys.platform)
-
-
 def _resolve_exact_lock_arguments(path: Path) -> tuple[Path, str]:
     """Resolve an exact file path into the lock strategy root and resource identifier."""
 
@@ -558,7 +554,7 @@ def lock_file(path: Path) -> str:
         return MISSING
 
     resolved_root, resolved_relative_path = _resolve_exact_lock_arguments(path=path)
-    return _get_lock_strategy().lock_file(
+    return _build_lock_strategy(sys.platform).lock_file(
         project_root=resolved_root,
         relative_path=resolved_relative_path,
     )
@@ -574,7 +570,7 @@ def lock_project_file(project_root: Path, path: Path) -> str:
         project_root=project_root,
         path=path,
     )
-    return _get_lock_strategy().lock_file(
+    return _build_lock_strategy(sys.platform).lock_file(
         project_root=resolved_root,
         relative_path=resolved_relative_path,
     )
@@ -587,7 +583,7 @@ def unlock_file(path: Path) -> str:
         return MISSING
 
     resolved_root, resolved_relative_path = _resolve_exact_lock_arguments(path=path)
-    return _get_lock_strategy().unlock_file(
+    return _build_lock_strategy(sys.platform).unlock_file(
         project_root=resolved_root,
         relative_path=resolved_relative_path,
     )
@@ -603,7 +599,7 @@ def unlock_project_file(project_root: Path, path: Path) -> str:
         project_root=project_root,
         path=path,
     )
-    return _get_lock_strategy().unlock_file(
+    return _build_lock_strategy(sys.platform).unlock_file(
         project_root=resolved_root,
         relative_path=resolved_relative_path,
     )
@@ -616,7 +612,7 @@ def get_file_lock_state(path: Path) -> str:
         return MISSING
 
     resolved_root, resolved_relative_path = _resolve_exact_lock_arguments(path=path)
-    return _get_lock_strategy().get_file_lock_state(
+    return _build_lock_strategy(sys.platform).get_file_lock_state(
         project_root=resolved_root,
         relative_path=resolved_relative_path,
     )
@@ -632,7 +628,7 @@ def get_project_file_lock_state(project_root: Path, path: Path) -> str:
         project_root=project_root,
         path=path,
     )
-    return _get_lock_strategy().get_file_lock_state(
+    return _build_lock_strategy(sys.platform).get_file_lock_state(
         project_root=resolved_root,
         relative_path=resolved_relative_path,
     )
