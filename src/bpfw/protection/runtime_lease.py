@@ -16,6 +16,7 @@ from bpfw.protection.authority import (
 )
 
 PROTECTED_RUNTIME_TOOLS = {"inspector", "planner"}
+AUTO_APPROVED_RUNTIME_TOOLS = {"inspector"}
 
 
 @dataclass(slots=True)
@@ -55,15 +56,16 @@ def runtime_blueprint_write_lease(
 
     lock_state = get_authority_protection_status(project_root=project_root).status
     if lock_state in {"locked", "degraded"}:
-        if not _is_interactive_terminal():
-            raise BlueprintLockedError(
-                "Blueprint is locked and this session is non-interactive. "
-                "Run in an interactive terminal to approve temporary unlock, or run bpfw unlock manually."
-            )
-        if not _prompt_unlock_confirmation(tool_name=tool_name, input_func=input_func):
-            raise BlueprintLockedError(
-                "Blueprint remains locked. Temporary unlock permission was not granted."
-            )
+        if tool_name not in AUTO_APPROVED_RUNTIME_TOOLS:
+            if not _is_interactive_terminal():
+                raise BlueprintLockedError(
+                    "Blueprint is locked and this session is non-interactive. "
+                    "Run in an interactive terminal to approve temporary unlock, or run bpfw unlock manually."
+                )
+            if not _prompt_unlock_confirmation(tool_name=tool_name, input_func=input_func):
+                raise BlueprintLockedError(
+                    "Blueprint remains locked. Temporary unlock permission was not granted."
+                )
         lease.temporarily_unlocked = True
 
     with authorize_blueprint_writes_for_tool(tool_name=tool_name):
