@@ -514,7 +514,7 @@ def _extract_function_unit(
         nodes=node.body,
         parent_symbol=symbol,
     )
-    called_symbols = _extract_called_symbols(node)
+    called_symbols = _extract_called_symbols_from_node(node)
 
     # Extract interface metadata
     interface_inputs, interface_output = extract_interface_metadata(
@@ -655,14 +655,6 @@ def _get_attribute_name(node: ast.Attribute) -> str:
         parts.append(current.id)
 
     return ".".join(reversed(parts))
-
-
-def _extract_called_symbols(
-    node: ast.FunctionDef | ast.AsyncFunctionDef,
-) -> List[str]:
-    """Extract locally called symbol names from a function body."""
-
-    return _extract_called_symbols_from_node(node)
 
 
 def _extract_called_symbols_from_node(node: ast.AST) -> List[str]:

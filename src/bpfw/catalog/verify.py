@@ -6,6 +6,7 @@ from typing import Any, List, Tuple
 from bpfw.authority.index import AuthorityIndex
 from bpfw.authority import AuthorityRepository
 from bpfw.catalog.drift import compare_declared_to_discovered
+from bpfw.catalog.domain import BlueprintDocument
 from bpfw.catalog.loader import BlueprintLoader
 from bpfw.catalog.models import (
     AUTHORITY_STATE_EMPTY,
@@ -17,7 +18,6 @@ from bpfw.catalog.models import (
 from bpfw.catalog.scanner import scan_python_project
 from bpfw.catalog.security import validate_no_blueprint_secrets
 from bpfw.catalog.validation import validate_blueprint_structure
-from bpfw.catalog.schema import get_blocks
 from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, FINDING_SEVERITY_WARNING, Finding
 
 # Finding codes used for counting.
@@ -39,13 +39,14 @@ DEFAULT_IGNORED_PATHS = [
 ]
 
 
-def _count_by_code(findings: List[Finding], code: str) -> int:
-    """Count how many findings match the given code."""
-    return sum(1 for finding in findings if finding.code == code)
-
-
-def read_source_roots(blueprint_data: dict) -> List[str]:
+def read_source_roots(
+    blueprint_data: dict,
+    domain_document: BlueprintDocument | None = None,
+) -> List[str]:
     """Read project.source_roots from blueprint, or return defaults."""
+    if domain_document is not None and domain_document.project.get("source_roots"):
+        return [str(root) for root in domain_document.project.get("source_roots", [])]
+
     project = blueprint_data.get("project")
     if isinstance(project, dict):
         source_roots = project.get("source_roots")
@@ -54,8 +55,14 @@ def read_source_roots(blueprint_data: dict) -> List[str]:
     return list(DEFAULT_SOURCE_ROOTS)
 
 
-def read_ignored_paths(blueprint_data: dict) -> List[str]:
+def read_ignored_paths(
+    blueprint_data: dict,
+    domain_document: BlueprintDocument | None = None,
+) -> List[str]:
     """Read project.ignored_paths from blueprint, or return defaults."""
+    if domain_document is not None and domain_document.project.get("ignored_paths"):
+        return [str(path) for path in domain_document.project.get("ignored_paths", [])]
+
     project = blueprint_data.get("project")
     if isinstance(project, dict):
         ignored_paths = project.get("ignored_paths")
@@ -64,11 +71,15 @@ def read_ignored_paths(blueprint_data: dict) -> List[str]:
     return list(DEFAULT_IGNORED_PATHS)
 
 
-def scan_project_from_blueprint(project_root: Path, blueprint_data: dict) -> ScanResult:
+def scan_project_from_blueprint(
+    project_root: Path,
+    blueprint_data: dict,
+    domain_document: BlueprintDocument | None = None,
+) -> ScanResult:
     """Run one AST scan using source and ignore settings from blueprint data."""
 
-    source_roots = read_source_roots(blueprint_data)
-    ignored_paths = read_ignored_paths(blueprint_data)
+    source_roots = read_source_roots(blueprint_data, domain_document=domain_document)
+    ignored_paths = read_ignored_paths(blueprint_data, domain_document=domain_document)
     return scan_python_project(
         project_root=project_root,
         source_roots=source_roots,
@@ -239,11 +250,11 @@ def _build_report(
     discovered_count: int = 0,
 ) -> VerificationReport:
     """Build a VerificationReport with computed counts and allowed flag."""
-    missing_declared_count = _count_by_code(findings, CODE_MISSING_DECLARED)
-    undeclared_count = _count_by_code(findings, CODE_UNDECLARED)
-    duplicate_active_purpose_count = _count_by_code(findings, CODE_DUPLICATE_ACTIVE_PURPOSE)
-    invalid_lifecycle_count = _count_by_code(findings, CODE_INVALID_LIFECYCLE)
-    incomplete_responsibility_count = _count_by_code(findings, CODE_INCOMPLETE_RESPONSIBILITY)
+    missing_declared_count = sum(1 for finding in findings if finding.code == CODE_MISSING_DECLARED)
+    undeclared_count = sum(1 for finding in findings if finding.code == CODE_UNDECLARED)
+    duplicate_active_purpose_count = sum(1 for finding in findings if finding.code == CODE_DUPLICATE_ACTIVE_PURPOSE)
+    invalid_lifecycle_count = sum(1 for finding in findings if finding.code == CODE_INVALID_LIFECYCLE)
+    incomplete_responsibility_count = sum(1 for finding in findings if finding.code == CODE_INCOMPLETE_RESPONSIBILITY)
 
     has_block = any(
         finding.severity == FINDING_SEVERITY_BLOCK
@@ -319,6 +330,7 @@ def run_verify(
         scan_result = scan_project_from_blueprint(
             project_root=resolved_root,
             blueprint_data=load_result.data,
+            domain_document=load_result.domain_document,
         )
     else:
         scan_result = precomputed_scan_result
@@ -348,8 +360,11 @@ def run_verify(
     all_findings.extend(drift_findings)
 
     # Count declared blocks
-    blocks = get_blocks(load_result.data)
-    declared_count = len(blocks) if isinstance(blocks, list) else 0
+    if load_result.domain_document is not None:
+        declared_count = len(load_result.domain_document.blocks)
+    else:
+        blocks = load_result.data.get("blocks", [])
+        declared_count = len(blocks) if isinstance(blocks, list) else 0
 
     discovered_count = len(scan_result.discovered_units)
 

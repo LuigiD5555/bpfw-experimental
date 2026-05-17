@@ -18,7 +18,6 @@ from bpfw.catalog.models import AUTHORITY_STATE_DEFINED, AUTHORITY_STATE_DRAFT, 
 from bpfw.catalog.security import validate_no_blueprint_secrets
 from bpfw.catalog.validation import validate_blueprint_structure
 from bpfw.catalog.verify import scan_project_from_blueprint
-from bpfw.catalog.schema import get_blocks
 from bpfw.core.errors import BlueprintLockedError
 from bpfw.protection.authority import (
     get_authority_protection_status,
@@ -279,7 +278,7 @@ class AuthoritySessionManager:
             project_root=self.project_root,
             blueprint_data=blueprint_data,
         )
-        blocks = get_blocks(blueprint_data)
+        blocks = blueprint_data.get("blocks", [])
         if not isinstance(blocks, list) or not blocks:
             authority_state = AUTHORITY_STATE_EMPTY
         else:

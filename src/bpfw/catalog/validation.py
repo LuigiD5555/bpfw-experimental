@@ -8,7 +8,6 @@ from bpfw.catalog.models import (
     AUTHORITY_STATE_INVALID,
     AUTHORITY_STATE_MISSING,
 )
-from bpfw.catalog.schema import get_blocks, get_code, get_kind, get_purpose, get_status
 from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, Finding
 
 _SOURCE = "bpfw"
@@ -24,9 +23,11 @@ def _is_blank(value: Any) -> bool:
 
 def _safe_code_field(block: Dict[str, Any], field_name: str) -> Any:
     """Safely retrieve a field from canonical code metadata."""
-    code = get_code(block)
+    code = block.get("code", {})
+    if not isinstance(code, dict):
+        code = {}
     if field_name == "kind":
-        return get_kind(code)
+        return code.get("kind")
     return code.get(field_name)
 
 
@@ -85,9 +86,9 @@ class BlockFieldsRule(PerBlockValidationRule):
             if _is_blank(block.get(field_name)):
                 missing_fields.append(field_name)
 
-        if _is_blank(get_purpose(block)):
+        if _is_blank(block.get("purpose")):
             missing_fields.append("purpose")
-        if _is_blank(get_status(block)):
+        if _is_blank(block.get("status")):
             missing_fields.append("status")
 
         for field_name in _CODE_REQUIRED_FIELDS:
@@ -121,7 +122,7 @@ class BlockStatusRule(PerBlockValidationRule):
         if not isinstance(block, dict):
             return
 
-        status = get_status(block)
+        status = block.get("status")
         if status is not None and not is_allowed_status(status):
             findings.append(
                 Finding(
@@ -178,10 +179,10 @@ class DuplicateActivePurposeRule(CrossBlockValidationRule):
         for block in blocks:
             if not isinstance(block, dict):
                 continue
-            status = get_status(block)
+            status = block.get("status")
             if status != "active":
                 continue
-            purpose = get_purpose(block)
+            purpose = block.get("purpose")
             block_id = block.get("id")
             if not isinstance(purpose, str) or purpose == "":
                 continue
@@ -248,7 +249,7 @@ def validate_blueprint_structure(
             )
         ]
 
-    blocks = get_blocks(blueprint_data)
+    blocks = blueprint_data.get("blocks", [])
     if not isinstance(blocks, list):
         return [
             Finding(

@@ -24,17 +24,15 @@ def is_allowed_status(status: str | None) -> bool:
 def count_statuses(blueprint_data: dict[str, Any]) -> dict[str, int]:
     """Count allowed status values declared in a blueprint payload."""
 
-    from bpfw.catalog.schema import get_blocks, get_status
-
     counts = {status: 0 for status in ALLOWED_STATUSES}
-    blocks = get_blocks(blueprint_data)
+    blocks = blueprint_data.get("blocks", [])
     if not isinstance(blocks, list):
         return counts
 
     for block in blocks:
         if not isinstance(block, dict):
             continue
-        status = get_status(block)
+        status = block.get("status")
         if isinstance(status, str) and status in counts:
             counts[status] += 1
 

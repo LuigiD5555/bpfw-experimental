@@ -7,7 +7,6 @@ from bpfw.catalog.keywords import build_project_vocabulary
 from bpfw.catalog.keywords.models import ProjectVocabulary
 from bpfw.catalog.keywords.tokenizer import tokenize_identifier
 from bpfw.catalog.learning import get_last_domain_for_origin
-from bpfw.catalog.schema import get_code
 
 
 # Technical stopwords that should be filtered regardless of frequency
@@ -102,7 +101,7 @@ class _DomainEvidence:
 def _collect_domain_evidence(block: dict[str, Any]) -> _DomainEvidence:
     """Collect deterministic evidence used to suggest functional domains."""
 
-    location = get_code(block)
+    location = block.get("code", {})
     path = ""
     module = ""
     symbol = ""
@@ -229,7 +228,7 @@ def _compose_previous_origin_domain(
 def _resolve_block_identity(block: dict[str, Any]) -> tuple[str, str, str]:
     """Return a stable identity for excluding the current block from history."""
 
-    code = get_code(block)
+    code = block.get("code", {})
     block_id = block.get("id")
     path = code.get("path") if isinstance(code, dict) else ""
     symbol = code.get("symbol") if isinstance(code, dict) else ""

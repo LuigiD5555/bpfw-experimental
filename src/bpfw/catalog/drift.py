@@ -6,7 +6,6 @@ from bpfw.catalog.models import (
     AUTHORITY_STATE_DEFINED,
     DiscoveredCodeUnit,
 )
-from bpfw.catalog.schema import get_blocks, get_code, get_kind
 from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, Finding
 
 _SOURCE = "bpfw"
@@ -19,7 +18,7 @@ def _extract_declared_keys(
     blueprint_data: Dict[str, Any],
 ) -> Tuple[Set[_DeclarationKey], Dict[_DeclarationKey, Dict[str, Any]]]:
     """Extract the set of declared block keys from blueprint data."""
-    blocks = get_blocks(blueprint_data)
+    blocks = blueprint_data.get("blocks", [])
     if not isinstance(blocks, list):
         return set(), {}
 
@@ -30,13 +29,13 @@ def _extract_declared_keys(
         if not isinstance(block, dict):
             continue
 
-        code = get_code(block)
+        code = block.get("code", {})
         if not isinstance(code, dict):
             continue
 
         path = code.get("path")
         symbol = code.get("symbol")
-        kind = get_kind(code)
+        kind = code.get("kind")
 
         if path and symbol and kind:
             key = (str(path), str(symbol), str(kind))
