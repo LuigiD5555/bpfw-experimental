@@ -224,24 +224,91 @@ def _editor_block_width(ratio: float = 0.70) -> int:
 
 
 def _results_block_ratio(results: list) -> float:
-    """Return dynamic width ratio (70%-95%) based on CODE content size."""
+    """Return dynamic width ratio (50%-95%) based on required table width."""
 
     if not results:
-        return 0.70
+        return 0.50
 
-    max_code_length = max(len((record.location or "")) for record in results)
-    min_ratio = 0.70
+    max_name_length = max(len((record.name or "-")) for record in results)
+    max_domain_length = max(len((record.domain or "-")) for record in results)
+    max_code_length = max(len((record.location or "-")) for record in results)
+
+    desired_idx_width = 5
+    desired_lifecycle_width = 10
+    desired_domain_width = max(10, min(max_domain_length, 40))
+    desired_name_width = max(14, min(max_name_length, 72))
+    desired_code_width = max(8, min(max_code_length, 52))
+
+    # Five columns use six vertical separators in the table renderer.
+    required_content_width = (
+        desired_idx_width
+        + desired_lifecycle_width
+        + desired_domain_width
+        + desired_name_width
+        + desired_code_width
+    )
+    required_block_width = required_content_width + 6
+
+    min_ratio = 0.50
     max_ratio = 0.95
-    min_length = 24
-    max_length = 120
 
-    if max_code_length <= min_length:
+    terminal_width = get_terminal_width()
+    if terminal_width <= 0:
         return min_ratio
-    if max_code_length >= max_length:
-        return max_ratio
 
-    growth_fraction = (max_code_length - min_length) / (max_length - min_length)
-    return min_ratio + (max_ratio - min_ratio) * growth_fraction
+    # _editor_block_width uses: int(terminal_width * ratio) - 2.
+    required_ratio = (required_block_width + 2) / terminal_width
+    return max(min_ratio, min(max_ratio, required_ratio))
+
+
+def _compute_results_column_widths(results: list, total_content_width: int) -> tuple[int, int, int, int, int]:
+    """Compute IDX/LIFECYCLE/DOMAIN/NAME/CODE widths with truncation priority.
+
+    When space is limited, reduce CODE first, then DOMAIN, and keep NAME as complete as possible.
+    """
+
+    idx_width = 5
+    lifecycle_width = 10
+
+    max_domain_length = max((len(record.domain or "-") for record in results), default=6)
+    max_name_length = max((len(record.name or "-") for record in results), default=4)
+    max_code_length = max((len(record.location or "-") for record in results), default=4)
+
+    min_domain_width = 10
+    min_name_width = 14
+    min_code_width = 8
+
+    available_main_width = total_content_width - idx_width - lifecycle_width
+    if available_main_width <= (min_domain_width + min_name_width + min_code_width):
+        return idx_width, lifecycle_width, min_domain_width, min_name_width, min_code_width
+
+    desired_domain_width = max(min_domain_width, min(max_domain_length, 40))
+    desired_name_width = max(min_name_width, min(max_name_length, 72))
+    desired_code_width = max(min_code_width, min(max_code_length, 52))
+    requested_main_width = desired_domain_width + desired_name_width + desired_code_width
+
+    if requested_main_width <= available_main_width:
+        extra_width = available_main_width - requested_main_width
+        desired_name_width += extra_width
+        return idx_width, lifecycle_width, desired_domain_width, desired_name_width, desired_code_width
+
+    overflow = requested_main_width - available_main_width
+
+    reducible_code = desired_code_width - min_code_width
+    reduce_code = min(overflow, reducible_code)
+    desired_code_width -= reduce_code
+    overflow -= reduce_code
+
+    reducible_domain = desired_domain_width - min_domain_width
+    reduce_domain = min(overflow, reducible_domain)
+    desired_domain_width -= reduce_domain
+    overflow -= reduce_domain
+
+    reducible_name = desired_name_width - min_name_width
+    reduce_name = min(overflow, reducible_name)
+    desired_name_width -= reduce_name
+
+    return idx_width, lifecycle_width, desired_domain_width, desired_name_width, desired_code_width
 
 
 def render_editor_banner(ratio: float = 0.70) -> None:
@@ -319,15 +386,10 @@ def _render_results_table_rows(results: list, ratio: float = 0.70) -> None:
 
     # Five columns need six vertical separators.
     total_content_width = max(54, width - 6)
-    idx_width = 5
-    # Keep CODE narrower so the other columns can breathe.
-    code_width = max(18, min(36, total_content_width // 3))
-    remaining_width = total_content_width - idx_width - code_width
-
-    # Redistribute remaining width with NAME slightly wider.
-    status_width = max(10, int(remaining_width * 0.28))
-    domain_width = max(10, int(remaining_width * 0.28))
-    name_width = max(14, remaining_width - status_width - domain_width)
+    idx_width, status_width, domain_width, name_width, code_width = _compute_results_column_widths(
+        results,
+        total_content_width,
+    )
 
     # Header
     header = (
