@@ -1,8 +1,10 @@
 import pytest
 from pathlib import Path
+import sys
 
 from bpfw.cli import (
     MVP_COMMANDS,
+    main,
     resolve_cli_command,
     _migrate_root_blocks_to_default_shard,
     _attempt_permission_repair,
@@ -16,6 +18,7 @@ def test_public_command_surface_is_mvp_only() -> None:
         "editor",
         "planner",
         "verify",
+        "run",
         "lock",
         "unlock",
         "status",
@@ -177,3 +180,49 @@ def test_migrate_root_blocks_to_default_shard_skips_duplicate_code_declarations(
     assert summary["migrated"] == 0
     assert summary["skipped"] == 1
     assert len(migrated_core["blocks"]) == 1
+
+
+def test_run_requires_command_and_prints_usage(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    monkeypatch.setattr(sys, "argv", ["bpfw", "run"])
+
+    exit_code = main()
+    output = capsys.readouterr().out
+
+    assert exit_code != 0
+    assert "Missing command." in output
+    assert "Usage:" in output
+    assert "bpfw run -- <command>" in output
+
+
+def test_run_passes_command_arguments_after_dash_dash(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    captured_command: list[str] = []
+
+    def fake_run_command_after_verify(project_root: Path, command: list[str]) -> int:
+        captured_command.extend(command)
+        return 0
+
+    monkeypatch.setattr(
+        "bpfw.cli.run_command_after_verify",
+        fake_run_command_after_verify,
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "bpfw",
+            "run",
+            "--project-root",
+            str(tmp_path),
+            "--",
+            "python",
+            "app.py",
+            "--debug",
+            "--port",
+            "8000",
+        ],
+    )
+
+    exit_code = main()
+
+    assert exit_code == 0
+    assert captured_command == ["python", "app.py", "--debug", "--port", "8000"]

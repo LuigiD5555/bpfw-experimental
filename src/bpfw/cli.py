@@ -12,6 +12,7 @@ from bpfw.authority.shard import AuthorityShard
 from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
 from bpfw.catalog.verify import run_verify
 from bpfw.catalog.writer import run_init
+from bpfw.runner import run_command_after_verify
 from bpfw.core.engine import BlueprintEngine, build_command
 from bpfw.protection.authority import (
     MISSING_BLUEPRINT_STATUS,
@@ -31,6 +32,7 @@ MVP_COMMANDS = (
     "editor",
     "planner",
     "verify",
+    "run",
     "lock",
     "unlock",
     "status",
@@ -49,6 +51,7 @@ Commands:
   editor      Edit existing blueprint authority entries.
   planner     Plan authority entries before code exists.
   verify      Check blueprint.yaml against the real code.
+  run         Run a command only after bpfw verify passes.
   lock        Lock protected authority files.
   unlock      Unlock protected authority files.
   status      Show project authority, drift, and lock status.
@@ -69,6 +72,7 @@ Examples:
   bpfw inspector
   bpfw inspector --all
   bpfw verify
+  bpfw run -- python app.py
   bpfw status
 """
 
@@ -142,6 +146,8 @@ def resolve_cli_command(command: str, subcommand: str | None) -> str:
         if normalized_subcommand is not None:
             raise ValueError("verify does not accept subcommands")
         return "verify"
+    if normalized_command == "run":
+        return "run"
     if normalized_command == "status":
         if normalized_subcommand is not None:
             raise ValueError("status does not accept subcommands")
@@ -368,7 +374,7 @@ def main() -> int:
     """Entry point for BPFW MVP CLI."""
 
     parser = build_parser()
-    parsed_arguments = parser.parse_args()
+    parsed_arguments, remaining_arguments = parser.parse_known_args()
 
     try:
         normalized_command = resolve_cli_command(
@@ -395,6 +401,25 @@ def main() -> int:
         output = render_verify_report(report)
         print(output)
         return exit_code
+
+    # run is handled directly by verification gate plus subprocess execution
+    if normalized_command == "run":
+        project_root = Path(parsed_arguments.project_root).resolve()
+        command: list[str] = []
+        if parsed_arguments.subcommand is not None:
+            command.append(parsed_arguments.subcommand)
+        command.extend(remaining_arguments)
+        if command and command[0] == "--":
+            command = command[1:]
+        if not command:
+            print("Missing command.\n")
+            print("Usage:")
+            print("  bpfw run -- <command>")
+            return 1
+        return run_command_after_verify(project_root=project_root, command=command)
+
+    if remaining_arguments:
+        parser.error(f"unrecognized arguments: {' '.join(remaining_arguments)}")
 
     # status is handled directly by the status report pipeline
     if normalized_command == "status":
