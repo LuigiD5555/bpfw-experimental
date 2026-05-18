@@ -19,6 +19,7 @@ def test_public_command_surface_is_mvp_only() -> None:
         "planner",
         "verify",
         "run",
+        "watch",
         "lock",
         "unlock",
         "status",
@@ -42,7 +43,7 @@ def test_inspector_editor_and_planner_map_without_subcommands() -> None:
 
 
 def test_catalog_commands_reject_subcommands() -> None:
-    for command in ("init", "inspector", "editor", "planner", "verify", "status"):
+    for command in ("init", "inspector", "editor", "planner", "verify", "watch", "status"):
         with pytest.raises(ValueError):
             resolve_cli_command(command, "extra")
 
@@ -59,6 +60,7 @@ def test_unknown_command_is_rejected() -> None:
 
 def test_resolve_cli_command_is_case_and_whitespace_insensitive() -> None:
     assert resolve_cli_command("  VERIFY  ", None) == "verify"
+    assert resolve_cli_command("  WATCH  ", None) == "watch"
     assert resolve_cli_command(" unlock ", "  BLUEPRINT  ") == "unlock"
 
 

@@ -13,6 +13,7 @@ from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
 from bpfw.catalog.verify import run_verify
 from bpfw.catalog.writer import run_init
 from bpfw.runner import run_command_after_verify
+from bpfw.watch import WatchDependencyError, run_watch
 from bpfw.core.engine import BlueprintEngine, build_command
 from bpfw.protection.authority import (
     MISSING_BLUEPRINT_STATUS,
@@ -33,6 +34,7 @@ MVP_COMMANDS = (
     "planner",
     "verify",
     "run",
+    "watch",
     "lock",
     "unlock",
     "status",
@@ -52,6 +54,7 @@ Commands:
   planner     Plan authority entries before code exists.
   verify      Check blueprint.yaml against the real code.
   run         Run a command only after bpfw verify passes.
+  watch       Watch project changes and print drift feedback.
   lock        Lock protected authority files.
   unlock      Unlock protected authority files.
   status      Show project authority, drift, and lock status.
@@ -73,6 +76,7 @@ Examples:
   bpfw inspector --all
   bpfw verify
   bpfw run -- python app.py
+  bpfw watch
   bpfw status
 """
 
@@ -107,6 +111,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="Allow init to complete without OS authority protection.",
     )
     parser.add_argument("--json", action="store_true", dest="as_json")
+    parser.add_argument("--once", action="store_true", dest="watch_once", help=argparse.SUPPRESS)
+    parser.add_argument("--debounce-ms", type=int, default=800, dest="watch_debounce_ms", help=argparse.SUPPRESS)
     parser.add_argument("-a", "--all", action="store_true", dest="inspector_all", help=argparse.SUPPRESS)
     return parser
 
@@ -148,6 +154,10 @@ def resolve_cli_command(command: str, subcommand: str | None) -> str:
         return "verify"
     if normalized_command == "run":
         return "run"
+    if normalized_command == "watch":
+        if normalized_subcommand is not None:
+            raise ValueError("watch does not accept subcommands")
+        return "watch"
     if normalized_command == "status":
         if normalized_subcommand is not None:
             raise ValueError("status does not accept subcommands")
@@ -420,6 +430,19 @@ def main() -> int:
 
     if remaining_arguments:
         parser.error(f"unrecognized arguments: {' '.join(remaining_arguments)}")
+
+    # watch is handled directly by the lightweight watch service
+    if normalized_command == "watch":
+        project_root = Path(parsed_arguments.project_root).resolve()
+        try:
+            return run_watch(
+                project_root=project_root,
+                debounce_ms=parsed_arguments.watch_debounce_ms,
+                once=parsed_arguments.watch_once,
+            )
+        except WatchDependencyError as error:
+            print(str(error))
+            return 1
 
     # status is handled directly by the status report pipeline
     if normalized_command == "status":

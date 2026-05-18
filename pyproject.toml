@@ -16,6 +16,7 @@ dependencies = [
   "PyYAML>=6.0",
   "prompt-toolkit>=3.0",
   "pydantic>=2.7",
+  "watchfiles>=0.21",
 ]
 
 [project.scripts]
