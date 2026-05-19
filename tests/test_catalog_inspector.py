@@ -51,20 +51,6 @@ def _responsibility(
     }
 
 
-def test_suggest_domain_from_source_package_path() -> None:
-    block = _responsibility(
-        responsibility_id="example",
-        purpose="maintain example",
-        status="active",
-        path="src/bpfw/protection/authority.py",
-    )
-
-    # Get first non-empty slot from fixed list
-    domains = suggest_domains(block)
-    first_domain = domains[0]
-    assert first_domain != "-"
-
-
 def test_suggest_domains_returns_list() -> None:
     block = _responsibility(
         responsibility_id="example",
@@ -97,20 +83,105 @@ def test_suggest_domains_ignores_package_roots() -> None:
     assert len(suggestions) == 6  # Fixed 6 slots
 
 
-def test_suggest_domain_returns_first_domain_suggestion() -> None:
+def test_suggest_domains_behavior_slots_use_existing_domains_only() -> None:
+    project_blocks = [
+        {
+            **_responsibility(
+                responsibility_id="authority_history",
+                purpose="save authority index",
+                status="active",
+                path="src/bpfw/domain/authority_store.py",
+                symbol="AuthorityStore.save",
+            ),
+            "domain": "authority",
+            "detected": {"docstring": "Save authority index and validate entries."},
+        },
+        {
+            **_responsibility(
+                responsibility_id="catalog_history",
+                purpose="persist catalog yaml",
+                status="active",
+                path="src/bpfw/domain/catalog_store.py",
+                symbol="CatalogStore.persist",
+            ),
+            "domain": "catalog",
+            "detected": {"docstring": "Persist blueprint catalog to yaml format."},
+        },
+        {
+            **_responsibility(
+                responsibility_id="filesystem_history",
+                purpose="manage project directories",
+                status="active",
+                path="src/bpfw/domain/filesystem_store.py",
+                symbol="FilesystemStore.ensure",
+            ),
+            "domain": "filesystem",
+            "detected": {"docstring": "Create project root directories and write files."},
+        },
+    ]
     block = _responsibility(
-        responsibility_id="purpose_suggestions",
-        purpose="suggest purposes",
+        responsibility_id="authority_save",
+        purpose="save authority index",
         status="active",
-        path="src/bpfw/catalog/purpose_suggestions.py",
-        symbol="PurposeSuggestion",
+        path="src/bpfw/authority/index.py",
+        symbol="AuthorityIndex.save",
     )
+    block["detected"] = {
+        "docstring": "Save the authority index to the project root.",
+        "called_symbols": ["self._validate", "yaml.safe_dump", "Path.mkdir"],
+    }
 
-    # Get first slot from fixed list
-    domains = suggest_domains(block)
-    first_domain = domains[0]
-    assert isinstance(first_domain, str)
-    assert first_domain != "-"  # Should not be a placeholder
+    domains = suggest_domains(block, project_blocks=project_blocks + [block])
+    behavior_slots = domains[:3]
+    assert all(slot in {"authority", "catalog", "filesystem"} for slot in behavior_slots if slot != "-")
+    assert "index" not in behavior_slots
+    assert len({slot for slot in behavior_slots if slot != "-"}) == len([slot for slot in behavior_slots if slot != "-"])
+
+
+def test_suggest_domains_behavior_slots_do_not_invent_file_based_domain() -> None:
+    project_blocks = [
+        {
+            **_responsibility("authority_history", "save authority index", "active", symbol="AuthorityStore"),
+            "domain": "authority",
+            "detected": {"docstring": "Save authority index values."},
+        },
+        {
+            **_responsibility("catalog_history", "write catalog file", "active", symbol="CatalogWriter"),
+            "domain": "catalog",
+            "detected": {"docstring": "Write catalog yaml output."},
+        },
+    ]
+    block = _responsibility(
+        responsibility_id="index_file_block",
+        purpose="save index",
+        status="active",
+        path="src/bpfw/authority/index.py",
+        symbol="AuthorityIndex.save",
+    )
+    block["detected"] = {"docstring": "Save authority index to project root."}
+
+    domains = suggest_domains(block, project_blocks=project_blocks + [block])
+    assert "index" not in domains[:3]
+
+
+def test_suggest_domains_behavior_slots_deduplicate_domains() -> None:
+    project_blocks = [
+        {
+            **_responsibility("authority_1", "save authority index", "active", symbol="AuthorityOne.save"),
+            "domain": "authority",
+            "detected": {"docstring": "Save authority index values."},
+        },
+        {
+            **_responsibility("authority_2", "validate authority", "active", symbol="AuthorityTwo.validate"),
+            "domain": "authority",
+            "detected": {"docstring": "Validate authority manifest values."},
+        },
+    ]
+    block = _responsibility("authority_now", "save authority index", "active", symbol="AuthorityIndex.save")
+    block["detected"] = {"docstring": "Save authority index to the project root."}
+
+    domains = suggest_domains(block, project_blocks=project_blocks + [block])
+    assert domains[:3].count("authority") == 1
 
 
 def test_inspector_domain_shortcuts_use_qwerty_and_y_custom() -> None:
@@ -779,6 +850,98 @@ def test_text_inspector_keyboard_interrupt_in_interface_editor_returns_to_main(
     assert "maintain example" in saved
 
 
+def test_text_inspector_keyboard_interrupt_in_custom_purpose_returns_to_main(tmp_path: Path) -> None:
+    blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
+    blueprint_path.parent.mkdir(parents=True)
+    blueprint_path.write_text(
+        "version: 1\n"
+        "blocks:\n"
+        "  - id: example\n"
+        "    name: ExampleService\n"
+        "    domain: catalog\n"
+        "    status: active\n"
+        "    purpose: ''\n"
+        "    code:\n"
+        "      path: src/bpfw/catalog/example.py\n"
+        "      symbol: ExampleService\n"
+        "      kind: class\n",
+        encoding="utf-8",
+    )
+    session = load_inspect_session(project_root=tmp_path)
+    output: list[str] = []
+    command_stream: list[object] = [
+        "6",
+        KeyboardInterrupt(),
+        "6maintain example",
+        "",
+    ]
+
+    def scripted_input(_prompt: str) -> str:
+        next_value = command_stream.pop(0)
+        if isinstance(next_value, BaseException):
+            raise next_value
+        return str(next_value)
+
+    exit_code = run_text_inspector_session(
+        session=session,
+        input_func=scripted_input,
+        print_func=output.append,
+    )
+
+    rendered = "\n".join(output)
+    saved = blueprint_path.read_text(encoding="utf-8")
+    assert exit_code == 0
+    assert "Inspector stopped." not in rendered
+    assert "Saved." in rendered
+    assert "maintain example" in saved
+
+
+def test_text_inspector_keyboard_interrupt_in_custom_domain_returns_to_main(tmp_path: Path) -> None:
+    blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
+    blueprint_path.parent.mkdir(parents=True)
+    blueprint_path.write_text(
+        "version: 1\n"
+        "blocks:\n"
+        "  - id: example\n"
+        "    name: ExampleService\n"
+        "    domain: ''\n"
+        "    status: active\n"
+        "    purpose: maintain example\n"
+        "    code:\n"
+        "      path: src/bpfw/catalog/example.py\n"
+        "      symbol: ExampleService\n"
+        "      kind: class\n",
+        encoding="utf-8",
+    )
+    session = load_inspect_session(project_root=tmp_path)
+    output: list[str] = []
+    command_stream: list[object] = [
+        "y",
+        KeyboardInterrupt(),
+        "ydemo_domain",
+        "",
+    ]
+
+    def scripted_input(_prompt: str) -> str:
+        next_value = command_stream.pop(0)
+        if isinstance(next_value, BaseException):
+            raise next_value
+        return str(next_value)
+
+    exit_code = run_text_inspector_session(
+        session=session,
+        input_func=scripted_input,
+        print_func=output.append,
+    )
+
+    rendered = "\n".join(output)
+    saved = blueprint_path.read_text(encoding="utf-8")
+    assert exit_code == 0
+    assert "Inspector stopped." not in rendered
+    assert "Saved." in rendered
+    assert "demo_domain" in saved
+
+
 def test_text_inspector_accepts_new_detected_code(tmp_path: Path) -> None:
     source_path = tmp_path / "src" / "demo"
     source_path.mkdir(parents=True)
@@ -964,6 +1127,53 @@ def test_suggest_domains_previous_origin_slot_ignores_other_modules() -> None:
     assert suggestions[4] == "-"
 
 
+def test_suggest_domains_slot_r_remains_symbol_based() -> None:
+    block = _responsibility(
+        responsibility_id="authority_index_save",
+        purpose="save authority index",
+        status="active",
+        path="src/bpfw/authority/index.py",
+        symbol="AuthorityIndex.save",
+    )
+
+    suggestions = suggest_domains(block, project_blocks=[block])
+    assert suggestions[3] == "authority"
+
+
+def test_docstring_behavior_extraction_uses_only_first_sentence() -> None:
+    from bpfw.integrations.inspector.suggestions.domain.domain_behavior import extract_docstring_behavior_terms
+
+    tokens, _, _ = extract_docstring_behavior_terms(
+        "Save the authority index to the project root.\n\nRaises:\n    InvalidAuthorityIndexError: If the index is invalid."
+    )
+
+    assert "save" in tokens
+    assert "authority" in tokens
+    assert "index" in tokens
+    assert "project" in tokens
+    assert "root" in tokens
+    assert "raises" not in tokens
+    assert "invalid" not in tokens
+    assert "error" not in tokens
+
+
+def test_suggest_domains_behavior_slots_are_dash_without_valid_history() -> None:
+    block = _responsibility(
+        responsibility_id="authority_index_save",
+        purpose="save authority index",
+        status="active",
+        path="src/bpfw/authority/index.py",
+        symbol="AuthorityIndex.save",
+    )
+    block["detected"] = {"docstring": "Save the authority index to the project root."}
+    project_blocks = [{**_responsibility("blank_domain", "x", "active"), "domain": "-"}, block]
+
+    suggestions = suggest_domains(block, project_blocks=project_blocks)
+    assert suggestions[0] == "-"
+    assert suggestions[1] == "-"
+    assert suggestions[2] == "-"
+
+
 def test_inspector_help_explains_suggestion_sources() -> None:
     """Ensure inspector help explains purpose and domain suggestion slots."""
 
@@ -979,9 +1189,9 @@ def test_inspector_help_explains_suggestion_sources() -> None:
     assert "[4] Docstring first sentence or supported docstring pattern." in rendered
     assert "[5] Blended evidence from history, symbol, and docstring." in rendered
     assert "Domain suggestions" in rendered
-    assert "[q] Folder-based domain from the nearest useful folder." in rendered
-    assert "[w] File-based domain from the source file name." in rendered
-    assert "[e] Module-based domain from the Python module parent." in rendered
+    assert "[q] Existing domain best matched by block behavior." in rendered
+    assert "[w] Second existing domain matched by block behavior." in rendered
+    assert "[e] Third existing domain matched by block behavior." in rendered
     assert "[r] Symbol-based domain from the class/function name." in rendered
     assert "[t] Previous domain used for the same code origin." in rendered
 

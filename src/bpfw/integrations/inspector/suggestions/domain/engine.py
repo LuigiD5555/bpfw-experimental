@@ -1,7 +1,8 @@
-"""AST-based domain suggestions using path and origin analysis."""
+"""Inspector domain suggestions with behavior and origin evidence."""
 
 from typing import Any
 
+from bpfw.integrations.inspector.suggestions.domain.domain_behavior import suggest_behavior_domains
 from bpfw.integrations.inspector.suggestions.domain.evidence import collect_domain_evidence
 from bpfw.integrations.inspector.suggestions.domain.learning import get_last_domain_for_origin
 from bpfw.integrations.inspector.suggestions.domain.models import DomainEvidence
@@ -23,9 +24,9 @@ def suggest_domains(
     """Suggest domains using fixed evidence slots.
 
     The slot order is fixed:
-    [q] folder_based
-    [w] file_based
-    [e] module_based
+    [q] behavior_based_match_1
+    [w] behavior_based_match_2
+    [e] behavior_based_match_3
     [r] symbol_based
     [t] previous_domain_for_origin
     [y] custom_domain
@@ -40,9 +41,12 @@ def suggest_domains(
 
     evidence = collect_domain_evidence(block)
 
-    folder_result = _compose_folder_based_domain(evidence)
-    file_result = _compose_file_based_domain(evidence)
-    module_result = _compose_module_based_domain(evidence)
+    current_identity = _resolve_block_identity(block)
+    behavior_slots = suggest_behavior_domains(
+        block=block,
+        project_blocks=project_blocks or [],
+        current_identity=current_identity,
+    )
     symbol_result = _compose_symbol_based_domain(evidence)
     previous_origin_result = _compose_previous_origin_domain(
         block=block,
@@ -53,67 +57,13 @@ def suggest_domains(
         previous_origin_result = get_last_domain_for_origin(evidence.origin_key)
 
     return [
-        _normalize_domain_suggestion_output(folder_result),
-        _normalize_domain_suggestion_output(file_result),
-        _normalize_domain_suggestion_output(module_result),
+        _normalize_domain_suggestion_output(behavior_slots[0]),
+        _normalize_domain_suggestion_output(behavior_slots[1]),
+        _normalize_domain_suggestion_output(behavior_slots[2]),
         _normalize_domain_suggestion_output(symbol_result),
         _normalize_domain_suggestion_output(previous_origin_result),
         "custom",
     ]
-
-
-def _compose_folder_based_domain(evidence: DomainEvidence) -> str | None:
-    """Compose domain from the nearest functional folder (slot q).
-
-    Args:
-        evidence: Domain evidence payload.
-
-    Returns:
-        Domain token candidate.
-    """
-
-    for part in reversed(evidence.path_parts[:-1]):
-        for token in part.split("_"):
-            if _is_domain_token(token):
-                return token
-    return None
-
-
-def _compose_file_based_domain(evidence: DomainEvidence) -> str | None:
-    """Compose domain from file stem tokens (slot w).
-
-    Args:
-        evidence: Domain evidence payload.
-
-    Returns:
-        Domain token candidate.
-    """
-
-    if not evidence.file_stem:
-        return None
-
-    file_tokens = [token for token in evidence.file_stem.split("_") if _is_domain_token(token)]
-    for token in file_tokens:
-        return token
-    return None
-
-
-def _compose_module_based_domain(evidence: DomainEvidence) -> str | None:
-    """Compose domain from the functional parent module (slot e).
-
-    Args:
-        evidence: Domain evidence payload.
-
-    Returns:
-        Domain token candidate.
-    """
-
-    module_tokens = [part for part in evidence.module_parts if _is_domain_token(part)]
-    if not module_tokens:
-        return None
-    if len(module_tokens) >= 2:
-        return module_tokens[-2]
-    return module_tokens[-1]
 
 
 def _compose_symbol_based_domain(evidence: DomainEvidence) -> str | None:
@@ -278,7 +228,10 @@ def _normalize_domain_suggestion_output(value: str | None) -> str:
 
     if not value:
         return "-"
-    normalized = value.strip().lower().replace("-", "_")
+    stripped = value.strip()
+    if stripped == "-":
+        return "-"
+    normalized = stripped.lower().replace("-", "_")
     if not normalized:
         return "-"
     return normalized

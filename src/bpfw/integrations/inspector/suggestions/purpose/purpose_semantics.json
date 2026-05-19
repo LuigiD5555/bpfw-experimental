@@ -1,0 +1,31 @@
+{
+  "stopwords": [
+    "the",
+    "a",
+    "an",
+    "to",
+    "from",
+    "of",
+    "in",
+    "on",
+    "for",
+    "with",
+    "and",
+    "or"
+  ],
+  "docstring_section_markers": [
+    "Args:",
+    "Arguments:",
+    "Parameters:",
+    "Returns:",
+    "Raises:",
+    "Notes:",
+    "Examples:"
+  ],
+  "incompatible_action_pairs": [
+    ["save", "load"],
+    ["load", "save"],
+    ["create", "delete"],
+    ["delete", "create"]
+  ]
+}

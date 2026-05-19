@@ -29,4 +29,8 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-bpfw = ["py.typed"]
+bpfw = [
+  "py.typed",
+  "integrations/inspector/suggestions/purpose/action_aliases.json",
+  "integrations/inspector/suggestions/purpose/purpose_semantics.json"
+]

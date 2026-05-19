@@ -355,14 +355,26 @@ def display_value(value: Any) -> str:
 
 
 def suggest_domain(block: Dict[str, Any]) -> str | None:
-    """Suggest the first deterministic domain for one block."""
+    """Suggest the first deterministic non-placeholder domain for one block.
+
+    Args:
+        block: Block dictionary.
+
+    Returns:
+        First domain suggestion when it is usable, otherwise ``None``.
+    """
 
     from bpfw.integrations.inspector.suggestions.domain.engine import suggest_domains as catalog_suggest_domains
 
     suggestions = catalog_suggest_domains(block)
     if not suggestions:
         return None
-    return suggestions[0]
+    for suggestion in suggestions:
+        normalized_suggestion = suggestion.strip().lower()
+        if normalized_suggestion in {"", "-", "custom"}:
+            continue
+        return normalized_suggestion
+    return None
 
 
 def collect_existing_purposes(blueprint_data: Dict[str, Any]) -> tuple[str, ...]:

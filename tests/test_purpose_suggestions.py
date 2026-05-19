@@ -1,687 +1,8 @@
-"""Tests for deterministic natural-language purpose suggestions."""
+"""Tests for deterministic semantic purpose suggestions."""
 
 from typing import Any
 
-from bpfw.integrations.inspector.suggestions.purpose.engine import compact_purpose_text, suggest_purposes
-
-
-def test_suggests_token_creation_from_issuer_symbol() -> None:
-    """Suggest token creation from an issuer-style class name."""
-
-    block = {
-        "name": "TokenIssuer",
-        "code": {
-            "path": "src/auth/token.py",
-            "symbol": "TokenIssuer",
-            "kind": "class",
-        },
-        "detected": {
-            "methods": ["issue_token"],
-            "signature": "issue_token(self, user_id: str) -> str",
-        },
-    }
-
-    suggestions = suggest_purposes(block)
-
-    assert suggestions
-    assert any("token" in suggestion.text.lower() for suggestion in suggestions)
-
-
-def test_suggests_blueprint_validation_from_verify_symbol() -> None:
-    """Suggest blueprint validation from verify-style evidence."""
-
-    block = {
-        "name": "verify_blueprint",
-        "code": {
-            "path": "src/bpfw/catalog/verify.py",
-            "symbol": "verify_blueprint",
-            "kind": "function",
-        },
-        "detected": {
-            "signature": "verify_blueprint(project_root: Path) -> VerificationResult",
-            "functions": ["load_blueprint", "scan_python_project", "compare_responsibilities"],
-        },
-    }
-
-    suggestions = suggest_purposes(block)
-
-    assert suggestions
-    assert len(suggestions) == 6  # Fixed 6 slots
-    assert any("verify" in s.text.lower() for s in suggestions if s.text != "-")
-
-
-def test_suggests_loading_blueprint_authority_from_disk() -> None:
-    """Suggest loading blueprint authority from disk."""
-
-    block = _responsibility(
-        symbol="load_blueprint",
-        path="src/bpfw/catalog/loader.py",
-        signature="load_blueprint(path: Path) -> Blueprint",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    assert len(suggestions) == 6
-    assert any("load" in s.text.lower() for s in suggestions if s.text != "-")
-
-
-def test_suggests_scanning_python_source_files() -> None:
-    """Suggest scanning Python source files for declared code units."""
-
-    block = _responsibility(
-        symbol="scan_python_files",
-        path="src/bpfw/catalog/scanner.py",
-        signature="scan_python_files(project_root: Path) -> list[CodeUnit]",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    # Fixed slot ordering, blended may vary but should contain scan/python
-    assert len(suggestions) == 6
-    assert any("scan" in s.text.lower() for s in suggestions if s.text != "-")
-
-
-def test_suggests_project_verification_against_detected_source_code() -> None:
-    """Suggest blueprint validation against detected source code."""
-
-    block = _responsibility(
-        symbol="verify_project",
-        path="src/bpfw/catalog/verify.py",
-        signature="verify_project(project_root: Path) -> VerificationResult",
-        functions=["load_blueprint", "scan_project", "compare_responsibilities"],
-    )
-
-    suggestions = suggest_purposes(block)
-
-    assert len(suggestions) == 6
-    assert any("verify" in s.text.lower() for s in suggestions if s.text != "-")
-
-
-def test_suggests_writing_blueprint_authority_changes_to_disk() -> None:
-    """Suggest writing blueprint authority changes to disk."""
-
-    block = _responsibility(
-        symbol="save_blueprint",
-        path="src/bpfw/catalog/writer.py",
-        signature="save_blueprint(blueprint: Blueprint, path: Path) -> None",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    assert len(suggestions) == 6
-    assert any("save" in s.text.lower() or "write" in s.text.lower() for s in suggestions if s.text != "-")
-
-
-def test_suggests_detecting_duplicate_active_responsibilities() -> None:
-    """Suggest detecting duplicate active blocks by purpose."""
-
-    block = _responsibility(
-        symbol="find_duplicate_purposes",
-        path="src/bpfw/catalog/drift.py",
-        signature=(
-            "find_duplicate_purposes("
-            "blocks: list[Block]"
-            ") -> list[DuplicateGroup]"
-        ),
-    )
-
-    suggestions = suggest_purposes(block)
-
-    assert len(suggestions) == 6
-    assert any("duplicate" in s.text.lower() for s in suggestions if s.text != "-")
-
-
-def test_suggests_protecting_authority_files() -> None:
-    """Suggest protecting authority files from direct modification."""
-
-    block = _responsibility(
-        symbol="lock_authority_file",
-        path="src/bpfw/protection/os_lock.py",
-        signature="lock_authority_file(path: Path) -> LockResult",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    assert len(suggestions) == 6
-    assert any("lock" in s.text.lower() or "protect" in s.text.lower() for s in suggestions if s.text != "-")
-
-
-def test_suggests_running_blueprint_verification_from_command_line() -> None:
-    """Suggest running blueprint verification from the command line."""
-
-    block = _responsibility(
-        symbol="handle_verify_command",
-        path="src/bpfw/cli.py",
-        signature="handle_verify_command(args: list[str]) -> int",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    assert len(suggestions) == 6
-    assert any("verify" in s.text.lower() or "handle" in s.text.lower() for s in suggestions if s.text != "-")
-
-
-def test_suggests_purpose_from_purpose_suggestion_dataclass() -> None:
-    """Suggest purpose suggestions from the dataclass evidence."""
-
-    block = _responsibility(
-        symbol="PurposeSuggestion",
-        path="src/bpfw/catalog/purpose_suggestions.py",
-        symbol_type="class",
-        docstring="Represent one deterministic natural-language purpose suggestion.",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    assert len(suggestions) == 6
-    assert any("suggest" in s.text.lower() or "represent" in s.text.lower() for s in suggestions if s.text != "-")
-
-
-def test_suggests_richer_purpose_for_suggest_purposes_function() -> None:
-    """Suggest the public suggester behavior from function evidence."""
-
-    block = _responsibility(
-        symbol="suggest_purposes",
-        path="src/bpfw/catalog/purpose_suggestions.py",
-        signature="suggest_purposes(block: dict[str, Any]) -> list[PurposeSuggestion]",
-        docstring="Suggest natural-language purposes from deterministic block evidence.",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    # Docstring slot contains the purpose-focused suggestion
-    assert suggestions[3].text == "suggest purpose"
-
-
-def test_docstring_slot_prefers_docstring_sentence_over_keyword_stems() -> None:
-    block = _responsibility(
-        symbol="resolve_guard_files",
-        path="src/bpfw/protection/authority.py",
-        signature="resolve_guard_files() -> List[Path]",
-        docstring="Return paths to BPFW package files that implement the protection mechanism.",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    assert suggestions[3].text == "return protection mechanism file paths"
-    assert "file" in suggestions[3].text.lower()
-
-
-def test_name_slot_preserves_symbol_token_order() -> None:
-    block = _responsibility(
-        symbol="resolve_guard_files",
-        path="src/bpfw/protection/authority.py",
-        signature="resolve_guard_files() -> List[Path]",
-        docstring="Return paths to BPFW package files that implement the protection mechanism.",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    assert suggestions[2].text == "resolve guard file"
-
-
-def test_build_docstring_slot_drops_secondary_clauses() -> None:
-    block = _responsibility(
-        symbol="resolve_protected_resources",
-        path="src/bpfw/protection/authority.py",
-        signature="resolve_protected_resources(project_root: Path) -> List[ProtectedResource]",
-        docstring="Build the full protection resource list for a project, including its blueprint and BPFW guard files.",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    assert suggestions[3].text == "build protection resource list"
-
-
-def test_suggests_collecting_responsibility_evidence() -> None:
-    """Suggest evidence collection rather than scanning evidence text."""
-
-    block = _responsibility(
-        symbol="collect_evidence_text",
-        path="src/bpfw/catalog/purpose_suggestions.py",
-        signature="collect_evidence_text(block: dict[str, Any]) -> str",
-        docstring="Collect deterministic text evidence from one block dictionary.",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    # "collect evidence text" now appears in name_based slot (2)
-    assert suggestions[2].text == "collect evidence text"
-    assert all("Scan evidence text" != suggestion.text for suggestion in suggestions)
-
-
-def test_suggests_normalizing_technical_evidence_tokens() -> None:
-    """Suggest token normalization from tokenizer evidence."""
-
-    block = _responsibility(
-        symbol="tokenize_evidence",
-        path="src/bpfw/catalog/purpose_suggestions.py",
-        signature="tokenize_evidence(text: str) -> list[str]",
-        docstring="Convert technical names and text evidence into normalized tokens.",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    assert len(suggestions) == 6
-    assert any("convert" in s.text.lower() or "normalize" in s.text.lower() for s in suggestions if s.text != "-")
-
-
-def test_suggests_composing_purpose_sentence_candidates() -> None:
-    """Suggest candidate composition from compose function evidence."""
-
-    block = _responsibility(
-        symbol="compose_candidates",
-        path="src/bpfw/catalog/purpose_suggestions.py",
-        signature="compose_candidates(...) -> list[_Candidate]",
-        docstring="Compose deterministic purpose sentence candidates.",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    assert len(suggestions) == 6
-    assert any("compose" in s.text.lower() or "build" in s.text.lower() for s in suggestions if s.text != "-")
-
-
-def test_returns_empty_slots_for_generic_low_evidence_symbol() -> None:
-    """Use placeholders for generic low-evidence blocks."""
-
-    block = _responsibility(
-        symbol="Helper",
-        path="src/bpfw/catalog/helper.py",
-        symbol_type="class",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    assert len(suggestions) == 6
-    assert suggestions[0].text == "-"
-    assert suggestions[5].text == "write custom purpose..."
-
-
-def test_suggestions_do_not_duplicate_action_words() -> None:
-    """Avoid duplicate action/object phrases."""
-
-    cases = [
-        _responsibility(
-            symbol="load_blueprint",
-            path="src/bpfw/catalog/loader.py",
-            signature="load_blueprint(path: Path) -> Blueprint",
-        ),
-        _responsibility(
-            symbol="save_blueprint",
-            path="src/bpfw/catalog/writer.py",
-            signature="save_blueprint(blueprint: Blueprint, path: Path) -> None",
-        ),
-        _responsibility(
-            symbol="handle_verify_command",
-            path="src/bpfw/cli.py",
-            signature="handle_verify_command(args: list[str]) -> int",
-        ),
-    ]
-
-    texts = [suggest_purposes(block)[4].text for block in cases]
-
-    assert all("Load load" not in text for text in texts)
-    assert all("Write save" not in text for text in texts)
-    assert all("Handle handle" not in text for text in texts)
-
-
-def test_suggest_purposes_returns_fixed_slots_when_evidence_is_sufficient() -> None:
-    block = _responsibility(
-        symbol="suggest_purposes",
-        path="src/bpfw/catalog/purpose_suggestions.py",
-        signature="suggest_purposes(block: dict[str, Any]) -> list[PurposeSuggestion]",
-        docstring="Suggest natural-language purposes from deterministic block evidence.",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    assert len(suggestions) == 6
-    # Docstring slot contains "suggest purpose", blended may be "-" after quality filter
-    assert any("suggest" in s.text for s in suggestions if s.text != "-")
-
-
-def test_suggest_purposes_keeps_specific_template_as_first_option() -> None:
-    block = _responsibility(
-        symbol="collect_evidence_text",
-        path="src/bpfw/catalog/purpose_suggestions.py",
-        signature="collect_evidence_text(block: dict[str, Any]) -> str",
-        docstring="Collect deterministic text evidence from one block dictionary.",
-    )
-
-    suggestions = suggest_purposes(block)
-    # "collect evidence text" is now in name_based slot (2), not blended_based (4)
-    assert suggestions[2].text == "collect evidence text"
-
-
-def test_suggest_purposes_does_not_return_duplicate_variants() -> None:
-    block = _responsibility(
-        symbol="suggest_purposes",
-        path="src/bpfw/catalog/purpose_suggestions.py",
-        signature="suggest_purposes(block: dict[str, Any]) -> list[PurposeSuggestion]",
-        docstring="Suggest natural-language purposes from deterministic block evidence.",
-    )
-
-    suggestions = suggest_purposes(block)
-    # Check that we don't have duplicate non-placeholder texts
-    non_placeholder_texts = [s.text for s in suggestions if s.text != "-"]
-    assert len(non_placeholder_texts) == len(set(non_placeholder_texts))
-
-
-def test_compact_purpose_text_removes_responsibility_evidence_context() -> None:
-    assert (
-        compact_purpose_text("Suggest natural-language purposes from block evidence")
-        == "suggest purposes"
-    )
-
-
-def test_compact_purpose_text_compacts_purpose_suggestion_text() -> None:
-    assert (
-        compact_purpose_text("Suggest purpose suggestions from block evidence")
-        == "suggest purposes"
-    )
-
-
-def test_compact_purpose_text_limits_word_count() -> None:
-    result = compact_purpose_text(
-        "Collect deterministic text evidence from one block dictionary"
-    )
-    assert len(result.split()) <= 5
-    # The compacting logic may produce different results with fixed slots
-    assert "collect" in result.lower() and "evidence" in result.lower()
-
-
-def test_suggest_purposes_returns_compact_options() -> None:
-    block = _responsibility(
-        symbol="suggest_purposes",
-        path="src/bpfw/catalog/purpose_suggestions.py",
-        signature="suggest_purposes(block: dict[str, Any]) -> list[PurposeSuggestion]",
-        docstring="Suggest natural-language purposes from deterministic block evidence.",
-    )
-    suggestions = suggest_purposes(block)
-    texts = [suggestion.text for suggestion in suggestions]
-    # The docstring slot now gives "suggest purpose" (singular)
-    assert any("suggest purpose" in text for text in texts)
-    assert all(len(text.split()) <= 5 for text in texts)
-    assert all("block evidence" not in text.lower() for text in texts)
-
-
-def test_suggest_purposes_returns_six_fixed_options() -> None:
-    block = _responsibility(
-        symbol="verify_project",
-        path="src/bpfw/catalog/verify.py",
-        signature="verify_project(project_root: Path) -> VerificationResult",
-        functions=["load_blueprint", "scan_project", "compare_responsibilities"],
-        docstring="Validate blueprint declarations against detected source code.",
-    )
-
-    suggestions = suggest_purposes(block)
-    assert len(suggestions) == 6
-    assert all(len(suggestion.text.split()) <= 5 for suggestion in suggestions)
-
-
-def test_suggest_purposes_generalizes_for_non_catalog_snippet() -> None:
-    block = _responsibility(
-        symbol="issue_access_token",
-        path="src/auth/jwt_tokens.py",
-        signature="issue_access_token(user_id: str, ttl_seconds: int) -> str",
-        docstring="Create and sign JWT access tokens.",
-    )
-
-    suggestions = suggest_purposes(block)
-    texts = [suggestion.text.lower() for suggestion in suggestions]
-    assert suggestions
-    assert all("purpose candidates" not in text for text in texts)
-
-
-def test_purpose_suggestions_include_distinct_sources_when_evidence_is_sufficient() -> None:
-    block = _responsibility(
-        symbol="suggest_purposes",
-        path="src/bpfw/catalog/purpose_suggestions.py",
-        signature="suggest_purposes(block: dict[str, Any]) -> list[PurposeSuggestion]",
-        functions=["compose_fixed_purpose_slots"],
-        docstring="Suggest natural-language purposes from deterministic block evidence.",
-    )
-    suggestions = suggest_purposes(
-        block,
-        existing_purposes=("suggest purposes", "collect evidence text"),
-    )
-    # Verify all 6 slots are present with correct source types
-    assert len(suggestions) == 6
-    sources = [s.source for s in suggestions]
-    assert sources == [
-        "existing_purpose",
-        "learned_based",
-        "name_based",
-        "docstring_based",
-        "blended_based",
-        "custom_purpose",
-    ]
-
-
-def test_existing_purpose_based_candidate_appears_when_similar_purpose_exists() -> None:
-    block = _responsibility(
-        symbol="collect_evidence_text",
-        path="src/bpfw/catalog/purpose_suggestions.py",
-        signature="collect_evidence_text(block: dict[str, Any]) -> str",
-        docstring="Collect deterministic text evidence from one block dictionary.",
-    )
-    existing = ("collect evidence text", "Run project verification")
-    suggestions = suggest_purposes(block, existing_purposes=existing)
-    assert any(suggestion.text == "collect evidence text" for suggestion in suggestions)
-
-
-def test_purpose_suggestions_keep_fixed_slot_order() -> None:
-    """Purpose suggestions must keep stable inspector slot order."""
-
-    block = {
-        "code": {
-            "path": "src/bpfw/protection/authority.py",
-            "symbol": "AuthorityValidator",
-            "kind": "class",
-        },
-        "detected": {
-            "docstring": "Validate blueprint authority declarations.",
-            "signature": "class AuthorityValidator",
-        },
-    }
-    suggestions = suggest_purposes(
-        block,
-        existing_purposes=("Validate blueprint authority",),
-    )
-    assert [item.source for item in suggestions] == [
-        "existing_purpose",
-        "learned_based",
-        "name_based",
-        "docstring_based",
-        "blended_based",
-        "custom_purpose",
-    ]
-
-
-def test_missing_purpose_sources_render_as_placeholders() -> None:
-    """Missing purpose sources must render placeholders without changing slot order."""
-
-    block = {
-        "code": {
-            "path": "src/example.py",
-            "symbol": "Thing",
-            "kind": "class",
-        }
-    }
-    suggestions = suggest_purposes(block)
-    assert len(suggestions) == 6
-    assert suggestions[0].source == "existing_purpose"
-    assert suggestions[-1].source == "custom_purpose"
-
-
-def test_error_docstring_generates_raise_object_error_purpose() -> None:
-    """Error docstrings should produce a clean raise purpose with object detail."""
-
-    block = _responsibility(
-        symbol="BlueprintMissingError",
-        path="src/bpfw/core/errors.py",
-        symbol_type="class",
-        docstring="Raised when an operation requires a missing blueprint file.",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    # Check that error-related text appears in one of the slots
-    assert len(suggestions) == 6
-    assert any(
-        "error" in s.text.lower() or "missing" in s.text.lower()
-        for s in suggestions if s.text != "-"
-    )
-
-
-def test_error_docstring_avoids_noisy_raised_when_prefix() -> None:
-    """Docstring-based error purpose should not contain noisy filler tokens."""
-
-    block = _responsibility(
-        symbol="BlueprintLockedError",
-        path="src/bpfw/core/errors.py",
-        symbol_type="class",
-        docstring="Raised when a protected blueprint write is attempted while locked.",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    # Check that noisy tokens are not present in any non-placeholder slot
-    non_placeholders = [s.text for s in suggestions if s.text != "-"]
-    assert all("raised when" not in text.lower() for text in non_placeholders)
-    assert all("operation" not in text.lower() for text in non_placeholders)
-
-
-def test_docstring_slot_transforms_raised_when_error_docstring() -> None:
-    """Docstring slot should convert raised-when error text into an active purpose."""
-
-    block = _responsibility(
-        symbol="BlueprintLockedError",
-        path="src/bpfw/core/errors.py",
-        symbol_type="class",
-        docstring="Raised when a protected blueprint write is attempted while locked.",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    assert suggestions[3].source == "docstring_based"
-    assert suggestions[3].text == "raise protected blueprint write error"
-
-
-def test_blended_slot_enriches_aligned_learned_history(monkeypatch: Any) -> None:
-    """Blended slot should use aligned learned text before fallback routes."""
-
-    monkeypatch.setattr(
-        "bpfw.integrations.inspector.suggestions.purpose.engine.get_top_learned_purposes",
-        lambda limit=20: [("declare blueprintlockederror class", 5)],
-    )
-    block = _responsibility(
-        symbol="BlueprintLockedError",
-        path="src/bpfw/core/errors.py",
-        symbol_type="class",
-        docstring="Raised when a protected blueprint write is attempted while locked.",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    assert suggestions[1].text == "declare blueprintlockederror class"
-    assert suggestions[4].source == "blended_based"
-    assert suggestions[4].text == "declare protected blueprint locked error"
-
-
-def test_blended_slot_uses_available_evidence_without_learned_history(monkeypatch: Any) -> None:
-    """Blended slot should not be empty when symbol and docstring are enough."""
-
-    monkeypatch.setattr(
-        "bpfw.integrations.inspector.suggestions.purpose.engine.get_top_learned_purposes",
-        lambda limit=20: [],
-    )
-    block = _responsibility(
-        symbol="BlueprintLockedError",
-        path="src/bpfw/core/errors.py",
-        symbol_type="class",
-        docstring="Raised when a protected blueprint write is attempted while locked.",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    assert suggestions[4].source == "blended_based"
-    assert suggestions[4].text == "protect blueprint write lock"
-
-
-def test_error_symbol_fallback_works_with_poor_docstring() -> None:
-    """Error class name should provide fallback purpose when docstring is weak."""
-
-    block = _responsibility(
-        symbol="AuthTokenError",
-        path="src/auth/errors.py",
-        symbol_type="class",
-        docstring="Raised.",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    # Check that error-related text appears in one of the slots
-    assert len(suggestions) == 6
-    assert any(
-        "auth" in s.text.lower() or "token" in s.text.lower()
-        or "error" in s.text.lower() for s in suggestions if s.text != "-"
-    )
-
-
-def test_non_error_docstring_path_keeps_existing_behavior() -> None:
-    """Non-error blocks should not be forced into raise-style fallback."""
-
-    block = _responsibility(
-        symbol="tokenize_evidence",
-        path="src/bpfw/catalog/purpose_suggestions.py",
-        signature="tokenize_evidence(text: str) -> list[str]",
-        docstring="Convert technical names and text evidence into normalized tokens.",
-    )
-
-    suggestions = suggest_purposes(block)
-
-    # Check that conversion/normalization related text appears
-    assert len(suggestions) == 6
-    assert any(
-        "convert" in s.text.lower() or "normalize" in s.text.lower()
-        or "token" in s.text.lower() for s in suggestions if s.text != "-"
-    )
-
-
-def test_docstring_slot_reads_source_when_detected_docstring_missing() -> None:
-    """Docstring slot should backfill from source file when detected docstring is absent."""
-
-    block = {
-        "name": "BlueprintMissingError",
-        "code": {
-            "path": "src/bpfw/core/errors.py",
-            "module": "src.bpfw.core.errors",
-            "symbol": "BlueprintMissingError",
-            "kind": "class",
-        },
-        "detected": {
-            "qualified_name": "BlueprintMissingError",
-            "kind": "class",
-            "methods": [],
-            "functions": [],
-            "imports": [],
-            "decorators": [],
-        },
-    }
-
-    suggestions = suggest_purposes(
-        block,
-        existing_purposes=("Define a BlueprintMissingError object",),
-    )
-
-    # Check that error-related text appears in one of the slots
-    assert len(suggestions) == 6
-    assert any(
-        "error" in s.text.lower() or "missing" in s.text.lower()
-        or "blueprint" in s.text.lower() for s in suggestions if s.text != "-"
-    )
+from bpfw.integrations.inspector.suggestions.purpose.engine import suggest_purposes
 
 
 def _responsibility(
@@ -689,17 +10,13 @@ def _responsibility(
     path: str,
     signature: str | None = None,
     symbol_type: str = "function",
-    functions: list[str] | None = None,
-    methods: list[str] | None = None,
     docstring: str | None = None,
 ) -> dict[str, Any]:
-    """Build a detected block fixture."""
-
     detected: dict[str, Any] = {
         "qualified_name": symbol,
         "kind": symbol_type,
-        "methods": methods or [],
-        "functions": functions or [],
+        "methods": [],
+        "functions": [],
         "imports": [],
         "decorators": [],
     }
@@ -719,19 +36,150 @@ def _responsibility(
         "detected": detected,
     }
 
-def test_represent_result_docstring_fills_docstring_and_blended_slots() -> None:
-    """Represent-result docstrings should not disappear from purpose suggestions."""
 
+def test_authority_index_save_semantic_slots() -> None:
     block = _responsibility(
-        symbol="ProtectionResult",
-        path="src/bpfw/protection/authority.py",
-        symbol_type="class",
-        docstring="Represent the result of a BPFW authority protection operation.",
+        symbol="AuthorityIndex.save",
+        path="src/bpfw/catalog/authority.py",
+        signature="save(self, project_root: Path) -> None",
+        docstring=(
+            "Save the authority index to the project root. "
+            "Args: project_root: The project root directory. "
+            "Raises: InvalidAuthorityIndexError: If the index is invalid."
+        ),
     )
 
     suggestions = suggest_purposes(block)
+    texts = [item.text for item in suggestions]
 
-    assert suggestions[3].source == "docstring_based"
-    assert suggestions[3].text == "represent authority protection result"
-    assert suggestions[4].source == "blended_based"
-    assert suggestions[4].text == "represent protection result"
+    assert suggestions[2].text == "save authority index"
+    assert suggestions[3].text == "save authority index to project root"
+    assert all("invalid" not in text for text in texts)
+    assert all("get project root" not in text for text in texts)
+    assert all("load authority index" not in text for text in texts)
+
+
+def test_existing_purpose_compatibility_reuses_matching_purpose() -> None:
+    block = _responsibility(symbol="AuthorityIndex.save", path="src/bpfw/catalog/authority.py")
+    suggestions = suggest_purposes(
+        block,
+        existing_purposes=("get project root", "load authority index", "save authority index"),
+    )
+    assert suggestions[0].text == "save authority index"
+
+
+def test_existing_purpose_rejects_incompatible_action() -> None:
+    block = _responsibility(symbol="AuthorityIndex.save", path="src/bpfw/catalog/authority.py")
+    suggestions = suggest_purposes(block, existing_purposes=("load authority index",))
+    assert suggestions[0].text == "-"
+
+
+def test_existing_purpose_accepts_normalized_compatible_action() -> None:
+    block = _responsibility(symbol="AuthorityIndex.save", path="src/bpfw/catalog/authority.py")
+    suggestions = suggest_purposes(block, existing_purposes=("persist authority index",))
+    assert suggestions[0].text == "persist authority index"
+
+
+def test_symbol_method_uses_class_context() -> None:
+    block = _responsibility(symbol="AuthorityIndex.save", path="src/bpfw/catalog/authority.py")
+    suggestions = suggest_purposes(block)
+    assert suggestions[2].text == "save authority index"
+
+
+def test_symbol_function_uses_function_name() -> None:
+    block = _responsibility(symbol="validate_blueprint_schema", path="src/bpfw/catalog/schema.py")
+    suggestions = suggest_purposes(block)
+    assert suggestions[2].text == "validate blueprint schema"
+
+
+def test_docstring_uses_first_sentence_only() -> None:
+    block = _responsibility(
+        symbol="AuthorityIndex.save",
+        path="src/bpfw/catalog/authority.py",
+        docstring=(
+            "Save the authority index to the project root. "
+            "Raises: InvalidAuthorityIndexError: If the index is invalid."
+        ),
+    )
+    suggestions = suggest_purposes(block)
+    assert suggestions[3].text == "save authority index to project root"
+    assert all("invalid" not in suggestion.text for suggestion in suggestions)
+
+
+def test_learned_purpose_uses_compatibility_order(monkeypatch: Any) -> None:
+    block = _responsibility(symbol="AuthorityIndex.save", path="src/bpfw/catalog/authority.py")
+    monkeypatch.setattr(
+        "bpfw.integrations.inspector.suggestions.purpose.engine.get_learned_purposes",
+        lambda: ["load authority index", "persist authority index"],
+    )
+    suggestions = suggest_purposes(block)
+    assert suggestions[1].text == "persist authority index"
+
+
+def test_no_hardcoded_authority_example_behavior() -> None:
+    block = _responsibility(
+        symbol="CacheStore.persist",
+        path="src/bpfw/cache/store.py",
+        docstring="Persist the cache store to disk.",
+    )
+    suggestions = suggest_purposes(block)
+    assert suggestions[2].text == "save cache store"
+    assert suggestions[3].text == "save cache store to disk"
+
+
+def test_symbol_alias_normalization_build_maps_to_create() -> None:
+    block = _responsibility(symbol="BlueprintFactory.build", path="src/bpfw/factory.py")
+    suggestions = suggest_purposes(block)
+    assert suggestions[2].text == "create blueprint factory"
+
+
+def test_docstring_alias_normalization_verify_maps_to_validate() -> None:
+    block = _responsibility(
+        symbol="SchemaInspector.inspect",
+        path="src/bpfw/schema/inspector.py",
+        docstring="Verify the blueprint schema for project compatibility.",
+    )
+    suggestions = suggest_purposes(block)
+    assert suggestions[3].text == "validate blueprint schema to project compatibility"
+
+
+def test_existing_purpose_accepts_modify_alias_from_update() -> None:
+    block = _responsibility(symbol="BlueprintConfig.modify", path="src/bpfw/config.py")
+    suggestions = suggest_purposes(block, existing_purposes=("update blueprint config",))
+    assert suggestions[0].text == "update blueprint config"
+
+
+def test_fixed_slots_and_custom_slot() -> None:
+    block = _responsibility(symbol="Thing", path="src/example.py", symbol_type="class")
+    suggestions = suggest_purposes(block)
+    assert len(suggestions) == 6
+    assert suggestions[5].text == "write custom purpose"
+
+
+def test_deduplication_keeps_earliest_slot() -> None:
+    block = _responsibility(symbol="AuthorityIndex.save", path="src/bpfw/catalog/authority.py")
+    suggestions = suggest_purposes(block, existing_purposes=("save authority index",))
+    assert suggestions[0].text == "save authority index"
+    assert suggestions[2].text == "-"
+
+
+def test_existing_purpose_relaxed_lookup_overlap_surfaces_near_match() -> None:
+    block = _responsibility(
+        symbol="AuthorityDocument.get_included_shard_paths",
+        path="src/bpfw/authority/document.py",
+    )
+    suggestions = suggest_purposes(block, existing_purposes=("return all shard paths",))
+    assert suggestions[0].text == "return all shard paths"
+
+
+def test_learned_purpose_relaxed_lookup_overlap_surfaces_near_match(monkeypatch: Any) -> None:
+    block = _responsibility(
+        symbol="AuthorityDocument.get_included_shard_paths",
+        path="src/bpfw/authority/document.py",
+    )
+    monkeypatch.setattr(
+        "bpfw.integrations.inspector.suggestions.purpose.engine.get_learned_purposes",
+        lambda: ["return list included shard paths"],
+    )
+    suggestions = suggest_purposes(block)
+    assert suggestions[1].text == "return list included shard paths"

@@ -1,15 +1,6 @@
-from bpfw.integrations.inspector.suggestions.purpose.learning import score_phrase_context_match
+from bpfw.integrations.inspector.suggestions.purpose.learning import get_learned_purposes
 
 
-def test_score_phrase_context_match_detects_overlap() -> None:
-    assert score_phrase_context_match("suggest purposes", "suggest_purposes function") > 0
-
-
-def test_score_phrase_context_match_returns_zero_without_overlap() -> None:
-    assert score_phrase_context_match("token issuer", "blueprint verification") == 0
-
-
-def test_score_phrase_context_match_handles_compound_error_tokens() -> None:
-    phrase = "define blueprintmissingerror object"
-    context = "blueprint missing error raised when file is absent"
-    assert score_phrase_context_match(phrase, context) >= 3
+def test_get_learned_purposes_returns_empty_when_learning_disabled(monkeypatch):
+    monkeypatch.setenv("PYTEST_CURRENT_TEST", "1")
+    assert get_learned_purposes() == []
