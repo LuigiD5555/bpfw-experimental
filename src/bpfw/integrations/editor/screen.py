@@ -231,13 +231,13 @@ def _results_block_ratio(results: list) -> float:
 
     max_name_length = max(len((record.name or "-")) for record in results)
     max_domain_length = max(len((record.domain or "-")) for record in results)
-    max_code_length = max(len((record.location or "-")) for record in results)
+    max_purpose_length = max(len((record.purpose or "-")) for record in results)
 
     desired_idx_width = 5
     desired_lifecycle_width = 10
     desired_domain_width = max(10, min(max_domain_length, 40))
     desired_name_width = max(14, min(max_name_length, 72))
-    desired_code_width = max(8, min(max_code_length, 52))
+    desired_purpose_width = max(8, min(max_purpose_length, 52))
 
     # Five columns use six vertical separators in the table renderer.
     required_content_width = (
@@ -245,7 +245,7 @@ def _results_block_ratio(results: list) -> float:
         + desired_lifecycle_width
         + desired_domain_width
         + desired_name_width
-        + desired_code_width
+        + desired_purpose_width
     )
     required_block_width = required_content_width + 6
 
@@ -262,9 +262,9 @@ def _results_block_ratio(results: list) -> float:
 
 
 def _compute_results_column_widths(results: list, total_content_width: int) -> tuple[int, int, int, int, int]:
-    """Compute IDX/LIFECYCLE/DOMAIN/NAME/CODE widths with truncation priority.
+    """Compute IDX/LIFECYCLE/DOMAIN/NAME/PURPOSE widths with truncation priority.
 
-    When space is limited, reduce CODE first, then DOMAIN, and keep NAME as complete as possible.
+    When space is limited, reduce PURPOSE first, then DOMAIN, and keep NAME as complete as possible.
     """
 
     idx_width = 5
@@ -272,32 +272,32 @@ def _compute_results_column_widths(results: list, total_content_width: int) -> t
 
     max_domain_length = max((len(record.domain or "-") for record in results), default=6)
     max_name_length = max((len(record.name or "-") for record in results), default=4)
-    max_code_length = max((len(record.location or "-") for record in results), default=4)
+    max_purpose_length = max((len(record.purpose or "-") for record in results), default=7)
 
     min_domain_width = 10
     min_name_width = 14
-    min_code_width = 8
+    min_purpose_width = 8
 
     available_main_width = total_content_width - idx_width - lifecycle_width
-    if available_main_width <= (min_domain_width + min_name_width + min_code_width):
-        return idx_width, lifecycle_width, min_domain_width, min_name_width, min_code_width
+    if available_main_width <= (min_domain_width + min_name_width + min_purpose_width):
+        return idx_width, lifecycle_width, min_domain_width, min_name_width, min_purpose_width
 
     desired_domain_width = max(min_domain_width, min(max_domain_length, 40))
     desired_name_width = max(min_name_width, min(max_name_length, 72))
-    desired_code_width = max(min_code_width, min(max_code_length, 52))
-    requested_main_width = desired_domain_width + desired_name_width + desired_code_width
+    desired_purpose_width = max(min_purpose_width, min(max_purpose_length, 52))
+    requested_main_width = desired_domain_width + desired_name_width + desired_purpose_width
 
     if requested_main_width <= available_main_width:
         extra_width = available_main_width - requested_main_width
         desired_name_width += extra_width
-        return idx_width, lifecycle_width, desired_domain_width, desired_name_width, desired_code_width
+        return idx_width, lifecycle_width, desired_domain_width, desired_name_width, desired_purpose_width
 
     overflow = requested_main_width - available_main_width
 
-    reducible_code = desired_code_width - min_code_width
-    reduce_code = min(overflow, reducible_code)
-    desired_code_width -= reduce_code
-    overflow -= reduce_code
+    reducible_purpose = desired_purpose_width - min_purpose_width
+    reduce_purpose = min(overflow, reducible_purpose)
+    desired_purpose_width -= reduce_purpose
+    overflow -= reduce_purpose
 
     reducible_domain = desired_domain_width - min_domain_width
     reduce_domain = min(overflow, reducible_domain)
@@ -308,7 +308,7 @@ def _compute_results_column_widths(results: list, total_content_width: int) -> t
     reduce_name = min(overflow, reducible_name)
     desired_name_width -= reduce_name
 
-    return idx_width, lifecycle_width, desired_domain_width, desired_name_width, desired_code_width
+    return idx_width, lifecycle_width, desired_domain_width, desired_name_width, desired_purpose_width
 
 
 def render_editor_banner(ratio: float = 0.70) -> None:
@@ -386,7 +386,7 @@ def _render_results_table_rows(results: list, ratio: float = 0.70) -> None:
 
     # Five columns need six vertical separators.
     total_content_width = max(54, width - 6)
-    idx_width, status_width, domain_width, name_width, code_width = _compute_results_column_widths(
+    idx_width, status_width, domain_width, name_width, purpose_width = _compute_results_column_widths(
         results,
         total_content_width,
     )
@@ -397,28 +397,28 @@ def _render_results_table_rows(results: list, ratio: float = 0.70) -> None:
         f"\u2502{'LIFECYCLE':^{status_width}}"
         f"\u2502{'DOMAIN':^{domain_width}}"
         f"\u2502{'NAME':^{name_width}}"
-        f"\u2502{'CODE':^{code_width}}\u2502"
+        f"\u2502{'PURPOSE':^{purpose_width}}\u2502"
     )
     separator = (
         f"\u251c{'\u2500' * idx_width}"
         f"\u253c{'\u2500' * status_width}"
         f"\u253c{'\u2500' * domain_width}"
         f"\u253c{'\u2500' * name_width}"
-        f"\u253c{'\u2500' * code_width}\u2524"
+        f"\u253c{'\u2500' * purpose_width}\u2524"
     )
     top_border = (
         f"\u250c{'\u2500' * idx_width}"
         f"\u252c{'\u2500' * status_width}"
         f"\u252c{'\u2500' * domain_width}"
         f"\u252c{'\u2500' * name_width}"
-        f"\u252c{'\u2500' * code_width}\u2510"
+        f"\u252c{'\u2500' * purpose_width}\u2510"
     )
     bottom_border = (
         f"\u2514{'\u2500' * idx_width}"
         f"\u2534{'\u2500' * status_width}"
         f"\u2534{'\u2500' * domain_width}"
         f"\u2534{'\u2500' * name_width}"
-        f"\u2534{'\u2500' * code_width}\u2518"
+        f"\u2534{'\u2500' * purpose_width}\u2518"
     )
 
     print(top_border)
@@ -429,12 +429,10 @@ def _render_results_table_rows(results: list, ratio: float = 0.70) -> None:
         status = truncate(record.status or "-", status_width).center(status_width)
         domain = truncate(record.domain or "-", domain_width).center(domain_width)
         name = truncate(record.name or "-", name_width).ljust(name_width)
-        record_location = record.location or "-"
-        code = truncate(record_location, code_width).ljust(code_width)
+        purpose_value = record.purpose or "-"
+        purpose = truncate(purpose_value, purpose_width).ljust(purpose_width)
         index_str = str(display_index).center(idx_width)
-        print(f"\u2502{index_str}\u2502{status}\u2502{domain}\u2502{name}\u2502{code}\u2502")
-        if code.strip() != record_location:
-            print(f"  location: {record_location}")
+        print(f"\u2502{index_str}\u2502{status}\u2502{domain}\u2502{name}\u2502{purpose}\u2502")
 
     print(bottom_border)
 
@@ -575,7 +573,7 @@ def render_editor_help_screen() -> None:
     print("│    LIFECYCLE  Current block lifecycle.                             │")
     print("│    DOMAIN        Block domain.                                  │")
     print("│    NAME          Block name.                                   │")
-    print("│    CODE      Related file path.                                     │")
+    print("│    PURPOSE       Why the block exists.                                 │")
     print("│                                                                         │")
     print("│  Filters                                                                │")
     print("│  ───────                                                                │")
