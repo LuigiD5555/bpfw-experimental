@@ -25,6 +25,7 @@ from bpfw.protection.authority import (
 from bpfw.reports.status_report import run_status
 from bpfw.reports.verify_report import render_verify_report
 from bpfw.shared.text import normalize_text_command
+from bpfw.protection.runtime_lease import runtime_blueprint_write_lease
 
 
 MVP_COMMANDS = (
@@ -397,10 +398,15 @@ def main() -> int:
     # init is handled directly by the catalog writer
     if normalized_command == "init":
         project_root = Path(parsed_arguments.project_root).resolve()
-        _success, message, exit_code = run_init(
-            project_root=project_root,
-            allow_unprotected=parsed_arguments.allow_unprotected,
-        )
+        try:
+            with runtime_blueprint_write_lease(project_root=project_root, tool_name="init"):
+                _success, message, exit_code = run_init(
+                    project_root=project_root,
+                    allow_unprotected=parsed_arguments.allow_unprotected,
+                )
+        except Exception as error:
+            print(f"Init error: {error}")
+            return 1
         print(message)
         return exit_code
 
@@ -457,60 +463,61 @@ def main() -> int:
         permission_repair_attempted = False
         while True:
             try:
-                migration_summary = _migrate_root_blocks_to_default_shard(project_root=project_root)
-                if migration_summary["migrated"] or migration_summary["skipped"]:
-                    print(
-                        "Migrated root-level blocks into shard storage: "
-                        f"{migration_summary['migrated']} moved, "
-                        f"{migration_summary['skipped']} skipped."
-                    )
-                repository = AuthorityRepository(project_root=project_root)
-                document = repository.load()
-                coordinator = ReshardCoordinator(project_root=project_root)
-                plan = coordinator.build_sync_plan(document=document)
+                with runtime_blueprint_write_lease(project_root=project_root, tool_name="reshard"):
+                    migration_summary = _migrate_root_blocks_to_default_shard(project_root=project_root)
+                    if migration_summary["migrated"] or migration_summary["skipped"]:
+                        print(
+                            "Migrated root-level blocks into shard storage: "
+                            f"{migration_summary['migrated']} moved, "
+                            f"{migration_summary['skipped']} skipped."
+                        )
+                    repository = AuthorityRepository(project_root=project_root)
+                    document = repository.load()
+                    coordinator = ReshardCoordinator(project_root=project_root)
+                    plan = coordinator.build_sync_plan(document=document)
 
-                if parsed_arguments.as_json:
-                    plan_dict = {
-                        "strategy": plan.strategy,
-                        "mode": plan.mode,
-                        "moves": [
-                            {
-                                "block_id": move.block_id,
-                                "from_shard": str(move.from_shard),
-                                "to_shard": str(move.to_shard),
-                                "reason": move.reason,
-                            }
-                            for move in plan.moves
-                        ],
-                        "blocks_affected": plan.move_count(),
-                        "shards_affected": plan.affected_shard_count(),
-                    }
-                    print(json.dumps(plan_dict, indent=2))
-                    return 0
+                    if parsed_arguments.as_json:
+                        plan_dict = {
+                            "strategy": plan.strategy,
+                            "mode": plan.mode,
+                            "moves": [
+                                {
+                                    "block_id": move.block_id,
+                                    "from_shard": str(move.from_shard),
+                                    "to_shard": str(move.to_shard),
+                                    "reason": move.reason,
+                                }
+                                for move in plan.moves
+                            ],
+                            "blocks_affected": plan.move_count(),
+                            "shards_affected": plan.affected_shard_count(),
+                        }
+                        print(json.dumps(plan_dict, indent=2))
+                        return 0
 
-                if plan.mode == ReshardMode.NO_DRIFT:
-                    print("No shard drift detected. Blueprint structure is already synchronized.")
-                    return 0
+                    if plan.mode == ReshardMode.NO_DRIFT:
+                        print("No shard drift detected. Blueprint structure is already synchronized.")
+                        return 0
 
-                if plan.requires_confirmation():
-                    print("Detected large structural migration.")
-                    print()
-                    print(f"Blocks affected: {plan.move_count()}")
-                    print(f"Shards affected: {plan.affected_shard_count()}")
-                    print()
-                    if input("Continue? [y/N] ").strip().lower() not in {"y", "yes"}:
-                        print("Reshard cancelled.")
-                        return 1
+                    if plan.requires_confirmation():
+                        print("Detected large structural migration.")
+                        print()
+                        print(f"Blocks affected: {plan.move_count()}")
+                        print(f"Shards affected: {plan.affected_shard_count()}")
+                        print()
+                        if input("Continue? [y/N] ").strip().lower() not in {"y", "yes"}:
+                            print("Reshard cancelled.")
+                            return 1
 
-                result = repository.save(document)
+                    result = repository.save(document)
 
-                if plan.mode == ReshardMode.SMALL:
-                    return 0
+                    if plan.mode == ReshardMode.SMALL:
+                        return 0
 
-                print("Reshard synchronization complete.")
-                print(f"Moved {len(result.moved_blocks)} blocks across {plan.affected_shard_count()} shards.")
-                if result.updated_includes:
-                    print("Updated shard includes.")
+                    print("Reshard synchronization complete.")
+                    print(f"Moved {len(result.moved_blocks)} blocks across {plan.affected_shard_count()} shards.")
+                    if result.updated_includes:
+                        print("Updated shard includes.")
                 return 0
             except PermissionError as error:
                 if permission_repair_attempted:

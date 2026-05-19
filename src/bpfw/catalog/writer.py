@@ -233,8 +233,7 @@ def _write_shard(shard_path: Path, shard_data: Dict[str, Any], project_root: Pat
     requires_temporary_unlock = lock_state in {"locked", "degraded"}
     temporarily_unlocked = False
 
-    if requires_temporary_unlock and not has_temporary_blueprint_unlock_authorization():
-        ensure_blueprint_can_be_written(project_root=project_root)
+    ensure_blueprint_can_be_written(project_root=project_root)
 
     if requires_temporary_unlock and has_temporary_blueprint_unlock_authorization():
         unlock_result = unlock_authority(project_root=project_root)
@@ -290,8 +289,7 @@ def write_blueprint(
     requires_temporary_unlock = lock_state in {"locked", "degraded"}
     temporarily_unlocked = False
 
-    if requires_temporary_unlock and not has_temporary_blueprint_unlock_authorization():
-        ensure_blueprint_can_be_written(project_root=project_root)
+    ensure_blueprint_can_be_written(project_root=project_root)
 
     if requires_temporary_unlock and has_temporary_blueprint_unlock_authorization():
         unlock_result = unlock_authority(project_root=project_root)

@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from bpfw.authority.errors import InvalidAuthorityShardError
+from bpfw.catalog.access_control import ensure_blueprint_can_be_written
 
 
 @dataclass(frozen=True)
@@ -160,6 +161,7 @@ class AuthorityShard:
 
         # Resolve shard path relative to project root
         absolute_path = project_root / self.path
+        ensure_blueprint_can_be_written(project_root=project_root)
 
         # Ensure directory exists
         absolute_path.parent.mkdir(parents=True, exist_ok=True)

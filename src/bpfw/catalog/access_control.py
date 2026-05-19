@@ -71,10 +71,16 @@ def has_temporary_blueprint_unlock_authorization(tool_name: str | None = None) -
 def ensure_blueprint_can_be_written(project_root: Path) -> None:
     """Raise when the MVP blueprint is locked against writes."""
 
-    if has_blueprint_write_authorization():
-        return
+    if not has_blueprint_write_authorization():
+        raise BlueprintLockedError(
+            "Blueprint write requires explicit authorization. "
+            "Use an approved BPFW tool and approve temporary write access."
+        )
 
-    if get_authority_protection_status(project_root=project_root).status in {"locked", "degraded"}:
+    if (
+        get_authority_protection_status(project_root=project_root).status in {"locked", "degraded"}
+        and not has_temporary_blueprint_unlock_authorization()
+    ):
         raise BlueprintLockedError("Blueprint is locked. Run bpfw unlock before editing.")
 
 

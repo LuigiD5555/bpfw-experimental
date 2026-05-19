@@ -15,8 +15,7 @@ from bpfw.protection.authority import (
     get_authority_protection_status,
 )
 
-PROTECTED_RUNTIME_TOOLS = {"inspector", "editor", "planner"}
-AUTO_APPROVED_RUNTIME_TOOLS = {"inspector", "editor"}
+PROTECTED_RUNTIME_TOOLS = {"init", "inspector", "editor", "planner", "reshard"}
 
 
 @dataclass(slots=True)
@@ -34,8 +33,9 @@ def _is_interactive_terminal() -> bool:
 
 def _prompt_unlock_confirmation(tool_name: str, input_func: Callable[[str], str]) -> bool:
     prompt = (
-        f"{tool_name} needs temporary write access to bpfw/blueprint.yaml while it is running.\n"
-        "Allow temporary unlock and auto re-lock on exit? [y/N]: "
+        f"{tool_name} needs temporary write access to BPFW authority files.\n"
+        "This includes bpfw/blueprint.yaml, bpfw/, bpfw/blocks/, and included shards.\n"
+        "Allow temporary write access and auto re-lock on exit? [y/N]: "
     )
     reply = input_func(prompt).strip().lower()
     return reply in {"y", "yes"}
@@ -55,17 +55,17 @@ def runtime_blueprint_write_lease(
         return
 
     lock_state = get_authority_protection_status(project_root=project_root).status
+    if not _is_interactive_terminal():
+        raise BlueprintLockedError(
+            "Blueprint authority writes require interactive approval. "
+            "Run this command in an interactive terminal."
+        )
+    if not _prompt_unlock_confirmation(tool_name=tool_name, input_func=input_func):
+        raise BlueprintLockedError(
+            "Blueprint authority write permission was not granted."
+        )
+
     if lock_state in {"locked", "degraded"}:
-        if tool_name not in AUTO_APPROVED_RUNTIME_TOOLS:
-            if not _is_interactive_terminal():
-                raise BlueprintLockedError(
-                    "Blueprint is locked and this session is non-interactive. "
-                    "Run in an interactive terminal to approve temporary unlock, or run bpfw unlock manually."
-                )
-            if not _prompt_unlock_confirmation(tool_name=tool_name, input_func=input_func):
-                raise BlueprintLockedError(
-                    "Blueprint remains locked. Temporary unlock permission was not granted."
-                )
         lease.temporarily_unlocked = True
 
     with authorize_blueprint_writes_for_tool(tool_name=tool_name):

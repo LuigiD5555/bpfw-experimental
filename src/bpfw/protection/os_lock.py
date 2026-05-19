@@ -131,7 +131,8 @@ class PosixLockStrategy(LockStrategy):
         lock_path = _lock_path(project_root=project_root, relative_path=relative_path)
         lock_path.parent.mkdir(parents=True, exist_ok=True)
         file_stat = target_path.stat()
-        directory_stat = target_path.parent.stat()
+        controlled_directory = self._controlled_directory_for(target_path)
+        directory_stat = controlled_directory.stat()
         file_mode = stat.S_IMODE(file_stat.st_mode)
         directory_mode = stat.S_IMODE(directory_stat.st_mode)
 
@@ -153,24 +154,25 @@ class PosixLockStrategy(LockStrategy):
             ),
             encoding="utf-8",
         )
-        self._remove_write_bits(target_path.parent)
-        self._try_set_immutable(target_path.parent)
+        self._remove_write_bits(controlled_directory)
+        self._try_set_immutable(controlled_directory)
         self._remove_write_bits(lock_path)
         self._chown_root(target_path)
         self._chown_root(lock_path)
-        self._chown_root(target_path.parent)
+        self._chown_root(controlled_directory)
 
         if self.get_file_lock_state(project_root=project_root, relative_path=relative_path) == LOCKED:
             return LOCKED
 
         self._restore_owner(target_path, file_stat.st_uid, file_stat.st_gid)
-        self._restore_owner(target_path.parent, directory_stat.st_uid, directory_stat.st_gid)
-        self._restore_mode(target_path.parent, directory_mode)
+        self._restore_owner(controlled_directory, directory_stat.st_uid, directory_stat.st_gid)
+        self._restore_mode(controlled_directory, directory_mode)
         self._restore_mode(target_path, file_mode)
         self._remove_lock_marker(lock_path)
         return self._try_readonly_weak_lock(
             project_root=project_root,
             target_path=target_path,
+            controlled_directory=controlled_directory,
             relative_path=relative_path,
             lock_path=lock_path,
             file_stat=file_stat,
@@ -185,7 +187,8 @@ class PosixLockStrategy(LockStrategy):
             return UNKNOWN
 
         lock_path = _lock_path(project_root=project_root, relative_path=relative_path)
-        self._try_clear_immutable(target_path.parent)
+        controlled_directory = self._controlled_directory_for(target_path)
+        self._try_clear_immutable(controlled_directory)
         self._try_clear_immutable(target_path)
 
         recorded_directory_mode = _read_recorded_mode(lock_path=lock_path, key="directory_mode")
@@ -196,8 +199,8 @@ class PosixLockStrategy(LockStrategy):
         recorded_file_gid = _read_recorded_int(lock_path=lock_path, key="file_gid")
 
         self._restore_owner(target_path, recorded_file_uid, recorded_file_gid)
-        self._restore_owner(target_path.parent, recorded_directory_uid, recorded_directory_gid)
-        self._restore_mode(target_path.parent, recorded_directory_mode)
+        self._restore_owner(controlled_directory, recorded_directory_uid, recorded_directory_gid)
+        self._restore_mode(controlled_directory, recorded_directory_mode)
         self._restore_mode(target_path, recorded_file_mode)
         self._remove_lock_marker(lock_path)
         return UNLOCKED
@@ -217,10 +220,11 @@ class PosixLockStrategy(LockStrategy):
             return UNLOCKED
 
         backend = _read_recorded_text(lock_path=lock_path, key="backend")
+        controlled_directory = self._controlled_directory_for(target_path)
         if backend == "readonly_weak":
             if (
                 not self._has_any_write_bit(target_path)
-                and not self._has_any_write_bit(target_path.parent)
+                and not self._has_any_write_bit(controlled_directory)
             ):
                 return DEGRADED
             return UNLOCKED
@@ -231,11 +235,14 @@ class PosixLockStrategy(LockStrategy):
         root_owned_state_matches = (
             root_owned_recorded
             and self._is_root_owned(target_path)
-            and self._is_root_owned(target_path.parent)
+            and self._is_root_owned(controlled_directory)
         )
         if immutable_state_matches or root_owned_state_matches:
             return LOCKED
         return UNLOCKED
+
+    def _controlled_directory_for(self, target_path: Path) -> Path:
+        return target_path if target_path.is_dir() else target_path.parent
 
     def _can_use_sudo(self) -> bool:
         return sys.stdin.isatty() and shutil.which("sudo") is not None
@@ -359,6 +366,7 @@ class PosixLockStrategy(LockStrategy):
         self,
         project_root: Path,
         target_path: Path,
+        controlled_directory: Path,
         relative_path: str,
         lock_path: Path,
         file_stat: os.stat_result,
@@ -383,13 +391,13 @@ class PosixLockStrategy(LockStrategy):
             encoding="utf-8",
         )
         self._remove_write_bits(target_path)
-        self._remove_write_bits(target_path.parent)
+        self._remove_write_bits(controlled_directory)
         self._remove_write_bits(lock_path)
 
         if self.get_file_lock_state(project_root=project_root, relative_path=relative_path) == DEGRADED:
             return DEGRADED
 
-        self._restore_mode(target_path.parent, directory_mode)
+        self._restore_mode(controlled_directory, directory_mode)
         self._restore_mode(target_path, file_mode)
         self._remove_lock_marker(lock_path)
         return UNSUPPORTED

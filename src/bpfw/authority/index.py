@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import Any
 
+from bpfw.catalog.access_control import ensure_blueprint_can_be_written
 from bpfw.authority.errors import InvalidAuthorityIndexError
 
 
@@ -164,6 +165,7 @@ class AuthorityIndex:
             raise ImportError("PyYAML is required to save bpfw/blueprint.yaml.") from error
 
         blueprint_path = project_root / "bpfw" / "blueprint.yaml"
+        ensure_blueprint_can_be_written(project_root=project_root)
 
         # Ensure directory exists
         blueprint_path.parent.mkdir(parents=True, exist_ok=True)

@@ -15,6 +15,9 @@ from bpfw.protection.os_lock import (
 )
 
 BLUEPRINT_RESOURCE_TYPE = "blueprint"
+AUTHORITY_DIRECTORY_RESOURCE_TYPE = "authority_directory"
+SHARD_DIRECTORY_RESOURCE_TYPE = "shard_directory"
+SHARD_RESOURCE_TYPE = "shard"
 GUARD_RESOURCE_TYPE = "guard"
 MISSING_BLUEPRINT_STATUS = "missing_blueprint"
 
@@ -67,6 +70,7 @@ def resolve_guard_files() -> List[Path]:
 def resolve_protected_resources(project_root: Path) -> List[ProtectedResource]:
     """Build the full protection resource list for a project, including its blueprint and BPFW guard files."""
 
+    bpfw_directory = project_root / "bpfw"
     blueprint_path = resolve_project_blueprint_path(project_root=project_root)
     resources = [
         ProtectedResource(
@@ -75,6 +79,21 @@ def resolve_protected_resources(project_root: Path) -> List[ProtectedResource]:
             exists=blueprint_path.exists(),
         )
     ]
+    resources.extend(_resolve_shard_resources(project_root=project_root, blueprint_path=blueprint_path))
+    resources.append(
+        ProtectedResource(
+            path=bpfw_directory / "blocks",
+            resource_type=SHARD_DIRECTORY_RESOURCE_TYPE,
+            exists=(bpfw_directory / "blocks").exists(),
+        )
+    )
+    resources.append(
+        ProtectedResource(
+            path=bpfw_directory,
+            resource_type=AUTHORITY_DIRECTORY_RESOURCE_TYPE,
+            exists=bpfw_directory.exists(),
+        )
+    )
 
     for guard_file_path in resolve_guard_files():
         resources.append(
@@ -85,6 +104,47 @@ def resolve_protected_resources(project_root: Path) -> List[ProtectedResource]:
             )
         )
 
+    return resources
+
+
+def _resolve_shard_resources(project_root: Path, blueprint_path: Path) -> List[ProtectedResource]:
+    """Return shard resources declared by the authority index."""
+
+    if not blueprint_path.exists():
+        return []
+
+    try:
+        import yaml
+    except ImportError:
+        return []
+
+    try:
+        data = yaml.safe_load(blueprint_path.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        return []
+
+    if not isinstance(data, dict):
+        return []
+    includes = data.get("includes", [])
+    if not isinstance(includes, list):
+        return []
+
+    resources: List[ProtectedResource] = []
+    seen_paths: set[Path] = set()
+    for include_path in includes:
+        if not isinstance(include_path, str) or not include_path.strip():
+            continue
+        shard_path = project_root / include_path
+        if shard_path in seen_paths:
+            continue
+        seen_paths.add(shard_path)
+        resources.append(
+            ProtectedResource(
+                path=shard_path,
+                resource_type=SHARD_RESOURCE_TYPE,
+                exists=shard_path.exists(),
+            )
+        )
     return resources
 
 
@@ -131,15 +191,26 @@ def lock_authority(project_root: Path) -> ProtectionResult:
     warnings: List[str] = []
     lock_states: list[str] = []
 
-    guard_resources = [
-        resource for resource in resources if resource.resource_type == GUARD_RESOURCE_TYPE
+    guard_resources = [resource for resource in resources if resource.resource_type == GUARD_RESOURCE_TYPE]
+    shard_resources = [resource for resource in resources if resource.resource_type == SHARD_RESOURCE_TYPE]
+    shard_directory_resources = [
+        resource for resource in resources if resource.resource_type == SHARD_DIRECTORY_RESOURCE_TYPE
     ]
-    resources_in_lock_order = [*guard_resources, blueprint_resource]
+    authority_directory_resources = [
+        resource for resource in resources if resource.resource_type == AUTHORITY_DIRECTORY_RESOURCE_TYPE
+    ]
+    resources_in_lock_order = [
+        *guard_resources,
+        blueprint_resource,
+        *shard_resources,
+        *shard_directory_resources,
+        *authority_directory_resources,
+    ]
 
     for resource in resources_in_lock_order:
         if not resource.exists:
             skipped_resources.append(resource)
-            warnings.append(f"Skipped missing guard file: {resource.path}")
+            warnings.append(f"Skipped missing {resource.resource_type}: {resource.path}")
             continue
 
         lock_state = _lock_existing_resource(project_root=project_root, resource=resource)
@@ -186,15 +257,26 @@ def unlock_authority(project_root: Path) -> ProtectionResult:
     warnings: List[str] = []
     unlock_states: list[str] = []
 
-    guard_resources = [
-        resource for resource in resources if resource.resource_type == GUARD_RESOURCE_TYPE
+    guard_resources = [resource for resource in resources if resource.resource_type == GUARD_RESOURCE_TYPE]
+    shard_resources = [resource for resource in resources if resource.resource_type == SHARD_RESOURCE_TYPE]
+    shard_directory_resources = [
+        resource for resource in resources if resource.resource_type == SHARD_DIRECTORY_RESOURCE_TYPE
     ]
-    resources_in_unlock_order = [blueprint_resource, *reversed(guard_resources)]
+    authority_directory_resources = [
+        resource for resource in resources if resource.resource_type == AUTHORITY_DIRECTORY_RESOURCE_TYPE
+    ]
+    resources_in_unlock_order = [
+        *authority_directory_resources,
+        *shard_directory_resources,
+        blueprint_resource,
+        *shard_resources,
+        *reversed(guard_resources),
+    ]
 
     for resource in resources_in_unlock_order:
         if not resource.exists:
             skipped_resources.append(resource)
-            warnings.append(f"Skipped missing guard file: {resource.path}")
+            warnings.append(f"Skipped missing {resource.resource_type}: {resource.path}")
             continue
 
         unlock_state = _unlock_existing_resource(project_root=project_root, resource=resource)
@@ -238,7 +320,7 @@ def get_authority_protection_status(project_root: Path) -> ProtectionResult:
     for resource in resources:
         if not resource.exists:
             skipped_resources.append(resource)
-            warnings.append(f"Skipped missing guard file: {resource.path}")
+            warnings.append(f"Skipped missing {resource.resource_type}: {resource.path}")
             continue
 
         lock_state = _get_existing_resource_state(project_root=project_root, resource=resource)
@@ -246,20 +328,14 @@ def get_authority_protection_status(project_root: Path) -> ProtectionResult:
         if lock_state in {LOCKED, DEGRADED}:
             protected_resources.append(resource)
 
-    blueprint_state = resource_states[0][1] if resource_states else "unknown"
-    guard_states = [
-        lock_state
-        for resource, lock_state in resource_states
-        if resource.resource_type == GUARD_RESOURCE_TYPE
-    ]
-
-    if blueprint_state == LOCKED and not skipped_resources and all(
-        guard_state == LOCKED for guard_state in guard_states
-    ):
+    lock_states = [lock_state for _resource, lock_state in resource_states]
+    if lock_states and all(lock_state == LOCKED for lock_state in lock_states):
         status = LOCKED
-    elif blueprint_state in {LOCKED, DEGRADED}:
+    elif lock_states and all(lock_state in {LOCKED, DEGRADED} for lock_state in lock_states):
         status = DEGRADED
-    elif blueprint_state == "unlocked":
+    elif any(lock_state in {LOCKED, DEGRADED} for lock_state in lock_states):
+        status = DEGRADED
+    elif lock_states and all(lock_state == "unlocked" for lock_state in lock_states):
         status = "unlocked"
     else:
         status = "unknown"

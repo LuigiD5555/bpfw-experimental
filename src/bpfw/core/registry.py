@@ -28,7 +28,19 @@ class InitProjectStep(PipelineStep):
     name: str = "catalog.init"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
-        _success, message, exit_code = run_init(project_root=context.project_root)
+        try:
+            with runtime_blueprint_write_lease(
+                project_root=context.project_root,
+                tool_name="init",
+            ):
+                _success, message, exit_code = run_init(project_root=context.project_root)
+        except BlueprintLockedError as error:
+            return StepResult(
+                status=ResultStatus.BLOCK,
+                message=f"BLOCK: {error}",
+                source=self.name,
+                details={"blueprint_path": CANONICAL_BLUEPRINT_FILE},
+            )
         return StepResult(
             status=ResultStatus.OK if exit_code == 0 else ResultStatus.BLOCK,
             message=message,
