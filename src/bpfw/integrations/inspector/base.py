@@ -357,7 +357,7 @@ def display_value(value: Any) -> str:
 def suggest_domain(block: Dict[str, Any]) -> str | None:
     """Suggest the first deterministic domain for one block."""
 
-    from bpfw.integrations.inspector.suggestions.domain import suggest_domains as catalog_suggest_domains
+    from bpfw.integrations.inspector.suggestions.domain.engine import suggest_domains as catalog_suggest_domains
 
     suggestions = catalog_suggest_domains(block)
     if not suggestions:
