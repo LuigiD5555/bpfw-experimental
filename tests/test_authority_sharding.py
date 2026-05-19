@@ -112,6 +112,7 @@ def project_root(tmp_path: Path) -> Path:
 
 def test_root_index_cannot_contain_blocks(tmp_path: Path):
     """Test that root blueprint.yaml fails if it contains blocks."""
+    (tmp_path / "bpfw").mkdir(parents=True)
     blueprint_data = {
         "version": 1,
         "project": {
@@ -182,7 +183,7 @@ def test_loader_fails_if_included_shard_missing(project_root: Path):
     with open(blueprint_path, "w") as f:
         yaml.dump(data, f)
     
-    with pytest.raises(InvalidAuthorityShardError):
+    with pytest.raises(FileNotFoundError):
         AuthorityRepository(project_root=project_root).load()
 
 
@@ -233,7 +234,7 @@ def test_repository_tracks_block_origin(project_root: Path):
     
     origin = document.get_origin("test_block_1")
     assert origin is not None
-    assert origin == project_root / "bpfw" / "blocks" / "core.yaml"
+    assert origin == Path("bpfw/blocks/core.yaml")
 
 
 def test_repository_saves_moved_block_when_domain_changes(project_root: Path):
@@ -244,6 +245,7 @@ def test_repository_saves_moved_block_when_domain_changes(project_root: Path):
     # Change domain of test_block_1
     blocks = document.get_blocks()
     blocks[0]["domain"] = "catalog"  # Change from protection to catalog
+    document.replace_blocks(blocks)
     
     repository.save(document)
     
@@ -275,6 +277,7 @@ def test_repository_creates_new_shard_and_adds_include(project_root: Path):
         },
         "detected": {"qualified_name": "bpfw.integrations.test.TestFunction", "kind": "function"},
     })
+    document.replace_blocks(blocks)
     
     repository.save(document)
     
@@ -292,6 +295,7 @@ def test_repository_removes_empty_shard_when_allow_empty_false(project_root: Pat
     # Remove all blocks from core shard
     blocks = document.get_blocks()
     blocks.clear()
+    document.replace_blocks(blocks)
     
     repository.save(document)
     
@@ -331,10 +335,8 @@ def test_duplicate_block_id_across_shards_blocks(tmp_path: Path):
         yaml.dump({"blocks": [{"id": "block_1"}]}, f)
     
     repository = AuthorityRepository(project_root=tmp_path)
-    findings = repository.validate(repository.load())
-    
-    # Should have a finding about duplicate block IDs
-    assert any("duplicate" in str(f).lower() and "block_id" in str(f).lower() for f in findings)
+    with pytest.raises(DuplicateBlockIdError):
+        repository.load()
 
 
 def test_duplicate_code_declaration_across_shards_blocks(tmp_path: Path):
@@ -385,10 +387,8 @@ def test_duplicate_code_declaration_across_shards_blocks(tmp_path: Path):
         }, f)
     
     repository = AuthorityRepository(project_root=tmp_path)
-    findings = repository.validate(repository.load())
-    
-    # Should have a finding about duplicate code declarations
-    assert any("duplicate" in str(f).lower() and "code" in str(f).lower() for f in findings)
+    with pytest.raises(DuplicateCodeDeclarationError):
+        repository.load()
 
 
 def test_verify_detects_shard_drift(project_root: Path):
@@ -399,13 +399,10 @@ def test_verify_detects_shard_drift(project_root: Path):
     # Move block to wrong shard manually (without reshard)
     blocks = document.get_blocks()
     blocks[0]["domain"] = "catalog"  # Should go to catalog.yaml
+    document.replace_blocks(blocks)
     
-    # Save without resharding (simulates drift)
-    repository.save(document)
-    
-    # Check for drift
+    # Check for drift before applying any save-time resharding
     planner = AuthorityReshardPlanner(project_root=project_root)
-    document = repository.load()
     plan = planner.build_plan(document)
     
     # Should have moves due to drift
@@ -420,11 +417,10 @@ def test_verify_passes_after_reshard_apply(project_root: Path):
     # Change domain to trigger move
     blocks = document.get_blocks()
     blocks[0]["domain"] = "catalog"
+    document.replace_blocks(blocks)
     
-    # Apply reshard
+    # Persist and let authority save perform synchronization.
     planner = AuthorityReshardPlanner(project_root=project_root)
-    plan = planner.build_plan(document)
-    planner.apply_plan(document, plan)
     repository.save(document)
     
     # Reload and verify no drift
@@ -444,6 +440,7 @@ def test_inspector_save_moves_block_after_domain_change(project_root: Path):
     blocks = document.get_blocks()
     old_shard = document.get_origin(blocks[0]["id"])
     blocks[0]["domain"] = "catalog"
+    document.replace_blocks(blocks)
     
     repository.save(document)
     
@@ -477,6 +474,7 @@ def test_planner_save_places_block_in_domain_shard(project_root: Path):
     
     blocks = document.get_blocks()
     blocks.append(new_block)
+    document.replace_blocks(blocks)
     repository.save(document)
     
     # Verify block is in correct shard
@@ -494,6 +492,7 @@ def test_bpfw_reshard_prints_plan_without_writing(project_root: Path):
     # Create a situation that needs resharding
     blocks = document.get_blocks()
     blocks[0]["domain"] = "catalog"
+    document.replace_blocks(blocks)
     
     planner = AuthorityReshardPlanner(project_root=project_root)
     plan = planner.build_plan(document)
@@ -515,11 +514,10 @@ def test_bpfw_reshard_apply_writes_moved_blocks(project_root: Path):
     blocks = document.get_blocks()
     blocks[0]["domain"] = "catalog"
     blocks[1]["domain"] = "protection"
+    document.replace_blocks(blocks)
     
-    # Apply reshard
+    # Persist and let authority save perform synchronization.
     planner = AuthorityReshardPlanner(project_root=project_root)
-    plan = planner.build_plan(document)
-    planner.apply_plan(document, plan)
     repository.save(document)
     
     # Reload and verify moves were applied

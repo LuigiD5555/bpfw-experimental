@@ -108,7 +108,7 @@ def test_add_block_flow_uses_sequential_prompts(monkeypatch) -> None:
 
 
 def test_render_add_block_modal_shows_current_step(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(renderer_module, "clear_screen", lambda: None)
+    monkeypatch.setattr(renderer_module, "refresh_screen", lambda: None)
     monkeypatch.setattr(renderer_module, "get_terminal_width", lambda: 120)
 
     state = _build_state(boxes=[])
@@ -164,7 +164,7 @@ def test_interface_block_selection_opens_interface_menu() -> None:
 
 
 def test_render_edit_interface_shows_inputs_and_output_actions(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(renderer_module, "clear_screen", lambda: None)
+    monkeypatch.setattr(renderer_module, "refresh_screen", lambda: None)
     monkeypatch.setattr(renderer_module, "get_terminal_width", lambda: 120)
     box = PlannerBox(name="Pipeline", domain="framework", purpose="Run pipeline", symbol_type="class")
     state = _build_state(boxes=[box])
@@ -211,7 +211,7 @@ def test_yaml_preview_f_toggles_full_preview() -> None:
 
 
 def test_render_full_yaml_preview_uses_assembled_blueprint(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(renderer_module, "clear_screen", lambda: None)
+    monkeypatch.setattr(renderer_module, "refresh_screen", lambda: None)
     monkeypatch.setattr(renderer_module, "get_terminal_width", lambda: 120)
     box = PlannerBox(name="Pipeline", domain="framework", purpose="Run pipeline", symbol_type="class")
     state = _build_state(boxes=[box])
@@ -227,7 +227,7 @@ def test_render_full_yaml_preview_uses_assembled_blueprint(monkeypatch, capsys) 
 
 
 def test_render_connect_target_modal_shows_numeric_list(monkeypatch, capsys) -> None:
-    monkeypatch.setattr(renderer_module, "clear_screen", lambda: None)
+    monkeypatch.setattr(renderer_module, "refresh_screen", lambda: None)
     monkeypatch.setattr(renderer_module, "get_terminal_width", lambda: 120)
 
     source = PlannerBox(name="SourceBox", domain="ingestion", purpose="source", symbol_type="class")

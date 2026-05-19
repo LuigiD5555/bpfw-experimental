@@ -573,7 +573,7 @@ def test_blended_slot_enriches_aligned_learned_history(monkeypatch: Any) -> None
     """Blended slot should use aligned learned text before fallback routes."""
 
     monkeypatch.setattr(
-        "bpfw.integrations.inspector.suggestions.purpose.get_top_learned_purposes",
+        "bpfw.integrations.inspector.suggestions.purpose.engine.get_top_learned_purposes",
         lambda limit=20: [("declare blueprintlockederror class", 5)],
     )
     block = _responsibility(
@@ -594,7 +594,7 @@ def test_blended_slot_uses_available_evidence_without_learned_history(monkeypatc
     """Blended slot should not be empty when symbol and docstring are enough."""
 
     monkeypatch.setattr(
-        "bpfw.integrations.inspector.suggestions.purpose.get_top_learned_purposes",
+        "bpfw.integrations.inspector.suggestions.purpose.engine.get_top_learned_purposes",
         lambda limit=20: [],
     )
     block = _responsibility(

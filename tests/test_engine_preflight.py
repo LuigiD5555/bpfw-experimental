@@ -77,7 +77,7 @@ def test_inspector_attempts_unlock_before_running_integration(
 ) -> None:
     """Verify inspector auto-unlocks authority before integration execution."""
 
-    def fake_verify(project_root: Path) -> tuple[VerificationReport, int]:
+    def fake_verify(project_root: Path, precomputed_scan_result=None) -> tuple[VerificationReport, int]:
         return (
             VerificationReport(
                 authority_state="defined",
@@ -117,7 +117,7 @@ def test_inspector_allows_draft_incomplete_preflight_without_blocking(
 ) -> None:
     """Verify inspector is not blocked when verify only reports incomplete draft metadata."""
 
-    def fake_verify(project_root: Path) -> tuple[VerificationReport, int]:
+    def fake_verify(project_root: Path, precomputed_scan_result=None) -> tuple[VerificationReport, int]:
         return (
             VerificationReport(
                 authority_state="draft",
