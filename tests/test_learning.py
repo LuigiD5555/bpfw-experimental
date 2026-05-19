@@ -1,4 +1,4 @@
-from bpfw.integrations.inspector.suggestions.learning import score_phrase_context_match
+from bpfw.integrations.inspector.suggestions.purpose.learning import score_phrase_context_match
 
 
 def test_score_phrase_context_match_detects_overlap() -> None:

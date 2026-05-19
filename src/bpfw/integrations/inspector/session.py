@@ -25,7 +25,7 @@ from bpfw.integrations.inspector.screen import (
 from bpfw.integrations.inspector.state import InspectorViewState
 from bpfw.integrations.inspector.view_modes import resolve_inspector_view_mode
 from bpfw.integrations.shared.cli_runtime import normalize_command
-from bpfw.integrations.inspector.suggestions.purpose import suggest_purposes
+from bpfw.integrations.inspector.suggestions.purpose.engine import suggest_purposes
 from bpfw.core.profiling import RuntimeProfiler
 
 _profiler = RuntimeProfiler()

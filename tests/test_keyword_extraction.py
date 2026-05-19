@@ -2,9 +2,10 @@
 
 import pytest
 
-from bpfw.integrations.inspector.suggestions.keywords import extract_block_keywords, build_project_vocabulary
-from bpfw.integrations.inspector.suggestions.keywords.tokenizer import tokenize_identifier
-from bpfw.integrations.inspector.suggestions.keywords.normalizer import normalize_token, normalize_tokens
+from bpfw.integrations.inspector.suggestions.purpose.extractor import extract_block_keywords
+from bpfw.integrations.inspector.suggestions.purpose.vocabulary import build_project_vocabulary
+from bpfw.integrations.inspector.suggestions.purpose.tokenizer import tokenize_identifier
+from bpfw.integrations.inspector.suggestions.purpose.normalizer import normalize_token, normalize_tokens
 
 
 def test_tokenize_snake_case():
@@ -286,7 +287,7 @@ def test_filter_generic_tokens():
 def test_confidence_levels():
     """Test confidence level assignment."""
 
-    from bpfw.integrations.inspector.suggestions.keywords.scorer import get_confidence_level
+    from bpfw.integrations.inspector.suggestions.purpose.scorer import get_confidence_level
 
     block = {
         "symbol": "validate_blueprint_authority",
@@ -318,8 +319,8 @@ def test_confidence_levels():
 def test_deduplication():
     """Test deduplication of similar keywords."""
 
-    from bpfw.integrations.inspector.suggestions.keywords.scorer import deduplicate_similar
-    from bpfw.integrations.inspector.suggestions.keywords.models import KeywordCandidate
+    from bpfw.integrations.inspector.suggestions.purpose.scorer import deduplicate_similar
+    from bpfw.integrations.inspector.suggestions.purpose.models import KeywordCandidate
 
     candidates = [
         KeywordCandidate(token="symbol", score=10, sources=["symbol_name"], occurrences=1),

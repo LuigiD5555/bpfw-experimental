@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from bpfw.integrations.inspector.suggestions.purpose import compact_purpose_text, suggest_purposes
+from bpfw.integrations.inspector.suggestions.purpose.engine import compact_purpose_text, suggest_purposes
 
 
 def test_suggests_token_creation_from_issuer_symbol() -> None:

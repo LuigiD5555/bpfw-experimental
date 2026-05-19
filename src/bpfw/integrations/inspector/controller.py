@@ -5,8 +5,8 @@ from typing import List
 
 from bpfw.integrations.inspector.suggestions.domain.engine import resolve_domain_origin_key
 from bpfw.integrations.inspector.suggestions.domain.learning import record_domain_for_origin, record_domain_value
-from bpfw.integrations.inspector.suggestions.learning import record_purpose_phrase
-from bpfw.integrations.inspector.suggestions.purpose import PurposeSuggestion
+from bpfw.integrations.inspector.suggestions.purpose.learning import record_purpose_phrase
+from bpfw.integrations.inspector.suggestions.purpose.models import PurposeSuggestion
 from bpfw.core.errors import BlueprintLockedError
 from bpfw.integrations.inspector.base import InspectIssue, InspectLoadResult, save_blueprint
 from bpfw.integrations.inspector.commands import (
