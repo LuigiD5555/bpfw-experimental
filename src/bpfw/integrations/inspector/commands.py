@@ -10,6 +10,17 @@ from bpfw.integrations.shared.cli_runtime import is_quit_command, normalize_comm
 InputFunc = Callable[[str], str]
 DOMAIN_SUGGESTION_KEYS = ("q", "w", "e", "r", "t")
 CUSTOM_DOMAIN_KEY = "y"
+
+
+def _read_optional_value(input_func: InputFunc, prompt: str) -> str | None:
+    """Read one optional value and cancel cleanly on keyboard interrupt."""
+
+    try:
+        return input_func(prompt).strip()
+    except KeyboardInterrupt:
+        return None
+
+
 class InspectorAction:
     """Define action names produced by inspector commands."""
 
@@ -49,7 +60,10 @@ def apply_inspector_command(
     if stripped_command.startswith("6"):
         value = stripped_command[1:].strip()
         if not value:
-            value = input_func("purpose: ").strip()
+            prompt_value = _read_optional_value(input_func=input_func, prompt="purpose: ")
+            if prompt_value is None:
+                return InspectorAction.STAY
+            value = prompt_value
         if value:
             issue.block["purpose"] = " ".join(value.strip().lower().split())
         return InspectorAction.STAY
@@ -77,7 +91,10 @@ def apply_inspector_command(
     if stripped_command.startswith(CUSTOM_DOMAIN_KEY):
         value = stripped_command[len(CUSTOM_DOMAIN_KEY):].strip()
         if not value:
-            value = input_func("domain: ").strip()
+            prompt_value = _read_optional_value(input_func=input_func, prompt="domain: ")
+            if prompt_value is None:
+                return InspectorAction.STAY
+            value = prompt_value
         if value:
             issue.block["domain"] = " ".join(value.strip().lower().split())
         return InspectorAction.STAY
@@ -86,7 +103,10 @@ def apply_inspector_command(
         value = stripped_command[1:].strip()
         if not value:
             current_name = issue.block.get("name", "")
-            value = input_func(f"name [{current_name}]: ").strip()
+            prompt_value = _read_optional_value(input_func=input_func, prompt=f"name [{current_name}]: ")
+            if prompt_value is None:
+                return InspectorAction.STAY
+            value = prompt_value
         if value:
             issue.block["name"] = value
         return InspectorAction.STAY
@@ -94,7 +114,10 @@ def apply_inspector_command(
     if stripped_command.startswith("o"):
         value = stripped_command[1:].strip()
         if not value:
-            value = input_func("observations: ").strip()
+            prompt_value = _read_optional_value(input_func=input_func, prompt="observations: ")
+            if prompt_value is None:
+                return InspectorAction.STAY
+            value = prompt_value
         if value:
             issue.block["notes"] = value
         return InspectorAction.STAY
