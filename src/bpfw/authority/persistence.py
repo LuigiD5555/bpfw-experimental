@@ -68,8 +68,7 @@ class AuthorityPersistenceEngine:
         requires_temporary_unlock = lock_state in {"locked", "degraded"}
         temporarily_unlocked = False
 
-        if requires_temporary_unlock and not has_temporary_blueprint_unlock_authorization():
-            ensure_blueprint_can_be_written(project_root=self.project_root)
+        ensure_blueprint_can_be_written(project_root=self.project_root)
 
         if requires_temporary_unlock and has_temporary_blueprint_unlock_authorization():
             unlock_result = unlock_authority(project_root=self.project_root)
@@ -92,9 +91,7 @@ class AuthorityPersistenceEngine:
             # Get all blocks
             blocks = document.get_blocks()
             if not blocks:
-                # No blocks, just save empty default shard if needed
                 result.warnings.append("No blocks to save")
-                return result
 
             # Build plan from internal reshard coordinator.
             reshard_plan = self._reshard_coordinator.build_sync_plan(document=document)
@@ -192,9 +189,9 @@ class AuthorityPersistenceEngine:
                         document.index.add_include(shard_path)
                         result.updated_includes = True
 
-            # Save index if includes changed
-            if result.updated_includes:
-                document.index.save(self.project_root)
+            # Keep root blueprint index synchronized and blocks-free on every save.
+            self._synchronize_index_with_document(document=document)
+            document.index.save(self.project_root)
             return result
         finally:
             if temporarily_unlocked:
@@ -329,3 +326,18 @@ class AuthorityPersistenceEngine:
 
         else:
             return "shard_strategy_changed"
+
+    def _synchronize_index_with_document(self, document: AuthorityDocument) -> None:
+        """Sync index metadata from unified blueprint data and remove root blocks."""
+
+        blueprint_data = document.blueprint_data
+        for key, value in blueprint_data.items():
+            if key in {"blocks", "includes"}:
+                continue
+            document.index.data[key] = value
+
+        document.index.data["includes"] = [
+            str(shard_path)
+            for shard_path in document.get_included_shard_paths()
+        ]
+        document.index.data.pop("blocks", None)

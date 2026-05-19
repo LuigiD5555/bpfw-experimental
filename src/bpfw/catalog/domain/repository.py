@@ -9,6 +9,7 @@ from typing import Any
 import yaml
 
 from bpfw.authority import AuthorityRepository
+from bpfw.catalog.access_control import ensure_blueprint_can_be_written
 from bpfw.catalog.domain.mapper import BlueprintMapper
 from bpfw.catalog.domain.models import BlueprintDocument
 from bpfw.catalog.paths import resolve_blueprint_path
@@ -31,10 +32,24 @@ class BlueprintRepository:
         self.blueprint_path = resolve_blueprint_path(project_root)
         self.mapper = mapper or BlueprintMapper()
 
-    def load(self) -> RepositoryLoadResult:
-        authority_dir = self.project_root / "bpfw" / "authority"
+    @staticmethod
+    def _has_sharded_authority_layout(raw_blueprint_data: dict[str, Any]) -> bool:
+        """Return True when raw blueprint data declares sharded authority."""
 
-        if authority_dir.exists():
+        authority_data = raw_blueprint_data.get("authority")
+        if not isinstance(authority_data, dict):
+            return False
+        return authority_data.get("layout") == "sharded"
+
+    def load(self) -> RepositoryLoadResult:
+        if not self.blueprint_path.exists():
+            return RepositoryLoadResult(document=BlueprintDocument(), raw_data={})
+
+        raw_blueprint_data = yaml.safe_load(self.blueprint_path.read_text(encoding="utf-8")) or {}
+        if not isinstance(raw_blueprint_data, dict):
+            raw_blueprint_data = {}
+
+        if self._has_sharded_authority_layout(raw_blueprint_data):
             repository = AuthorityRepository(self.project_root)
             authority_document = repository.load()
             raw_blueprint_data = authority_document.blueprint_data
@@ -44,13 +59,6 @@ class BlueprintRepository:
                 raw_data=raw_blueprint_data,
                 authority_document=authority_document,
             )
-
-        if not self.blueprint_path.exists():
-            return RepositoryLoadResult(document=BlueprintDocument(), raw_data={})
-
-        raw_blueprint_data = yaml.safe_load(self.blueprint_path.read_text(encoding="utf-8")) or {}
-        if not isinstance(raw_blueprint_data, dict):
-            raw_blueprint_data = {}
 
         document = self.mapper.from_raw(raw_blueprint_data)
         return RepositoryLoadResult(document=document, raw_data=raw_blueprint_data)
@@ -65,6 +73,7 @@ class BlueprintRepository:
             return
 
         rendered = yaml.safe_dump(raw_blueprint_data, sort_keys=False, allow_unicode=True)
+        ensure_blueprint_can_be_written(project_root=self.project_root)
         self.blueprint_path.parent.mkdir(parents=True, exist_ok=True)
         self.blueprint_path.write_text(rendered, encoding="utf-8")
 

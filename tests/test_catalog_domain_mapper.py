@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import yaml
+
 from bpfw.catalog.domain import BlueprintMapper, BlueprintRepository
 
 
@@ -61,3 +63,46 @@ def test_blueprint_repository_loads_simple_blueprint(tmp_path: Path) -> None:
     assert result.document.blocks
     assert result.document.blocks[0].identifier == "demo"
     assert result.raw_data["blocks"][0]["id"] == "demo"
+
+
+def test_blueprint_repository_loads_sharded_layout_without_authority_directory(tmp_path: Path) -> None:
+    bpfw_dir = tmp_path / "bpfw"
+    blocks_dir = bpfw_dir / "blocks"
+    blocks_dir.mkdir(parents=True)
+
+    (bpfw_dir / "blueprint.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "version": 1,
+                "project": {"id": "demo"},
+                "authority": {"layout": "sharded", "default_shard": "bpfw/blocks/core.yaml"},
+                "includes": ["bpfw/blocks/core.yaml"],
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    (blocks_dir / "core.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "blocks": [
+                    {
+                        "id": "demo",
+                        "purpose": "demo purpose",
+                        "domain": "core",
+                        "name": "Demo",
+                        "status": "active",
+                        "code": {"path": "src/demo.py", "symbol": "Demo", "kind": "class"},
+                    }
+                ]
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = BlueprintRepository(project_root=tmp_path).load()
+
+    assert result.authority_document is not None
+    assert result.document.blocks
+    assert result.document.blocks[0].identifier == "demo"

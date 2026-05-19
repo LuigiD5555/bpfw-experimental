@@ -227,6 +227,20 @@ def test_repository_loads_core_and_returns_unified_blocks(project_root: Path):
     assert blocks[1]["id"] == "test_block_2"
 
 
+def test_repository_save_syncs_index_metadata_without_includes_changes(project_root: Path):
+    """Test that repository save syncs root index metadata even without include updates."""
+    repository = AuthorityRepository(project_root=project_root)
+    document = repository.load()
+
+    document.blueprint_data["project"]["name"] = "renamed-project"
+    repository.save(document)
+
+    import yaml
+    saved_root = yaml.safe_load((project_root / "bpfw" / "blueprint.yaml").read_text(encoding="utf-8"))
+    assert saved_root["project"]["name"] == "renamed-project"
+    assert "blocks" not in saved_root
+
+
 def test_repository_tracks_block_origin(project_root: Path):
     """Test that repository tracks where each block came from."""
     repository = AuthorityRepository(project_root=project_root)

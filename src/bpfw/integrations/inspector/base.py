@@ -29,6 +29,17 @@ ISSUE_DRAFT = "draft"
 ISSUE_NEW_DETECTED = "new_detected"
 
 
+def _has_sharded_authority_layout(blueprint_data: Dict[str, Any] | None) -> bool:
+    """Return True when blueprint data declares sharded authority layout."""
+
+    if not isinstance(blueprint_data, dict):
+        return False
+    authority_data = blueprint_data.get("authority")
+    if not isinstance(authority_data, dict):
+        return False
+    return authority_data.get("layout") == "sharded"
+
+
 @dataclass(slots=True)
 class InspectIssue:
     """One block-level item to review in inspector."""
@@ -137,17 +148,16 @@ def load_inspect_session(
         )
 
     with _profiler.measure("inspector.load_authority_document"):
-        # Load authority document only for sharded authority
-        authority_dir = resolved_root / "bpfw" / "authority"
+        # Load authority document only for sharded authority.
+        blueprint_for_authority_check = blueprint_data if isinstance(blueprint_data, dict) else load_result.data
         authority_document = None
-        
-        if authority_dir.exists():
+
+        if _has_sharded_authority_layout(blueprint_for_authority_check):
             repository = AuthorityRepository(resolved_root)
             authority_document = repository.load()
-            
-            # Use blueprint data from authority document if not already loaded
-            if blueprint_data is None:
-                blueprint_data = authority_document.blueprint_data
+
+            # Always use canonical sharded authority data from repository.
+            blueprint_data = authority_document.blueprint_data
         elif blueprint_data is None:
             # Simple blueprint.yaml - use data from loader
             blueprint_data = load_result.data
@@ -735,14 +745,13 @@ def save_blueprint(
     apply_automatic_authority_fields(blueprint_data)
 
     project_root = blueprint_path.parent.parent
-    authority_dir = project_root / "bpfw" / "authority"
-    
-    # If authority directory exists, use sharded authority
-    if authority_dir.exists():
+
+    # Use sharded authority path when layout declares it.
+    if _has_sharded_authority_layout(blueprint_data):
         from bpfw.authority import AuthorityRepository
-        
+
         repository = AuthorityRepository(project_root)
-        
+
         if authority_document is not None:
             authority_document.blueprint_data = blueprint_data
             repository.save(authority_document)
