@@ -6,7 +6,7 @@ from typing import Any, Dict, List
 import shutil
 import textwrap
 
-from bpfw.catalog.purpose_suggestions import PurposeSuggestion
+from bpfw.integrations.inspector.suggestions.purpose import PurposeSuggestion
 from bpfw.integrations.inspector.base import (
     build_hierarchy_lines,
     build_nested_snippet_lines,

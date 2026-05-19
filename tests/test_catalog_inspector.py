@@ -1,8 +1,8 @@
 """Tests for the catalog inspector module."""
 from pathlib import Path
 
-from bpfw.catalog.domain_suggestions import suggest_domains
-from bpfw.catalog.purpose_suggestions import suggest_purposes
+from bpfw.integrations.inspector.suggestions.domain import suggest_domains
+from bpfw.integrations.inspector.suggestions.purpose import suggest_purposes
 from bpfw.integrations.inspector.base import (
     InspectIssue,
     apply_automatic_authority_fields,

@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from pathlib import Path
 
-from bpfw.catalog.domain_suggestions import suggest_domains
+from bpfw.integrations.inspector.suggestions.domain import suggest_domains
 from bpfw.catalog.models import AUTHORITY_STATE_EMPTY
 from bpfw.integrations.inspector.base import (
     ISSUE_NEW_DETECTED,
@@ -25,7 +25,7 @@ from bpfw.integrations.inspector.screen import (
 from bpfw.integrations.inspector.state import InspectorViewState
 from bpfw.integrations.inspector.view_modes import resolve_inspector_view_mode
 from bpfw.integrations.shared.cli_runtime import normalize_command
-from bpfw.catalog.purpose_suggestions import suggest_purposes
+from bpfw.integrations.inspector.suggestions.purpose import suggest_purposes
 from bpfw.core.profiling import RuntimeProfiler
 
 _profiler = RuntimeProfiler()

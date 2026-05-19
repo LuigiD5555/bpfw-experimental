@@ -3,9 +3,9 @@
 from dataclasses import dataclass
 from typing import List
 
-from bpfw.catalog.domain_suggestions import resolve_domain_origin_key
-from bpfw.catalog.learning import record_domain_for_origin, record_domain_value, record_purpose_phrase
-from bpfw.catalog.purpose_suggestions import PurposeSuggestion
+from bpfw.integrations.inspector.suggestions.domain import resolve_domain_origin_key
+from bpfw.integrations.inspector.suggestions.learning import record_domain_for_origin, record_domain_value, record_purpose_phrase
+from bpfw.integrations.inspector.suggestions.purpose import PurposeSuggestion
 from bpfw.core.errors import BlueprintLockedError
 from bpfw.integrations.inspector.base import InspectIssue, InspectLoadResult, save_blueprint
 from bpfw.integrations.inspector.commands import (

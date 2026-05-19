@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import Any, Dict, List
 
-from bpfw.catalog.purpose_suggestions import PurposeSuggestion
+from bpfw.integrations.inspector.suggestions.purpose import PurposeSuggestion
 from bpfw.integrations.inspector.base import InspectIssue
 from bpfw.integrations.shared.cli_runtime import is_quit_command, normalize_command
 

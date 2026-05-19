@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from bpfw.catalog.purpose_suggestions import compact_purpose_text, suggest_purposes
+from bpfw.integrations.inspector.suggestions.purpose import compact_purpose_text, suggest_purposes
 
 
 def test_suggests_token_creation_from_issuer_symbol() -> None:
@@ -573,7 +573,7 @@ def test_blended_slot_enriches_aligned_learned_history(monkeypatch: Any) -> None
     """Blended slot should use aligned learned text before fallback routes."""
 
     monkeypatch.setattr(
-        "bpfw.catalog.purpose_suggestions.get_top_learned_purposes",
+        "bpfw.integrations.inspector.suggestions.purpose.get_top_learned_purposes",
         lambda limit=20: [("declare blueprintlockederror class", 5)],
     )
     block = _responsibility(
@@ -594,7 +594,7 @@ def test_blended_slot_uses_available_evidence_without_learned_history(monkeypatc
     """Blended slot should not be empty when symbol and docstring are enough."""
 
     monkeypatch.setattr(
-        "bpfw.catalog.purpose_suggestions.get_top_learned_purposes",
+        "bpfw.integrations.inspector.suggestions.purpose.get_top_learned_purposes",
         lambda limit=20: [],
     )
     block = _responsibility(
