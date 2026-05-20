@@ -5,6 +5,7 @@ from typing import Any, List, Tuple
 
 from bpfw.authority.index import AuthorityIndex
 from bpfw.authority import AuthorityRepository
+from bpfw.authority.reshard import try_synchronize_authority_shards
 from bpfw.catalog.drift import compare_declared_to_discovered
 from bpfw.catalog.domain import BlueprintDocument
 from bpfw.catalog.loader import BlueprintLoader
@@ -293,6 +294,9 @@ def run_verify(
         1 = blocked).
     """
     resolved_root = project_root.resolve()
+
+    # Keep shard layout synchronized before verification.
+    try_synchronize_authority_shards(project_root=resolved_root)
 
     # Step 1-2: Load blueprint
     loader = BlueprintLoader(project_root=resolved_root)

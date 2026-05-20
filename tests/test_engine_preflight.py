@@ -156,3 +156,33 @@ def test_inspector_allows_draft_incomplete_preflight_without_blocking(
     assert result.steps[0].status == ResultStatus.WARNING
     assert result.steps[1].source == "integrations.inspector"
     assert integration.was_run is True
+
+
+def test_inspector_attempts_auto_reshard_before_integration(tmp_path: Path, monkeypatch) -> None:
+    """Verify inspector attempts auto-reshard even without verify preflight."""
+
+    (tmp_path / "bpfw").mkdir()
+    (tmp_path / "src").mkdir()
+
+    auto_reshard_calls: list[Path] = []
+
+    monkeypatch.setattr(
+        "bpfw.core.engine.try_synchronize_authority_shards",
+        lambda project_root: auto_reshard_calls.append(project_root),
+    )
+
+    integration = RecordingIntegration()
+    registry = IntegrationRegistry()
+    registry.register(integration)
+
+    result = BlueprintEngine(integration_registry=registry).run(
+        build_command(
+            command_name="inspector",
+            project_root=tmp_path,
+            arguments={},
+        )
+    )
+
+    assert result.status == ResultStatus.OK
+    assert integration.was_run is True
+    assert auto_reshard_calls == [tmp_path]

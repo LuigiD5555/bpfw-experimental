@@ -7,8 +7,7 @@ import subprocess
 from pathlib import Path
 
 from bpfw.authority import AuthorityRepository
-from bpfw.authority.reshard import ReshardCoordinator, ReshardMode
-from bpfw.authority.shard import AuthorityShard
+from bpfw.authority.reshard import ReshardCoordinator, ReshardMode, migrate_root_blocks_to_default_shard
 from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
 from bpfw.catalog.verify import run_verify
 from bpfw.catalog.writer import run_init
@@ -269,102 +268,8 @@ def _print_human(payload: dict) -> None:
 
 def _migrate_root_blocks_to_default_shard(project_root: Path) -> dict[str, int]:
     """Move legacy root-level blocks into shard storage for sharded authority."""
-    def _declaration_key(block: dict) -> str | None:
-        code_data = block.get("code")
-        if not isinstance(code_data, dict):
-            return None
-        code_path = code_data.get("path")
-        code_symbol = code_data.get("symbol")
-        code_kind = code_data.get("kind")
-        if not all(isinstance(value, str) and value.strip() for value in (code_path, code_symbol, code_kind)):
-            return None
-        return f"{code_path}:{code_symbol}:{code_kind}"
 
-    try:
-        import yaml
-    except ImportError as error:
-        raise ImportError("PyYAML is required to migrate root blueprint blocks.") from error
-
-    blueprint_path = project_root / "bpfw" / "blueprint.yaml"
-    if not blueprint_path.exists():
-        return {"migrated": 0, "skipped": 0, "shard_total": 0}
-
-    data = yaml.safe_load(blueprint_path.read_text(encoding="utf-8"))
-    if not isinstance(data, dict):
-        return {"migrated": 0, "skipped": 0, "shard_total": 0}
-
-    authority = data.get("authority")
-    if not isinstance(authority, dict) or authority.get("layout") != "sharded":
-        return {"migrated": 0, "skipped": 0, "shard_total": 0}
-
-    root_blocks = data.get("blocks")
-    if not isinstance(root_blocks, list) or not root_blocks:
-        return {"migrated": 0, "skipped": 0, "shard_total": 0}
-
-    includes = data.get("includes")
-    include_values = includes if isinstance(includes, list) else []
-    default_shard_value = authority.get("default_shard")
-    if isinstance(default_shard_value, str) and default_shard_value.strip():
-        default_shard_path = Path(default_shard_value)
-    elif include_values:
-        default_shard_path = Path(str(include_values[0]))
-    else:
-        default_shard_path = Path("bpfw/blocks/core.yaml")
-
-    try:
-        target_shard = AuthorityShard.load(project_root=project_root, shard_path=default_shard_path)
-    except FileNotFoundError:
-        target_shard = AuthorityShard(path=default_shard_path, blocks=[])
-
-    shard_blocks = target_shard.get_blocks()
-    existing_block_ids = {
-        str(block_id)
-        for block in shard_blocks
-        if isinstance(block, dict)
-        for block_id in [block.get("id")]
-        if block_id
-    }
-    existing_declaration_keys = {
-        declaration_key
-        for block in shard_blocks
-        if isinstance(block, dict)
-        for declaration_key in [_declaration_key(block)]
-        if declaration_key is not None
-    }
-
-    migrated_count = 0
-    skipped_count = 0
-    for root_block in root_blocks:
-        if not isinstance(root_block, dict):
-            skipped_count += 1
-            continue
-        root_block_id = root_block.get("id")
-        if isinstance(root_block_id, str) and root_block_id in existing_block_ids:
-            skipped_count += 1
-            continue
-        root_declaration_key = _declaration_key(root_block)
-        if root_declaration_key is not None and root_declaration_key in existing_declaration_keys:
-            skipped_count += 1
-            continue
-        shard_blocks.append(root_block)
-        if isinstance(root_block_id, str):
-            existing_block_ids.add(root_block_id)
-        if root_declaration_key is not None:
-            existing_declaration_keys.add(root_declaration_key)
-        migrated_count += 1
-
-    target_shard.set_blocks(shard_blocks)
-    target_shard.sort_blocks()
-    target_shard.save(project_root=project_root)
-
-    if not isinstance(includes, list):
-        data["includes"] = [str(default_shard_path)]
-    elif str(default_shard_path) not in includes:
-        includes.append(str(default_shard_path))
-
-    data.pop("blocks", None)
-    blueprint_path.write_text(yaml.safe_dump(data, sort_keys=False, allow_unicode=True), encoding="utf-8")
-    return {"migrated": migrated_count, "skipped": skipped_count, "shard_total": len(shard_blocks)}
+    return migrate_root_blocks_to_default_shard(project_root=project_root)
 
 
 def _attempt_permission_repair(project_root: Path, error: PermissionError) -> bool:
