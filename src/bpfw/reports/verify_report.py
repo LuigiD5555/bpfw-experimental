@@ -1,6 +1,7 @@
 """Verify report rendering for BPFW MVP Catalog Mode."""
 
-from typing import Dict, List
+from collections import defaultdict
+from typing import DefaultDict, Dict, List, Sequence
 
 from bpfw.catalog.status import ALLOWED_STATUSES
 from bpfw.catalog.models import VerificationReport
@@ -49,29 +50,80 @@ _SUGGESTED_ACTIONS: Dict[str, str] = {
     ),
 }
 
+VERIFY_FINDING_FILTERS: Dict[str, set[str]] = {
+    "all": set(),
+    "undeclared": {"UNDECLARED_CODE"},
+    "missing": {"MISSING_DECLARED_CODE"},
+    "duplicate": {"DUPLICATE_ACTIVE_PURPOSE", "DUPLICATE_BLOCK_ID"},
+    "secret": {"BLUEPRINT_SECRET_LIKE_VALUE"},
+    "invalid": {"INVALID_STATUS", "INCOMPLETE_BLOCK", "INVALID_BLUEPRINT"},
+}
 
-def _render_block_finding(finding: Finding) -> str:
-    """Render a single block finding as human-readable text."""
+
+def _group_block_findings(findings: List[Finding]) -> DefaultDict[str, List[Finding]]:
+    """Group findings by code while preserving input order inside each group."""
+    grouped: DefaultDict[str, List[Finding]] = defaultdict(list)
+    for finding in findings:
+        grouped[finding.code].append(finding)
+    return grouped
+
+
+def _compact_location(finding: Finding) -> str:
+    """Return a compact and stable location string."""
+    path_value = finding.path or "n/a"
+    symbol_value = finding.symbol or "n/a"
+    return f"{path_value}::{symbol_value}"
+
+
+def _render_block_group(code: str, grouped_findings: List[Finding], max_items: int = 8) -> str:
+    """Render one grouped finding code with compact locations."""
     lines: List[str] = []
+    lines.append(f"[{code}] count={len(grouped_findings)}")
 
-    lines.append(f"[{finding.code}]")
-    lines.append("Path:")
-    lines.append(f"  {finding.path or 'n/a'}")
-    lines.append("")
-    lines.append("Symbol:")
-    lines.append(f"  {finding.symbol or 'n/a'}")
-    lines.append("")
-    lines.append("Reason:")
-    lines.append(f"  {finding.message}")
-    lines.append("")
-    lines.append("Suggested action:")
-    action = _SUGGESTED_ACTIONS.get(finding.code, "Review and resolve the finding.")
-    lines.append(f"  {action}")
+    first_finding = grouped_findings[0]
+    lines.append(f"Reason: {first_finding.message}")
+    action = _SUGGESTED_ACTIONS.get(code, "Review and resolve the finding.")
+    lines.append(f"Suggested action: {action}")
+
+    unique_locations: List[str] = []
+    seen_locations = set()
+    for finding in grouped_findings:
+        location = _compact_location(finding)
+        if location in seen_locations:
+            continue
+        seen_locations.add(location)
+        unique_locations.append(location)
+
+    lines.append("Locations:")
+    if max_items <= 0:
+        max_items = len(unique_locations)
+
+    for location in unique_locations[:max_items]:
+        lines.append(f"  - {location}")
+
+    remaining = len(unique_locations) - max_items
+    if remaining > 0:
+        lines.append(f"  ... and {remaining} more")
 
     return "\n".join(lines)
 
 
-def render_verify_report(report: VerificationReport) -> str:
+def _filter_block_findings(
+    block_findings: List[Finding],
+    finding_codes: Sequence[str] | None,
+) -> List[Finding]:
+    """Filter findings by a list of explicit finding codes."""
+    if not finding_codes:
+        return block_findings
+    allowed_codes = set(finding_codes)
+    return [finding for finding in block_findings if finding.code in allowed_codes]
+
+
+def render_verify_report(
+    report: VerificationReport,
+    finding_codes: Sequence[str] | None = None,
+    max_items_per_group: int = 8,
+) -> str:
     """Render a VerificationReport into a human-readable string.
 
     Parameters
@@ -125,10 +177,35 @@ def render_verify_report(report: VerificationReport) -> str:
         sections.append("Execution:")
         sections.append("  ALLOWED")
     else:
-        # Blocked: render each block finding, then execution
-        for finding in block_findings:
-            sections.append(_render_block_finding(finding))
+        filtered_findings = _filter_block_findings(block_findings, finding_codes)
+        grouped_findings = _group_block_findings(filtered_findings)
+
+        if finding_codes:
+            sections.append(f"Filter: {', '.join(finding_codes)}")
             sections.append("")
+
+        if not grouped_findings:
+            sections.append("Findings summary:")
+            sections.append("  No findings match the selected filter.")
+            sections.append("")
+            sections.append(f"Hidden findings: {len(block_findings)}")
+            sections.append("")
+        else:
+            sections.append("Findings summary:")
+            for finding_code in sorted(grouped_findings):
+                sections.append(f"  {finding_code}: {len(grouped_findings[finding_code])}")
+            sections.append("")
+
+            sections.append("Findings detail:")
+            for finding_code in sorted(grouped_findings):
+                sections.append(
+                    _render_block_group(
+                        finding_code,
+                        grouped_findings[finding_code],
+                        max_items=max_items_per_group,
+                    )
+                )
+                sections.append("")
 
         sections.append("Execution:")
         sections.append("  BLOCKED")

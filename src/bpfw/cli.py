@@ -23,7 +23,7 @@ from bpfw.protection.authority import (
     unlock_authority,
 )
 from bpfw.reports.status_report import run_status
-from bpfw.reports.verify_report import render_verify_report
+from bpfw.reports.verify_report import VERIFY_FINDING_FILTERS, render_verify_report
 from bpfw.shared.text import normalize_text_command
 from bpfw.protection.runtime_lease import runtime_blueprint_write_lease
 
@@ -76,9 +76,16 @@ Examples:
   bpfw inspector
   bpfw inspector --all
   bpfw verify
+  bpfw verify undeclared
+  bpfw verify --all
   bpfw run -- python app.py
   bpfw watch
   bpfw status
+
+Verify filters:
+  bpfw verify [all|undeclared|missing|duplicate|secret|invalid]
+  bpfw verify --all
+  bpfw verify --max N
 """
 
 
@@ -115,6 +122,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--once", action="store_true", dest="watch_once", help=argparse.SUPPRESS)
     parser.add_argument("--debounce-ms", type=int, default=800, dest="watch_debounce_ms", help=argparse.SUPPRESS)
     parser.add_argument("-a", "--all", action="store_true", dest="inspector_all", help=argparse.SUPPRESS)
+    parser.add_argument("--max", type=int, default=8, dest="verify_max_items", help=argparse.SUPPRESS)
     return parser
 
 
@@ -150,8 +158,12 @@ def resolve_cli_command(command: str, subcommand: str | None) -> str:
             raise ValueError("init does not accept subcommands")
         return "init"
     if normalized_command == "verify":
-        if normalized_subcommand is not None:
-            raise ValueError("verify does not accept subcommands")
+        if normalized_subcommand is not None and normalized_subcommand not in VERIFY_FINDING_FILTERS:
+            valid_filters = ", ".join(sorted(VERIFY_FINDING_FILTERS))
+            raise ValueError(
+                f"unknown verify filter: {normalized_subcommand}. "
+                f"Supported filters: {valid_filters}"
+            )
         return "verify"
     if normalized_command == "run":
         return "run"
@@ -413,8 +425,15 @@ def main() -> int:
     # verify is handled directly by the catalog verify pipeline
     if normalized_command == "verify":
         project_root = Path(parsed_arguments.project_root).resolve()
+        selected_filter = normalize_text_command(parsed_arguments.subcommand) if parsed_arguments.subcommand else None
+        selected_codes = None if selected_filter in {None, "all"} else sorted(VERIFY_FINDING_FILTERS[selected_filter])
+        max_items = 0 if parsed_arguments.inspector_all else parsed_arguments.verify_max_items
         report, exit_code = run_verify(project_root=project_root)
-        output = render_verify_report(report)
+        output = render_verify_report(
+            report,
+            finding_codes=selected_codes,
+            max_items_per_group=max_items,
+        )
         print(output)
         return exit_code
 

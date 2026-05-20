@@ -43,9 +43,23 @@ def test_inspector_editor_and_planner_map_without_subcommands() -> None:
 
 
 def test_catalog_commands_reject_subcommands() -> None:
-    for command in ("init", "inspector", "editor", "planner", "verify", "watch", "status"):
+    for command in ("init", "inspector", "editor", "planner", "watch", "status"):
         with pytest.raises(ValueError):
             resolve_cli_command(command, "extra")
+
+
+def test_verify_accepts_supported_filters() -> None:
+    assert resolve_cli_command("verify", "undeclared") == "verify"
+    assert resolve_cli_command("verify", "missing") == "verify"
+    assert resolve_cli_command("verify", "duplicate") == "verify"
+    assert resolve_cli_command("verify", "secret") == "verify"
+    assert resolve_cli_command("verify", "invalid") == "verify"
+    assert resolve_cli_command("verify", "all") == "verify"
+
+
+def test_verify_rejects_unknown_filter() -> None:
+    with pytest.raises(ValueError, match="unknown verify filter"):
+        resolve_cli_command("verify", "extra")
 
 
 def test_unlock_rejects_non_blueprint_target() -> None:
