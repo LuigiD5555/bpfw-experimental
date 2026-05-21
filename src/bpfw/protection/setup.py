@@ -114,7 +114,7 @@ def _reason_lines(result: ProtectionSetupResult) -> list[str]:
     return lines
 
 
-def _format_setup_summary(result: ProtectionSetupResult, action: str | None = None) -> str:
+def format_setup_summary(result: ProtectionSetupResult, action: str | None = None) -> str:
     """Format protection setup details with state-aware wording."""
 
     resolved_action = action if action is not None else _action_for_result(result=result)
@@ -137,12 +137,6 @@ def _format_setup_summary(result: ProtectionSetupResult, action: str | None = No
         lines.extend(["", *_reason_lines(result=result)])
 
     return "\n".join(lines)
-
-
-def format_setup_summary(result: ProtectionSetupResult, action: str | None = None) -> str:
-    """Format a protection setup summary for callers."""
-
-    return _format_setup_summary(result=result, action=action)
 
 
 def run_protection_setup(project_root: Path, allow_unprotected: bool = False) -> ProtectionSetupResult:
@@ -168,7 +162,3 @@ def run_protection_setup(project_root: Path, allow_unprotected: bool = False) ->
     )
 
 
-def format_init_setup_summary(result: ProtectionSetupResult) -> str:
-    """Format protection setup details for init output."""
-
-    return format_setup_summary(result=result)

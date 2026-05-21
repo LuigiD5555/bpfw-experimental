@@ -76,7 +76,7 @@ def test_run_protection_setup_allows_explicit_unprotected_mode(
         project_root=tmp_path,
         allow_unprotected=True,
     )
-    message = setup.format_init_setup_summary(result=result)
+    message = setup.format_setup_summary(result=result)
 
     assert result.allowed is True
     assert result.lock_state == setup.UNPROTECTED_STATUS
@@ -106,7 +106,7 @@ def test_run_protection_setup_allows_degraded_protection(
     monkeypatch.setattr(setup, "lock_authority", lambda project_root: type("Result", (), {"status": "degraded"})())
 
     result = setup.run_protection_setup(project_root=tmp_path)
-    message = setup.format_init_setup_summary(result=result)
+    message = setup.format_setup_summary(result=result)
 
     assert result.allowed is True
     assert result.lock_state == "degraded"
@@ -115,7 +115,7 @@ def test_run_protection_setup_allows_degraded_protection(
     assert "backend: readonly_weak" in message
 
 
-def test_format_init_setup_summary_never_claims_unsupported_is_configured(
+def test_format_setup_summary_never_claims_unsupported_is_configured(
     tmp_path: Path,
 ) -> None:
     """Verify unsupported setup results are rendered as failures."""
@@ -131,7 +131,7 @@ def test_format_init_setup_summary_never_claims_unsupported_is_configured(
         ),
     )
 
-    message = setup.format_init_setup_summary(result=result)
+    message = setup.format_setup_summary(result=result)
 
     assert "BPFW protection failed." in message
     assert "os lock: unsupported" in message
@@ -139,7 +139,7 @@ def test_format_init_setup_summary_never_claims_unsupported_is_configured(
     assert "Immutable flags are unavailable." in message
 
 
-def test_format_init_setup_summary_prioritizes_filesystem_fix_for_weak_mount(
+def test_format_setup_summary_prioritizes_filesystem_fix_for_weak_mount(
     tmp_path: Path,
 ) -> None:
     """Verify weak-mount failures recommend moving or remounting before sudo."""
@@ -159,7 +159,7 @@ def test_format_init_setup_summary_prioritizes_filesystem_fix_for_weak_mount(
         ),
     )
 
-    message = setup.format_init_setup_summary(result=result)
+    message = setup.format_setup_summary(result=result)
 
     assert "Move the project to a filesystem that enforces POSIX ownership or permissions" in message
     assert "remount this filesystem with real permission support" in message

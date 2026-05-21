@@ -3,6 +3,7 @@
 import pytest
 from pathlib import Path
 
+from bpfw.catalog.access_control import authorize_blueprint_writes_for_tool
 from bpfw.authority import (
     AuthorityRepository,
     AuthorityReshardPlanner,
@@ -233,7 +234,8 @@ def test_repository_save_syncs_index_metadata_without_includes_changes(project_r
     document = repository.load()
 
     document.blueprint_data["project"]["name"] = "renamed-project"
-    repository.save(document)
+    with authorize_blueprint_writes_for_tool("test"):
+        repository.save(document)
 
     import yaml
     saved_root = yaml.safe_load((project_root / "bpfw" / "blueprint.yaml").read_text(encoding="utf-8"))
@@ -261,7 +263,8 @@ def test_repository_saves_moved_block_when_domain_changes(project_root: Path):
     blocks[0]["domain"] = "catalog"  # Change from protection to catalog
     document.replace_blocks(blocks)
     
-    repository.save(document)
+    with authorize_blueprint_writes_for_tool("test"):
+        repository.save(document)
     
     # Reload and verify
     document = repository.load()
@@ -293,7 +296,8 @@ def test_repository_creates_new_shard_and_adds_include(project_root: Path):
     })
     document.replace_blocks(blocks)
     
-    repository.save(document)
+    with authorize_blueprint_writes_for_tool("test"):
+        repository.save(document)
     
     # Reload and verify new shard exists
     document = repository.load()
@@ -311,7 +315,8 @@ def test_repository_removes_empty_shard_when_allow_empty_false(project_root: Pat
     blocks.clear()
     document.replace_blocks(blocks)
     
-    repository.save(document)
+    with authorize_blueprint_writes_for_tool("test"):
+        repository.save(document)
     
     # Verify empty shard was removed
     document = repository.load()
@@ -435,7 +440,8 @@ def test_verify_passes_after_reshard_apply(project_root: Path):
     
     # Persist and let authority save perform synchronization.
     planner = AuthorityReshardPlanner(project_root=project_root)
-    repository.save(document)
+    with authorize_blueprint_writes_for_tool("test"):
+        repository.save(document)
     
     # Reload and verify no drift
     document = repository.load()
@@ -452,11 +458,11 @@ def test_inspector_save_moves_block_after_domain_change(project_root: Path):
     
     # Simulate inspector changing domain
     blocks = document.get_blocks()
-    old_shard = document.get_origin(blocks[0]["id"])
     blocks[0]["domain"] = "catalog"
     document.replace_blocks(blocks)
     
-    repository.save(document)
+    with authorize_blueprint_writes_for_tool("test"):
+        repository.save(document)
     
     # Verify block moved to new shard
     document = repository.load()
@@ -489,7 +495,8 @@ def test_planner_save_places_block_in_domain_shard(project_root: Path):
     blocks = document.get_blocks()
     blocks.append(new_block)
     document.replace_blocks(blocks)
-    repository.save(document)
+    with authorize_blueprint_writes_for_tool("test"):
+        repository.save(document)
     
     # Verify block is in correct shard
     document = repository.load()
@@ -532,7 +539,8 @@ def test_bpfw_reshard_apply_writes_moved_blocks(project_root: Path):
     
     # Persist and let authority save perform synchronization.
     planner = AuthorityReshardPlanner(project_root=project_root)
-    repository.save(document)
+    with authorize_blueprint_writes_for_tool("test"):
+        repository.save(document)
     
     # Reload and verify moves were applied
     document = repository.load()

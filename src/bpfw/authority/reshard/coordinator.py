@@ -35,6 +35,7 @@ class AuthoritySyncResult:
         created_shards: Shards created during synchronization.
         removed_shards: Shards removed during synchronization.
         updated_includes: Whether the root index includes changed.
+        purged_ghost_blocks: Blocks removed because their source files no longer exist.
         skipped_reason: Reason synchronization was skipped, if no safe write was performed.
     """
 
@@ -45,6 +46,7 @@ class AuthoritySyncResult:
     created_shards: tuple[Path, ...] = ()
     removed_shards: tuple[Path, ...] = ()
     updated_includes: bool = False
+    purged_ghost_blocks: tuple[str, ...] = ()
     skipped_reason: str | None = None
 
     def has_changes(self) -> bool:
@@ -60,6 +62,7 @@ class AuthoritySyncResult:
             or bool(self.created_shards)
             or bool(self.removed_shards)
             or self.updated_includes
+            or bool(self.purged_ghost_blocks)
         )
 
 
@@ -216,6 +219,57 @@ def _is_sharded_authority(data: dict[str, Any] | None) -> bool:
     return isinstance(authority, dict) and authority.get("layout") == "sharded"
 
 
+def _purge_ghost_blocks(repository: "AuthorityRepository", document: AuthorityDocument) -> tuple[str, ...]:
+    """Remove blocks whose source files no longer exist.
+
+    Args:
+        repository: Authority repository containing all blocks.
+        document: Loaded authority document.
+
+    Returns:
+        Tuple of block IDs that were removed (ghost blocks).
+    """
+    from bpfw.authority.shard import AuthorityShard
+
+    ghost_block_ids = []
+
+    for block in document.get_blocks():
+        block_id = block.get("id")
+        code = block.get("code")
+        if not isinstance(code, dict):
+            continue
+        code_path = code.get("path")
+        if not isinstance(code_path, str) or not code_path.strip():
+            continue
+        full_path = repository.project_root / code_path
+        if not full_path.exists():
+            if block_id and isinstance(block_id, str):
+                ghost_block_ids.append(block_id)
+
+    if not ghost_block_ids:
+        return ()
+
+    shard_block_lists: dict[Path, list[dict[str, Any]]] = {}
+    for block in document.get_blocks():
+        block_id = block.get("id")
+        if not block_id or block_id in ghost_block_ids:
+            continue
+        origin = document.get_origin(block_id)
+        if not origin:
+            continue
+        if origin not in shard_block_lists:
+            shard_block_lists[origin] = []
+        shard_block_lists[origin].append(block)
+
+    for shard_path, blocks in shard_block_lists.items():
+        shard = AuthorityShard.load(repository.project_root, shard_path)
+        shard.set_blocks(blocks)
+        shard.sort_blocks()
+        shard.save(repository.project_root)
+
+    return tuple(ghost_block_ids)
+
+
 def migrate_root_blocks_to_default_shard(project_root: Path) -> dict[str, int]:
     """Move legacy root-level blocks into the default shard when possible.
 
@@ -346,6 +400,8 @@ def synchronize_authority_shards(
     migration_summary = migrate_root_blocks_to_default_shard(project_root=project_root)
     repository = AuthorityRepository(project_root=project_root)
     document = repository.load()
+    
+    ghost_block_ids = _purge_ghost_blocks(repository, document)
     coordinator = ReshardCoordinator(project_root=project_root)
     plan = coordinator.build_sync_plan(document=document)
 
@@ -354,11 +410,17 @@ def synchronize_authority_shards(
             mode=plan.mode,
             migrated_root_blocks=migration_summary["migrated"],
             skipped_root_blocks=migration_summary["skipped"],
+            purged_ghost_blocks=ghost_block_ids,
             skipped_reason="large_migration_requires_explicit_reshard",
         )
 
-    if plan.mode == ReshardMode.NO_DRIFT and not migration_summary["migrated"] and not migration_summary["skipped"]:
-        return AuthoritySyncResult(mode=plan.mode)
+    if (
+        plan.mode == ReshardMode.NO_DRIFT
+        and not migration_summary["migrated"]
+        and not migration_summary["skipped"]
+        and not ghost_block_ids
+    ):
+        return AuthoritySyncResult(mode=plan.mode, purged_ghost_blocks=ghost_block_ids)
 
     persistence_result = repository.save(document)
     return AuthoritySyncResult(
@@ -369,6 +431,7 @@ def synchronize_authority_shards(
         created_shards=tuple(persistence_result.created_shards),
         removed_shards=tuple(persistence_result.removed_shards),
         updated_includes=persistence_result.updated_includes,
+        purged_ghost_blocks=ghost_block_ids,
     )
 
 

@@ -2,6 +2,7 @@ from pathlib import Path
 
 import yaml
 
+from bpfw.catalog.access_control import authorize_blueprint_writes_for_tool
 from bpfw.catalog.verify import run_verify
 from bpfw.reports.status_report import run_status
 
@@ -112,3 +113,55 @@ def test_status_migrates_legacy_root_blocks_before_loading_authority(tmp_path: P
     assert "state: defined" in output
     assert "blocks" not in migrated_index
     assert (tmp_path / "bpfw" / "blocks" / "demo.yaml").exists()
+
+
+def test_reshard_purges_ghost_blocks(tmp_path: Path) -> None:
+    """Reshard should remove blocks whose source files no longer exist."""
+
+    _write_demo_source(project_root=tmp_path)
+    _write_sharded_index(project_root=tmp_path, includes=["bpfw/blocks/core.yaml"])
+
+    ghost_block = {
+        "id": "ghost_func",
+        "purpose": "does not exist",
+        "name": "ghost_func",
+        "domain": "demo",
+        "status": "active",
+        "code": {
+            "path": "src/ghost/missing.py",
+            "module": "ghost.missing",
+            "symbol": "ghost_func",
+            "kind": "function",
+            "start_line": 1,
+            "end_line": 2,
+        },
+    }
+
+    core_shard_path = tmp_path / "bpfw" / "blocks" / "core.yaml"
+    core_shard_path.parent.mkdir(parents=True)
+    core_shard_path.write_text(
+        yaml.safe_dump(
+            {"blocks": [_complete_declared_block(), ghost_block]},
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    from bpfw.authority.reshard.coordinator import synchronize_authority_shards
+
+    with authorize_blueprint_writes_for_tool("test"):
+        result = synchronize_authority_shards(project_root=tmp_path)
+
+    assert result.purged_ghost_blocks == ("ghost_func",)
+
+    updated_shard = yaml.safe_load(core_shard_path.read_text(encoding="utf-8"))
+    block_ids = [block["id"] for block in updated_shard.get("blocks", [])]
+    assert "ghost_func" not in block_ids
+
+    demo_shard_path = tmp_path / "bpfw" / "blocks" / "demo.yaml"
+    if demo_shard_path.exists():
+        demo_shard = yaml.safe_load(demo_shard_path.read_text(encoding="utf-8"))
+        demo_block_ids = [block["id"] for block in demo_shard.get("blocks", [])]
+        assert "declared_func" in demo_block_ids
+    else:
+        assert "declared_func" in block_ids

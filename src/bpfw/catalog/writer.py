@@ -18,7 +18,7 @@ from bpfw.catalog.status import ALLOWED_STATUSES
 from bpfw.catalog.models import DiscoveredCodeUnit
 from bpfw.catalog.symbol_types import normalize_symbol_type
 from bpfw.core.errors import BlueprintLockedError
-from bpfw.protection.setup import format_init_setup_summary, run_protection_setup
+from bpfw.protection.setup import format_setup_summary, run_protection_setup
 from bpfw.protection.authority import (
     get_authority_protection_status,
     lock_authority,
@@ -374,7 +374,7 @@ def run_init(project_root: Path, allow_unprotected: bool = False) -> tuple[bool,
             and _try_interactive_permission_repair(setup_result=setup_result)
         ):
             setup_result = run_protection_setup(project_root=project_root, allow_unprotected=allow_unprotected)
-        message = format_init_setup_summary(result=setup_result)
+        message = format_setup_summary(result=setup_result)
         return setup_result.allowed, message, 0 if setup_result.allowed else 1
     
     # Step 4: Create bpfw directory if missing
@@ -460,5 +460,5 @@ Pending fields:
 Next:
   bpfw inspector"""
     
-    message = f"{init_summary}\n\n{format_init_setup_summary(result=setup_result)}"
+    message = f"{init_summary}\n\n{format_setup_summary(result=setup_result)}"
     return setup_result.allowed, message, 0 if setup_result.allowed else 1
