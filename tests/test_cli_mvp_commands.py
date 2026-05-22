@@ -21,7 +21,6 @@ def test_public_command_surface_is_mvp_only() -> None:
         "lock",
         "unlock",
         "status",
-        "reshard",
     )
 
 
@@ -97,22 +96,6 @@ def test_main_help_hides_internal_and_inspector_specific_options() -> None:
     assert "-a, --all" not in rendered_help
     assert "bpfw inspector --all" in rendered_help
 
-
-def test_reshard_is_blocked_as_public_command(
-    monkeypatch: pytest.MonkeyPatch,
-    capsys: pytest.CaptureFixture[str],
-    tmp_path: Path,
-) -> None:
-    """Reshard must print a blocking message and return non-zero."""
-    monkeypatch.setattr(
-        sys, "argv", ["bpfw", "reshard", "--project-root", str(tmp_path)]
-    )
-
-    exit_code = main()
-    output = capsys.readouterr().out
-
-    assert exit_code != 0
-    assert "no longer a public workflow" in output
 
 
 def test_run_requires_command_and_prints_usage(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:

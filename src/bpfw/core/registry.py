@@ -308,6 +308,17 @@ def build_default_registry(
                 ),
             ],
         ),
+
+        "diff": Pipeline(
+            name="diff",
+            steps=[
+                IntegrationStep(
+                    integration_registry=optional_integrations,
+                    integration_name="diff",
+                    name="integrations.diff",
+                ),
+            ],
+        ),
         "verify": Pipeline(name="verify", steps=[VerifyBlueprintStep()]),
         "lock": Pipeline(name="lock", steps=[AuthorityLockStep()]),
         "unlock": Pipeline(name="unlock", steps=[AuthorityUnlockStep()]),

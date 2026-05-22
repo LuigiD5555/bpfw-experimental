@@ -121,6 +121,7 @@ def build_default_integration_registry() -> IntegrationRegistry:
         ("inspector", "bpfw.integrations.inspector", "InspectorIntegration"),
         ("editor", "bpfw.integrations.editor", "EditorIntegration"),
         ("planner", "bpfw.integrations.planner", "PlannerIntegration"),
+        ("diff", "bpfw.integrations.diff", "DiffIntegration"),
     ):
         try:
             module = import_module(module_name)

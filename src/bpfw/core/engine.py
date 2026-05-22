@@ -59,7 +59,7 @@ class BlueprintEngine:
                         message=f"Unknown command: {command.command_name}",
                         source="core.registry",
                         suggested_actions=[
-                            "Use one of: init, inspector, editor, planner, verify, lock, unlock, status"
+                            "Use one of: init, inspector, editor, planner, diff, verify, lock, unlock, status"
                         ],
                     )
                 ],
