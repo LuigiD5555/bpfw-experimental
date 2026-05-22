@@ -7,7 +7,7 @@ inspector in target mode.
 
 from pathlib import Path
 
-from bpfw.catalog.loader import BlueprintLoader
+from bpfw.core.catalog.loader import BlueprintLoader
 from bpfw.integrations.editor.filters import FilterState, apply_filters, parse_filter_input
 from bpfw.integrations.editor.screen import (
     read_input,

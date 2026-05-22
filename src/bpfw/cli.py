@@ -4,9 +4,9 @@ import argparse
 import json
 from pathlib import Path
 
-from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
-from bpfw.catalog.verify import run_verify
-from bpfw.catalog.writer import run_init
+from bpfw.core.catalog.paths import CANONICAL_BLUEPRINT_FILE
+from bpfw.core.catalog.verify import run_verify
+from bpfw.core.catalog.writer import run_init
 from bpfw.runner import run_command_after_verify
 from bpfw.watch import WatchDependencyError, run_watch
 from bpfw.core.engine import BlueprintEngine, build_command

@@ -1,4 +1,4 @@
-from bpfw.catalog.models import VerificationReport
+from bpfw.core.catalog.models import VerificationReport
 from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, Finding
 from bpfw.reports.verify_report import render_verify_report
 

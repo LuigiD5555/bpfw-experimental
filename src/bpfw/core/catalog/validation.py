@@ -2,8 +2,8 @@
 
 from typing import Any, Dict, List
 
-from bpfw.catalog.status import ALLOWED_STATUSES, is_allowed_status
-from bpfw.catalog.models import (
+from bpfw.core.catalog.status import ALLOWED_STATUSES, is_allowed_status
+from bpfw.core.catalog.models import (
     AUTHORITY_STATE_EMPTY,
     AUTHORITY_STATE_INVALID,
     AUTHORITY_STATE_MISSING,

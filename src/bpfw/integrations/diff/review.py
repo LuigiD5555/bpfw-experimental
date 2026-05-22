@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import Any
 
 from bpfw.core.authority import AuthorityRepository, ShardDecisionEngine
-from bpfw.catalog.loader import BlueprintLoader
-from bpfw.catalog.models import BlueprintLoadResult, DiscoveredCodeUnit, ScanResult, VerificationReport
-from bpfw.catalog.verify import run_verify, scan_project_from_blueprint
+from bpfw.core.catalog.loader import BlueprintLoader
+from bpfw.core.catalog.models import BlueprintLoadResult, DiscoveredCodeUnit, ScanResult, VerificationReport
+from bpfw.core.catalog.verify import run_verify, scan_project_from_blueprint
 from bpfw.integrations.diff.models import (
     BlueprintTarget,
     CodeTarget,

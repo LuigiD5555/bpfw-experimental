@@ -3,7 +3,7 @@
 import pytest
 from pathlib import Path
 
-from bpfw.catalog.access_control import authorize_blueprint_writes_for_tool
+from bpfw.core.catalog.access_control import authorize_blueprint_writes_for_tool
 from bpfw.core.authority import (
     AuthorityRepository,
     InvalidAuthorityIndexError,
@@ -88,14 +88,14 @@ def project_root(tmp_path: Path) -> Path:
                 "status": "active",
                 "code": {
                     "path": "src/bpfw/catalog/test.py",
-                    "module": "bpfw.catalog.test",
+                    "module": "bpfw.core.catalog.test",
                     "symbol": "TestClass",
                     "kind": "class",
                     "start_line": 1,
                     "end_line": 20,
                 },
                 "detected": {
-                    "qualified_name": "bpfw.catalog.test.TestClass",
+                    "qualified_name": "bpfw.core.catalog.test.TestClass",
                     "kind": "class",
                 },
             },

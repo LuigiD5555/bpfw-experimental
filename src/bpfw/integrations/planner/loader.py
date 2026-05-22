@@ -3,8 +3,8 @@
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from bpfw.catalog.domain import BlueprintRepository
-from bpfw.catalog.paths import resolve_blueprint_path
+from bpfw.core.catalog.domain import BlueprintRepository
+from bpfw.core.catalog.paths import resolve_blueprint_path
 from bpfw.integrations.planner.connection_detection import detect_connections
 from bpfw.integrations.planner.connection_merge import merge_connections
 from bpfw.integrations.planner.models import (

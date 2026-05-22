@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 from typing import Callable, Iterator
 
-from bpfw.catalog.access_control import (
+from bpfw.core.catalog.access_control import (
     authorize_blueprint_writes_for_tool,
     authorize_temporary_blueprint_unlock_for_tool,
 )

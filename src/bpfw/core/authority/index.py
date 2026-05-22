@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Any
 
-from bpfw.catalog.access_control import ensure_blueprint_can_be_written
+from bpfw.core.catalog.access_control import ensure_blueprint_can_be_written
 from bpfw.core.authority.errors import InvalidAuthorityIndexError
 
 

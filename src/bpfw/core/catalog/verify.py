@@ -5,19 +5,19 @@ from typing import Any, List, Tuple
 
 from bpfw.core.authority.index import AuthorityIndex
 from bpfw.core.authority import AuthorityRepository
-from bpfw.catalog.drift import compare_declared_to_discovered
-from bpfw.catalog.domain import BlueprintDocument
-from bpfw.catalog.loader import BlueprintLoader
-from bpfw.catalog.models import (
+from bpfw.core.catalog.drift import compare_declared_to_discovered
+from bpfw.core.catalog.domain import BlueprintDocument
+from bpfw.core.catalog.loader import BlueprintLoader
+from bpfw.core.catalog.models import (
     AUTHORITY_STATE_EMPTY,
     AUTHORITY_STATE_INVALID,
     AUTHORITY_STATE_MISSING,
     VerificationReport,
     ScanResult,
 )
-from bpfw.catalog.scanner import scan_python_project
-from bpfw.catalog.security import validate_no_blueprint_secrets
-from bpfw.catalog.validation import validate_blueprint_structure
+from bpfw.core.catalog.scanner import scan_python_project
+from bpfw.core.catalog.security import validate_no_blueprint_secrets
+from bpfw.core.catalog.validation import validate_blueprint_structure
 from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, FINDING_SEVERITY_WARNING, Finding
 
 # Finding codes used for counting.

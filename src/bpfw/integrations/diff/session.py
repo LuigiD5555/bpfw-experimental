@@ -11,7 +11,7 @@ from bpfw.core.blueprint_engine import (
     BlueprintEngine as AuthorityBlueprintEngine,
 )
 from bpfw.core.authority.patch.transaction import PatchWriteContext
-from bpfw.catalog.verify import run_verify
+from bpfw.core.catalog.verify import run_verify
 from bpfw.integrations.diff.metadata_window import MetadataDraft, run_metadata_window
 from bpfw.integrations.diff.models import (
     BlueprintTarget,

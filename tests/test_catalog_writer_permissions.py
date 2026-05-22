@@ -2,7 +2,7 @@
 
 from types import SimpleNamespace
 
-from bpfw.catalog import writer
+from bpfw.core.catalog import writer
 
 
 def test_extract_repair_command_returns_expected_command() -> None:

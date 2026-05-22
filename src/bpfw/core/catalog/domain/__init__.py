@@ -1,7 +1,7 @@
 """Domain package for blueprint models, mapping, and repository."""
 
-from bpfw.catalog.domain.mapper import BlueprintMapper
-from bpfw.catalog.domain.models import (
+from bpfw.core.catalog.domain.mapper import BlueprintMapper
+from bpfw.core.catalog.domain.models import (
     ALLOWED_LIFECYCLES,
     BlueprintDocument,
     Connection,
@@ -10,7 +10,7 @@ from bpfw.catalog.domain.models import (
     Responsibility,
     ResponsibilityLocation,
 )
-from bpfw.catalog.domain.repository import BlueprintRepository, RepositoryLoadResult
+from bpfw.core.catalog.domain.repository import BlueprintRepository, RepositoryLoadResult
 
 __all__ = [
     "ALLOWED_LIFECYCLES",

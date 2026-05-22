@@ -1,13 +1,13 @@
 """Catalog verification support for MVP."""
 
-from bpfw.catalog.status import (
+from bpfw.core.catalog.status import (
     ALLOWED_STATUSES,
     STATUS_ACTIVE,
     STATUS_DEPRECATED,
     STATUS_EXPERIMENTAL,
     STATUS_LEGACY,
 )
-from bpfw.catalog.models import (
+from bpfw.core.catalog.models import (
     AUTHORITY_STATE_DEFINED,
     AUTHORITY_STATE_DRAFT,
     AUTHORITY_STATE_EMPTY,

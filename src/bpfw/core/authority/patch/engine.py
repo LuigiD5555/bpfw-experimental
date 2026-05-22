@@ -32,7 +32,7 @@ from bpfw.core.authority.patch.actions import (
 from bpfw.core.authority.patch.plan import AuthorityPatchPlan, PatchOperation
 from bpfw.core.authority.patch.result import AuthorityPatchResult
 from bpfw.core.authority.patch.transaction import PatchWriteContext, TransactionBackup
-from bpfw.catalog.access_control import (
+from bpfw.core.catalog.access_control import (
     authorize_blueprint_writes_for_tool,
     authorize_temporary_blueprint_unlock_for_tool,
 )

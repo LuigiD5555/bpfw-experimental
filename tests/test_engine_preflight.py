@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from bpfw.catalog.models import VerificationReport
+from bpfw.core.catalog.models import VerificationReport
 from bpfw.core import registry as core_registry
 from bpfw.core.engine import BlueprintEngine, build_command
 from bpfw.core.result import ResultStatus

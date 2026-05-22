@@ -4,8 +4,8 @@ import ast
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from bpfw.catalog.models import DiscoveredCodeUnit, ScanResult
-from bpfw.catalog.review_order import order_blocks_for_review
+from bpfw.core.catalog.models import DiscoveredCodeUnit, ScanResult
+from bpfw.core.catalog.review_order import order_blocks_for_review
 from bpfw.reports.finding import Finding
 
 
@@ -1290,7 +1290,7 @@ def _is_schema_wrapper_function(
         True if it's a schema wrapper, False otherwise.
     """
     # Only check schema.py
-    if module != "src.bpfw.catalog.schema":
+    if module != "src.bpfw.core.catalog.schema":
         return False
     # If function body is just a return with .get() or dict access
     if len(node.body) == 1 and isinstance(node.body[0], ast.Return):

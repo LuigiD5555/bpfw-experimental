@@ -5,7 +5,7 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Iterable, Sequence
 
-from bpfw.catalog.verify import run_verify
+from bpfw.core.catalog.verify import run_verify
 from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, Finding
 from bpfw.reports.verify_report import render_verify_report
 

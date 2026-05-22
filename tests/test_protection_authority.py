@@ -5,7 +5,7 @@ import pytest
 
 import bpfw.protection.authority as authority
 import bpfw.protection.os_lock as os_lock
-from bpfw.catalog.access_control import ensure_blueprint_can_be_written
+from bpfw.core.catalog.access_control import ensure_blueprint_can_be_written
 from bpfw.core.errors import BlueprintLockedError
 from bpfw.protection.authority import (
     get_authority_protection_status,

@@ -1,4 +1,4 @@
-from bpfw.catalog.writer import to_snake_case as writer_to_snake_case
+from bpfw.core.catalog.writer import to_snake_case as writer_to_snake_case
 from bpfw.integrations.planner.utils import to_snake_case as planner_to_snake_case
 from bpfw.integrations.shared.cli_runtime import normalize_command
 from bpfw.shared.text import normalize_text_command, to_snake_case

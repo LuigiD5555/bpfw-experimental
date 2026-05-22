@@ -6,7 +6,7 @@ not just BPFW-specific code.
 
 from pathlib import Path
 
-from bpfw.catalog.scanner import scan_python_project
+from bpfw.core.catalog.scanner import scan_python_project
 
 
 def test_method_calls_method_declared_below_it(tmp_path: Path) -> None:

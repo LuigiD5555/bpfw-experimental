@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
+from bpfw.core.catalog.paths import CANONICAL_BLUEPRINT_FILE
 
 
 @dataclass(slots=True)

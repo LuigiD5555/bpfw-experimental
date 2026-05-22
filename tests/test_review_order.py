@@ -1,7 +1,7 @@
 """Test dependency-first review ordering for blocks."""
 
-from bpfw.catalog.review_order import order_blocks_for_review
-from bpfw.catalog.models import DiscoveredCodeUnit
+from bpfw.core.catalog.review_order import order_blocks_for_review
+from bpfw.core.catalog.models import DiscoveredCodeUnit
 
 
 def test_simple_dependency_ordering():

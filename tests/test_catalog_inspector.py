@@ -1011,7 +1011,7 @@ def test_text_inspector_back_returns_to_saved_previous_item(tmp_path: Path) -> N
         "    purpose: ''\n"
         "    code:\n"
         "      path: src/bpfw/catalog/first.py\n"
-        "      module: src.bpfw.catalog.first\n"
+        "      module: src.bpfw.core.catalog.first\n"
         "      symbol: FirstService\n"
         "      kind: class\n"
         "  - id: second\n"
@@ -1021,7 +1021,7 @@ def test_text_inspector_back_returns_to_saved_previous_item(tmp_path: Path) -> N
         "    purpose: ''\n"
         "    code:\n"
         "      path: src/bpfw/catalog/second.py\n"
-        "      module: src.bpfw.catalog.second\n"
+        "      module: src.bpfw.core.catalog.second\n"
         "      symbol: SecondService\n"
         "      kind: class\n",
         encoding="utf-8",

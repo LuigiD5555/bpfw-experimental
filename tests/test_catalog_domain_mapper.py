@@ -2,7 +2,7 @@ from pathlib import Path
 
 import yaml
 
-from bpfw.catalog.domain import BlueprintMapper, BlueprintRepository
+from bpfw.core.catalog.domain import BlueprintMapper, BlueprintRepository
 
 
 def test_blueprint_mapper_round_trip_preserves_core_fields() -> None:

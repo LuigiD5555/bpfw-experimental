@@ -4,15 +4,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, TYPE_CHECKING
 
-from bpfw.catalog.access_control import ensure_blueprint_can_be_written
-from bpfw.catalog.loader import BlueprintLoader
-from bpfw.catalog.models import (
+from bpfw.core.catalog.access_control import ensure_blueprint_can_be_written
+from bpfw.core.catalog.loader import BlueprintLoader
+from bpfw.core.catalog.models import (
     AUTHORITY_STATE_INVALID,
     AUTHORITY_STATE_MISSING,
     DiscoveredCodeUnit,
 )
-from bpfw.catalog.models import ScanResult
-from bpfw.catalog.verify import run_verify, scan_project_from_blueprint
+from bpfw.core.catalog.models import ScanResult
+from bpfw.core.catalog.verify import run_verify, scan_project_from_blueprint
 from bpfw.core.errors import BlueprintLockedError
 from bpfw.reports.finding import Finding
 from bpfw.shared.text import to_snake_case
@@ -761,5 +761,5 @@ def save_blueprint(
             repository.save(document)
     else:
         # Simple blueprint.yaml file - save directly using writer
-        from bpfw.catalog.writer import write_blueprint
+        from bpfw.core.catalog.writer import write_blueprint
         write_blueprint(blueprint_path, blueprint_data)

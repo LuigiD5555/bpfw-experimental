@@ -4,7 +4,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from bpfw.integrations.inspector.suggestions.domain.engine import suggest_domains
-from bpfw.catalog.models import AUTHORITY_STATE_EMPTY
+from bpfw.core.catalog.models import AUTHORITY_STATE_EMPTY
 from bpfw.integrations.inspector.base import (
     ISSUE_NEW_DETECTED,
     InspectLoadResult,

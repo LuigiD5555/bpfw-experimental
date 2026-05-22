@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from bpfw.catalog.symbol_types import VALID_SYMBOL_TYPES
+from bpfw.core.catalog.symbol_types import VALID_SYMBOL_TYPES
 from bpfw.integrations.planner.models import (
     PlannerBox,
     PlannerInterface,

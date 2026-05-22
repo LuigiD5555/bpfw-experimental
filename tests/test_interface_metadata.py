@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from bpfw.catalog.scanner import extract_interface_metadata
+from bpfw.core.catalog.scanner import extract_interface_metadata
 
 
 def test_function_inputs_and_output(tmp_path: Path) -> None:
@@ -309,7 +309,7 @@ def test_classmethod_excludes_cls(tmp_path: Path) -> None:
 def test_canonical_blueprint_no_interface(tmp_path: Path) -> None:
     """Test that old blueprint entries without interface still load and work."""
     # This is a basic sanity check that the interface key is optional
-    from bpfw.catalog.loader import BlueprintLoader
+    from bpfw.core.catalog.loader import BlueprintLoader
 
     # Create a simple blueprint without interface
     blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
@@ -385,7 +385,7 @@ def test_canonical_blueprint_no_interface(tmp_path: Path) -> None:
 
 def test_scan_python_project_includes_interface(tmp_path: Path) -> None:
     """Test that scan_python_project includes interface metadata."""
-    from bpfw.catalog.scanner import scan_python_project
+    from bpfw.core.catalog.scanner import scan_python_project
 
     source_root = tmp_path / "src"
     source_root.mkdir()

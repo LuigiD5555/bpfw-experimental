@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
+from bpfw.core.catalog.paths import CANONICAL_BLUEPRINT_FILE
 from bpfw.protection.authority import lock_authority
 from bpfw.protection.capabilities import LockSupportResult, check_lock_support
 

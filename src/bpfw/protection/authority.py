@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import List
 
 import bpfw
-from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
+from bpfw.core.catalog.paths import CANONICAL_BLUEPRINT_FILE
 from bpfw.protection.os_lock import (
     DEGRADED,
     LOCKED,

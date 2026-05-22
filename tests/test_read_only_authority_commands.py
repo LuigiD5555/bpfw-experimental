@@ -2,8 +2,8 @@ from pathlib import Path
 
 import yaml
 
-from bpfw.catalog.access_control import authorize_blueprint_writes_for_tool
-from bpfw.catalog.verify import run_verify
+from bpfw.core.catalog.access_control import authorize_blueprint_writes_for_tool
+from bpfw.core.catalog.verify import run_verify
 from bpfw.reports.status_report import run_status
 
 
@@ -153,7 +153,7 @@ def test_blueprint_engine_does_not_purge_ghost_blocks_automatically(tmp_path: Pa
         encoding="utf-8",
     )
 
-    from bpfw.catalog.verify import run_verify
+    from bpfw.core.catalog.verify import run_verify
 
     run_verify(project_root=tmp_path)
 

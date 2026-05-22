@@ -3,8 +3,8 @@
 from collections import defaultdict
 from typing import DefaultDict, Dict, List, Sequence
 
-from bpfw.catalog.status import ALLOWED_STATUSES
-from bpfw.catalog.models import VerificationReport
+from bpfw.core.catalog.status import ALLOWED_STATUSES
+from bpfw.core.catalog.models import VerificationReport
 from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, Finding
 
 # Suggested actions keyed by finding code.

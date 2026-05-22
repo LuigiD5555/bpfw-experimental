@@ -9,8 +9,8 @@ from bpfw.core.authority import (
     InvalidAuthorityShardError,
     MissingShardError,
 )
-from bpfw.catalog.domain import BlueprintRepository
-from bpfw.catalog.models import (
+from bpfw.core.catalog.domain import BlueprintRepository
+from bpfw.core.catalog.models import (
     AUTHORITY_STATE_DEFINED,
     AUTHORITY_STATE_DRAFT,
     AUTHORITY_STATE_EMPTY,
@@ -18,7 +18,7 @@ from bpfw.catalog.models import (
     AUTHORITY_STATE_MISSING,
     BlueprintLoadResult,
 )
-from bpfw.catalog.paths import resolve_blueprint_path
+from bpfw.core.catalog.paths import resolve_blueprint_path
 from bpfw.reports.finding import (
     FINDING_SEVERITY_BLOCK,
     FINDING_SEVERITY_INFO,

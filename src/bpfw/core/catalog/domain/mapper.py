@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from bpfw.catalog.domain.models import BlueprintDocument, Policy, Responsibility
+from bpfw.core.catalog.domain.models import BlueprintDocument, Policy, Responsibility
 
 
 class BlueprintMapper:

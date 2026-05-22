@@ -5,18 +5,18 @@ import subprocess
 import sys
 from typing import Any, Dict, List
 
-from bpfw.catalog.access_control import (
+from bpfw.core.catalog.access_control import (
     ensure_blueprint_can_be_written,
     has_temporary_blueprint_unlock_authorization,
 )
-from bpfw.catalog.paths import (
+from bpfw.core.catalog.paths import (
     DEFAULT_CORE_SHARD,
     resolve_blueprint_path,
     resolve_shard_path,
 )
-from bpfw.catalog.status import ALLOWED_STATUSES
-from bpfw.catalog.models import DiscoveredCodeUnit
-from bpfw.catalog.symbol_types import normalize_symbol_type
+from bpfw.core.catalog.status import ALLOWED_STATUSES
+from bpfw.core.catalog.models import DiscoveredCodeUnit
+from bpfw.core.catalog.symbol_types import normalize_symbol_type
 from bpfw.core.errors import BlueprintLockedError
 from bpfw.protection.setup import format_setup_summary, run_protection_setup
 from bpfw.protection.authority import (
@@ -359,7 +359,7 @@ def run_init(project_root: Path, allow_unprotected: bool = False) -> tuple[bool,
     Returns:
         Tuple of (success, message, exit_code).
     """
-    from bpfw.catalog.scanner import scan_python_project
+    from bpfw.core.catalog.scanner import scan_python_project
     
     blueprint_path = resolve_blueprint_path(project_root)
     

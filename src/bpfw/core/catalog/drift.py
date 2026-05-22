@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, List, Set, Tuple
 
-from bpfw.catalog.models import (
+from bpfw.core.catalog.models import (
     AUTHORITY_STATE_DEFINED,
     DiscoveredCodeUnit,
 )

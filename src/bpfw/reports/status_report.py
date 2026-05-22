@@ -3,15 +3,15 @@
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from bpfw.catalog.status import count_statuses
-from bpfw.catalog.loader import BlueprintLoader
-from bpfw.catalog.models import (
+from bpfw.core.catalog.status import count_statuses
+from bpfw.core.catalog.loader import BlueprintLoader
+from bpfw.core.catalog.models import (
     AUTHORITY_STATE_EMPTY,
     AUTHORITY_STATE_INVALID,
     AUTHORITY_STATE_MISSING,
     VerificationReport,
 )
-from bpfw.catalog.verify import run_verify
+from bpfw.core.catalog.verify import run_verify
 from bpfw.protection.authority import get_authority_protection_status
 
 _BLUEPRINT_DISPLAY_PATH = "bpfw/blueprint.yaml"

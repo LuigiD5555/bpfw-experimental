@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from bpfw.core.authority.errors import InvalidAuthorityShardError
-from bpfw.catalog.access_control import ensure_blueprint_can_be_written
+from bpfw.core.catalog.access_control import ensure_blueprint_can_be_written
 
 
 @dataclass(frozen=True)

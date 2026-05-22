@@ -1,6 +1,6 @@
 """Tests for blueprint security validation."""
 
-from bpfw.catalog.security import validate_no_blueprint_secrets
+from bpfw.core.catalog.security import validate_no_blueprint_secrets
 
 
 def test_validate_no_blueprint_secrets_allows_clean_blueprint() -> None:

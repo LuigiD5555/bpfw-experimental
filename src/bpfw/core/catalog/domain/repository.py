@@ -9,10 +9,10 @@ from typing import Any
 import yaml
 
 from bpfw.core.authority import AuthorityRepository
-from bpfw.catalog.access_control import ensure_blueprint_can_be_written
-from bpfw.catalog.domain.mapper import BlueprintMapper
-from bpfw.catalog.domain.models import BlueprintDocument
-from bpfw.catalog.paths import resolve_blueprint_path
+from bpfw.core.catalog.access_control import ensure_blueprint_can_be_written
+from bpfw.core.catalog.domain.mapper import BlueprintMapper
+from bpfw.core.catalog.domain.models import BlueprintDocument
+from bpfw.core.catalog.paths import resolve_blueprint_path
 
 
 @dataclass(slots=True)

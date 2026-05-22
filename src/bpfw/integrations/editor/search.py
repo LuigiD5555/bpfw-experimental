@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any
 
-from bpfw.catalog.domain import BlueprintDocument
+from bpfw.core.catalog.domain import BlueprintDocument
 
 
 @dataclass(slots=True)

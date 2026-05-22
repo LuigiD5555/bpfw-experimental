@@ -26,7 +26,7 @@ from bpfw.core.authority.patch import (
     UpdateBlockMetadataOperation,
 )
 from bpfw.core.authority.errors import AuthorityError
-from bpfw.catalog.access_control import authorize_blueprint_writes_for_tool
+from bpfw.core.catalog.access_control import authorize_blueprint_writes_for_tool
 
 
 # ---------------------------------------------------------------------------
@@ -825,7 +825,7 @@ class TestReadOnlyCommandBoundaries:
 
     def test_verify_does_not_call_patch_engine(self, tmp_path: Path) -> None:
         """Verify must not import or use the patch engine."""
-        import bpfw.catalog.verify as verify_module
+        import bpfw.core.catalog.verify as verify_module
 
         source_code = open(verify_module.__file__, encoding="utf-8").read()
         assert "patch_engine" not in source_code

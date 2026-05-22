@@ -12,12 +12,12 @@ from bpfw.core.authority.session.recovery import (
     write_session_meta,
 )
 from bpfw.core.authority.session.temporary_blueprint import read_unified_blueprint, write_unified_blueprint
-from bpfw.catalog.access_control import has_temporary_blueprint_unlock_authorization
-from bpfw.catalog.drift import compare_declared_to_discovered
-from bpfw.catalog.models import AUTHORITY_STATE_DEFINED, AUTHORITY_STATE_DRAFT, AUTHORITY_STATE_EMPTY
-from bpfw.catalog.security import validate_no_blueprint_secrets
-from bpfw.catalog.validation import validate_blueprint_structure
-from bpfw.catalog.verify import scan_project_from_blueprint
+from bpfw.core.catalog.access_control import has_temporary_blueprint_unlock_authorization
+from bpfw.core.catalog.drift import compare_declared_to_discovered
+from bpfw.core.catalog.models import AUTHORITY_STATE_DEFINED, AUTHORITY_STATE_DRAFT, AUTHORITY_STATE_EMPTY
+from bpfw.core.catalog.security import validate_no_blueprint_secrets
+from bpfw.core.catalog.validation import validate_blueprint_structure
+from bpfw.core.catalog.verify import scan_project_from_blueprint
 from bpfw.core.errors import BlueprintLockedError
 from bpfw.protection.authority import (
     get_authority_protection_status,

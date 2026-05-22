@@ -3,7 +3,7 @@
 from pathlib import Path
 from types import SimpleNamespace
 
-from bpfw.catalog import verify
+from bpfw.core.catalog import verify
 
 
 def test_validate_sharded_authority_ignores_unified_blocks_from_loader(monkeypatch, tmp_path: Path) -> None:

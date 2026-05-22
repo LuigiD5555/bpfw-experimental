@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from bpfw.catalog.scanner import scan_python_project
+from bpfw.core.catalog.scanner import scan_python_project
 
 
 def test_scanner_orders_dependencies_before_dependents(tmp_path: Path) -> None:

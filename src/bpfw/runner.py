@@ -3,7 +3,7 @@
 from pathlib import Path
 import subprocess
 
-from bpfw.catalog.verify import run_verify
+from bpfw.core.catalog.verify import run_verify
 
 
 def run_command_after_verify(project_root: Path, command: list[str]) -> int:

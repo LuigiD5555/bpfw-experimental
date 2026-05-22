@@ -2,9 +2,9 @@
 
 from dataclasses import dataclass
 
-from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
-from bpfw.catalog.verify import run_verify
-from bpfw.catalog.writer import run_init
+from bpfw.core.catalog.paths import CANONICAL_BLUEPRINT_FILE
+from bpfw.core.catalog.verify import run_verify
+from bpfw.core.catalog.writer import run_init
 from bpfw.core.pipeline import Pipeline, PipelineStep
 from bpfw.core.result import ResultStatus, StepResult
 from bpfw.core.errors import BlueprintLockedError
@@ -113,8 +113,8 @@ class VerifyBlueprintStep(PipelineStep):
     name: str = "catalog.verify"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
-        from bpfw.catalog.loader import BlueprintLoader
-        from bpfw.catalog.verify import scan_project_from_blueprint
+        from bpfw.core.catalog.loader import BlueprintLoader
+        from bpfw.core.catalog.verify import scan_project_from_blueprint
         from bpfw.core.profiling import RuntimeProfiler
         
         profiler = RuntimeProfiler()

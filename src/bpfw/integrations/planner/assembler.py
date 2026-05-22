@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Any, Dict, List
 
-from bpfw.catalog.writer import write_blueprint
+from bpfw.core.catalog.writer import write_blueprint
 from bpfw.integrations.planner.models import PlannerBox, PlannerConnection, PlannerState
 
 

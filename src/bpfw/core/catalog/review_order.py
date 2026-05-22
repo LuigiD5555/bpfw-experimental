@@ -13,7 +13,7 @@ This implementation:
 from collections import defaultdict
 from typing import Dict, List, Set
 
-from bpfw.catalog.models import DiscoveredCodeUnit
+from bpfw.core.catalog.models import DiscoveredCodeUnit
 
 
 def order_blocks_for_review(units: List[DiscoveredCodeUnit]) -> List[DiscoveredCodeUnit]:

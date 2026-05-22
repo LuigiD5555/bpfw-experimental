@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Optional
 
-from bpfw.catalog.symbol_types import VALID_SYMBOL_TYPES
+from bpfw.core.catalog.symbol_types import VALID_SYMBOL_TYPES
 from bpfw.integrations.editor.screen import read_input, read_line
 from bpfw.integrations.planner.defaults import AddBoxInput
 
