@@ -67,8 +67,8 @@ def _write_sharded_index(project_root: Path, includes: list[str]) -> None:
     )
 
 
-def test_verify_automatically_reshards_small_layout_drift(tmp_path: Path) -> None:
-    """Verify should apply safe shard synchronization before reporting drift."""
+def test_verify_does_not_auto_reshard_small_layout_drift(tmp_path: Path) -> None:
+    """Verify must detect drift but must not auto-reshard or create new shard files."""
 
     _write_demo_source(project_root=tmp_path)
     _write_sharded_index(project_root=tmp_path, includes=["bpfw/blocks/core.yaml"])
@@ -80,19 +80,24 @@ def test_verify_automatically_reshards_small_layout_drift(tmp_path: Path) -> Non
         encoding="utf-8",
     )
 
-    report, exit_code = run_verify(project_root=tmp_path)
+    original_index = yaml.safe_load(
+        (tmp_path / "bpfw" / "blueprint.yaml").read_text(encoding="utf-8")
+    )
 
-    migrated_index = yaml.safe_load((tmp_path / "bpfw" / "blueprint.yaml").read_text(encoding="utf-8"))
-    migrated_demo_shard = yaml.safe_load((tmp_path / "bpfw" / "blocks" / "demo.yaml").read_text(encoding="utf-8"))
+    report, _exit_code = run_verify(project_root=tmp_path)
 
-    assert exit_code == 0
-    assert report.allowed is True
-    assert "bpfw/blocks/demo.yaml" in migrated_index["includes"]
-    assert migrated_demo_shard["blocks"][0]["id"] == "declared_func"
+    # Verify must not modify the index
+    current_index = yaml.safe_load(
+        (tmp_path / "bpfw" / "blueprint.yaml").read_text(encoding="utf-8")
+    )
+    assert current_index["includes"] == original_index["includes"]
+
+    # Verify must not create new shard files
+    assert not (tmp_path / "bpfw" / "blocks" / "demo.yaml").exists()
 
 
-def test_status_migrates_legacy_root_blocks_before_loading_authority(tmp_path: Path) -> None:
-    """Status should normalize legacy root-level blocks instead of reporting invalid authority."""
+def test_status_does_not_auto_reshard_legacy_blocks(tmp_path: Path) -> None:
+    """Status must not auto-migrate legacy root-level blocks."""
 
     _write_demo_source(project_root=tmp_path)
     _write_sharded_index(project_root=tmp_path, includes=["bpfw/blocks/core.yaml"])
@@ -105,14 +110,14 @@ def test_status_migrates_legacy_root_blocks_before_loading_authority(tmp_path: P
     core_shard_path.parent.mkdir(parents=True)
     core_shard_path.write_text(yaml.safe_dump({"blocks": []}, sort_keys=False), encoding="utf-8")
 
-    output, exit_code = run_status(project_root=tmp_path)
+    run_status(project_root=tmp_path)
 
-    migrated_index = yaml.safe_load(blueprint_path.read_text(encoding="utf-8"))
+    # Status must not modify the blueprint
+    current_index = yaml.safe_load(blueprint_path.read_text(encoding="utf-8"))
+    assert "blocks" in current_index
 
-    assert exit_code == 0
-    assert "state: defined" in output
-    assert "blocks" not in migrated_index
-    assert (tmp_path / "bpfw" / "blocks" / "demo.yaml").exists()
+    # Status must not create new shard files
+    assert not (tmp_path / "bpfw" / "blocks" / "demo.yaml").exists()
 
 
 def test_reshard_purges_ghost_blocks(tmp_path: Path) -> None:

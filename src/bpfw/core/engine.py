@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-from bpfw.authority.reshard import try_synchronize_authority_shards
 from bpfw.core.context import EngineCommand, build_project_context
 from bpfw.core.pipeline import execute_pipeline
 from bpfw.core import registry as core_registry
@@ -72,7 +71,6 @@ class BlueprintEngine:
         )
         step_results = []
         if command.command_name in {"inspector", "editor", "planner"}:
-            try_synchronize_authority_shards(project_root=context.project_root)
             with _profiler.measure("engine.preflight_lock_check"):
                 lock_state = core_registry.get_authority_protection_status(project_root=context.project_root).status
             if lock_state in {"locked", "degraded"}:

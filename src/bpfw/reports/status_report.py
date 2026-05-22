@@ -3,7 +3,6 @@
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from bpfw.authority.reshard import try_synchronize_authority_shards
 from bpfw.catalog.status import count_statuses
 from bpfw.catalog.loader import BlueprintLoader
 from bpfw.catalog.models import (
@@ -53,9 +52,6 @@ def run_status(project_root: Path) -> Tuple[str, int]:
         Formatted status output and exit code (0 = allowed, 1 = blocked).
     """
     resolved_root = project_root.resolve()
-
-    # Keep shard layout synchronized before reporting status.
-    try_synchronize_authority_shards(project_root=resolved_root)
 
     # Step 2: Load blueprint
     loader = BlueprintLoader(project_root=resolved_root)

@@ -6,8 +6,6 @@ from bpfw.cli import (
     MVP_COMMANDS,
     main,
     resolve_cli_command,
-    _migrate_root_blocks_to_default_shard,
-    _attempt_permission_repair,
 )
 
 
@@ -100,102 +98,21 @@ def test_main_help_hides_internal_and_inspector_specific_options() -> None:
     assert "bpfw inspector --all" in rendered_help
 
 
-def test_migrate_root_blocks_to_default_shard_moves_legacy_blocks(tmp_path: Path) -> None:
-    import yaml
+def test_reshard_is_blocked_as_public_command(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    """Reshard must print a blocking message and return non-zero."""
+    monkeypatch.setattr(
+        sys, "argv", ["bpfw", "reshard", "--project-root", str(tmp_path)]
+    )
 
-    (tmp_path / "bpfw" / "blocks").mkdir(parents=True)
-    blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
-    core_shard_path = tmp_path / "bpfw" / "blocks" / "core.yaml"
+    exit_code = main()
+    output = capsys.readouterr().out
 
-    blueprint_data = {
-        "version": 1,
-        "project": {"id": "demo", "name": "demo"},
-        "authority": {"layout": "sharded", "default_shard": "bpfw/blocks/core.yaml"},
-        "includes": ["bpfw/blocks/core.yaml"],
-        "blocks": [{"id": "legacy_1"}, {"id": "legacy_2"}],
-    }
-    core_data = {"blocks": [{"id": "legacy_2"}, {"id": "existing_1"}]}
-
-    blueprint_path.write_text(yaml.safe_dump(blueprint_data, sort_keys=False), encoding="utf-8")
-    core_shard_path.write_text(yaml.safe_dump(core_data, sort_keys=False), encoding="utf-8")
-
-    summary = _migrate_root_blocks_to_default_shard(project_root=tmp_path)
-    migrated_blueprint = yaml.safe_load(blueprint_path.read_text(encoding="utf-8"))
-    migrated_core = yaml.safe_load(core_shard_path.read_text(encoding="utf-8"))
-
-    assert summary["migrated"] == 1
-    assert summary["skipped"] == 1
-    assert "blocks" not in migrated_blueprint
-    assert migrated_blueprint["includes"] == ["bpfw/blocks/core.yaml"]
-    assert {block["id"] for block in migrated_core["blocks"]} == {"legacy_1", "legacy_2", "existing_1"}
-
-
-def test_attempt_permission_repair_executes_sudo_sequence(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    (tmp_path / "bpfw" / "blocks").mkdir(parents=True)
-    calls: list[list[str]] = []
-
-    class _Completed:
-        def __init__(self, returncode: int) -> None:
-            self.returncode = returncode
-
-    def fake_run(command: list[str], cwd: Path, check: bool):  # noqa: ANN001
-        calls.append(command)
-        return _Completed(0)
-
-    monkeypatch.setattr("bpfw.cli.subprocess.run", fake_run)
-    error = PermissionError(13, "Permission denied", str(tmp_path / "bpfw" / "blueprint.yaml"))
-
-    assert _attempt_permission_repair(project_root=tmp_path, error=error) is True
-    assert calls[0] == ["sudo", "-v"]
-    assert calls[1][0:2] == ["sudo", "chown"]
-    assert calls[2][0:2] == ["sudo", "chmod"]
-
-
-def test_migrate_root_blocks_to_default_shard_skips_duplicate_code_declarations(tmp_path: Path) -> None:
-    import yaml
-
-    (tmp_path / "bpfw" / "blocks").mkdir(parents=True)
-    blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
-    core_shard_path = tmp_path / "bpfw" / "blocks" / "core.yaml"
-
-    blueprint_data = {
-        "version": 1,
-        "project": {"id": "demo", "name": "demo"},
-        "authority": {"layout": "sharded", "default_shard": "bpfw/blocks/core.yaml"},
-        "includes": ["bpfw/blocks/core.yaml"],
-        "blocks": [
-            {
-                "id": "legacy_duplicate",
-                "code": {
-                    "path": "src/bpfw/authority/document.py",
-                    "symbol": "AuthorityDocument.get_blocks",
-                    "kind": "method",
-                },
-            }
-        ],
-    }
-    core_data = {
-        "blocks": [
-            {
-                "id": "existing_reference",
-                "code": {
-                    "path": "src/bpfw/authority/document.py",
-                    "symbol": "AuthorityDocument.get_blocks",
-                    "kind": "method",
-                },
-            }
-        ]
-    }
-
-    blueprint_path.write_text(yaml.safe_dump(blueprint_data, sort_keys=False), encoding="utf-8")
-    core_shard_path.write_text(yaml.safe_dump(core_data, sort_keys=False), encoding="utf-8")
-
-    summary = _migrate_root_blocks_to_default_shard(project_root=tmp_path)
-    migrated_core = yaml.safe_load(core_shard_path.read_text(encoding="utf-8"))
-
-    assert summary["migrated"] == 0
-    assert summary["skipped"] == 1
-    assert len(migrated_core["blocks"]) == 1
+    assert exit_code != 0
+    assert "no longer a public workflow" in output
 
 
 def test_run_requires_command_and_prints_usage(monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:

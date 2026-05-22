@@ -1,13 +1,9 @@
 """Command line interface for Blueprint Framework MVP Catalog Mode."""
 
 import argparse
-import getpass
 import json
-import subprocess
 from pathlib import Path
 
-from bpfw.authority import AuthorityRepository
-from bpfw.authority.reshard import ReshardCoordinator, ReshardMode, migrate_root_blocks_to_default_shard
 from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
 from bpfw.catalog.verify import run_verify
 from bpfw.catalog.writer import run_init
@@ -58,7 +54,7 @@ Commands:
   lock        Lock protected authority files.
   unlock      Unlock protected authority files.
   status      Show project authority, drift, and lock status.
-  reshard     Repair and synchronize block shards.
+  reshard     Reshard is no longer a public workflow. Use bpfw verify to detect drift.
 
 Global options:
   -h, --help              Show this help message.
@@ -266,38 +262,6 @@ def _print_human(payload: dict) -> None:
     print(payload.get("status", "").upper())
 
 
-def _migrate_root_blocks_to_default_shard(project_root: Path) -> dict[str, int]:
-    """Move legacy root-level blocks into shard storage for sharded authority."""
-
-    return migrate_root_blocks_to_default_shard(project_root=project_root)
-
-
-def _attempt_permission_repair(project_root: Path, error: PermissionError) -> bool:
-    """Try to repair authority file ownership/permissions via sudo."""
-    target_path = Path(error.filename) if error.filename else (project_root / "bpfw" / "blueprint.yaml")
-    blocks_path = project_root / "bpfw" / "blocks"
-    current_user = getpass.getuser()
-
-    print("Reshard requires elevated permission repair.")
-    print("Authorizing sudo will continue automatically after repair.")
-
-    commands = [
-        ["sudo", "-v"],
-        ["sudo", "chown", f"{current_user}:{current_user}", str(target_path)],
-        ["sudo", "chmod", "u+rw", str(target_path)],
-    ]
-
-    if blocks_path.exists():
-        commands.append(["sudo", "chown", "-R", f"{current_user}:{current_user}", str(blocks_path)])
-        commands.append(["sudo", "chmod", "-R", "u+rw", str(blocks_path)])
-
-    for command in commands:
-        completed = subprocess.run(command, cwd=project_root, check=False)
-        if completed.returncode != 0:
-            return False
-    return True
-
-
 def main() -> int:
     """Entry point for BPFW MVP CLI."""
 
@@ -381,80 +345,13 @@ def main() -> int:
         print(output)
         return exit_code
 
-    # reshard is handled as one-shot synchronization and repair
+    # reshard is no longer a public workflow
     if normalized_command == "reshard":
-        project_root = Path(parsed_arguments.project_root).resolve()
-        permission_repair_attempted = False
-        while True:
-            try:
-                with runtime_blueprint_write_lease(project_root=project_root, tool_name="reshard"):
-                    migration_summary = _migrate_root_blocks_to_default_shard(project_root=project_root)
-                    if migration_summary["migrated"] or migration_summary["skipped"]:
-                        print(
-                            "Migrated root-level blocks into shard storage: "
-                            f"{migration_summary['migrated']} moved, "
-                            f"{migration_summary['skipped']} skipped."
-                        )
-                    repository = AuthorityRepository(project_root=project_root)
-                    document = repository.load()
-                    coordinator = ReshardCoordinator(project_root=project_root)
-                    plan = coordinator.build_sync_plan(document=document)
-
-                    if parsed_arguments.as_json:
-                        plan_dict = {
-                            "strategy": plan.strategy,
-                            "mode": plan.mode,
-                            "moves": [
-                                {
-                                    "block_id": move.block_id,
-                                    "from_shard": str(move.from_shard),
-                                    "to_shard": str(move.to_shard),
-                                    "reason": move.reason,
-                                }
-                                for move in plan.moves
-                            ],
-                            "blocks_affected": plan.move_count(),
-                            "shards_affected": plan.affected_shard_count(),
-                        }
-                        print(json.dumps(plan_dict, indent=2))
-                        return 0
-
-                    if plan.mode == ReshardMode.NO_DRIFT:
-                        print("No shard drift detected. Blueprint structure is already synchronized.")
-                        return 0
-
-                    if plan.requires_confirmation():
-                        print("Detected large structural migration.")
-                        print()
-                        print(f"Blocks affected: {plan.move_count()}")
-                        print(f"Shards affected: {plan.affected_shard_count()}")
-                        print()
-                        if input("Continue? [y/N] ").strip().lower() not in {"y", "yes"}:
-                            print("Reshard cancelled.")
-                            return 1
-
-                    result = repository.save(document)
-
-                    if plan.mode == ReshardMode.SMALL:
-                        return 0
-
-                    print("Reshard synchronization complete.")
-                    print(f"Moved {len(result.moved_blocks)} blocks across {plan.affected_shard_count()} shards.")
-                    if result.updated_includes:
-                        print("Updated shard includes.")
-                return 0
-            except PermissionError as error:
-                if permission_repair_attempted:
-                    print(f"Reshard error: {error}")
-                    return 1
-                permission_repair_attempted = True
-                if not _attempt_permission_repair(project_root=project_root, error=error):
-                    print(f"Reshard error: {error}")
-                    return 1
-                print("Permission repair completed. Retrying reshard...")
-            except Exception as error:
-                print(f"Reshard error: {error}")
-                return 1
+        print(
+            "Reshard is no longer a public workflow. "
+            "Use bpfw verify to detect drift."
+        )
+        return 1
 
     # lock is handled directly by the protection authority
     if normalized_command == "lock":
