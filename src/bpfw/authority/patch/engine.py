@@ -1,8 +1,8 @@
-"""Internal authority patch engine for BPFW.
+"""Low-level mechanical patch engine used by Blueprint Engine.
 
-Applies an ``AuthorityPatchPlan`` safely with validation, backups,
-rollback, and structured results. This engine is not part of the
-public CLI and must not be invoked from read-only commands.
+This engine applies explicit ``AuthorityPatchPlan`` instances safely with
+validation, backups, rollback, and structured results. It is an internal writer
+only. Read-only commands must never invoke it to silently synchronize drift.
 """
 
 from contextlib import contextmanager
@@ -12,6 +12,8 @@ from typing import Iterator
 import yaml
 
 from bpfw.authority.patch.actions import (
+    AddCoveredCodeOperation,
+    AddIgnoreRuleOperation,
     CreateBlockOperation,
     CreateShardFileOperation,
     DeleteBlockOperation,
@@ -19,8 +21,13 @@ from bpfw.authority.patch.actions import (
     MoveBlockOperation,
     MoveShardFileOperation,
     PatchOperationKind,
+    RemoveCoveredCodeOperation,
+    RemoveIgnoreRuleOperation,
     RenameShardFileOperation,
+    UpdateBlockCodeReferenceOperation,
+    UpdateBlockLocationOperation,
     UpdateBlockMetadataOperation,
+    UpdateBlockSymbolOperation,
 )
 from bpfw.authority.patch.plan import AuthorityPatchPlan, PatchOperation
 from bpfw.authority.patch.result import AuthorityPatchResult
@@ -29,51 +36,33 @@ from bpfw.catalog.access_control import (
     authorize_blueprint_writes_for_tool,
     authorize_temporary_blueprint_unlock_for_tool,
 )
-from bpfw.protection.authority import (
-    lock_authority,
-    unlock_authority,
-)
+from bpfw.protection.authority import lock_authority, unlock_authority
 
 
 class AuthorityPatchEngine:
     """Apply an ``AuthorityPatchPlan`` safely to authority files.
 
-    The engine:
-    1. Validates the plan.
-    2. Computes affected files.
-    3. Verifies the write context grants permission.
-    4. Creates backups of affected files.
-    5. Applies operations in deterministic order.
-    6. Validates resulting YAML.
-    7. Updates the manifest when required.
-    8. Returns a structured ``AuthorityPatchResult``.
-
-    On failure the engine attempts rollback from backups.
-
-    Usage::
-
-        engine = AuthorityPatchEngine(project_root=Path("."))
-        result = engine.apply(plan, write_context=PatchWriteContext(tool_name="diff"))
+    The engine validates, backs up, writes, validates YAML, updates the root
+    include list when shard files change, and rolls back on failed filesystem
+    operations. It does not build plans and does not decide what authority means.
     """
 
     def __init__(self, project_root: Path) -> None:
         """Initialize the engine.
 
         Args:
-            project_root: The project root directory containing
-                ``bpfw/`` authority files.
+            project_root: Project root directory containing ``bpfw/``.
         """
         self.project_root = project_root
 
     def preview(self, plan: AuthorityPatchPlan) -> AuthorityPatchResult:
-        """Preview what the plan would affect without writing files.
+        """Preview affected files without writing.
 
         Args:
-            plan: The plan to preview.
+            plan: Plan to preview.
 
         Returns:
-            Result with ``affected_files`` populated but no writes
-            performed.
+            Result object containing affected files and validation messages.
         """
         result = AuthorityPatchResult()
         if plan.is_empty():
@@ -86,10 +75,10 @@ class AuthorityPatchEngine:
                 result.messages.append(f"Validation: {error_message}")
             return result
 
-        for relative_path in sorted(plan.affected_files()):
+        affected_files = sorted(plan.affected_files())
+        for relative_path in affected_files:
             result.messages.append(f"Would modify: {relative_path}")
-
-        result.modified_files = sorted(plan.affected_files())
+        result.modified_files = affected_files
         return result
 
     def apply(
@@ -97,71 +86,58 @@ class AuthorityPatchEngine:
         plan: AuthorityPatchPlan,
         write_context: PatchWriteContext,
     ) -> AuthorityPatchResult:
-        """Apply the plan with explicit write permission.
+        """Apply a plan with explicit write permission.
 
         Args:
-            plan: The plan containing operations to apply.
-            write_context: Explicit permission context. Must have a valid
-                ``tool_name``.
+            plan: Mechanical patch plan to apply.
+            write_context: Explicit permission context for guarded writes.
 
         Returns:
-            Structured result describing what was applied, skipped, or
-            rolled back.
+            Structured result describing applied or skipped operations.
         """
         result = AuthorityPatchResult()
 
-        # 1. Validate plan is not empty.
         if plan.is_empty():
             result.messages.append("Plan is empty. Nothing to apply.")
             result.success = True
             return result
 
-        # 2. Validate write context.
         if not write_context.is_valid():
             result.error_message = "Invalid write context: tool_name is required."
             return result
 
-        # 3. Validate all operation preconditions.
         validation_errors = plan.validate(self.project_root)
         if validation_errors:
             result.error_message = "Plan validation failed."
-            for error_message in validation_errors:
-                result.messages.append(error_message)
+            result.messages.extend(validation_errors)
             return result
 
-        # 4. Collect affected files and create backups.
-        affected = plan.affected_files()
+        affected_files = plan.affected_files()
         backup = TransactionBackup(self.project_root)
-
-        for relative_path in affected:
+        for relative_path in affected_files:
             backup.backup(relative_path)
 
-        # 5. Apply within write authorization context.
         with self._write_authorization(write_context):
             try:
                 self._apply_sorted_operations(plan, result)
             except (OSError, yaml.YAMLError, ValueError) as apply_error:
                 result.error_message = f"Apply failed: {apply_error}"
-                restored = backup.rollback()
+                restored_paths = backup.rollback()
                 result.rolled_back = True
-                for restored_path in restored:
+                for restored_path in restored_paths:
                     result.messages.append(f"Rolled back: {restored_path}")
                 return result
 
-            # 6. Validate resulting YAML files while still unlocked.
-            yaml_errors = self._validate_yaml_files(affected)
+            yaml_errors = self._validate_yaml_files(affected_files)
             if yaml_errors:
                 result.messages.append("YAML validation warning after apply:")
                 for yaml_error in yaml_errors:
                     result.messages.append(f"  {yaml_error}")
 
-            # 7. Update manifest if required (while still unlocked).
             if plan.requires_manifest_update():
-                self._update_manifest(plan, result)
+                self._update_manifest_includes(plan, result)
 
-        # 8. Commit backups (cleanup).
         backup.commit()
-
         result.success = True
         return result
 
@@ -169,10 +145,10 @@ class AuthorityPatchEngine:
         """Validate a plan without applying it.
 
         Args:
-            plan: The plan to validate.
+            plan: Plan to validate.
 
         Returns:
-            List of error strings. Empty when valid.
+            Validation messages, or an empty list when valid.
         """
         if plan.is_empty():
             return []
@@ -182,10 +158,10 @@ class AuthorityPatchEngine:
         """Return all files the plan would modify.
 
         Args:
-            plan: The plan to inspect.
+            plan: Plan to inspect.
 
         Returns:
-            Set of project-relative paths.
+            Set of affected project-relative paths.
         """
         return plan.affected_files()
 
@@ -194,8 +170,7 @@ class AuthorityPatchEngine:
         """Set up blueprint write authorization for the apply.
 
         Args:
-            context: Write context specifying the tool name and
-                whether guarded writes are allowed.
+            context: Write context specifying tool name and guarded write policy.
         """
         with authorize_blueprint_writes_for_tool(context.tool_name):
             if context.allow_guarded_writes:
@@ -216,7 +191,7 @@ class AuthorityPatchEngine:
         """Apply each operation in deterministic order.
 
         Args:
-            plan: The plan whose sorted operations to apply.
+            plan: Plan whose sorted operations should be applied.
             result: Result object to record outcomes.
         """
         for operation in plan.sorted_operations():
@@ -227,10 +202,10 @@ class AuthorityPatchEngine:
         operation: PatchOperation,
         result: AuthorityPatchResult,
     ) -> None:
-        """Dispatch a single operation to the appropriate handler.
+        """Dispatch one operation to its handler.
 
         Args:
-            operation: The operation to apply.
+            operation: Operation to apply.
             result: Result object to record outcomes.
         """
         kind = operation.kind
@@ -244,6 +219,20 @@ class AuthorityPatchEngine:
             self._apply_delete_block(operation, result, label)  # type: ignore[arg-type]
         elif kind == PatchOperationKind.UPDATE_BLOCK_METADATA:
             self._apply_update_metadata(operation, result, label)  # type: ignore[arg-type]
+        elif kind == PatchOperationKind.UPDATE_BLOCK_LOCATION:
+            self._apply_update_location(operation, result, label)  # type: ignore[arg-type]
+        elif kind == PatchOperationKind.UPDATE_BLOCK_SYMBOL:
+            self._apply_update_symbol(operation, result, label)  # type: ignore[arg-type]
+        elif kind == PatchOperationKind.UPDATE_BLOCK_CODE_REFERENCE:
+            self._apply_update_code_reference(operation, result, label)  # type: ignore[arg-type]
+        elif kind == PatchOperationKind.ADD_IGNORE_RULE:
+            self._apply_add_ignore_rule(operation, result, label)  # type: ignore[arg-type]
+        elif kind == PatchOperationKind.REMOVE_IGNORE_RULE:
+            self._apply_remove_ignore_rule(operation, result, label)  # type: ignore[arg-type]
+        elif kind == PatchOperationKind.ADD_COVERED_CODE:
+            self._apply_add_covered_code(operation, result, label)  # type: ignore[arg-type]
+        elif kind == PatchOperationKind.REMOVE_COVERED_CODE:
+            self._apply_remove_covered_code(operation, result, label)  # type: ignore[arg-type]
         elif kind == PatchOperationKind.CREATE_SHARD_FILE:
             self._apply_create_shard_file(operation, result, label)  # type: ignore[arg-type]
         elif kind == PatchOperationKind.DELETE_SHARD_FILE:
@@ -262,19 +251,13 @@ class AuthorityPatchEngine:
         """Move a block from source shard to target shard.
 
         Args:
-            operation: The move operation details.
+            operation: Move operation details.
             result: Result object to record outcomes.
-            label: Human-readable operation label.
+            label: Operation label.
         """
         from bpfw.authority.shard import AuthorityShard
 
-        source_shard = AuthorityShard.load(
-            self.project_root, operation.source_shard_path
-        )
-        if not source_shard.contains_block_id(operation.block_id):
-            result.add_skipped(label, f"block '{operation.block_id}' not found in source")
-            return
-
+        source_shard = AuthorityShard.load(self.project_root, operation.source_shard_path)
         block_data = source_shard.remove_block(operation.block_id)
         if block_data is None:
             result.add_skipped(label, f"block '{operation.block_id}' not found in source")
@@ -286,15 +269,11 @@ class AuthorityPatchEngine:
         target_absolute = self.project_root / operation.target_shard_path
         if not target_absolute.exists() and operation.create_target_if_missing:
             target_absolute.parent.mkdir(parents=True, exist_ok=True)
-            target_absolute.write_text(
-                yaml.safe_dump({"blocks": []}, sort_keys=False),
-                encoding="utf-8",
-            )
+            target_absolute.write_text(yaml.safe_dump({"blocks": []}, sort_keys=False), encoding="utf-8")
 
-        target_shard = AuthorityShard.load(
-            self.project_root, operation.target_shard_path
-        )
+        target_shard = AuthorityShard.load(self.project_root, operation.target_shard_path)
         target_shard.add_block(block_data)
+        target_shard.sort_blocks()
         target_shard.save(self.project_root)
         result.add_modified(operation.target_shard_path)
         result.add_applied(label)
@@ -308,24 +287,20 @@ class AuthorityPatchEngine:
         """Create a new block in the target shard.
 
         Args:
-            operation: The create operation details.
+            operation: Create operation details.
             result: Result object to record outcomes.
-            label: Human-readable operation label.
+            label: Operation label.
         """
         from bpfw.authority.shard import AuthorityShard
 
         target_absolute = self.project_root / operation.target_shard_path
         if not target_absolute.exists() and operation.create_target_if_missing:
             target_absolute.parent.mkdir(parents=True, exist_ok=True)
-            target_absolute.write_text(
-                yaml.safe_dump({"blocks": []}, sort_keys=False),
-                encoding="utf-8",
-            )
+            target_absolute.write_text(yaml.safe_dump({"blocks": []}, sort_keys=False), encoding="utf-8")
 
-        target_shard = AuthorityShard.load(
-            self.project_root, operation.target_shard_path
-        )
+        target_shard = AuthorityShard.load(self.project_root, operation.target_shard_path)
         target_shard.add_block(operation.block_data)
+        target_shard.sort_blocks()
         target_shard.save(self.project_root)
         result.add_modified(operation.target_shard_path)
         result.add_applied(label)
@@ -336,18 +311,16 @@ class AuthorityPatchEngine:
         result: AuthorityPatchResult,
         label: str,
     ) -> None:
-        """Delete a block from the source shard.
+        """Delete a block from a shard.
 
         Args:
-            operation: The delete operation details.
+            operation: Delete operation details.
             result: Result object to record outcomes.
-            label: Human-readable operation label.
+            label: Operation label.
         """
         from bpfw.authority.shard import AuthorityShard
 
-        source_shard = AuthorityShard.load(
-            self.project_root, operation.source_shard_path
-        )
+        source_shard = AuthorityShard.load(self.project_root, operation.source_shard_path)
         source_shard.remove_block(operation.block_id)
         source_shard.save(self.project_root)
         result.add_modified(operation.source_shard_path)
@@ -359,40 +332,219 @@ class AuthorityPatchEngine:
         result: AuthorityPatchResult,
         label: str,
     ) -> None:
-        """Update metadata fields on an existing block.
-
-        Uses ``get_blocks`` and ``set_blocks`` to find and modify the
-        target block, since ``AuthorityShard`` does not expose individual
-        block accessors.
+        """Update top-level metadata fields on a block.
 
         Args:
-            operation: The metadata update details.
+            operation: Metadata update details.
             result: Result object to record outcomes.
-            label: Human-readable operation label.
+            label: Operation label.
         """
-        from bpfw.authority.shard import AuthorityShard
-
-        source_shard = AuthorityShard.load(
-            self.project_root, operation.source_shard_path
-        )
-
-        blocks = source_shard.get_blocks()
-        target_block = None
-        for block in blocks:
-            if block.get("id") == operation.block_id:
-                target_block = block
-                break
-
-        if target_block is None:
+        block = self._get_mutable_block(operation.source_shard_path, operation.block_id)
+        if block is None:
             result.add_skipped(label, f"block '{operation.block_id}' not found")
             return
-
         for field_name, field_value in operation.metadata_changes.items():
-            target_block[field_name] = field_value
-
-        source_shard.set_blocks(blocks)
-        source_shard.save(self.project_root)
+            block[field_name] = field_value
+        self._save_mutated_block(operation.source_shard_path, operation.block_id, block)
         result.add_modified(operation.source_shard_path)
+        result.add_applied(label)
+
+    def _apply_update_location(
+        self,
+        operation: UpdateBlockLocationOperation,
+        result: AuthorityPatchResult,
+        label: str,
+    ) -> None:
+        """Update a block code path.
+
+        Args:
+            operation: Location update details.
+            result: Result object to record outcomes.
+            label: Operation label.
+        """
+        block = self._get_mutable_block(operation.source_shard_path, operation.block_id)
+        if block is None:
+            result.add_skipped(label, f"block '{operation.block_id}' not found")
+            return
+        code = block.setdefault("code", {})
+        if not isinstance(code, dict):
+            code = {}
+            block["code"] = code
+        code["path"] = operation.new_path
+        self._save_mutated_block(operation.source_shard_path, operation.block_id, block)
+        result.add_modified(operation.source_shard_path)
+        result.add_applied(label)
+
+    def _apply_update_symbol(
+        self,
+        operation: UpdateBlockSymbolOperation,
+        result: AuthorityPatchResult,
+        label: str,
+    ) -> None:
+        """Update a block code symbol and optional display name.
+
+        Args:
+            operation: Symbol update details.
+            result: Result object to record outcomes.
+            label: Operation label.
+        """
+        block = self._get_mutable_block(operation.source_shard_path, operation.block_id)
+        if block is None:
+            result.add_skipped(label, f"block '{operation.block_id}' not found")
+            return
+        code = block.setdefault("code", {})
+        if not isinstance(code, dict):
+            code = {}
+            block["code"] = code
+        code["symbol"] = operation.new_symbol
+        if operation.new_name is not None:
+            block["name"] = operation.new_name
+        self._save_mutated_block(operation.source_shard_path, operation.block_id, block)
+        result.add_modified(operation.source_shard_path)
+        result.add_applied(label)
+
+    def _apply_update_code_reference(
+        self,
+        operation: UpdateBlockCodeReferenceOperation,
+        result: AuthorityPatchResult,
+        label: str,
+    ) -> None:
+        """Update a block code path, symbol, optional kind, and optional name.
+
+        Args:
+            operation: Code reference update details.
+            result: Result object to record outcomes.
+            label: Operation label.
+        """
+        block = self._get_mutable_block(operation.source_shard_path, operation.block_id)
+        if block is None:
+            result.add_skipped(label, f"block '{operation.block_id}' not found")
+            return
+        code = block.setdefault("code", {})
+        if not isinstance(code, dict):
+            code = {}
+            block["code"] = code
+        code["path"] = operation.new_path
+        code["symbol"] = operation.new_symbol
+        if operation.new_kind is not None:
+            code["kind"] = operation.new_kind
+        if operation.new_name is not None:
+            block["name"] = operation.new_name
+        self._save_mutated_block(operation.source_shard_path, operation.block_id, block)
+        result.add_modified(operation.source_shard_path)
+        result.add_applied(label)
+
+    def _apply_add_ignore_rule(
+        self,
+        operation: AddIgnoreRuleOperation,
+        result: AuthorityPatchResult,
+        label: str,
+    ) -> None:
+        """Add an ignored-code rule to the root blueprint.
+
+        Args:
+            operation: Ignore-rule creation details.
+            result: Result object to record outcomes.
+            label: Operation label.
+        """
+        data = self._load_blueprint_index(operation.blueprint_path)
+        authority = data.setdefault("authority", {})
+        if not isinstance(authority, dict):
+            authority = {}
+            data["authority"] = authority
+        ignored_code = authority.setdefault("ignored_code", [])
+        if not isinstance(ignored_code, list):
+            ignored_code = []
+            authority["ignored_code"] = ignored_code
+        if operation.rule_data not in ignored_code:
+            ignored_code.append(dict(operation.rule_data))
+        self._save_blueprint_index(operation.blueprint_path, data)
+        result.add_modified(operation.blueprint_path)
+        result.add_applied(label)
+
+    def _apply_remove_ignore_rule(
+        self,
+        operation: RemoveIgnoreRuleOperation,
+        result: AuthorityPatchResult,
+        label: str,
+    ) -> None:
+        """Remove an ignored-code rule from the root blueprint.
+
+        Args:
+            operation: Ignore-rule removal details.
+            result: Result object to record outcomes.
+            label: Operation label.
+        """
+        data = self._load_blueprint_index(operation.blueprint_path)
+        authority = data.get("authority")
+        if not isinstance(authority, dict):
+            result.add_skipped(label, "authority section not found")
+            return
+        ignored_code = authority.get("ignored_code")
+        if not isinstance(ignored_code, list):
+            result.add_skipped(label, "ignored_code section not found")
+            return
+        remaining = [rule for rule in ignored_code if rule != operation.rule_data]
+        authority["ignored_code"] = remaining
+        self._save_blueprint_index(operation.blueprint_path, data)
+        result.add_modified(operation.blueprint_path)
+        result.add_applied(label)
+
+
+    def _apply_add_covered_code(
+        self,
+        operation: AddCoveredCodeOperation,
+        result: AuthorityPatchResult,
+        label: str,
+    ) -> None:
+        """Add a covered-code relation to the root blueprint.
+
+        Args:
+            operation: Covered-code creation details.
+            result: Result object to record outcomes.
+            label: Operation label.
+        """
+        data = self._load_blueprint_index(operation.blueprint_path)
+        authority = data.setdefault("authority", {})
+        if not isinstance(authority, dict):
+            authority = {}
+            data["authority"] = authority
+        covered_code = authority.setdefault("covered_code", [])
+        if not isinstance(covered_code, list):
+            covered_code = []
+            authority["covered_code"] = covered_code
+        if operation.rule_data not in covered_code:
+            covered_code.append(dict(operation.rule_data))
+        self._save_blueprint_index(operation.blueprint_path, data)
+        result.add_modified(operation.blueprint_path)
+        result.add_applied(label)
+
+    def _apply_remove_covered_code(
+        self,
+        operation: RemoveCoveredCodeOperation,
+        result: AuthorityPatchResult,
+        label: str,
+    ) -> None:
+        """Remove a covered-code relation from the root blueprint.
+
+        Args:
+            operation: Covered-code removal details.
+            result: Result object to record outcomes.
+            label: Operation label.
+        """
+        data = self._load_blueprint_index(operation.blueprint_path)
+        authority = data.get("authority")
+        if not isinstance(authority, dict):
+            result.add_skipped(label, "authority section not found")
+            return
+        covered_code = authority.get("covered_code")
+        if not isinstance(covered_code, list):
+            result.add_skipped(label, "covered_code section not found")
+            return
+        remaining = [rule for rule in covered_code if rule != operation.rule_data]
+        authority["covered_code"] = remaining
+        self._save_blueprint_index(operation.blueprint_path, data)
+        result.add_modified(operation.blueprint_path)
         result.add_applied(label)
 
     def _apply_create_shard_file(
@@ -404,15 +556,14 @@ class AuthorityPatchEngine:
         """Create a new shard file.
 
         Args:
-            operation: The shard creation details.
+            operation: Shard creation details.
             result: Result object to record outcomes.
-            label: Human-readable operation label.
+            label: Operation label.
         """
         target_absolute = self.project_root / operation.shard_path
         target_absolute.parent.mkdir(parents=True, exist_ok=True)
-        content = {"blocks": operation.initial_blocks}
         target_absolute.write_text(
-            yaml.safe_dump(content, sort_keys=False),
+            yaml.safe_dump({"blocks": operation.initial_blocks}, sort_keys=False),
             encoding="utf-8",
         )
         result.add_modified(operation.shard_path)
@@ -427,9 +578,9 @@ class AuthorityPatchEngine:
         """Delete a shard file from disk.
 
         Args:
-            operation: The shard deletion details.
+            operation: Shard deletion details.
             result: Result object to record outcomes.
-            label: Human-readable operation label.
+            label: Operation label.
         """
         target_absolute = self.project_root / operation.shard_path
         target_absolute.unlink()
@@ -445,9 +596,9 @@ class AuthorityPatchEngine:
         """Rename a shard file.
 
         Args:
-            operation: The rename details.
+            operation: Rename details.
             result: Result object to record outcomes.
-            label: Human-readable operation label.
+            label: Operation label.
         """
         source_absolute = self.project_root / operation.source_shard_path
         target_absolute = self.project_root / operation.target_shard_path
@@ -466,9 +617,9 @@ class AuthorityPatchEngine:
         """Move a shard file to a new location.
 
         Args:
-            operation: The move details.
+            operation: Move details.
             result: Result object to record outcomes.
-            label: Human-readable operation label.
+            label: Operation label.
         """
         source_absolute = self.project_root / operation.source_shard_path
         target_absolute = self.project_root / operation.target_shard_path
@@ -478,85 +629,149 @@ class AuthorityPatchEngine:
         result.add_modified(operation.target_shard_path)
         result.add_applied(label)
 
+    def _get_mutable_block(self, shard_path: Path, block_id: str) -> dict | None:
+        """Return a mutable copy of one block from a shard.
+
+        Args:
+            shard_path: Project-relative shard path.
+            block_id: Block identifier.
+
+        Returns:
+            Block dictionary copy, or None when not found.
+        """
+        from bpfw.authority.shard import AuthorityShard
+
+        shard = AuthorityShard.load(self.project_root, shard_path)
+        for block in shard.get_blocks():
+            if isinstance(block, dict) and block.get("id") == block_id:
+                return dict(block)
+        return None
+
+    def _save_mutated_block(self, shard_path: Path, block_id: str, block_data: dict) -> None:
+        """Replace one block in a shard and save it.
+
+        Args:
+            shard_path: Project-relative shard path.
+            block_id: Block identifier to replace.
+            block_data: New block data.
+        """
+        from bpfw.authority.shard import AuthorityShard
+
+        shard = AuthorityShard.load(self.project_root, shard_path)
+        blocks = shard.get_blocks()
+        for index, block in enumerate(blocks):
+            if isinstance(block, dict) and block.get("id") == block_id:
+                blocks[index] = block_data
+                break
+        shard.set_blocks(blocks)
+        shard.sort_blocks()
+        shard.save(self.project_root)
+
+    def _load_blueprint_index(self, blueprint_path: Path) -> dict:
+        """Load the root blueprint YAML as a dictionary.
+
+        Args:
+            blueprint_path: Project-relative blueprint path.
+
+        Returns:
+            Loaded blueprint dictionary.
+
+        Raises:
+            ValueError: If the loaded YAML is not a dictionary.
+        """
+        absolute_path = self.project_root / blueprint_path
+        data = yaml.safe_load(absolute_path.read_text(encoding="utf-8"))
+        if data is None:
+            return {}
+        if not isinstance(data, dict):
+            raise ValueError(f"Root blueprint must be a mapping: {blueprint_path}")
+        return data
+
+    def _save_blueprint_index(self, blueprint_path: Path, data: dict) -> None:
+        """Write the root blueprint YAML.
+
+        Args:
+            blueprint_path: Project-relative blueprint path.
+            data: Blueprint dictionary to write.
+        """
+        absolute_path = self.project_root / blueprint_path
+        absolute_path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+
     def _validate_yaml_files(self, paths: set[Path]) -> list[str]:
-        """Validate that all written files contain valid YAML.
+        """Validate that all written YAML files parse correctly.
 
         Args:
             paths: Project-relative paths to validate.
 
         Returns:
-            List of error strings. Empty when all files are valid.
+            List of validation messages.
         """
         errors: list[str] = []
         for relative_path in paths:
+            if relative_path.suffix not in {".yaml", ".yml"}:
+                continue
             absolute_path = self.project_root / relative_path
             if not absolute_path.exists():
                 continue
             try:
-                raw = absolute_path.read_text(encoding="utf-8")
-                yaml.safe_load(raw)
+                yaml.safe_load(absolute_path.read_text(encoding="utf-8"))
             except yaml.YAMLError as yaml_error:
                 errors.append(f"Invalid YAML in {relative_path}: {yaml_error}")
         return errors
 
-    def _update_manifest(
+    def _update_manifest_includes(
         self,
         plan: AuthorityPatchPlan,
         result: AuthorityPatchResult,
     ) -> None:
-        """Update the root manifest includes after shard file changes.
-
-        Only updates if there are create/delete/rename/move shard file
-        operations.
+        """Update root blueprint includes after shard file lifecycle changes.
 
         Args:
-            plan: The applied plan.
-            result: Result object to record the manifest update.
+            plan: Applied patch plan.
+            result: Result object to record modifications.
         """
-        manifest_path = self.project_root / "bpfw" / "blueprint.yaml"
-        if not manifest_path.exists():
+        manifest_path = Path("bpfw/blueprint.yaml")
+        absolute_path = self.project_root / manifest_path
+        if not absolute_path.exists():
             return
 
-        try:
-            raw = manifest_path.read_text(encoding="utf-8")
-            manifest_data = yaml.safe_load(raw)
-        except yaml.YAMLError:
+        data = yaml.safe_load(absolute_path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
             return
 
-        if not isinstance(manifest_data, dict):
-            return
-
-        includes = set(manifest_data.get("includes", []))
+        includes = data.get("includes", [])
+        if not isinstance(includes, list):
+            includes = []
+        include_set = {include for include in includes if isinstance(include, str)}
 
         changed = False
         for operation in plan.sorted_operations():
             kind = operation.kind
             if kind == PatchOperationKind.CREATE_SHARD_FILE:
                 include_path = str(operation.shard_path)  # type: ignore[union-attr]
-                if include_path not in includes:
-                    includes.add(include_path)
+                if include_path not in include_set:
+                    include_set.add(include_path)
+                    changed = True
+            elif kind in {PatchOperationKind.CREATE_BLOCK, PatchOperationKind.MOVE_BLOCK}:
+                include_path = str(operation.target_shard_path)  # type: ignore[union-attr]
+                if include_path not in include_set:
+                    include_set.add(include_path)
                     changed = True
             elif kind == PatchOperationKind.DELETE_SHARD_FILE:
                 include_path = str(operation.shard_path)  # type: ignore[union-attr]
-                if include_path in includes:
-                    includes.discard(include_path)
+                if include_path in include_set:
+                    include_set.discard(include_path)
                     changed = True
-            elif kind in (
-                PatchOperationKind.RENAME_SHARD_FILE,
-                PatchOperationKind.MOVE_SHARD_FILE,
-            ):
+            elif kind in {PatchOperationKind.RENAME_SHARD_FILE, PatchOperationKind.MOVE_SHARD_FILE}:
                 old_include = str(operation.source_shard_path)  # type: ignore[union-attr]
                 new_include = str(operation.target_shard_path)  # type: ignore[union-attr]
-                if old_include in includes:
-                    includes.discard(old_include)
-                    includes.add(new_include)
+                if old_include in include_set:
+                    include_set.discard(old_include)
+                    include_set.add(new_include)
                     changed = True
 
         if changed:
-            manifest_data["includes"] = sorted(includes)
-            manifest_path.write_text(
-                yaml.safe_dump(manifest_data, sort_keys=False),
-                encoding="utf-8",
-            )
+            data["includes"] = sorted(include_set)
+            absolute_path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
             result.manifest_updated = True
-            result.add_modified(Path("bpfw/blueprint.yaml"))
+            result.add_modified(manifest_path)

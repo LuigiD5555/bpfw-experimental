@@ -1,7 +1,7 @@
-"""Transaction support for the authority patch engine.
+"""Transaction support for Blueprint Engine mechanical writes.
 
-Provides backup/rollback mechanics and the write context protocol
-that the engine requires before applying any plan.
+Provides backup and rollback mechanics plus the explicit write context required
+before any authority patch plan can be applied.
 """
 
 import shutil
@@ -11,23 +11,18 @@ from pathlib import Path
 
 @dataclass
 class PatchWriteContext:
-    """Explicit permission context required by ``AuthorityPatchEngine.apply``.
-
-    The engine does **not** obtain write permission silently. The caller
-    must provide a write context that declares which tool is authorized
-    and whether guarded writes (temporary unlock) are permitted.
+    """Explicit permission context required by patch application.
 
     Attributes:
-        tool_name: Name of the tool requesting writes (e.g. ``"diff"``).
-        allow_guarded_writes: Whether the context permits temporary
-            authority unlock during the apply.
+        tool_name: Name of the approved tool requesting writes.
+        allow_guarded_writes: Whether temporary authority unlock is allowed.
     """
 
     tool_name: str = ""
     allow_guarded_writes: bool = False
 
     def is_valid(self) -> bool:
-        """Return whether this context has the minimum required fields.
+        """Return whether the context has the minimum required fields.
 
         Returns:
             True when ``tool_name`` is non-empty.
@@ -36,38 +31,38 @@ class PatchWriteContext:
 
 
 class TransactionBackup:
-    """Create and manage file backups for rollback during patch apply.
-
-    Backups are stored in a temporary directory under the project root.
-    On rollback, files are restored from backups. On commit, backups
-    are cleaned up.
-    """
+    """Create and manage file backups for rollback during apply."""
 
     def __init__(self, project_root: Path) -> None:
         """Initialize the backup manager.
 
         Args:
-            project_root: The project root directory.
+            project_root: Project root directory.
         """
         self._project_root = project_root
-        self._backup_dir = project_root / ".bpfw" / "patch_backup"
+        self._backup_dir = project_root / ".bpfw" / "blueprint_engine_backup"
         self._backed_up: set[Path] = set()
 
     @property
     def backup_dir(self) -> Path:
-        """Return the backup directory path."""
+        """Return the backup directory path.
+
+        Returns:
+            Backup directory path.
+        """
         return self._backup_dir
 
     @property
     def backed_up_files(self) -> set[Path]:
-        """Return the set of project-relative paths that have backups."""
+        """Return backed-up project-relative files.
+
+        Returns:
+            Copy of the backed-up path set.
+        """
         return set(self._backed_up)
 
     def backup(self, relative_path: Path) -> None:
         """Create a backup of a file if it exists.
-
-        If the file does not exist (e.g., it is about to be created),
-        no backup is created but the path is tracked.
 
         Args:
             relative_path: Project-relative path to back up.
@@ -77,7 +72,6 @@ class TransactionBackup:
             return
 
         self._backed_up.add(relative_path)
-
         if not absolute_source.exists():
             return
 
@@ -89,7 +83,7 @@ class TransactionBackup:
         """Restore all backed-up files and remove newly created files.
 
         Returns:
-            List of project-relative paths that were restored.
+            List of project-relative paths restored or removed.
         """
         restored: list[Path] = []
         for relative_path in self._backed_up:
@@ -100,11 +94,9 @@ class TransactionBackup:
                 original_target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(backup_target, original_target)
                 restored.append(relative_path)
-            else:
-                # File was created by the patch; remove it on rollback.
-                if original_target.exists():
-                    original_target.unlink()
-                    restored.append(relative_path)
+            elif original_target.exists():
+                original_target.unlink()
+                restored.append(relative_path)
 
         return restored
 

@@ -1,17 +1,13 @@
-"""Internal authority patch engine for BPFW.
+"""Low-level mechanical patch primitives for Blueprint Engine.
 
-This package provides the AuthorityPatchEngine and supporting models
-used by the future ``bpfw diff`` workflow. It is not part of the
-public CLI and must not be invoked from read-only commands.
-
-Workflow::
-
-    bpfw verify       → detects drift
-    bpfw diff         → user chooses actions (future)
-    AuthorityPatchEngine → applies approved plan
+This package is internal. It applies explicit operations to files under
+``bpfw/`` after inspector, editor, planner, or a safe mechanical workflow has
+already produced an approved change request.
 """
 
 from bpfw.authority.patch.actions import (
+    AddCoveredCodeOperation,
+    AddIgnoreRuleOperation,
     CreateBlockOperation,
     CreateShardFileOperation,
     DeleteBlockOperation,
@@ -20,8 +16,13 @@ from bpfw.authority.patch.actions import (
     MoveShardFileOperation,
     PatchOperation,
     PatchOperationKind,
+    RemoveCoveredCodeOperation,
+    RemoveIgnoreRuleOperation,
     RenameShardFileOperation,
+    UpdateBlockCodeReferenceOperation,
+    UpdateBlockLocationOperation,
     UpdateBlockMetadataOperation,
+    UpdateBlockSymbolOperation,
 )
 from bpfw.authority.patch.engine import AuthorityPatchEngine
 from bpfw.authority.patch.plan import AuthorityPatchPlan
@@ -29,18 +30,23 @@ from bpfw.authority.patch.result import AuthorityPatchResult
 from bpfw.authority.patch.transaction import PatchWriteContext, TransactionBackup
 
 __all__ = [
-    # Operations
     "PatchOperationKind",
     "PatchOperation",
     "MoveBlockOperation",
     "CreateBlockOperation",
     "DeleteBlockOperation",
     "UpdateBlockMetadataOperation",
+    "UpdateBlockLocationOperation",
+    "UpdateBlockSymbolOperation",
+    "UpdateBlockCodeReferenceOperation",
+    "AddIgnoreRuleOperation",
+    "AddCoveredCodeOperation",
+    "RemoveIgnoreRuleOperation",
+    "RemoveCoveredCodeOperation",
     "CreateShardFileOperation",
     "DeleteShardFileOperation",
     "RenameShardFileOperation",
     "MoveShardFileOperation",
-    # Core
     "AuthorityPatchPlan",
     "AuthorityPatchResult",
     "AuthorityPatchEngine",

@@ -847,13 +847,13 @@ class TestReadOnlyCommandBoundaries:
         assert "patch_engine" not in source_code
         assert "AuthorityPatchEngine" not in source_code
 
-    def test_reshard_is_not_public_mutation_path(self) -> None:
-        """CLI must not route reshard to the patch engine."""
+    def test_cli_does_not_expose_blueprint_engine_mutation_path(self) -> None:
+        """CLI must not route public commands directly to the patch engine."""
         import bpfw.cli as cli_module
 
         source_code = open(cli_module.__file__, encoding="utf-8").read()
         assert "AuthorityPatchEngine" not in source_code
-        assert "no longer a public workflow" in source_code
+        assert "bpfw.authority.blueprint_engine" not in source_code
 
 
 # ---------------------------------------------------------------------------

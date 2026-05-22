@@ -1,14 +1,16 @@
-"""Authority patch plan model for the internal patch engine.
+"""Mechanical authority patch plan for Blueprint Engine.
 
-An ``AuthorityPatchPlan`` holds a list of explicit patch operations
-that will be applied by ``AuthorityPatchEngine``. The plan itself
-does not modify any files.
+A plan stores explicit operations that will be applied by the low-level
+``AuthorityPatchEngine``. The plan itself is read-only and never modifies files.
 """
 
 from pathlib import Path
 from typing import Union
 
+from bpfw.authority.errors import AuthorityError
 from bpfw.authority.patch.actions import (
+    AddCoveredCodeOperation,
+    AddIgnoreRuleOperation,
     CreateBlockOperation,
     CreateShardFileOperation,
     DeleteBlockOperation,
@@ -16,35 +18,54 @@ from bpfw.authority.patch.actions import (
     MoveBlockOperation,
     MoveShardFileOperation,
     PatchOperationKind,
+    RemoveCoveredCodeOperation,
+    RemoveIgnoreRuleOperation,
     RenameShardFileOperation,
+    UpdateBlockCodeReferenceOperation,
+    UpdateBlockLocationOperation,
     UpdateBlockMetadataOperation,
+    UpdateBlockSymbolOperation,
 )
 
-# Union of all concrete operation types the plan accepts.
 PatchOperation = Union[
     MoveBlockOperation,
     CreateBlockOperation,
     DeleteBlockOperation,
     UpdateBlockMetadataOperation,
+    UpdateBlockLocationOperation,
+    UpdateBlockSymbolOperation,
+    UpdateBlockCodeReferenceOperation,
+    AddIgnoreRuleOperation,
+    RemoveIgnoreRuleOperation,
+    AddCoveredCodeOperation,
+    RemoveCoveredCodeOperation,
     CreateShardFileOperation,
     DeleteShardFileOperation,
     RenameShardFileOperation,
     MoveShardFileOperation,
 ]
 
-# Operations that modify blocks within shard files and therefore
-# require a manifest update after application.
 _BLOCK_OPERATIONS: frozenset[PatchOperationKind] = frozenset(
     {
         PatchOperationKind.MOVE_BLOCK,
         PatchOperationKind.CREATE_BLOCK,
         PatchOperationKind.DELETE_BLOCK,
         PatchOperationKind.UPDATE_BLOCK_METADATA,
+        PatchOperationKind.UPDATE_BLOCK_LOCATION,
+        PatchOperationKind.UPDATE_BLOCK_SYMBOL,
+        PatchOperationKind.UPDATE_BLOCK_CODE_REFERENCE,
     }
 )
 
-# Operations that create, delete, rename, or move shard files and
-# therefore also require a manifest update.
+_BLUEPRINT_INDEX_OPERATIONS: frozenset[PatchOperationKind] = frozenset(
+    {
+        PatchOperationKind.ADD_IGNORE_RULE,
+        PatchOperationKind.REMOVE_IGNORE_RULE,
+        PatchOperationKind.ADD_COVERED_CODE,
+        PatchOperationKind.REMOVE_COVERED_CODE,
+    }
+)
+
 _SHARD_FILE_OPERATIONS: frozenset[PatchOperationKind] = frozenset(
     {
         PatchOperationKind.CREATE_SHARD_FILE,
@@ -54,8 +75,6 @@ _SHARD_FILE_OPERATIONS: frozenset[PatchOperationKind] = frozenset(
     }
 )
 
-# Deterministic application order: shard file lifecycle first, then
-# block-level mutations within shards.
 _APPLICATION_ORDER: dict[PatchOperationKind, int] = {
     PatchOperationKind.CREATE_SHARD_FILE: 0,
     PatchOperationKind.MOVE_SHARD_FILE: 1,
@@ -63,8 +82,15 @@ _APPLICATION_ORDER: dict[PatchOperationKind, int] = {
     PatchOperationKind.MOVE_BLOCK: 3,
     PatchOperationKind.CREATE_BLOCK: 4,
     PatchOperationKind.UPDATE_BLOCK_METADATA: 5,
-    PatchOperationKind.DELETE_BLOCK: 6,
-    PatchOperationKind.DELETE_SHARD_FILE: 7,
+    PatchOperationKind.UPDATE_BLOCK_LOCATION: 6,
+    PatchOperationKind.UPDATE_BLOCK_SYMBOL: 7,
+    PatchOperationKind.UPDATE_BLOCK_CODE_REFERENCE: 8,
+    PatchOperationKind.ADD_IGNORE_RULE: 9,
+    PatchOperationKind.REMOVE_IGNORE_RULE: 10,
+    PatchOperationKind.ADD_COVERED_CODE: 11,
+    PatchOperationKind.REMOVE_COVERED_CODE: 12,
+    PatchOperationKind.DELETE_BLOCK: 13,
+    PatchOperationKind.DELETE_SHARD_FILE: 14,
 }
 
 
@@ -72,33 +98,27 @@ class AuthorityPatchPlan:
     """Represent a list of explicit authority patch operations.
 
     The plan stores operations, reports affected files, and validates
-    preconditions. It does **not** apply changes itself.
-
-    Usage::
-
-        plan = AuthorityPatchPlan()
-        plan.add_operation(MoveBlockOperation(...))
-        plan.validate(project_root)
-        engine.apply(plan, write_context)
+    preconditions. It does not decide whether operations are semantically right.
     """
 
     def __init__(self) -> None:
+        """Initialize an empty patch plan."""
         self._operations: list[PatchOperation] = []
 
     def add_operation(self, operation: PatchOperation) -> None:
-        """Append an operation to the plan.
+        """Append one operation to the plan.
 
         Args:
-            operation: One of the supported patch operation types.
+            operation: Supported mechanical operation to append.
         """
         self._operations.append(operation)
 
     @property
     def operations(self) -> list[PatchOperation]:
-        """Return the raw list of added operations.
+        """Return operations in insertion order.
 
         Returns:
-            List of patch operations in insertion order.
+            Copy of the operation list.
         """
         return list(self._operations)
 
@@ -106,7 +126,7 @@ class AuthorityPatchPlan:
         """Return whether the plan contains no operations.
 
         Returns:
-            True when the plan has zero operations.
+            True when no operations are present.
         """
         return len(self._operations) == 0
 
@@ -114,35 +134,37 @@ class AuthorityPatchPlan:
         """Return the number of operations in the plan.
 
         Returns:
-            Integer count of operations.
+            Operation count.
         """
         return len(self._operations)
 
     def affected_files(self) -> set[Path]:
-        """Return all project-relative paths touched by any operation.
+        """Return all project-relative paths touched by the plan.
 
         Returns:
-            Set of paths that may be read or written during apply.
+            Set of affected paths.
         """
         collected: set[Path] = set()
         for operation in self._operations:
             collected.update(operation.affected_files())
+        if self.requires_manifest_update() or self.writes_blueprint_index():
+            collected.add(Path("bpfw/blueprint.yaml"))
         return collected
 
     def affected_authority_files(self) -> set[Path]:
-        """Return only shard YAML paths affected by this plan.
+        """Return YAML authority files affected by this plan.
 
         Returns:
-            Set of paths ending in ``.yaml`` inside ``bpfw/``.
+            Set of YAML files under ``bpfw/``.
         """
         return {
             path
             for path in self.affected_files()
-            if path.suffix == ".yaml" and path.parts[0] == "bpfw"
+            if path.suffix in {".yaml", ".yml"} and path.parts and path.parts[0] == "bpfw"
         }
 
     def affected_shard_files(self) -> set[Path]:
-        """Return only shard paths inside ``bpfw/blocks/``.
+        """Return shard files affected by this plan.
 
         Returns:
             Set of paths under ``bpfw/blocks/``.
@@ -150,33 +172,39 @@ class AuthorityPatchPlan:
         return {
             path
             for path in self.affected_files()
-            if len(path.parts) >= 2
-            and path.parts[0] == "bpfw"
-            and path.parts[1] == "blocks"
+            if len(path.parts) >= 2 and path.parts[0] == "bpfw" and path.parts[1] == "blocks"
         }
 
     def requires_manifest_update(self) -> bool:
-        """Return whether applying this plan requires a manifest update.
+        """Return whether applying the plan requires root include updates.
 
         Returns:
-            True when any operation creates, deletes, renames, or moves
-            shard files, or when blocks are moved between shards.
+            True when shard creation, movement, deletion, or block placement
+            operations may require the root include list to change.
         """
         for operation in self._operations:
-            if operation.kind in _BLOCK_OPERATIONS:
-                return True
             if operation.kind in _SHARD_FILE_OPERATIONS:
+                return True
+            if operation.kind in {PatchOperationKind.CREATE_BLOCK, PatchOperationKind.MOVE_BLOCK}:
+                return True
+        return False
+
+    def writes_blueprint_index(self) -> bool:
+        """Return whether the plan writes the root blueprint file directly.
+
+        Returns:
+            True when an index-level operation is present.
+        """
+        for operation in self._operations:
+            if operation.kind in _BLUEPRINT_INDEX_OPERATIONS:
                 return True
         return False
 
     def sorted_operations(self) -> list[PatchOperation]:
         """Return operations in deterministic application order.
 
-        Shard file lifecycle operations come first, followed by
-        block-level mutations, followed by deletions.
-
         Returns:
-            List of operations sorted by ``_APPLICATION_ORDER``.
+            Sorted operation list.
         """
         return sorted(
             self._operations,
@@ -184,23 +212,18 @@ class AuthorityPatchPlan:
         )
 
     def validate(self, project_root: Path) -> list[str]:
-        """Validate all operations and return collected error messages.
-
-        Does not raise on the first error. Instead, collects all
-        validation failures so the caller can report them together.
+        """Validate all operations and collect readable errors.
 
         Args:
-            project_root: The project root directory for resolving paths.
+            project_root: Project root directory.
 
         Returns:
-            List of human-readable error strings. Empty when valid.
+            Empty list when valid, otherwise validation messages.
         """
         errors: list[str] = []
         for operation in self._operations:
             try:
                 operation.validate(project_root)
-            except Exception as error:
-                errors.append(
-                    f"[{operation.kind.value}] {error}"
-                )
+            except AuthorityError as error:
+                errors.append(f"[{operation.kind.value}] {error}")
         return errors
