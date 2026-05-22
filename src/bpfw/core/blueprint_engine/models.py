@@ -10,7 +10,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from bpfw.authority.patch.result import AuthorityPatchResult
+from bpfw.core.authority.patch.result import AuthorityPatchResult
 
 
 class BlueprintChangeKind(Enum):

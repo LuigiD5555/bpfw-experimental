@@ -9,9 +9,11 @@ This repository contains only the framework code (no application/domain code fro
 - `bpfw/blueprint.yaml` catalog generation
 - Catalog validation against discovered Python code
 - Drift detection for declared responsibilities
+- Interactive `bpfw diff` review for explicit authority decisions
 - Protected initialization with OS-level authority lock
 - Inspector for interactive authority completion
 - Human-readable `verify` and `status` reports
+- Mechanical authority updates through Blueprint Engine after approval (no automatic reshard flow)
 
 ## Internal architecture
 
@@ -37,6 +39,7 @@ bpfw init
 bpfw inspector
 bpfw editor
 bpfw planner
+bpfw diff
 bpfw verify
 bpfw status
 bpfw lock

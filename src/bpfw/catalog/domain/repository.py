@@ -8,7 +8,7 @@ from typing import Any
 
 import yaml
 
-from bpfw.authority import AuthorityRepository
+from bpfw.core.authority import AuthorityRepository
 from bpfw.catalog.access_control import ensure_blueprint_can_be_written
 from bpfw.catalog.domain.mapper import BlueprintMapper
 from bpfw.catalog.domain.models import BlueprintDocument

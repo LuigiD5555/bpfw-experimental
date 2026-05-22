@@ -7,8 +7,8 @@ A plan stores explicit operations that will be applied by the low-level
 from pathlib import Path
 from typing import Union
 
-from bpfw.authority.errors import AuthorityError
-from bpfw.authority.patch.actions import (
+from bpfw.core.authority.errors import AuthorityError
+from bpfw.core.authority.patch.actions import (
     AddCoveredCodeOperation,
     AddIgnoreRuleOperation,
     CreateBlockOperation,

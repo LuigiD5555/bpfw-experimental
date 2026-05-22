@@ -11,7 +11,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from bpfw.authority.errors import AuthorityError, InvalidShardPathError
+from bpfw.core.authority.errors import AuthorityError, InvalidShardPathError
 
 
 class PatchOperationKind(Enum):
@@ -106,7 +106,7 @@ def _validate_block_exists(project_root: Path, shard_path: Path, block_id: str) 
         AuthorityError: If the shard or block does not exist.
     """
 
-    from bpfw.authority.shard import AuthorityShard
+    from bpfw.core.authority.shard import AuthorityShard
 
     if not block_id.strip():
         raise AuthorityError("Operation requires a non-empty block_id.")
@@ -182,7 +182,7 @@ class MoveBlockOperation:
         Raises:
             AuthorityError: If the source, target, or block state is invalid.
         """
-        from bpfw.authority.shard import AuthorityShard
+        from bpfw.core.authority.shard import AuthorityShard
 
         _validate_shard_path(self.source_shard_path)
         _validate_shard_path(self.target_shard_path)
@@ -231,7 +231,7 @@ class CreateBlockOperation:
         Raises:
             AuthorityError: If the block data or target shard is invalid.
         """
-        from bpfw.authority.shard import AuthorityShard
+        from bpfw.core.authority.shard import AuthorityShard
 
         _validate_shard_path(self.target_shard_path)
         if not isinstance(self.block_data, dict) or "id" not in self.block_data:
@@ -657,7 +657,7 @@ class DeleteShardFileOperation:
         Args:
             project_root: Project root directory.
         """
-        from bpfw.authority.shard import AuthorityShard
+        from bpfw.core.authority.shard import AuthorityShard
 
         _validate_shard_path(self.shard_path)
         target_absolute = project_root / self.shard_path

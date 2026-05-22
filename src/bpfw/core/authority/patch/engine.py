@@ -11,7 +11,7 @@ from typing import Iterator
 
 import yaml
 
-from bpfw.authority.patch.actions import (
+from bpfw.core.authority.patch.actions import (
     AddCoveredCodeOperation,
     AddIgnoreRuleOperation,
     CreateBlockOperation,
@@ -29,9 +29,9 @@ from bpfw.authority.patch.actions import (
     UpdateBlockMetadataOperation,
     UpdateBlockSymbolOperation,
 )
-from bpfw.authority.patch.plan import AuthorityPatchPlan, PatchOperation
-from bpfw.authority.patch.result import AuthorityPatchResult
-from bpfw.authority.patch.transaction import PatchWriteContext, TransactionBackup
+from bpfw.core.authority.patch.plan import AuthorityPatchPlan, PatchOperation
+from bpfw.core.authority.patch.result import AuthorityPatchResult
+from bpfw.core.authority.patch.transaction import PatchWriteContext, TransactionBackup
 from bpfw.catalog.access_control import (
     authorize_blueprint_writes_for_tool,
     authorize_temporary_blueprint_unlock_for_tool,
@@ -255,7 +255,7 @@ class AuthorityPatchEngine:
             result: Result object to record outcomes.
             label: Operation label.
         """
-        from bpfw.authority.shard import AuthorityShard
+        from bpfw.core.authority.shard import AuthorityShard
 
         source_shard = AuthorityShard.load(self.project_root, operation.source_shard_path)
         block_data = source_shard.remove_block(operation.block_id)
@@ -291,7 +291,7 @@ class AuthorityPatchEngine:
             result: Result object to record outcomes.
             label: Operation label.
         """
-        from bpfw.authority.shard import AuthorityShard
+        from bpfw.core.authority.shard import AuthorityShard
 
         target_absolute = self.project_root / operation.target_shard_path
         if not target_absolute.exists() and operation.create_target_if_missing:
@@ -318,7 +318,7 @@ class AuthorityPatchEngine:
             result: Result object to record outcomes.
             label: Operation label.
         """
-        from bpfw.authority.shard import AuthorityShard
+        from bpfw.core.authority.shard import AuthorityShard
 
         source_shard = AuthorityShard.load(self.project_root, operation.source_shard_path)
         source_shard.remove_block(operation.block_id)
@@ -639,7 +639,7 @@ class AuthorityPatchEngine:
         Returns:
             Block dictionary copy, or None when not found.
         """
-        from bpfw.authority.shard import AuthorityShard
+        from bpfw.core.authority.shard import AuthorityShard
 
         shard = AuthorityShard.load(self.project_root, shard_path)
         for block in shard.get_blocks():
@@ -655,7 +655,7 @@ class AuthorityPatchEngine:
             block_id: Block identifier to replace.
             block_data: New block data.
         """
-        from bpfw.authority.shard import AuthorityShard
+        from bpfw.core.authority.shard import AuthorityShard
 
         shard = AuthorityShard.load(self.project_root, shard_path)
         blocks = shard.get_blocks()

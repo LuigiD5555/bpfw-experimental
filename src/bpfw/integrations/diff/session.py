@@ -4,13 +4,13 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from bpfw.authority.blueprint_engine import (
+from bpfw.core.blueprint_engine import (
     BlueprintChangeKind,
     BlueprintChangeRequest,
     BlueprintChangeSource,
     BlueprintEngine as AuthorityBlueprintEngine,
 )
-from bpfw.authority.patch.transaction import PatchWriteContext
+from bpfw.core.authority.patch.transaction import PatchWriteContext
 from bpfw.catalog.verify import run_verify
 from bpfw.integrations.diff.metadata_window import MetadataDraft, run_metadata_window
 from bpfw.integrations.diff.models import (

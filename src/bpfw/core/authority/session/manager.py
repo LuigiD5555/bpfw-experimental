@@ -4,14 +4,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-from bpfw.authority import AuthorityError, AuthorityRepository
-from bpfw.authority.session.recovery import (
+from bpfw.core.authority import AuthorityError, AuthorityRepository
+from bpfw.core.authority.session.recovery import (
     AuthoritySessionMeta,
     read_session_meta,
     utc_now_iso8601,
     write_session_meta,
 )
-from bpfw.authority.session.temporary_blueprint import read_unified_blueprint, write_unified_blueprint
+from bpfw.core.authority.session.temporary_blueprint import read_unified_blueprint, write_unified_blueprint
 from bpfw.catalog.access_control import has_temporary_blueprint_unlock_authorization
 from bpfw.catalog.drift import compare_declared_to_discovered
 from bpfw.catalog.models import AUTHORITY_STATE_DEFINED, AUTHORITY_STATE_DRAFT, AUTHORITY_STATE_EMPTY

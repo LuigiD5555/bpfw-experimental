@@ -3,10 +3,10 @@
 from pathlib import Path
 from typing import Any
 
-from bpfw.authority.document import AuthorityDocument
-from bpfw.authority.index import AuthorityIndex
-from bpfw.authority.persistence import AuthorityPersistenceEngine, AuthorityPersistenceResult
-from bpfw.authority.shard import AuthorityShard
+from bpfw.core.authority.document import AuthorityDocument
+from bpfw.core.authority.index import AuthorityIndex
+from bpfw.core.authority.persistence import AuthorityPersistenceEngine, AuthorityPersistenceResult
+from bpfw.core.authority.shard import AuthorityShard
 from bpfw.reports.finding import Finding, FINDING_SEVERITY_BLOCK
 
 
@@ -98,7 +98,7 @@ class AuthorityRepository:
         # Check for duplicate block IDs
         for block_id, locations in seen_block_ids.items():
             if len(locations) > 1:
-                from bpfw.authority.errors import DuplicateBlockIdError
+                from bpfw.core.authority.errors import DuplicateBlockIdError
                 raise DuplicateBlockIdError(
                     f"Duplicate block ID '{block_id}' found in shards: {locations}"
                 )
@@ -106,7 +106,7 @@ class AuthorityRepository:
         # Check for duplicate code declarations
         for code_key, block_ids in seen_code_declarations.items():
             if len(block_ids) > 1:
-                from bpfw.authority.errors import DuplicateCodeDeclarationError
+                from bpfw.core.authority.errors import DuplicateCodeDeclarationError
                 raise DuplicateCodeDeclarationError(
                     f"Duplicate code declaration '{code_key}' found in blocks: {block_ids}"
                 )

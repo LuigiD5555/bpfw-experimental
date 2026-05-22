@@ -217,7 +217,7 @@ class BlueprintYamlWriter:
             blueprint_path: Path to the blueprint file.
             blueprint_data: Blueprint data to write.
         """
-        from bpfw.authority import AuthorityRepository
+        from bpfw.core.authority import AuthorityRepository
         
         # Get project root from blueprint path
         project_root = blueprint_path.parent.parent

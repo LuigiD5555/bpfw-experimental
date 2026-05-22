@@ -2,14 +2,14 @@
 
 from pathlib import Path
 
-from bpfw.authority.blueprint_engine.models import (
+from bpfw.core.blueprint_engine.models import (
     BlueprintChangePreview,
     BlueprintChangeRequest,
     BlueprintChangeResult,
 )
-from bpfw.authority.blueprint_engine.planner import BlueprintPlanBuilder
-from bpfw.authority.blueprint_engine.safety import BlueprintEngineSafetyPolicy
-from bpfw.authority.patch import AuthorityPatchEngine, PatchWriteContext
+from bpfw.core.blueprint_engine.planner import BlueprintPlanBuilder
+from bpfw.core.blueprint_engine.safety import BlueprintEngineSafetyPolicy
+from bpfw.core.authority.patch import AuthorityPatchEngine, PatchWriteContext
 
 
 class BlueprintEngine:

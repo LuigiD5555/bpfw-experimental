@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from bpfw.authority.blueprint_engine.models import BlueprintChangeRequest
+from bpfw.core.blueprint_engine.models import BlueprintChangeRequest
 from bpfw.integrations.diff.models import SourceChangeRequest
 
 

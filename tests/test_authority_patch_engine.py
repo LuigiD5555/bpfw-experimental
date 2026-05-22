@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from bpfw.authority.patch import (
+from bpfw.core.authority.patch import (
     AuthorityPatchEngine,
     AuthorityPatchPlan,
     PatchWriteContext,
@@ -25,7 +25,7 @@ from bpfw.authority.patch import (
     RenameShardFileOperation,
     UpdateBlockMetadataOperation,
 )
-from bpfw.authority.errors import AuthorityError
+from bpfw.core.authority.errors import AuthorityError
 from bpfw.catalog.access_control import authorize_blueprint_writes_for_tool
 
 
@@ -853,7 +853,7 @@ class TestReadOnlyCommandBoundaries:
 
         source_code = open(cli_module.__file__, encoding="utf-8").read()
         assert "AuthorityPatchEngine" not in source_code
-        assert "bpfw.authority.blueprint_engine" not in source_code
+        assert "bpfw.core.blueprint_engine" not in source_code
 
 
 # ---------------------------------------------------------------------------

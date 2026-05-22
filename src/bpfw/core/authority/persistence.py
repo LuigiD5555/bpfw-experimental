@@ -9,9 +9,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from bpfw.authority.document import AuthorityDocument
-from bpfw.authority.shard import AuthorityShard
-from bpfw.authority.sharding import ShardDecisionEngine
+from bpfw.core.authority.document import AuthorityDocument
+from bpfw.core.authority.shard import AuthorityShard
+from bpfw.core.authority.sharding import ShardDecisionEngine
 from bpfw.catalog.access_control import (
     ensure_blueprint_can_be_written,
     has_temporary_blueprint_unlock_authorization,

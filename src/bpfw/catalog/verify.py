@@ -3,8 +3,8 @@
 from pathlib import Path
 from typing import Any, List, Tuple
 
-from bpfw.authority.index import AuthorityIndex
-from bpfw.authority import AuthorityRepository
+from bpfw.core.authority.index import AuthorityIndex
+from bpfw.core.authority import AuthorityRepository
 from bpfw.catalog.drift import compare_declared_to_discovered
 from bpfw.catalog.domain import BlueprintDocument
 from bpfw.catalog.loader import BlueprintLoader

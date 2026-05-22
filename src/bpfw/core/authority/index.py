@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from bpfw.catalog.access_control import ensure_blueprint_can_be_written
-from bpfw.authority.errors import InvalidAuthorityIndexError
+from bpfw.core.authority.errors import InvalidAuthorityIndexError
 
 
 class AuthorityIndex:

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from bpfw.authority import (
+from bpfw.core.authority import (
     InvalidAuthorityIndexError,
     InvalidAuthorityShardError,
     MissingShardError,

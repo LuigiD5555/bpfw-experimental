@@ -5,7 +5,7 @@ This package is internal. It applies explicit operations to files under
 already produced an approved change request.
 """
 
-from bpfw.authority.patch.actions import (
+from bpfw.core.authority.patch.actions import (
     AddCoveredCodeOperation,
     AddIgnoreRuleOperation,
     CreateBlockOperation,
@@ -24,10 +24,10 @@ from bpfw.authority.patch.actions import (
     UpdateBlockMetadataOperation,
     UpdateBlockSymbolOperation,
 )
-from bpfw.authority.patch.engine import AuthorityPatchEngine
-from bpfw.authority.patch.plan import AuthorityPatchPlan
-from bpfw.authority.patch.result import AuthorityPatchResult
-from bpfw.authority.patch.transaction import PatchWriteContext, TransactionBackup
+from bpfw.core.authority.patch.engine import AuthorityPatchEngine
+from bpfw.core.authority.patch.plan import AuthorityPatchPlan
+from bpfw.core.authority.patch.result import AuthorityPatchResult
+from bpfw.core.authority.patch.transaction import PatchWriteContext, TransactionBackup
 
 __all__ = [
     "PatchOperationKind",

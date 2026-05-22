@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from bpfw.authority import AuthorityRepository, ShardDecisionEngine
+from bpfw.core.authority import AuthorityRepository, ShardDecisionEngine
 from bpfw.catalog.loader import BlueprintLoader
 from bpfw.catalog.models import BlueprintLoadResult, DiscoveredCodeUnit, ScanResult, VerificationReport
 from bpfw.catalog.verify import run_verify, scan_project_from_blueprint

@@ -90,7 +90,7 @@ def load_inspect_session(
         InspectLoadResult with loaded session data.
     """
 
-    from bpfw.authority import AuthorityRepository
+    from bpfw.core.authority import AuthorityRepository
     from bpfw.integrations.shared.runtime_context import get_integration_runtime_cache
 
     with _profiler.measure("inspector.load_blueprint"):
@@ -748,7 +748,7 @@ def save_blueprint(
 
     # Use sharded authority path when layout declares it.
     if _has_sharded_authority_layout(blueprint_data):
-        from bpfw.authority import AuthorityRepository
+        from bpfw.core.authority import AuthorityRepository
 
         repository = AuthorityRepository(project_root)
 

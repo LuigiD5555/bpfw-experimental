@@ -3,8 +3,8 @@
 from pathlib import Path
 from typing import Any
 
-from bpfw.authority.index import AuthorityIndex
-from bpfw.authority.shard import AuthorityShard
+from bpfw.core.authority.index import AuthorityIndex
+from bpfw.core.authority.shard import AuthorityShard
 
 
 class AuthorityDocument:

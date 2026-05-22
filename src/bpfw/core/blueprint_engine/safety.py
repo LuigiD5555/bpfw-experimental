@@ -4,7 +4,7 @@ The policy keeps the engine mechanical. It decides whether a request has enough
 approval to be applied, not whether the underlying drift interpretation is true.
 """
 
-from bpfw.authority.blueprint_engine.models import (
+from bpfw.core.blueprint_engine.models import (
     BlueprintChangeKind,
     BlueprintChangeRequest,
     BlueprintChangeSource,

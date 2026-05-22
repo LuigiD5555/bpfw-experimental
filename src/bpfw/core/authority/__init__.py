@@ -4,7 +4,7 @@ This package provides loading, validation, persistence, and Blueprint Engine
 operations used to apply approved mechanical changes under ``bpfw/``.
 """
 
-from bpfw.authority.blueprint_engine import (
+from bpfw.core.blueprint_engine import (
     BlueprintChangeKind,
     BlueprintChangePreview,
     BlueprintChangeRequest,
@@ -13,8 +13,8 @@ from bpfw.authority.blueprint_engine import (
     BlueprintEngine,
     MechanicalChangeEvidence,
 )
-from bpfw.authority.document import AuthorityDocument
-from bpfw.authority.errors import (
+from bpfw.core.authority.document import AuthorityDocument
+from bpfw.core.authority.errors import (
     AuthorityError,
     DuplicateBlockIdError,
     DuplicateCodeDeclarationError,
@@ -24,11 +24,11 @@ from bpfw.authority.errors import (
     MissingShardError,
     ShardDriftError,
 )
-from bpfw.authority.index import AuthorityIndex
-from bpfw.authority.persistence import AuthorityPersistenceEngine, AuthorityPersistenceResult
-from bpfw.authority.repository import AuthorityRepository
-from bpfw.authority.shard import AuthorityShard, BlockOrigin
-from bpfw.authority.sharding import ShardDecisionEngine
+from bpfw.core.authority.index import AuthorityIndex
+from bpfw.core.authority.persistence import AuthorityPersistenceEngine, AuthorityPersistenceResult
+from bpfw.core.authority.repository import AuthorityRepository
+from bpfw.core.authority.shard import AuthorityShard, BlockOrigin
+from bpfw.core.authority.sharding import ShardDecisionEngine
 
 __all__ = [
     "AuthorityError",

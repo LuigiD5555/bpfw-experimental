@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 
 from bpfw.catalog.access_control import authorize_blueprint_writes_for_tool
-from bpfw.authority import (
+from bpfw.core.authority import (
     AuthorityRepository,
     InvalidAuthorityIndexError,
     InvalidAuthorityShardError,
@@ -12,10 +12,10 @@ from bpfw.authority import (
     DuplicateCodeDeclarationError,
     ShardDriftError,
 )
-from bpfw.authority.index import AuthorityIndex
-from bpfw.authority.shard import AuthorityShard
-from bpfw.authority.document import AuthorityDocument
-from bpfw.authority.sharding import ShardDecisionEngine
+from bpfw.core.authority.index import AuthorityIndex
+from bpfw.core.authority.shard import AuthorityShard
+from bpfw.core.authority.document import AuthorityDocument
+from bpfw.core.authority.sharding import ShardDecisionEngine
 
 
 @pytest.fixture

@@ -4,8 +4,8 @@ import re
 from pathlib import Path
 from typing import Any
 
-from bpfw.authority.document import AuthorityDocument
-from bpfw.authority.errors import InvalidShardPathError
+from bpfw.core.authority.document import AuthorityDocument
+from bpfw.core.authority.errors import InvalidShardPathError
 
 
 class ShardDecisionEngine:

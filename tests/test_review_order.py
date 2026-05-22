@@ -203,10 +203,10 @@ def test_real_world_authority_repository_scenario():
     units = [
         DiscoveredCodeUnit(
             path="authority/repository.py",
-            module="bpfw.authority.repository",
+            module="bpfw.core.authority.repository",
             symbol="AuthorityRepository.get_shard_for_block",
             symbol_type="method",
-            qualified_name="bpfw.authority.repository.AuthorityRepository.get_shard_for_block",
+            qualified_name="bpfw.core.authority.repository.AuthorityRepository.get_shard_for_block",
             start_line=87,
             end_line=99,
             methods=[],
@@ -221,10 +221,10 @@ def test_real_world_authority_repository_scenario():
         ),
         DiscoveredCodeUnit(
             path="authority/repository.py",
-            module="bpfw.authority.repository",
+            module="bpfw.core.authority.repository",
             symbol="AuthorityRepository.get_origin",
             symbol_type="method",
-            qualified_name="bpfw.authority.repository.AuthorityRepository.get_origin",
+            qualified_name="bpfw.core.authority.repository.AuthorityRepository.get_origin",
             start_line=60,
             end_line=85,
             methods=[],
@@ -239,10 +239,10 @@ def test_real_world_authority_repository_scenario():
         ),
         DiscoveredCodeUnit(
             path="authority/repository.py",
-            module="bpfw.authority.repository",
+            module="bpfw.core.authority.repository",
             symbol="AuthorityRepository.get_shards",
             symbol_type="method",
-            qualified_name="bpfw.authority.repository.AuthorityRepository.get_shards",
+            qualified_name="bpfw.core.authority.repository.AuthorityRepository.get_shards",
             start_line=40,
             end_line=58,
             methods=[],

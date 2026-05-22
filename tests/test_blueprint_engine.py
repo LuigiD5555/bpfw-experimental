@@ -4,14 +4,14 @@ from pathlib import Path
 
 import yaml
 
-from bpfw.authority.blueprint_engine import (
+from bpfw.core.blueprint_engine import (
     BlueprintChangeKind,
     BlueprintChangeRequest,
     BlueprintChangeSource,
     BlueprintEngine,
     MechanicalChangeEvidence,
 )
-from bpfw.authority.patch import PatchWriteContext
+from bpfw.core.authority.patch import PatchWriteContext
 
 
 def _write_blueprint(project_root: Path, includes: list[str] | None = None) -> None:

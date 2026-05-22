@@ -3,8 +3,8 @@
 from pathlib import Path
 from typing import Any
 
-from bpfw.authority.errors import AuthorityError
-from bpfw.authority.patch import (
+from bpfw.core.authority.errors import AuthorityError
+from bpfw.core.authority.patch import (
     AddCoveredCodeOperation,
     AddIgnoreRuleOperation,
     AuthorityPatchPlan,
@@ -22,7 +22,7 @@ from bpfw.authority.patch import (
     UpdateBlockMetadataOperation,
     UpdateBlockSymbolOperation,
 )
-from bpfw.authority.blueprint_engine.models import BlueprintChangeKind, BlueprintChangeRequest
+from bpfw.core.blueprint_engine.models import BlueprintChangeKind, BlueprintChangeRequest
 
 
 class BlueprintPlanBuilder:
