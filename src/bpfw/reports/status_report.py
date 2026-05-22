@@ -12,7 +12,7 @@ from bpfw.core.catalog.models import (
     VerificationReport,
 )
 from bpfw.core.catalog.verify import run_verify
-from bpfw.protection.authority import get_authority_protection_status
+from bpfw.core.protection.authority import get_authority_protection_status
 
 _BLUEPRINT_DISPLAY_PATH = "bpfw/blueprint.yaml"
 

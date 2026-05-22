@@ -10,7 +10,7 @@ from bpfw.core.catalog.writer import run_init
 from bpfw.runner import run_command_after_verify
 from bpfw.watch import WatchDependencyError, run_watch
 from bpfw.core.engine import BlueprintEngine, build_command
-from bpfw.protection.authority import (
+from bpfw.core.protection.authority import (
     MISSING_BLUEPRINT_STATUS,
     ProtectionResult,
     get_authority_protection_status,
@@ -20,7 +20,7 @@ from bpfw.protection.authority import (
 from bpfw.reports.status_report import run_status
 from bpfw.reports.verify_report import VERIFY_FINDING_FILTERS, render_verify_report
 from bpfw.shared.text import normalize_text_command
-from bpfw.protection.runtime_lease import runtime_blueprint_write_lease
+from bpfw.core.protection.runtime_lease import runtime_blueprint_write_lease
 
 
 MVP_COMMANDS = (

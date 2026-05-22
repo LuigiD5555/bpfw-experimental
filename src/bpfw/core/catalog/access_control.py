@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Iterator, TypeVar
 
 from bpfw.core.errors import BlueprintLockedError
-from bpfw.protection.authority import get_authority_protection_status
+from bpfw.core.protection.authority import get_authority_protection_status
 
 _Func = TypeVar("_Func", bound=Callable[..., object])
 

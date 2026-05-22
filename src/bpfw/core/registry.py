@@ -12,13 +12,13 @@ from bpfw.integrations.registry import (
     IntegrationRegistry,
     build_default_integration_registry,
 )
-from bpfw.protection.authority import (
+from bpfw.core.protection.authority import (
     MISSING_BLUEPRINT_STATUS,
     get_authority_protection_status,
     lock_authority,
     unlock_authority,
 )
-from bpfw.protection.runtime_lease import runtime_blueprint_write_lease
+from bpfw.core.protection.runtime_lease import runtime_blueprint_write_lease
 
 
 @dataclass(slots=True)

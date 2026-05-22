@@ -17,7 +17,7 @@ from bpfw.core.catalog.access_control import (
     has_temporary_blueprint_unlock_authorization,
 )
 from bpfw.core.errors import BlueprintLockedError
-from bpfw.protection.authority import (
+from bpfw.core.protection.authority import (
     get_authority_protection_status,
     lock_authority,
     unlock_authority,

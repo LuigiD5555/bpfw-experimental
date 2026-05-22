@@ -18,8 +18,8 @@ from bpfw.core.catalog.status import ALLOWED_STATUSES
 from bpfw.core.catalog.models import DiscoveredCodeUnit
 from bpfw.core.catalog.symbol_types import normalize_symbol_type
 from bpfw.core.errors import BlueprintLockedError
-from bpfw.protection.setup import format_setup_summary, run_protection_setup
-from bpfw.protection.authority import (
+from bpfw.core.protection.setup import format_setup_summary, run_protection_setup
+from bpfw.core.protection.authority import (
     get_authority_protection_status,
     lock_authority,
     unlock_authority,
