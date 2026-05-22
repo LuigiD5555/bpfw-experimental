@@ -15,7 +15,7 @@ from bpfw.protection.authority import (
     get_authority_protection_status,
 )
 
-PROTECTED_RUNTIME_TOOLS = {"init", "inspector", "editor", "planner", "reshard"}
+PROTECTED_RUNTIME_TOOLS = {"init", "inspector", "editor", "planner"}
 
 
 @dataclass(slots=True)

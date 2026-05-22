@@ -152,7 +152,7 @@ def build_initial_blueprint(
             "default_shard": DEFAULT_CORE_SHARD,
             "allow_empty_shards": False,
             "auto_create_shards": True,
-            "auto_move_blocks_on_save": True,
+            "auto_move_blocks_on_save": False,
             "remove_empty_shards": False,
         },
         "includes": [DEFAULT_CORE_SHARD],

@@ -158,8 +158,8 @@ def test_inspector_allows_draft_incomplete_preflight_without_blocking(
     assert integration.was_run is True
 
 
-def test_inspector_does_not_auto_reshard_before_integration(tmp_path: Path, monkeypatch) -> None:
-    """Verify inspector must not auto-reshard before running integration."""
+def test_inspector_does_not_auto_update_blueprint_before_integration(tmp_path: Path, monkeypatch) -> None:
+    """Verify inspector must not auto-update blueprint before running integration."""
 
     (tmp_path / "bpfw").mkdir()
     (tmp_path / "src").mkdir()

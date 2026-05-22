@@ -1,15 +1,18 @@
-"""Authority sharding engine for BPFW.
+"""Authority package for BPFW blueprint files.
 
-This package provides:
-- AuthorityIndex: Root blueprint.yaml management
-- AuthorityShard: Individual shard file management
-- AuthorityDocument: Unified in-memory model
-- ShardDecisionEngine: Decide shard placement based on strategy
-- AuthorityRepository: Load, validate, and save documents
-- AuthorityPersistenceEngine: Handle physical persistence
-- AuthorityReshardPlanner: Plan and apply reshard operations
+This package provides loading, validation, persistence, layout planning, and the
+Blueprint Engine used to apply approved mechanical changes under ``bpfw/``.
 """
 
+from bpfw.authority.blueprint_engine import (
+    BlueprintChangeKind,
+    BlueprintChangePreview,
+    BlueprintChangeRequest,
+    BlueprintChangeResult,
+    BlueprintChangeSource,
+    BlueprintEngine,
+    MechanicalChangeEvidence,
+)
 from bpfw.authority.document import AuthorityDocument
 from bpfw.authority.errors import (
     AuthorityError,
@@ -22,15 +25,17 @@ from bpfw.authority.errors import (
     ShardDriftError,
 )
 from bpfw.authority.index import AuthorityIndex
+from bpfw.authority.layout import (
+    BlockPlacementChange,
+    BlueprintLayoutPlan,
+    BlueprintLayoutPlanner,
+)
 from bpfw.authority.persistence import AuthorityPersistenceEngine, AuthorityPersistenceResult
-from bpfw.authority.planner import AuthorityReshardPlanner, ReshardPlan
 from bpfw.authority.repository import AuthorityRepository
-from bpfw.authority.reshard.models import BlockMove
 from bpfw.authority.shard import AuthorityShard, BlockOrigin
 from bpfw.authority.sharding import ShardDecisionEngine
 
 __all__ = [
-    # Errors
     "AuthorityError",
     "InvalidAuthorityIndexError",
     "InvalidAuthorityShardError",
@@ -39,22 +44,22 @@ __all__ = [
     "InvalidShardPathError",
     "MissingShardError",
     "ShardDriftError",
-    # Index
     "AuthorityIndex",
-    # Shard
     "BlockOrigin",
     "AuthorityShard",
-    # Document
     "AuthorityDocument",
-    # Sharding
     "ShardDecisionEngine",
-    # Repository
     "AuthorityRepository",
-    # Persistence
-    "BlockMove",
     "AuthorityPersistenceResult",
     "AuthorityPersistenceEngine",
-    # Planner
-    "ReshardPlan",
-    "AuthorityReshardPlanner",
+    "BlockPlacementChange",
+    "BlueprintLayoutPlan",
+    "BlueprintLayoutPlanner",
+    "BlueprintEngine",
+    "BlueprintChangeKind",
+    "BlueprintChangePreview",
+    "BlueprintChangeRequest",
+    "BlueprintChangeResult",
+    "BlueprintChangeSource",
+    "MechanicalChangeEvidence",
 ]

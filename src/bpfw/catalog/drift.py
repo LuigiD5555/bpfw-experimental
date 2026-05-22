@@ -65,6 +65,40 @@ def _extract_discovered_keys(
     return discovered_keys, discovered_by_key
 
 
+
+def _extract_rule_keys(blueprint_data: Dict[str, Any], section_name: str) -> Set[_DeclarationKey]:
+    """Extract path, symbol, and kind keys from an authority rule section.
+
+    Args:
+        blueprint_data: Parsed blueprint data.
+        section_name: Authority section key, such as ``ignored_code`` or ``covered_code``.
+
+    Returns:
+        Set of declaration keys covered by the authority rules.
+    """
+    authority = blueprint_data.get("authority")
+    if not isinstance(authority, dict):
+        return set()
+    rules = authority.get(section_name)
+    if not isinstance(rules, list):
+        return set()
+
+    rule_keys: Set[_DeclarationKey] = set()
+    for rule in rules:
+        if not isinstance(rule, dict):
+            continue
+        path_value = rule.get("path")
+        symbol_value = rule.get("symbol")
+        kind_value = rule.get("kind") or rule.get("symbol_type")
+        if not path_value or not symbol_value:
+            continue
+        if kind_value:
+            rule_keys.add((str(path_value), str(symbol_value), str(kind_value)))
+            continue
+        for fallback_kind in ("class", "function", "method"):
+            rule_keys.add((str(path_value), str(symbol_value), fallback_kind))
+    return rule_keys
+
 def _find_missing_declared(
     declared_keys: Set[_DeclarationKey],
     discovered_keys: Set[_DeclarationKey],
@@ -163,6 +197,9 @@ def compare_declared_to_discovered(
     # Rule 5: perform drift comparison only for defined authority.
     declared_keys, _declared_by_key = _extract_declared_keys(blueprint_data)
     discovered_keys, discovered_by_key = _extract_discovered_keys(discovered_units)
+    ignored_keys = _extract_rule_keys(blueprint_data, "ignored_code")
+    covered_keys = _extract_rule_keys(blueprint_data, "covered_code")
+    declared_or_covered_keys = declared_keys | ignored_keys | covered_keys
 
     findings: List[Finding] = []
 
@@ -170,6 +207,6 @@ def compare_declared_to_discovered(
     findings.extend(_find_missing_declared(declared_keys, discovered_keys))
 
     # Rule 7: discovered code not found in declarations.
-    findings.extend(_find_undeclared(discovered_keys, declared_keys, discovered_by_key))
+    findings.extend(_find_undeclared(discovered_keys, declared_or_covered_keys, discovered_by_key))
 
     return findings
