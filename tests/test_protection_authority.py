@@ -3,11 +3,11 @@ from pathlib import Path
 
 import pytest
 
-import bpfw.protection.authority as authority
-import bpfw.protection.os_lock as os_lock
+import bpfw.core.protection.authority as authority
+import bpfw.core.protection.os_lock as os_lock
 from bpfw.core.catalog.access_control import ensure_blueprint_can_be_written
 from bpfw.core.errors import BlueprintLockedError
-from bpfw.protection.authority import (
+from bpfw.core.protection.authority import (
     get_authority_protection_status,
     lock_authority,
     resolve_protected_resources,
@@ -20,10 +20,10 @@ RUNS_AS_ROOT = hasattr(os, "geteuid") and os.geteuid() == 0
 def _create_guard_package_root(tmp_path: Path) -> Path:
     package_root = tmp_path / "package" / "bpfw"
     for relative_path in (
-        "protection/os_lock.py",
-        "protection/authority.py",
-        "protection/setup.py",
-        "catalog/access_control.py",
+        "core/protection/os_lock.py",
+        "core/protection/authority.py",
+        "core/protection/setup.py",
+        "core/catalog/access_control.py",
     ):
         guard_path = package_root / relative_path
         guard_path.parent.mkdir(parents=True, exist_ok=True)

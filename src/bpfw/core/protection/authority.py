@@ -6,7 +6,7 @@ from typing import List
 
 import bpfw
 from bpfw.core.catalog.paths import CANONICAL_BLUEPRINT_FILE
-from bpfw.protection.os_lock import (
+from bpfw.core.protection.os_lock import (
     DEGRADED,
     LOCKED,
     get_project_file_lock_state,
@@ -60,10 +60,10 @@ def resolve_guard_files() -> List[Path]:
     
     package_root = resolve_bpfw_package_root()
     return [
-        package_root / "protection" / "os_lock.py",
-        package_root / "protection" / "authority.py",
-        package_root / "protection" / "setup.py",
-        package_root / "catalog" / "access_control.py",
+        package_root / "core" / "protection" / "os_lock.py",
+        package_root / "core" / "protection" / "authority.py",
+        package_root / "core" / "protection" / "setup.py",
+        package_root / "core" / "catalog" / "access_control.py",
     ]
 
 
