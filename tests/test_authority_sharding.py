@@ -69,14 +69,14 @@ def project_root(tmp_path: Path) -> Path:
                 "status": "active",
                 "code": {
                     "path": "src/bpfw/protection/test.py",
-                    "module": "bpfw.protection.test",
+                    "module": "bpfw.core.protection.test",
                     "symbol": "TestFunction",
                     "kind": "function",
                     "start_line": 1,
                     "end_line": 10,
                 },
                 "detected": {
-                    "qualified_name": "bpfw.protection.test.TestFunction",
+                    "qualified_name": "bpfw.core.protection.test.TestFunction",
                     "kind": "function",
                 },
             },
@@ -445,7 +445,7 @@ def test_planner_save_places_block_in_domain_shard(project_root: Path):
             "symbol": "NewFunction",
             "kind": "function",
         },
-        "detected": {"qualified_name": "bpfw.protection.new.NewFunction", "kind": "function"},
+        "detected": {"qualified_name": "bpfw.core.protection.new.NewFunction", "kind": "function"},
     }
     
     blocks = document.get_blocks()

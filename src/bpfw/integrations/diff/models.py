@@ -15,6 +15,7 @@ class DiffItemKind(Enum):
     MISSING_DECLARED_CODE = "MISSING_DECLARED_CODE"
     MOVED_CODE_CANDIDATE = "MOVED_CODE_CANDIDATE"
     DUPLICATE_ACTIVE_PURPOSE = "DUPLICATE_ACTIVE_PURPOSE"
+    INCOMPLETE_METADATA = "INCOMPLETE_METADATA"
     METADATA_DRIFT = "METADATA_DRIFT"
     INVALID_AUTHORITY = "INVALID_AUTHORITY"
     IGNORED_CODE_CONFLICT = "IGNORED_CODE_CONFLICT"
@@ -28,6 +29,14 @@ class DiffRisk(Enum):
     LOW = "LOW"
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
+
+
+class DiffActionLevel(Enum):
+    """Classify how a diff item must be handled."""
+
+    READ_ONLY = "READ_ONLY"
+    SAFE_MECHANICAL_UPDATE = "SAFE_MECHANICAL_UPDATE"
+    HUMAN_DECISION = "HUMAN_DECISION"
 
 
 class SourceChangeKind(Enum):
@@ -123,6 +132,7 @@ class DiffItem:
 
     identifier: str
     kind: DiffItemKind
+    action_level: DiffActionLevel
     risk: DiffRisk
     reason: str
     finding: Finding | None = None

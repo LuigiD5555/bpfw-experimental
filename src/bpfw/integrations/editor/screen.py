@@ -374,6 +374,10 @@ def render_results_table(
 
     _render_results_table_rows(results, ratio=block_ratio)
     print()
+    for display_index, record in enumerate(results, start=1):
+        if record.location:
+            print(f" [{display_index}] location: {record.location}")
+    print()
     _render_filter_display(filter_display_lines)
     print()
     _render_results_commands(ratio=block_ratio)
@@ -430,6 +434,8 @@ def _render_results_table_rows(results: list, ratio: float = 0.70) -> None:
         domain = truncate(record.domain or "-", domain_width).center(domain_width)
         name = truncate(record.name or "-", name_width).ljust(name_width)
         purpose_value = record.purpose or "-"
+        if record.location:
+            purpose_value = f"{purpose_value} [{record.location}]"
         purpose = truncate(purpose_value, purpose_width).ljust(purpose_width)
         index_str = str(display_index).center(idx_width)
         print(f"\u2502{index_str}\u2502{status}\u2502{domain}\u2502{name}\u2502{purpose}\u2502")

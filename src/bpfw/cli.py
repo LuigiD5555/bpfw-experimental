@@ -28,7 +28,6 @@ MVP_COMMANDS = (
     "inspector",
     "editor",
     "planner",
-    "diff",
     "verify",
     "run",
     "watch",
@@ -48,7 +47,6 @@ Commands:
   inspector   Review code blocks and assign purpose, domain, lifecycle, and metadata.
   editor      Edit existing blueprint authority entries.
   planner     Plan authority entries before code exists.
-  diff        Review blueprint-vs-code differences and apply approved decisions.
   verify      Check blueprint.yaml against the real code.
   run         Run a command only after bpfw verify passes.
   watch       Watch project changes and print drift feedback.
@@ -70,7 +68,6 @@ Examples:
   bpfw init
   bpfw inspector
   bpfw inspector --all
-  bpfw diff
   bpfw verify
   bpfw verify undeclared
   bpfw verify --all
@@ -149,10 +146,6 @@ def resolve_cli_command(command: str, subcommand: str | None) -> str:
         if normalized_subcommand is not None:
             raise ValueError("planner does not accept subcommands")
         return "planner"
-    if normalized_command == "diff":
-        if normalized_subcommand is not None:
-            raise ValueError("diff does not accept subcommands")
-        return "diff"
     if normalized_command == "init":
         if normalized_subcommand is not None:
             raise ValueError("init does not accept subcommands")
@@ -251,10 +244,10 @@ def _print_human(payload: dict) -> None:
         print(f"  status: {details.get('status_state', 'unknown')}")
         return
 
-    if payload["command_name"] in {"inspector", "editor", "planner", "diff"} and not payload["message"]:
+    if payload["command_name"] in {"inspector", "editor", "planner"} and not payload["message"]:
         return
 
-    # lock, unlock, inspector, editor, planner, diff: print message directly
+    # lock, unlock, inspector, editor, planner: print message directly
     if payload["message"]:
         print(payload["message"])
         return

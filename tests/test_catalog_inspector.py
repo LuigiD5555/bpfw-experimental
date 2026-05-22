@@ -1111,7 +1111,7 @@ def test_suggest_domains_previous_origin_slot_ignores_other_modules() -> None:
         symbol="PreviousError",
     )
     previous["domain"] = "protection"
-    previous["code"]["module"] = "src.bpfw.protection.errors"
+    previous["code"]["module"] = "src.bpfw.core.protection.errors"
 
     current = _responsibility(
         responsibility_id="blueprint_locked_error",

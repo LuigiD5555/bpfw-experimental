@@ -198,7 +198,9 @@ class AuthorityPersistenceEngine:
 
             origin = document.get_origin(block_id)
             if origin is None:
-                origin = default_shard
+                origin = decision_engine.decide_shard_for_block(block, document)
+                if not isinstance(origin, Path):
+                    origin = default_shard
                 document.block_origins[block_id] = origin
                 if origin not in document.get_included_shard_paths():
                     document.index.add_include(origin)

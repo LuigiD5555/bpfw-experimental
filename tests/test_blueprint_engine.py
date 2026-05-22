@@ -174,3 +174,49 @@ def test_rejects_unsafe_mechanical_code_reference_update(tmp_path: Path) -> None
 
     assert not preview.allowed
     assert preview.blocked_reason == "Safe mechanical update requires exact one-to-one evidence."
+
+
+def test_blocks_unconfirmed_controlled_refactor_without_evidence(tmp_path: Path) -> None:
+    """Block controlled refactor requests without confirmation or exact evidence."""
+    _write_blueprint(tmp_path, includes=["bpfw/blocks/core.yaml"])
+    _write_shard(tmp_path, "bpfw/blocks/core.yaml", [_block()])
+
+    engine = BlueprintEngine(tmp_path)
+    request = BlueprintChangeRequest(
+        kind=BlueprintChangeKind.UPDATE_LOCATION,
+        source=BlueprintChangeSource.CONTROLLED_REFACTOR,
+        payload={
+            "block_id": "reports.ReportGenerator",
+            "source_shard_path": "bpfw/blocks/core.yaml",
+            "new_path": "src/app/reports/new_location.py",
+        },
+    )
+
+    preview = engine.preview_change(request)
+
+    assert not preview.allowed
+    assert preview.blocked_reason == "Safe mechanical update requires exact one-to-one evidence."
+
+
+def test_allows_human_confirmed_controlled_refactor(tmp_path: Path) -> None:
+    """Allow controlled refactor requests when explicitly confirmed by a human."""
+    _write_blueprint(tmp_path, includes=["bpfw/blocks/core.yaml"])
+    _write_shard(tmp_path, "bpfw/blocks/core.yaml", [_block()])
+
+    engine = BlueprintEngine(tmp_path)
+    request = BlueprintChangeRequest(
+        kind=BlueprintChangeKind.UPDATE_LOCATION,
+        source=BlueprintChangeSource.CONTROLLED_REFACTOR,
+        human_confirmed=True,
+        payload={
+            "block_id": "reports.ReportGenerator",
+            "source_shard_path": "bpfw/blocks/core.yaml",
+            "new_path": "src/app/reports/new_location.py",
+        },
+    )
+
+    result = engine.apply_change(request, _context())
+    shard = _read_yaml(tmp_path / "bpfw" / "blocks" / "core.yaml")
+
+    assert result.success
+    assert shard["blocks"][0]["code"]["path"] == "src/app/reports/new_location.py"

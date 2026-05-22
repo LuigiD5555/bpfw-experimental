@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from bpfw.core.errors import BlueprintLockedError
-from bpfw.protection import runtime_lease
+from bpfw.core.protection import runtime_lease
 
 
 def test_inspector_auto_approves_temporary_unlock_when_locked(tmp_path: Path, monkeypatch) -> None:

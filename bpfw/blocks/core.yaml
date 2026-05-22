@@ -5,14 +5,14 @@ blocks:
   domain: null
   status: null
   code:
-    path: src/bpfw/authority/blueprint_engine/engine.py
-    module: src.bpfw.authority.blueprint_engine.engine
+    path: src/bpfw/core/blueprint_engine/engine.py
+    module: src.bpfw.core.blueprint_engine.engine
     symbol: BlueprintEngine.preview_changes
     kind: method
     start_line: 46
     end_line: 69
   detected:
-    qualified_name: src.bpfw.authority.blueprint_engine.engine.BlueprintEngine.preview_changes
+    qualified_name: src.bpfw.core.blueprint_engine.engine.BlueprintEngine.preview_changes
     kind: method
     methods: []
     functions: []
@@ -44,14 +44,14 @@ blocks:
   domain: null
   status: null
   code:
-    path: src/bpfw/authority/blueprint_engine/engine.py
-    module: src.bpfw.authority.blueprint_engine.engine
+    path: src/bpfw/core/blueprint_engine/engine.py
+    module: src.bpfw.core.blueprint_engine.engine
     symbol: BlueprintEngine.preview_change
     kind: method
     start_line: 35
     end_line: 44
   detected:
-    qualified_name: src.bpfw.authority.blueprint_engine.engine.BlueprintEngine.preview_change
+    qualified_name: src.bpfw.core.blueprint_engine.engine.BlueprintEngine.preview_change
     kind: method
     methods: []
     functions: []
@@ -83,14 +83,14 @@ blocks:
   domain: null
   status: null
   code:
-    path: src/bpfw/authority/blueprint_engine/engine.py
-    module: src.bpfw.authority.blueprint_engine.engine
+    path: src/bpfw/core/blueprint_engine/engine.py
+    module: src.bpfw.core.blueprint_engine.engine
     symbol: BlueprintEngine.apply_changes
     kind: method
     start_line: 87
     end_line: 112
   detected:
-    qualified_name: src.bpfw.authority.blueprint_engine.engine.BlueprintEngine.apply_changes
+    qualified_name: src.bpfw.core.blueprint_engine.engine.BlueprintEngine.apply_changes
     kind: method
     methods: []
     functions: []
@@ -127,14 +127,14 @@ blocks:
   domain: null
   status: null
   code:
-    path: src/bpfw/authority/blueprint_engine/engine.py
-    module: src.bpfw.authority.blueprint_engine.engine
+    path: src/bpfw/core/blueprint_engine/engine.py
+    module: src.bpfw.core.blueprint_engine.engine
     symbol: BlueprintEngine.apply_change
     kind: method
     start_line: 71
     end_line: 85
   detected:
-    qualified_name: src.bpfw.authority.blueprint_engine.engine.BlueprintEngine.apply_change
+    qualified_name: src.bpfw.core.blueprint_engine.engine.BlueprintEngine.apply_change
     kind: method
     methods: []
     functions: []
@@ -171,20 +171,20 @@ blocks:
   domain: null
   status: null
   code:
-    path: src/bpfw/authority/blueprint_engine/engine.py
-    module: src.bpfw.authority.blueprint_engine.engine
+    path: src/bpfw/core/blueprint_engine/engine.py
+    module: src.bpfw.core.blueprint_engine.engine
     symbol: BlueprintEngine
     kind: class
     start_line: 15
     end_line: 127
   detected:
-    qualified_name: src.bpfw.authority.blueprint_engine.engine.BlueprintEngine
+    qualified_name: src.bpfw.core.blueprint_engine.engine.BlueprintEngine
     kind: class
     methods:
-    - src.bpfw.authority.blueprint_engine.engine.BlueprintEngine.preview_change
-    - src.bpfw.authority.blueprint_engine.engine.BlueprintEngine.preview_changes
-    - src.bpfw.authority.blueprint_engine.engine.BlueprintEngine.apply_change
-    - src.bpfw.authority.blueprint_engine.engine.BlueprintEngine.apply_changes
+    - src.bpfw.core.blueprint_engine.engine.BlueprintEngine.preview_change
+    - src.bpfw.core.blueprint_engine.engine.BlueprintEngine.preview_changes
+    - src.bpfw.core.blueprint_engine.engine.BlueprintEngine.apply_change
+    - src.bpfw.core.blueprint_engine.engine.BlueprintEngine.apply_changes
     functions: []
   entrypoints: []
   connections: []
@@ -214,14 +214,14 @@ blocks:
   domain: null
   status: null
   code:
-    path: src/bpfw/authority/blueprint_engine/models.py
-    module: src.bpfw.authority.blueprint_engine.models
+    path: src/bpfw/core/blueprint_engine/models.py
+    module: src.bpfw.core.blueprint_engine.models
     symbol: MechanicalChangeEvidence.is_safe_mechanical_match
     kind: method
     start_line: 67
     end_line: 80
   detected:
-    qualified_name: src.bpfw.authority.blueprint_engine.models.MechanicalChangeEvidence.is_safe_mechanical_match
+    qualified_name: src.bpfw.core.blueprint_engine.models.MechanicalChangeEvidence.is_safe_mechanical_match
     kind: method
     methods: []
     functions: []
@@ -247,17 +247,17 @@ blocks:
   domain: null
   status: null
   code:
-    path: src/bpfw/authority/blueprint_engine/models.py
-    module: src.bpfw.authority.blueprint_engine.models
+    path: src/bpfw/core/blueprint_engine/models.py
+    module: src.bpfw.core.blueprint_engine.models
     symbol: MechanicalChangeEvidence
     kind: class
     start_line: 46
     end_line: 80
   detected:
-    qualified_name: src.bpfw.authority.blueprint_engine.models.MechanicalChangeEvidence
+    qualified_name: src.bpfw.core.blueprint_engine.models.MechanicalChangeEvidence
     kind: class
     methods:
-    - src.bpfw.authority.blueprint_engine.models.MechanicalChangeEvidence.is_safe_mechanical_match
+    - src.bpfw.core.blueprint_engine.models.MechanicalChangeEvidence.is_safe_mechanical_match
     functions: []
   entrypoints: []
   connections: []
@@ -277,14 +277,14 @@ blocks:
   domain: null
   status: null
   code:
-    path: src/bpfw/authority/blueprint_engine/planner.py
-    module: src.bpfw.authority.blueprint_engine.planner
+    path: src/bpfw/core/blueprint_engine/planner.py
+    module: src.bpfw.core.blueprint_engine.planner
     symbol: BlueprintPlanBuilder.build_plan
     kind: method
     start_line: 29
     end_line: 44
   detected:
-    qualified_name: src.bpfw.authority.blueprint_engine.planner.BlueprintPlanBuilder.build_plan
+    qualified_name: src.bpfw.core.blueprint_engine.planner.BlueprintPlanBuilder.build_plan
     kind: method
     methods: []
     functions: []
@@ -316,17 +316,17 @@ blocks:
   domain: null
   status: null
   code:
-    path: src/bpfw/authority/blueprint_engine/planner.py
-    module: src.bpfw.authority.blueprint_engine.planner
+    path: src/bpfw/core/blueprint_engine/planner.py
+    module: src.bpfw.core.blueprint_engine.planner
     symbol: BlueprintPlanBuilder
     kind: class
     start_line: 26
     end_line: 217
   detected:
-    qualified_name: src.bpfw.authority.blueprint_engine.planner.BlueprintPlanBuilder
+    qualified_name: src.bpfw.core.blueprint_engine.planner.BlueprintPlanBuilder
     kind: class
     methods:
-    - src.bpfw.authority.blueprint_engine.planner.BlueprintPlanBuilder.build_plan
+    - src.bpfw.core.blueprint_engine.planner.BlueprintPlanBuilder.build_plan
     functions: []
   entrypoints: []
   connections: []
@@ -346,14 +346,14 @@ blocks:
   domain: null
   status: null
   code:
-    path: src/bpfw/authority/blueprint_engine/safety.py
-    module: src.bpfw.authority.blueprint_engine.safety
+    path: src/bpfw/core/blueprint_engine/safety.py
+    module: src.bpfw.core.blueprint_engine.safety
     symbol: BlueprintEngineSafetyPolicy.validate_request
     kind: method
     start_line: 25
     end_line: 49
   detected:
-    qualified_name: src.bpfw.authority.blueprint_engine.safety.BlueprintEngineSafetyPolicy.validate_request
+    qualified_name: src.bpfw.core.blueprint_engine.safety.BlueprintEngineSafetyPolicy.validate_request
     kind: method
     methods: []
     functions: []
@@ -385,17 +385,17 @@ blocks:
   domain: null
   status: null
   code:
-    path: src/bpfw/authority/blueprint_engine/safety.py
-    module: src.bpfw.authority.blueprint_engine.safety
+    path: src/bpfw/core/blueprint_engine/safety.py
+    module: src.bpfw.core.blueprint_engine.safety
     symbol: BlueprintEngineSafetyPolicy
     kind: class
     start_line: 14
     end_line: 49
   detected:
-    qualified_name: src.bpfw.authority.blueprint_engine.safety.BlueprintEngineSafetyPolicy
+    qualified_name: src.bpfw.core.blueprint_engine.safety.BlueprintEngineSafetyPolicy
     kind: class
     methods:
-    - src.bpfw.authority.blueprint_engine.safety.BlueprintEngineSafetyPolicy.validate_request
+    - src.bpfw.core.blueprint_engine.safety.BlueprintEngineSafetyPolicy.validate_request
     functions: []
   entrypoints: []
   connections: []

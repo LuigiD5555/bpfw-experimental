@@ -16,7 +16,6 @@ from bpfw.core.protection.os_lock import (
 
 BLUEPRINT_RESOURCE_TYPE = "blueprint"
 AUTHORITY_DIRECTORY_RESOURCE_TYPE = "authority_directory"
-SHARD_DIRECTORY_RESOURCE_TYPE = "shard_directory"
 SHARD_RESOURCE_TYPE = "shard"
 GUARD_RESOURCE_TYPE = "guard"
 MISSING_BLUEPRINT_STATUS = "missing_blueprint"
@@ -80,20 +79,6 @@ def resolve_protected_resources(project_root: Path) -> List[ProtectedResource]:
         )
     ]
     resources.extend(_resolve_shard_resources(project_root=project_root, blueprint_path=blueprint_path))
-    resources.append(
-        ProtectedResource(
-            path=bpfw_directory / "blocks",
-            resource_type=SHARD_DIRECTORY_RESOURCE_TYPE,
-            exists=(bpfw_directory / "blocks").exists(),
-        )
-    )
-    resources.append(
-        ProtectedResource(
-            path=bpfw_directory,
-            resource_type=AUTHORITY_DIRECTORY_RESOURCE_TYPE,
-            exists=bpfw_directory.exists(),
-        )
-    )
 
     for guard_file_path in resolve_guard_files():
         resources.append(
@@ -193,18 +178,10 @@ def lock_authority(project_root: Path) -> ProtectionResult:
 
     guard_resources = [resource for resource in resources if resource.resource_type == GUARD_RESOURCE_TYPE]
     shard_resources = [resource for resource in resources if resource.resource_type == SHARD_RESOURCE_TYPE]
-    shard_directory_resources = [
-        resource for resource in resources if resource.resource_type == SHARD_DIRECTORY_RESOURCE_TYPE
-    ]
-    authority_directory_resources = [
-        resource for resource in resources if resource.resource_type == AUTHORITY_DIRECTORY_RESOURCE_TYPE
-    ]
     resources_in_lock_order = [
         *guard_resources,
         blueprint_resource,
         *shard_resources,
-        *shard_directory_resources,
-        *authority_directory_resources,
     ]
 
     for resource in resources_in_lock_order:
@@ -259,15 +236,7 @@ def unlock_authority(project_root: Path) -> ProtectionResult:
 
     guard_resources = [resource for resource in resources if resource.resource_type == GUARD_RESOURCE_TYPE]
     shard_resources = [resource for resource in resources if resource.resource_type == SHARD_RESOURCE_TYPE]
-    shard_directory_resources = [
-        resource for resource in resources if resource.resource_type == SHARD_DIRECTORY_RESOURCE_TYPE
-    ]
-    authority_directory_resources = [
-        resource for resource in resources if resource.resource_type == AUTHORITY_DIRECTORY_RESOURCE_TYPE
-    ]
     resources_in_unlock_order = [
-        *authority_directory_resources,
-        *shard_directory_resources,
         blueprint_resource,
         *shard_resources,
         *reversed(guard_resources),

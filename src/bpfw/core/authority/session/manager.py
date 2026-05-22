@@ -19,7 +19,7 @@ from bpfw.core.catalog.security import validate_no_blueprint_secrets
 from bpfw.core.catalog.validation import validate_blueprint_structure
 from bpfw.core.catalog.verify import scan_project_from_blueprint
 from bpfw.core.errors import BlueprintLockedError
-from bpfw.protection.authority import (
+from bpfw.core.protection.authority import (
     get_authority_protection_status,
     lock_authority,
     unlock_authority,

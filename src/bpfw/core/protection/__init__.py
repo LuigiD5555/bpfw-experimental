@@ -1,6 +1,6 @@
 """Blueprint protection support for BPFW MVP Catalog Mode."""
 
-from bpfw.protection.authority import (
+from bpfw.core.protection.authority import (
     ProtectedResource,
     ProtectionResult,
     get_authority_protection_status,
@@ -11,8 +11,8 @@ from bpfw.protection.authority import (
     resolve_protected_resources,
     unlock_authority,
 )
-from bpfw.protection.capabilities import LockSupportResult, check_lock_support
-from bpfw.protection.setup import run_protection_setup
+from bpfw.core.protection.capabilities import LockSupportResult, check_lock_support
+from bpfw.core.protection.setup import run_protection_setup
 
 __all__ = [
     "LockSupportResult",

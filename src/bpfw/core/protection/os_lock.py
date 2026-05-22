@@ -21,7 +21,10 @@ def _lock_path(project_root: Path, relative_path: str) -> Path:
     if relative_path == "bpfw/blueprint.yaml":
         return project_root / "bpfw" / ".lock"
 
-    safe_name = relative_path.replace("/", "__").replace("\\", "__")
+    marker_resource_path = relative_path.replace("\\", "/")
+    if marker_resource_path.startswith("package/bpfw/core/"):
+        marker_resource_path = "package/bpfw/" + marker_resource_path[len("package/bpfw/core/"):]
+    safe_name = marker_resource_path.replace("/", "__").replace("\\", "__")
     return project_root / "bpfw" / ".locks" / f"{safe_name}.lock"
 
 
@@ -559,9 +562,9 @@ def _resolve_project_lock_arguments(project_root: Path, path: Path) -> tuple[Pat
     resolved_path = path.resolve()
     try:
         relative_path = resolved_path.relative_to(resolved_root)
+        return resolved_root, relative_path.as_posix()
     except ValueError:
         return resolved_root, resolved_path.as_posix()
-    return resolved_root, relative_path.as_posix()
 
 
 def lock_file(path: Path) -> str:

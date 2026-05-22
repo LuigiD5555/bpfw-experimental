@@ -34,11 +34,12 @@ class BlueprintEngineSafetyPolicy:
         if request.human_confirmed:
             return None
 
-        if request.source == BlueprintChangeSource.CONTROLLED_REFACTOR:
-            return None
-
         if (
-            request.source == BlueprintChangeSource.SAFE_MECHANICAL_UPDATE
+            request.source
+            in {
+                BlueprintChangeSource.SAFE_MECHANICAL_UPDATE,
+                BlueprintChangeSource.CONTROLLED_REFACTOR,
+            }
             and request.kind in self._SAFE_MECHANICAL_KINDS
         ):
             evidence = request.mechanical_evidence

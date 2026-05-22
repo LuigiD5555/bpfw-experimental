@@ -36,7 +36,7 @@ from bpfw.core.catalog.access_control import (
     authorize_blueprint_writes_for_tool,
     authorize_temporary_blueprint_unlock_for_tool,
 )
-from bpfw.protection.authority import lock_authority, unlock_authority
+from bpfw.core.protection.authority import lock_authority, unlock_authority
 
 
 class AuthorityPatchEngine:

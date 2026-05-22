@@ -13,7 +13,7 @@ try:
 except ImportError:  # pragma: no cover - not available on Windows
     pwd = None
 
-from bpfw.protection.os_lock import DEGRADED, LOCKED, UNSUPPORTED
+from bpfw.core.protection.os_lock import DEGRADED, LOCKED, UNSUPPORTED
 
 IMMUTABLE_BACKEND = "immutable"
 OWNERSHIP_BACKEND = "ownership"

@@ -9,6 +9,7 @@ from bpfw.core.catalog.loader import BlueprintLoader
 from bpfw.core.catalog.models import BlueprintLoadResult, DiscoveredCodeUnit, ScanResult, VerificationReport
 from bpfw.core.catalog.verify import run_verify, scan_project_from_blueprint
 from bpfw.integrations.diff.models import (
+    DiffActionLevel,
     BlueprintTarget,
     CodeTarget,
     DiffItem,
@@ -136,6 +137,7 @@ class DiffReviewService:
                 DiffItem(
                     identifier="invalid-authority-0",
                     kind=DiffItemKind.INVALID_AUTHORITY,
+                    action_level=DiffActionLevel.HUMAN_DECISION,
                     risk=DiffRisk.HIGH,
                     reason="No BPFW blueprint file was found.",
                     finding=load_result.findings[0] if load_result.findings else None,
@@ -195,6 +197,7 @@ class DiffReviewService:
             return DiffItem(
                 identifier=identifier,
                 kind=item_kind,
+                action_level=DiffActionLevel.HUMAN_DECISION,
                 risk=DiffRisk.LOW,
                 reason="Code exists but no authority block declares it.",
                 finding=finding,
@@ -217,6 +220,7 @@ class DiffReviewService:
             return DiffItem(
                 identifier=identifier,
                 kind=display_kind,
+                action_level=DiffActionLevel.HUMAN_DECISION,
                 risk=DiffRisk.HIGH if candidates else DiffRisk.MEDIUM,
                 reason=(
                     "Blueprint code was not found, but a possible moved-code candidate exists."
@@ -239,6 +243,7 @@ class DiffReviewService:
             return DiffItem(
                 identifier=identifier,
                 kind=item_kind,
+                action_level=DiffActionLevel.HUMAN_DECISION,
                 risk=DiffRisk.HIGH,
                 reason="Two or more active blocks claim the same purpose.",
                 finding=finding,
@@ -248,6 +253,7 @@ class DiffReviewService:
         return DiffItem(
             identifier=identifier,
             kind=item_kind,
+            action_level=_action_level_for_kind(item_kind),
             risk=DiffRisk.HIGH,
             reason=finding.message,
             finding=finding,
@@ -398,14 +404,21 @@ def _map_finding_code(code: str) -> DiffItemKind | None:
         "UNDECLARED_CODE": DiffItemKind.UNDECLARED_CODE,
         "MISSING_DECLARED_CODE": DiffItemKind.MISSING_DECLARED_CODE,
         "DUPLICATE_ACTIVE_PURPOSE": DiffItemKind.DUPLICATE_ACTIVE_PURPOSE,
-        "INCOMPLETE_BLOCK": DiffItemKind.INVALID_AUTHORITY,
-        "INVALID_STATUS": DiffItemKind.INVALID_AUTHORITY,
+        "INCOMPLETE_BLOCK": DiffItemKind.INCOMPLETE_METADATA,
+        "INVALID_STATUS": DiffItemKind.INCOMPLETE_METADATA,
         "DUPLICATE_BLOCK_ID": DiffItemKind.INVALID_AUTHORITY,
         "DUPLICATE_CODE_DECLARATION": DiffItemKind.INVALID_AUTHORITY,
         "INVALID_SHARD": DiffItemKind.INVALID_AUTHORITY,
         "INCLUDE_FILE_MISSING": DiffItemKind.BROKEN_SHARD_REFERENCE,
     }
     return mapping.get(code)
+
+
+def _action_level_for_kind(item_kind: DiffItemKind) -> DiffActionLevel:
+    """Return the handling level for one diff item kind."""
+    if item_kind == DiffItemKind.METADATA_DRIFT:
+        return DiffActionLevel.READ_ONLY
+    return DiffActionLevel.HUMAN_DECISION
 
 
 def _read_blocks(blueprint_data: dict[str, Any]) -> list[dict[str, Any]]:

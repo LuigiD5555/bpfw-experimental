@@ -1,7 +1,7 @@
 version: 1
 project:
-  id: bpfw_(26_5)
-  name: bpfw (26-5)
+  id: bpfw
+  name: bpfw
   root: .
   language: python
   source_roots:

@@ -2,9 +2,9 @@
 
 from pathlib import Path
 
-from bpfw.protection.capabilities import LockSupportResult
-from bpfw.protection import capabilities
-from bpfw.protection import setup
+from bpfw.core.protection.capabilities import LockSupportResult
+from bpfw.core.protection import capabilities
+from bpfw.core.protection import setup
 
 
 def test_run_protection_setup_stops_before_locking_when_support_is_missing(

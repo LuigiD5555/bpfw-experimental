@@ -16,6 +16,7 @@ from bpfw.integrations.diff.metadata_window import MetadataDraft, run_metadata_w
 from bpfw.integrations.diff.models import (
     BlueprintTarget,
     CodeTarget,
+    DiffActionLevel,
     DiffItem,
     DiffItemKind,
     DiffRisk,
@@ -201,7 +202,7 @@ class DiffSession:
         group_name = groups[selected_index]
         assert self.snapshot is not None
         for item in self.snapshot.items:
-            if item.kind.value != group_name:
+            if item.action_level.value != group_name:
                 continue
             if item.identifier in self.plan.planned_item_ids():
                 continue
@@ -982,6 +983,7 @@ class DiffSession:
         synthetic = DiffItem(
             identifier=item.identifier,
             kind=DiffItemKind.UNDECLARED_CODE,
+            action_level=DiffActionLevel.HUMAN_DECISION,
             risk=item.risk,
             reason=item.reason,
             finding=item.finding,
@@ -1017,6 +1019,7 @@ class DiffSession:
         synthetic = DiffItem(
             identifier=item.identifier,
             kind=DiffItemKind.UNDECLARED_CODE,
+            action_level=DiffActionLevel.HUMAN_DECISION,
             risk=item.risk,
             reason=item.reason,
             finding=item.finding,
@@ -1101,6 +1104,7 @@ class DiffSession:
         synthetic = DiffItem(
             identifier=item.identifier,
             kind=item.kind,
+            action_level=item.action_level,
             risk=item.risk,
             reason=item.reason,
             finding=item.finding,
@@ -1121,6 +1125,7 @@ class DiffSession:
         synthetic = DiffItem(
             identifier=item.identifier,
             kind=item.kind,
+            action_level=item.action_level,
             risk=item.risk,
             reason=item.reason,
             finding=item.finding,
@@ -1566,12 +1571,12 @@ class DiffSession:
         """Return item counts by group.
 
         Returns:
-            Mapping of item kind value to count.
+            Mapping of action level to count.
         """
         assert self.snapshot is not None
         counts: dict[str, int] = {}
         for item in self.snapshot.items:
-            counts[item.kind.value] = counts.get(item.kind.value, 0) + 1
+            counts[item.action_level.value] = counts.get(item.action_level.value, 0) + 1
         return counts
 
     def _ordered_group_values(self) -> list[str]:
@@ -1583,15 +1588,9 @@ class DiffSession:
         assert self.snapshot is not None
         counts = self._group_counts()
         order = [
-            DiffItemKind.INVALID_AUTHORITY.value,
-            DiffItemKind.MISSING_DECLARED_CODE.value,
-            DiffItemKind.MOVED_CODE_CANDIDATE.value,
-            DiffItemKind.UNDECLARED_CODE.value,
-            DiffItemKind.DUPLICATE_ACTIVE_PURPOSE.value,
-            DiffItemKind.METADATA_DRIFT.value,
-            DiffItemKind.IGNORED_CODE_CONFLICT.value,
-            DiffItemKind.ORPHAN_SHARD.value,
-            DiffItemKind.BROKEN_SHARD_REFERENCE.value,
+            DiffActionLevel.SAFE_MECHANICAL_UPDATE.value,
+            DiffActionLevel.HUMAN_DECISION.value,
+            DiffActionLevel.READ_ONLY.value,
         ]
         return [name for name in order if counts.get(name, 0) > 0]
 

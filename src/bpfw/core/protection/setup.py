@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from bpfw.core.catalog.paths import CANONICAL_BLUEPRINT_FILE
-from bpfw.protection.authority import lock_authority
-from bpfw.protection.capabilities import LockSupportResult, check_lock_support
+from bpfw.core.protection.authority import lock_authority
+from bpfw.core.protection.capabilities import LockSupportResult, check_lock_support
 
 UNPROTECTED_STATUS = "unprotected"
 
