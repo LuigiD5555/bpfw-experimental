@@ -7,8 +7,7 @@ from bpfw.authority.document import AuthorityDocument
 from bpfw.authority.index import AuthorityIndex
 from bpfw.authority.persistence import AuthorityPersistenceEngine, AuthorityPersistenceResult
 from bpfw.authority.shard import AuthorityShard
-from bpfw.authority.sharding import ShardDecisionEngine
-from bpfw.reports.finding import Finding, FINDING_SEVERITY_BLOCK, FINDING_SEVERITY_WARNING
+from bpfw.reports.finding import Finding, FINDING_SEVERITY_BLOCK
 
 
 class AuthorityRepository:
@@ -18,7 +17,7 @@ class AuthorityRepository:
     - Loads the authority index and all shard files
     - Composes a unified blueprint_data dictionary
     - Tracks block origins
-    - Validates for duplicate IDs, code declarations, and shard drift
+    - Validates for duplicate IDs and code declarations
     - Saves documents through the persistence engine
     """
 
@@ -151,59 +150,11 @@ class AuthorityRepository:
         """
         findings: list[Finding] = []
 
-        # Check for shard drift
-        findings.extend(self._validate_shard_drift(document))
-
         # Check for duplicate block IDs
         findings.extend(self._validate_duplicate_block_ids(document))
 
         # Check for duplicate code declarations
         findings.extend(self._validate_duplicate_code_declarations(document))
-
-        return findings
-
-    def _validate_shard_drift(self, document: AuthorityDocument) -> list[Finding]:
-        """Validate that blocks are in the correct shards.
-        
-        Args:
-            document: The authority document to validate.
-        
-        Returns:
-            List of findings for shard drift.
-        """
-        findings: list[Finding] = []
-
-        authority_config = document.get_authority_config()
-        decision_engine = ShardDecisionEngine(authority_config)
-
-        for block in document.get_blocks():
-            block_id = block.get("id")
-            if not block_id:
-                continue
-
-            # Get current shard
-            current_shard = document.get_origin(block_id)
-            if current_shard is None:
-                continue
-
-            # Determine expected shard
-            expected_shard = decision_engine.decide_shard_for_block(block, document)
-
-            # Check for drift
-            if current_shard != expected_shard:
-                findings.append(Finding(
-                    source="authority",
-                    code="SHARD_DRIFT",
-                    severity=FINDING_SEVERITY_WARNING,
-                    message=f"Block '{block_id}' is in wrong shard",
-                    path=str(current_shard),
-                    symbol=block_id,
-                    evidence={
-                        "current_shard": str(current_shard),
-                        "expected_shard": str(expected_shard),
-                        "strategy": decision_engine.shard_strategy,
-                    },
-                ))
 
         return findings
 

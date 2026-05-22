@@ -1,7 +1,7 @@
 """Authority package for BPFW blueprint files.
 
-This package provides loading, validation, persistence, layout planning, and the
-Blueprint Engine used to apply approved mechanical changes under ``bpfw/``.
+This package provides loading, validation, persistence, and Blueprint Engine
+operations used to apply approved mechanical changes under ``bpfw/``.
 """
 
 from bpfw.authority.blueprint_engine import (
@@ -25,11 +25,6 @@ from bpfw.authority.errors import (
     ShardDriftError,
 )
 from bpfw.authority.index import AuthorityIndex
-from bpfw.authority.layout import (
-    BlockPlacementChange,
-    BlueprintLayoutPlan,
-    BlueprintLayoutPlanner,
-)
 from bpfw.authority.persistence import AuthorityPersistenceEngine, AuthorityPersistenceResult
 from bpfw.authority.repository import AuthorityRepository
 from bpfw.authority.shard import AuthorityShard, BlockOrigin
@@ -52,9 +47,6 @@ __all__ = [
     "AuthorityRepository",
     "AuthorityPersistenceResult",
     "AuthorityPersistenceEngine",
-    "BlockPlacementChange",
-    "BlueprintLayoutPlan",
-    "BlueprintLayoutPlanner",
     "BlueprintEngine",
     "BlueprintChangeKind",
     "BlueprintChangePreview",

@@ -36,7 +36,6 @@ authority:
   default_shard: bpfw/blocks/core.yaml
   allow_empty_shards: false
   auto_create_shards: true
-  auto_move_blocks_on_save: false
   remove_empty_shards: false
 includes:
 - bpfw/blocks/core.yaml

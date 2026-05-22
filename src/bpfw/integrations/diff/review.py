@@ -229,23 +229,6 @@ class DiffReviewService:
                 candidates=tuple(candidates),
             )
 
-        if item_kind == DiffItemKind.SHARD_DRIFT:
-            block_id = finding.symbol or ""
-            block = block_by_id.get(block_id)
-            current_shard = Path(str(finding.evidence.get("current_shard", finding.path or "")))
-            expected_shard = Path(str(finding.evidence.get("expected_shard", "")))
-            blueprint_target = self._blueprint_target_for_block(block, authority_document) if block else None
-            return DiffItem(
-                identifier=identifier,
-                kind=item_kind,
-                risk=DiffRisk.LOW,
-                reason="Block is stored in a shard that does not match the current shard strategy.",
-                finding=finding,
-                blueprint_target=blueprint_target,
-                current_shard_path=current_shard,
-                expected_shard_path=expected_shard,
-            )
-
         if item_kind == DiffItemKind.DUPLICATE_ACTIVE_PURPOSE:
             active_ids = finding.evidence.get("active_block_ids", [])
             related_blocks = tuple(
@@ -414,7 +397,6 @@ def _map_finding_code(code: str) -> DiffItemKind | None:
     mapping = {
         "UNDECLARED_CODE": DiffItemKind.UNDECLARED_CODE,
         "MISSING_DECLARED_CODE": DiffItemKind.MISSING_DECLARED_CODE,
-        "SHARD_DRIFT": DiffItemKind.SHARD_DRIFT,
         "DUPLICATE_ACTIVE_PURPOSE": DiffItemKind.DUPLICATE_ACTIVE_PURPOSE,
         "INCOMPLETE_BLOCK": DiffItemKind.INVALID_AUTHORITY,
         "INVALID_STATUS": DiffItemKind.INVALID_AUTHORITY,

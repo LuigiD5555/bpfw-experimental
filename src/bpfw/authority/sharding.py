@@ -34,7 +34,6 @@ class ShardDecisionEngine:
         self.shard_strategy = self.authority_config.get("shard_strategy", "domain")
         self.default_shard = self.authority_config.get("default_shard", "bpfw/blocks/core.yaml")
         self.auto_create_shards = self.authority_config.get("auto_create_shards", True)
-        self.auto_move_blocks = self.authority_config.get("auto_move_blocks_on_save", False)
 
     def decide_shard_for_block(
         self,

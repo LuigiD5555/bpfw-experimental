@@ -6,7 +6,6 @@ from pathlib import Path
 from bpfw.catalog.access_control import authorize_blueprint_writes_for_tool
 from bpfw.authority import (
     AuthorityRepository,
-    BlueprintLayoutPlanner,
     InvalidAuthorityIndexError,
     InvalidAuthorityShardError,
     DuplicateBlockIdError,
@@ -17,7 +16,6 @@ from bpfw.authority.index import AuthorityIndex
 from bpfw.authority.shard import AuthorityShard
 from bpfw.authority.document import AuthorityDocument
 from bpfw.authority.sharding import ShardDecisionEngine
-from bpfw.authority.planner import BlueprintLayoutPlan
 
 
 @pytest.fixture
@@ -52,7 +50,6 @@ def project_root(tmp_path: Path) -> Path:
             "default_shard": "bpfw/blocks/core.yaml",
             "allow_empty_shards": False,
             "auto_create_shards": True,
-            "auto_move_blocks": True,
         },
         "includes": ["bpfw/blocks/core.yaml"],
     }
@@ -410,47 +407,6 @@ def test_duplicate_code_declaration_across_shards_blocks(tmp_path: Path):
         repository.load()
 
 
-def test_verify_detects_shard_drift(project_root: Path):
-    """Test that verify detects shard drift."""
-    repository = AuthorityRepository(project_root=project_root)
-    document = repository.load()
-    
-    # Move block to wrong shard manually (without blueprint layout)
-    blocks = document.get_blocks()
-    blocks[0]["domain"] = "catalog"  # Should go to catalog.yaml
-    document.replace_blocks(blocks)
-    
-    # Check for drift before applying any save-time blueprint layouting
-    planner = BlueprintLayoutPlanner(project_root=project_root)
-    plan = planner.build_plan(document)
-    
-    # Should have moves due to drift
-    assert plan.move_count() > 0
-
-
-def test_verify_reports_layout_change_until_blueprint_engine_applies(project_root: Path):
-    """Test that verify passes after blueprint layout --apply."""
-    repository = AuthorityRepository(project_root=project_root)
-    document = repository.load()
-    
-    # Change domain to trigger move
-    blocks = document.get_blocks()
-    blocks[0]["domain"] = "catalog"
-    document.replace_blocks(blocks)
-    
-    # Persist and let authority save perform synchronization.
-    planner = BlueprintLayoutPlanner(project_root=project_root)
-    with authorize_blueprint_writes_for_tool("test"):
-        repository.save(document)
-    
-    # Reload and verify no drift
-    document = repository.load()
-    plan = planner.build_plan(document)
-    
-    # Should have no moves after blueprint layout
-    assert plan.move_count() == 0
-
-
 def test_inspector_save_moves_block_after_domain_change(project_root: Path):
     """Test that inspector save moves block after domain change."""
     repository = AuthorityRepository(project_root=project_root)
@@ -505,51 +461,6 @@ def test_planner_save_places_block_in_domain_shard(project_root: Path):
     # After blueprint layout, should be in protection.yaml
 
 
-def test_blueprint_layout_plan_without_writing(project_root: Path):
-    """Test that bpfw blueprint layout prints plan without writing."""
-    repository = AuthorityRepository(project_root=project_root)
-    document = repository.load()
-    
-    # Create a situation that needs blueprint layouting
-    blocks = document.get_blocks()
-    blocks[0]["domain"] = "catalog"
-    document.replace_blocks(blocks)
-    
-    planner = BlueprintLayoutPlanner(project_root=project_root)
-    plan = planner.build_plan(document)
-    
-    # Plan should have moves but not be applied
-    assert plan.move_count() > 0
-    
-    # Original files should be unchanged
-    original_blocks = repository.load().get_blocks()
-    assert len(original_blocks) == len(blocks)
-
-
-def test_blueprint_engine_writes_moved_blocks(project_root: Path):
-    """Test that bpfw blueprint layout --apply writes moved blocks."""
-    repository = AuthorityRepository(project_root=project_root)
-    document = repository.load()
-    
-    # Create moves
-    blocks = document.get_blocks()
-    blocks[0]["domain"] = "catalog"
-    blocks[1]["domain"] = "protection"
-    document.replace_blocks(blocks)
-    
-    # Persist and let authority save perform synchronization.
-    planner = BlueprintLayoutPlanner(project_root=project_root)
-    with authorize_blueprint_writes_for_tool("test"):
-        repository.save(document)
-    
-    # Reload and verify moves were applied
-    document = repository.load()
-    new_plan = planner.build_plan(document)
-    
-    # Should have no moves after blueprint layout
-    assert new_plan.move_count() == 0
-
-
 def test_shard_decision_engine_domain_strategy(project_root: Path):
     """Test that shard decision engine uses domain strategy correctly."""
     authority_config = {
@@ -589,25 +500,3 @@ def test_shard_decision_engine_default_shard(project_root: Path):
     shard = engine.decide_shard_for_block(block, None)
     assert str(shard).endswith("uncategorized.yaml")
 
-
-def test_blueprint_layout_plan_has_changes():
-    """Test that BlueprintLayoutPlan.has_changes() works correctly."""
-    plan = BlueprintLayoutPlan(
-        strategy="domain",
-        default_shard=Path("bpfw/blocks/core.yaml"),
-    )
-    
-    assert not plan.has_changes()
-    assert plan.move_count() == 0
-    
-    # Add a move
-    from bpfw.authority.layout import BlockPlacementChange
-    plan.moves.append(BlockPlacementChange(
-        block_id="test",
-        source_shard=Path("a.yaml"),
-        target_shard=Path("b.yaml"),
-        reason="test",
-    ))
-    
-    assert plan.has_changes()
-    assert plan.move_count() == 1

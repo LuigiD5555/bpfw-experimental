@@ -240,8 +240,6 @@ class DiffSession:
             return self._review_missing_declared_code(item)
         if item.kind == DiffItemKind.MOVED_CODE_CANDIDATE:
             return self._review_moved_code_candidate(item)
-        if item.kind == DiffItemKind.SHARD_DRIFT:
-            return self._review_shard_drift(item)
         if item.kind == DiffItemKind.DUPLICATE_ACTIVE_PURPOSE:
             return self._review_duplicate_active_purpose(item)
         if item.kind == DiffItemKind.INVALID_AUTHORITY:
@@ -1029,115 +1027,6 @@ class DiffSession:
             return
         self._add_create_block_action(synthetic, block)
 
-    def _review_shard_drift(self, item: DiffItem) -> bool:
-        """Review a shard drift item.
-
-        Args:
-            item: Diff item.
-
-        Returns:
-            True to continue, False to return home.
-        """
-        while True:
-            self._render_shard_drift(item)
-            command = normalize_command(self.input_func("Choice: "))
-            if is_quit_command(command) or is_back_command(command):
-                return False
-            if command == "1":
-                self._move_block_to_expected_shard(item)
-                return True
-            if command == "2":
-                self.print_func("No-op selected. The shard drift finding will remain.")
-                return True
-            if command == "3":
-                self._apply_all_safe_shard_moves()
-                return True
-            if command == "4":
-                self._metadata_for_existing_block(item)
-                return True
-            if command == "5":
-                return True
-            self.print_func("Unknown command.")
-
-    def _render_shard_drift(self, item: DiffItem) -> None:
-        """Render shard drift screen.
-
-        Args:
-            item: Diff item.
-        """
-        target = item.blueprint_target
-        self.print_func("")
-        self.print_func("DIFF: SHARD_DRIFT")
-        self.print_func("")
-        self.print_func(f"Block: {target.block_id if target else item.finding.symbol if item.finding else 'unknown'}")
-        self.print_func(f"Current shard:  {item.current_shard_path or '<unknown>'}")
-        self.print_func(f"Expected shard: {item.expected_shard_path or '<unknown>'}")
-        self.print_func("")
-        if target is not None:
-            self.print_func("BLUEPRINT METADATA")
-            self.print_func(f"  name:      {target.name or '<empty>'}")
-            self.print_func(f"  purpose:   {target.purpose or '<empty>'}")
-            self.print_func(f"  domain:    {target.domain or '<empty>'}")
-            self.print_func(f"  lifecycle: {target.status or '<empty>'}")
-            self.print_func("")
-        self.print_func("Options:")
-        self.print_func("  [1] Move block to expected shard")
-        self.print_func("  [2] Keep current shard")
-        self.print_func("  [3] Apply all safe shard moves")
-        self.print_func("  [4] Open inspector metadata window")
-        self.print_func("  [5] Skip")
-        self.print_func("  [b] Back")
-        self.print_func("  [q] Quit")
-        self.print_func("")
-
-    def _move_block_to_expected_shard(self, item: DiffItem) -> None:
-        """Add a move-block decision for shard drift.
-
-        Args:
-            item: Diff item.
-        """
-        target = item.blueprint_target
-        if target is None or item.current_shard_path is None or item.expected_shard_path is None:
-            self.print_func("Cannot move block because shard information is incomplete.")
-            return
-        request = BlueprintChangeRequest(
-            kind=BlueprintChangeKind.MOVE_BLOCK,
-            source=BlueprintChangeSource.DIFF,
-            payload={
-                "block_id": target.block_id,
-                "source_shard_path": item.current_shard_path,
-                "target_shard_path": item.expected_shard_path,
-                "create_target_if_missing": True,
-            },
-            human_confirmed=True,
-            reason="Diff decision: move block to expected shard.",
-        )
-        stamps = collect_file_stamps(self.project_root, [item.current_shard_path, item.expected_shard_path])
-        conflicts = self.plan.add_authority_action(
-            PlannedAuthorityAction(
-                diff_item_id=item.identifier,
-                label=f"MOVE_BLOCK {target.block_id}",
-                request=request,
-                file_stamps=stamps,
-            )
-        )
-        self._render_decision_added("MOVE_BLOCK", item, conflicts)
-
-    def _apply_all_safe_shard_moves(self) -> None:
-        """Add all shard drift moves to the plan."""
-        assert self.snapshot is not None
-        count = 0
-        for item in self.snapshot.items:
-            if item.kind != DiffItemKind.SHARD_DRIFT:
-                continue
-            if item.identifier in self.plan.planned_item_ids():
-                continue
-            before = self.plan.action_count()
-            self._move_block_to_expected_shard(item)
-            if self.plan.action_count() > before:
-                count += 1
-        self.print_func(f"Added safe shard moves: {count}")
-
     def _review_duplicate_active_purpose(self, item: DiffItem) -> bool:
         """Review duplicate active purpose item.
 
@@ -1700,7 +1589,6 @@ class DiffSession:
             DiffItemKind.UNDECLARED_CODE.value,
             DiffItemKind.DUPLICATE_ACTIVE_PURPOSE.value,
             DiffItemKind.METADATA_DRIFT.value,
-            DiffItemKind.SHARD_DRIFT.value,
             DiffItemKind.IGNORED_CODE_CONFLICT.value,
             DiffItemKind.ORPHAN_SHARD.value,
             DiffItemKind.BROKEN_SHARD_REFERENCE.value,

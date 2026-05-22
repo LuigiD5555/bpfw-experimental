@@ -14,7 +14,6 @@ class DiffItemKind(Enum):
     UNDECLARED_CODE = "UNDECLARED_CODE"
     MISSING_DECLARED_CODE = "MISSING_DECLARED_CODE"
     MOVED_CODE_CANDIDATE = "MOVED_CODE_CANDIDATE"
-    SHARD_DRIFT = "SHARD_DRIFT"
     DUPLICATE_ACTIVE_PURPOSE = "DUPLICATE_ACTIVE_PURPOSE"
     METADATA_DRIFT = "METADATA_DRIFT"
     INVALID_AUTHORITY = "INVALID_AUTHORITY"
@@ -119,8 +118,6 @@ class DiffItem:
         code_target: Code-side target, when applicable.
         blueprint_target: Authority-side target, when applicable.
         candidates: Candidate code targets for moved-code or replacement decisions.
-        current_shard_path: Current shard path for shard drift.
-        expected_shard_path: Expected shard path for shard drift.
         related_blocks: Extra authority blocks related to duplicate or conflict decisions.
     """
 
@@ -132,8 +129,6 @@ class DiffItem:
     code_target: CodeTarget | None = None
     blueprint_target: BlueprintTarget | None = None
     candidates: tuple[CodeTarget, ...] = ()
-    current_shard_path: Path | None = None
-    expected_shard_path: Path | None = None
     related_blocks: tuple[BlueprintTarget, ...] = ()
 
 

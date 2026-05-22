@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any
 
 from bpfw.authority.document import AuthorityDocument
-from bpfw.authority.layout import BlockPlacementChange
 from bpfw.authority.shard import AuthorityShard
 from bpfw.authority.sharding import ShardDecisionEngine
 from bpfw.catalog.access_control import (
@@ -33,7 +32,6 @@ class AuthorityPersistenceResult:
         saved_shards: Shard files written to disk.
         created_shards: Shard files created during save.
         removed_shards: Shard files removed during save.
-        moved_blocks: Mechanical placement changes explicitly applied elsewhere.
         updated_includes: Whether root includes were written.
         warnings: Non-fatal persistence messages.
     """
@@ -41,7 +39,6 @@ class AuthorityPersistenceResult:
     saved_shards: list[Path] = field(default_factory=list)
     created_shards: list[Path] = field(default_factory=list)
     removed_shards: list[Path] = field(default_factory=list)
-    moved_blocks: list[BlockPlacementChange] = field(default_factory=list)
     updated_includes: bool = False
     warnings: list[str] = field(default_factory=list)
 
@@ -168,41 +165,6 @@ class AuthorityPersistenceEngine:
         document.replace_blocks(self._collect_blocks_from_shards(document))
         return self.save_document(document)
 
-    def build_block_placement_change(
-        self,
-        document: AuthorityDocument,
-        block: dict[str, Any],
-    ) -> BlockPlacementChange | None:
-        """Return a placement change if a block is in the wrong shard.
-
-        This method is read-only. It does not apply the move.
-
-        Args:
-            document: Authority document to inspect.
-            block: Block dictionary to inspect.
-
-        Returns:
-            Placement change or None when no move is needed.
-        """
-        block_id = block.get("id")
-        if not isinstance(block_id, str) or not block_id.strip():
-            return None
-
-        authority_config = document.get_authority_config()
-        decision_engine = ShardDecisionEngine(authority_config)
-        expected_shard = decision_engine.decide_shard_for_block(block, document)
-        current_shard = document.get_origin(block_id)
-
-        if current_shard is None or current_shard == expected_shard:
-            return None
-
-        return BlockPlacementChange(
-            block_id=block_id,
-            source_shard=current_shard,
-            target_shard=expected_shard,
-            reason=self._determine_move_reason(block, decision_engine),
-        )
-
     def _rebuild_current_shards_from_document(
         self,
         document: AuthorityDocument,
@@ -262,31 +224,6 @@ class AuthorityPersistenceEngine:
         for shard in document.shards.values():
             blocks.extend(shard.get_blocks())
         return blocks
-
-    def _determine_move_reason(
-        self,
-        block: dict[str, Any],
-        decision_engine: ShardDecisionEngine,
-    ) -> str:
-        """Determine the reason for a placement change.
-
-        Args:
-            block: Authority block dictionary.
-            decision_engine: Shard decision engine.
-
-        Returns:
-            Reason label.
-        """
-        strategy = decision_engine.shard_strategy
-        if strategy == "domain":
-            return "domain_changed" if block.get("domain") else "default_shard"
-        if strategy == "path":
-            code = block.get("code", {})
-            return "path_changed" if isinstance(code, dict) and code.get("path") else "default_shard"
-        if strategy == "architecture_layer":
-            code = block.get("code", {})
-            return "architecture_layer_changed" if isinstance(code, dict) and code.get("path") else "default_shard"
-        return "shard_strategy_changed"
 
     def _synchronize_index_with_document(self, document: AuthorityDocument) -> None:
         """Copy root metadata and includes from the document into the index.
