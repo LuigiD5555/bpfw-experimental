@@ -10,6 +10,7 @@ from bpfw.core.blueprint_engine.models import (
 from bpfw.core.blueprint_engine.planner import BlueprintPlanBuilder
 from bpfw.core.blueprint_engine.safety import BlueprintEngineSafetyPolicy
 from bpfw.core.authority.patch import AuthorityPatchEngine, PatchWriteContext
+from bpfw.core.authority.patch.engine import PatchProgressCallback
 
 
 class BlueprintEngine:
@@ -88,12 +89,14 @@ class BlueprintEngine:
         self,
         requests: list[BlueprintChangeRequest],
         write_context: PatchWriteContext,
+        progress_callback: PatchProgressCallback | None = None,
     ) -> BlueprintChangeResult:
         """Apply multiple approved requests as one patch plan.
 
         Args:
             requests: Change requests to apply.
             write_context: Explicit write permission context.
+            progress_callback: Optional callback notified after patch operations progress.
 
         Returns:
             Structured apply result.
@@ -103,7 +106,11 @@ class BlueprintEngine:
             return BlueprintChangeResult(success=False, blocked_reason=blocked_reason)
 
         plan = self._builder.build_plan(requests)
-        patch_result = self._patch_engine.apply(plan, write_context=write_context)
+        patch_result = self._patch_engine.apply(
+            plan,
+            write_context=write_context,
+            progress_callback=progress_callback,
+        )
         return BlueprintChangeResult(
             success=patch_result.success,
             patch_result=patch_result,

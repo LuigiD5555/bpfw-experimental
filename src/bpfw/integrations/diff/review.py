@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from bpfw.core.authority import AuthorityRepository, ShardDecisionEngine
+from bpfw.core.authority.errors import AuthorityError
 from bpfw.core.catalog.loader import BlueprintLoader
 from bpfw.core.catalog.models import BlueprintLoadResult, DiscoveredCodeUnit, ScanResult, VerificationReport
 from bpfw.core.catalog.verify import run_verify, scan_project_from_blueprint
@@ -70,7 +71,7 @@ class DiffReviewService:
                 repository = AuthorityRepository(self.project_root)
                 authority_document = repository.load()
                 blueprint_data = authority_document.blueprint_data
-            except (FileNotFoundError, ValueError):
+            except (FileNotFoundError, ValueError, AuthorityError):
                 authority_document = None
             scan_result = scan_project_from_blueprint(
                 project_root=self.project_root,
@@ -82,6 +83,44 @@ class DiffReviewService:
             project_root=self.project_root,
             precomputed_scan_result=scan_result,
         )
+        items = self._build_items(
+            load_result=load_result,
+            blueprint_data=blueprint_data,
+            authority_document=authority_document,
+            scan_result=scan_result,
+            verify_findings=verify_report.findings,
+        )
+        return DiffReviewSnapshot(
+            project_root=self.project_root,
+            load_result=load_result,
+            scan_result=scan_result,
+            verify_report=verify_report,
+            blueprint_data=blueprint_data,
+            authority_document=authority_document,
+            items=tuple(items),
+        )
+
+
+    def from_loaded_context(
+        self,
+        load_result: BlueprintLoadResult,
+        blueprint_data: dict[str, Any],
+        authority_document: Any | None,
+        scan_result: ScanResult | None,
+        verify_report: VerificationReport,
+    ) -> DiffReviewSnapshot:
+        """Build a diff snapshot from already-loaded inspector context.
+
+        Args:
+            load_result: Blueprint load result.
+            blueprint_data: Unified blueprint dictionary.
+            authority_document: Optional sharded authority document.
+            scan_result: Precomputed scan result.
+            verify_report: Precomputed verify report.
+
+        Returns:
+            Review snapshot without reloading, rescanning, or reverifying.
+        """
         items = self._build_items(
             load_result=load_result,
             blueprint_data=blueprint_data,

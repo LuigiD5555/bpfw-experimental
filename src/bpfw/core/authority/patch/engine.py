@@ -7,7 +7,7 @@ only. Read-only commands must never invoke it to silently synchronize drift.
 
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator
+from typing import Callable, Iterator
 
 import yaml
 
@@ -37,6 +37,8 @@ from bpfw.core.catalog.access_control import (
     authorize_temporary_blueprint_unlock_for_tool,
 )
 from bpfw.core.protection.authority import lock_authority, unlock_authority
+
+PatchProgressCallback = Callable[[int, int, str], None]
 
 
 class AuthorityPatchEngine:
@@ -85,12 +87,14 @@ class AuthorityPatchEngine:
         self,
         plan: AuthorityPatchPlan,
         write_context: PatchWriteContext,
+        progress_callback: PatchProgressCallback | None = None,
     ) -> AuthorityPatchResult:
         """Apply a plan with explicit write permission.
 
         Args:
             plan: Mechanical patch plan to apply.
             write_context: Explicit permission context for guarded writes.
+            progress_callback: Optional callback notified after patch operations progress.
 
         Returns:
             Structured result describing applied or skipped operations.
@@ -119,7 +123,7 @@ class AuthorityPatchEngine:
 
         with self._write_authorization(write_context):
             try:
-                self._apply_sorted_operations(plan, result)
+                self._apply_sorted_operations(plan, result, progress_callback)
             except (OSError, yaml.YAMLError, ValueError) as apply_error:
                 result.error_message = f"Apply failed: {apply_error}"
                 restored_paths = backup.rollback()
@@ -187,15 +191,116 @@ class AuthorityPatchEngine:
         self,
         plan: AuthorityPatchPlan,
         result: AuthorityPatchResult,
+        progress_callback: PatchProgressCallback | None = None,
     ) -> None:
         """Apply each operation in deterministic order.
 
         Args:
             plan: Plan whose sorted operations should be applied.
             result: Result object to record outcomes.
+            progress_callback: Optional callback notified after patch operations progress.
         """
-        for operation in plan.sorted_operations():
+        operations = plan.sorted_operations()
+        total_operations = len(operations)
+        completed_operations = 0
+        index = 0
+
+        while index < total_operations:
+            operation = operations[index]
+            if operation.kind == PatchOperationKind.UPDATE_BLOCK_CODE_REFERENCE:
+                update_operations: list[UpdateBlockCodeReferenceOperation] = []
+                while (
+                    index < total_operations
+                    and operations[index].kind == PatchOperationKind.UPDATE_BLOCK_CODE_REFERENCE
+                ):
+                    update_operations.append(operations[index])  # type: ignore[arg-type]
+                    index += 1
+                completed_operations = self._apply_update_code_references_batch(
+                    operations=update_operations,
+                    result=result,
+                    completed_operations=completed_operations,
+                    total_operations=total_operations,
+                    progress_callback=progress_callback,
+                )
+                continue
+
             self._apply_single_operation(operation, result)
+            completed_operations += 1
+            if progress_callback is not None:
+                progress_callback(completed_operations, total_operations, operation.kind.value)
+            index += 1
+
+    def _apply_update_code_references_batch(
+        self,
+        operations: list[UpdateBlockCodeReferenceOperation],
+        result: AuthorityPatchResult,
+        completed_operations: int,
+        total_operations: int,
+        progress_callback: PatchProgressCallback | None = None,
+    ) -> int:
+        """Apply code-reference updates grouped by shard.
+
+        Args:
+            operations: Code-reference update operations to apply.
+            result: Result object to record outcomes.
+            completed_operations: Number of already completed operations.
+            total_operations: Total operations in the full plan.
+            progress_callback: Optional callback notified after each operation.
+
+        Returns:
+            Updated completed operation count.
+        """
+        from collections import defaultdict
+
+        from bpfw.core.authority.shard import AuthorityShard
+
+        operations_by_shard: dict[Path, list[UpdateBlockCodeReferenceOperation]] = defaultdict(list)
+        for operation in operations:
+            operations_by_shard[operation.source_shard_path].append(operation)
+
+        label = PatchOperationKind.UPDATE_BLOCK_CODE_REFERENCE.value
+        for shard_path, shard_operations in operations_by_shard.items():
+            shard = AuthorityShard.load(self.project_root, shard_path)
+            blocks = shard.get_blocks()
+            block_by_id = {
+                block.get("id"): block
+                for block in blocks
+                if isinstance(block, dict) and isinstance(block.get("id"), str)
+            }
+            shard_changed = False
+
+            for operation in shard_operations:
+                block = block_by_id.get(operation.block_id)
+                if block is None:
+                    result.add_skipped(label, f"block '{operation.block_id}' not found")
+                    completed_operations += 1
+                    if progress_callback is not None:
+                        progress_callback(completed_operations, total_operations, label)
+                    continue
+
+                code = block.setdefault("code", {})
+                if not isinstance(code, dict):
+                    code = {}
+                    block["code"] = code
+                code["path"] = operation.new_path
+                code["symbol"] = operation.new_symbol
+                if operation.new_kind is not None:
+                    code["kind"] = operation.new_kind
+                if operation.new_name is not None:
+                    block["name"] = operation.new_name
+                shard_changed = True
+                result.add_applied(label)
+                completed_operations += 1
+                if progress_callback is not None:
+                    progress_callback(completed_operations, total_operations, label)
+
+            if shard_changed:
+                shard.set_blocks(blocks)
+                shard.sort_blocks()
+                shard.save(self.project_root)
+                result.add_modified(shard_path)
+
+        return completed_operations
 
     def _apply_single_operation(
         self,

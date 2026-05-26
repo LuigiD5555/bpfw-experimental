@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Set, Tuple
 
 from bpfw.core.catalog.models import (
     AUTHORITY_STATE_DEFINED,
+    AUTHORITY_STATE_DRAFT,
     DiscoveredCodeUnit,
 )
 from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, Finding
@@ -167,9 +168,9 @@ def compare_declared_to_discovered(
 ) -> List[Finding]:
     """Compare declared blocks against discovered code units.
 
-    Drift only runs when the blueprint is in the ``defined`` state.  For all
-    other states (``missing``, ``empty``, ``invalid``, ``draft``) the
-    function returns an empty list — validation handles those cases.
+    Drift runs when the blueprint is in the ``defined`` or ``draft`` state.
+    Draft authority may still have enough code references for structural
+    path/symbol comparison, so incomplete metadata must not hide drift.
 
     Matching uses the exact composite key ``path + symbol + kind``.
     No rename detection, no semantic duplicate inference, no lifecycle
@@ -190,11 +191,12 @@ def compare_declared_to_discovered(
         Drift findings (``MISSING_DECLARED_CODE`` and/or
         ``UNDECLARED_CODE``).
     """
-    # Rules 1-4: non-actionable blueprint states return no drift findings.
-    if authority_state != AUTHORITY_STATE_DEFINED:
+    # Non-actionable blueprint states return no drift findings. Draft remains
+    # actionable for structural path/symbol comparison.
+    if authority_state not in {AUTHORITY_STATE_DEFINED, AUTHORITY_STATE_DRAFT}:
         return []
 
-    # Rule 5: perform drift comparison only for defined authority.
+    # Perform drift comparison for defined and draft authority.
     declared_keys, _declared_by_key = _extract_declared_keys(blueprint_data)
     discovered_keys, discovered_by_key = _extract_discovered_keys(discovered_units)
     ignored_keys = _extract_rule_keys(blueprint_data, "ignored_code")
