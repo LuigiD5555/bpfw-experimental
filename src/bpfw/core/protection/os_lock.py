@@ -264,12 +264,7 @@ class PosixLockStrategy(LockStrategy):
             return False
 
         try:
-            result = subprocess.run(
-                ["sudo", *command],
-                check=False,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
+            result = subprocess.run(["sudo", *command], check=False)
         except OSError:
             return False
         return result.returncode == 0

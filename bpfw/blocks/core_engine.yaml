@@ -1,0 +1,167 @@
+blocks:
+- code:
+    end_line: 22
+    kind: function
+    path: src/bpfw/cli.py
+    start_line: 10
+    symbol: run_command_after_verify
+  connections: []
+  detected:
+    docstring: "Run a command after verification through a lazy import.\n\nArgs:\n\
+      \    project_root: Project root directory.\n    command: Subprocess command\
+      \ to run after verification passes.\n\nReturns:\n    Subprocess or verification\
+      \ exit code."
+    functions: []
+    kind: function
+    methods: []
+    qualified_name: src.bpfw.cli.run_command_after_verify
+  domain: core engine
+  entrypoints: []
+  id: run_command_after_verify
+  name: run_command_after_verify
+  notes: null
+  purpose: execute command after verify
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: execute_command_after_verify
+    suspected_duplicates: []
+- code:
+    end_line: 172
+    kind: class
+    path: src/bpfw/core/authority/document.py
+    start_line: 10
+    symbol: AuthorityDocument
+  connections: []
+  detected:
+    docstring: 'Unified in-memory model for sharded authority.
+
+
+      This class holds:
+
+      - index: AuthorityIndex (root blueprint.yaml)
+
+      - blueprint_data: dict with version, project, policy, authority, includes, blocks
+
+      - block_origins: dict mapping block_id -> shard_path
+
+      - shards: dict mapping shard_path -> AuthorityShard
+
+
+      The blueprint_data dict has the same shape as the current loaded blueprint,
+
+      so existing integrations continue to work without changes.'
+    functions: []
+    kind: class
+    methods: []
+    qualified_name: src.bpfw.core.authority.document.AuthorityDocument
+  domain: core engine
+  entrypoints: []
+  id: authority_document
+  name: AuthorityDocument
+  notes: null
+  purpose: declare model for sharded authority
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: declare_model_for_sharded_authority
+    suspected_duplicates: []
+- code:
+    end_line: 85
+    kind: method
+    path: src/bpfw/core/authority/document.py
+    start_line: 73
+    symbol: AuthorityDocument.get_block
+  connections: []
+  detected:
+    docstring: "Get a specific block by ID.\n\nArgs:\n    block_id: The block ID to\
+      \ look up.\n\nReturns:\n    Block dictionary, or None if not found."
+    functions: []
+    kind: method
+    methods: []
+    qualified_name: src.bpfw.core.authority.document.AuthorityDocument.get_block
+  domain: core engine
+  entrypoints: []
+  id: authority_document_get_block
+  name: AuthorityDocument.get_block
+  notes: null
+  purpose: get specific block by id
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: get_specific_block_by_id
+    suspected_duplicates: []
+- code:
+    end_line: 132
+    kind: method
+    path: src/bpfw/core/authority/document.py
+    start_line: 126
+    symbol: AuthorityDocument.get_block_count
+  connections: []
+  detected:
+    docstring: "Get the total number of blocks.\n\nReturns:\n    Total block count."
+    functions: []
+    kind: method
+    methods: []
+    qualified_name: src.bpfw.core.authority.document.AuthorityDocument.get_block_count
+  domain: core engine
+  entrypoints: []
+  id: authority_document_get_block_count
+  name: AuthorityDocument.get_block_count
+  notes: null
+  purpose: get total number blocks
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: get_total_number_blocks
+    suspected_duplicates: []
+- code:
+    end_line: 172
+    kind: method
+    path: src/bpfw/core/authority/document.py
+    start_line: 166
+    symbol: AuthorityDocument.get_authority_config
+  connections: []
+  detected:
+    docstring: "Get the authority configuration.\n\nReturns:\n    Dictionary containing\
+      \ authority configuration."
+    functions: []
+    kind: method
+    methods: []
+    qualified_name: src.bpfw.core.authority.document.AuthorityDocument.get_authority_config
+  domain: core engine
+  entrypoints: []
+  id: authority_document_get_authority_config
+  name: AuthorityDocument.get_authority_config
+  notes: null
+  purpose: return authority config
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: return_authority_config
+    suspected_duplicates: []

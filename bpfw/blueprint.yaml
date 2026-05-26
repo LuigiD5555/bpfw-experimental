@@ -1,11 +1,6 @@
 version: 1
 project:
   id: bpfw
-  name: bpfw
-  root: .
-  language: python
-  source_roots:
-  - src
   ignored_paths:
   - .git
   - .venv
@@ -14,28 +9,35 @@ project:
   - node_modules
   - tests
   - migrations
+  language: python
+  name: bpfw
+  root: .
+  source_roots:
+  - src
 policy:
-  mode: catalog
-  empty_blueprint_allows_execution: true
-  defined_blueprint_blocks_on_drift: true
   allowed_statuses:
   - active
   - experimental
   - legacy
   - deprecated
-  one_active_block_per_purpose: true
-  undeclared_code_blocks: true
+  defined_blueprint_blocks_on_drift: true
+  empty_blueprint_allows_execution: true
   missing_declared_code_blocks: true
+  mode: catalog
+  one_active_block_per_purpose: true
   security:
+    detected_detail_level: minimal
     no_secrets_in_blueprint: true
     public_safe_mode: true
-    detected_detail_level: minimal
+  undeclared_code_blocks: true
 authority:
-  layout: sharded
-  shard_strategy: domain
-  default_shard: bpfw/blocks/core.yaml
   allow_empty_shards: false
   auto_create_shards: true
+  default_shard: bpfw/blocks/core.yaml
+  layout: sharded
   remove_empty_shards: false
+  shard_strategy: domain
 includes:
 - bpfw/blocks/core.yaml
+- bpfw/blocks/core_engine.yaml
+- bpfw/blocks/drift_engine.yaml

@@ -223,6 +223,7 @@ def test_posix_lock_uses_readonly_weak_when_strong_lock_fails(
     monkeypatch.setattr(strategy, "_try_set_immutable", lambda path: False)
     monkeypatch.setattr(strategy, "_chown_root", lambda path: False)
     monkeypatch.setattr(strategy, "_can_use_sudo", lambda: False)
+    monkeypatch.setattr(strategy, "_is_root", lambda: False)
 
     try:
         assert strategy.lock_file(tmp_path, "resource.txt") == "degraded"
