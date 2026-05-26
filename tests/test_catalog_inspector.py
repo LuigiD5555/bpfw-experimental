@@ -12,8 +12,11 @@ from bpfw.integrations.inspector.base import (
     load_inspect_session,
 )
 from bpfw.integrations.inspector.commands import InspectorAction, apply_inspector_command
+from bpfw.integrations.inspector.drift_gate import _sort_approved_new_issues
+from bpfw.integrations.inspector.inspector_state import InspectorStateRepository
 from bpfw.integrations.inspector.screen import render_inspector_screen
 from bpfw.integrations.inspector.session import run_text_inspector, run_text_inspector_session
+from bpfw.core.catalog.models import DiscoveredCodeUnit
 
 
 def _responsibility(
@@ -184,10 +187,10 @@ def test_suggest_domains_behavior_slots_deduplicate_domains() -> None:
     assert domains[:3].count("authority") == 1
 
 
-def test_inspector_domain_shortcuts_use_qwerty_and_y_custom() -> None:
+def test_inspector_domain_shortcuts_use_numbered_domain_keys() -> None:
     issue = _responsibility("example", "maintain example", "active")
     action = apply_inspector_command(
-        command="t",
+        command="D5",
         issue=InspectIssue(issue_type="draft", block=issue),
         purpose_suggestions=[],
         domain_suggestions=["one", "two", "three", "four", "five"],
@@ -198,7 +201,7 @@ def test_inspector_domain_shortcuts_use_qwerty_and_y_custom() -> None:
     assert issue["domain"] == "five"
 
     action = apply_inspector_command(
-        command="ycustom_domain",
+        command="d custom_domain",
         issue=InspectIssue(issue_type="draft", block=issue),
         purpose_suggestions=[],
         domain_suggestions=[],
@@ -269,38 +272,38 @@ def test_text_inspector_renders_expected_sections(tmp_path: Path) -> None:
     assert "Blueprint Framework Inspector" in rendered
     assert "Block Status" in rendered
     assert "Purpose suggestions" in rendered
-    assert "[6] write custom purpose" in rendered
+    assert "[p] write custom purpose" in rendered
     assert "Domain suggestions" in rendered
-    assert " [q] " in rendered
-    assert " [w] " in rendered
-    assert " [e] " in rendered
-    assert " [r] " in rendered
-    assert " [t] " in rendered
-    assert "[y] write custom domain" in rendered
+    assert " [d1] " in rendered
+    assert " [d2] " in rendered
+    assert " [d3] " in rendered
+    assert " [d4] " in rendered
+    assert " [d5] " in rendered
+    assert "[d] write custom domain" in rendered
     assert "Hierarchy" not in rendered
     assert "Interface" not in rendered
     assert "Notes" not in rendered
     assert "[a] full view" in rendered
-    assert "[z] active" in rendered
-    assert "[x] experimental" in rendered
-    assert "[c] legacy" in rendered
-    assert "[v] deprecated" in rendered
+    assert "[l1] active" in rendered
+    assert "[l2] experimental" in rendered
+    assert "[l3] legacy" in rendered
+    assert "[l4] deprecated" in rendered
     assert "[Enter] save + next" in rendered
     assert "Type a command key and press Enter" in rendered
-    assert "a + Enter" in rendered
-    assert "ctrl+c to quit" in rendered
+    assert "p1 + Enter" in rendered
+    assert "ctrl+c quits" in rendered
     commands_section = rendered[rendered.rindex("Commands"):]
-    assert "purpose suggestion" not in commands_section
+    assert "purpose" not in commands_section
     assert "custom purpose" not in commands_section
     assert "custom domain" not in commands_section
-    assert "[z|x|c|v] status" not in commands_section
+    assert "[l1|l2|l3|l4] lifecycle" not in commands_section
     assert "[n] name" not in commands_section
     assert "[i] interface" not in commands_section
     assert "[o] notes" not in commands_section
     assert "├" in rendered
     assert "s save" not in rendered
     assert "l1" not in rendered
-    assert "d1" not in rendered
+    assert "l1" not in rendered
 
 
 def test_text_inspector_all_view_renders_extended_sections(tmp_path: Path) -> None:
@@ -338,14 +341,92 @@ def test_text_inspector_all_view_renders_extended_sections(tmp_path: Path) -> No
     assert "Notes" in rendered
     assert "[a] compact view" in rendered
     commands_section = rendered[rendered.rindex("Commands"):]
-    assert "purpose suggestion" in commands_section
+    assert "purpose" in commands_section
     assert "custom purpose" in commands_section
     assert "custom domain" in commands_section
-    assert "[z|x|c|v] status" in commands_section
+    assert "[l1|l2|l3|l4] lifecycle" in commands_section
     assert "[n] name" in commands_section
     assert "[i] interface" in commands_section
     assert "[o] notes" in commands_section
-    assert "1 + Enter" in commands_section
+    assert "p1 + Enter" in commands_section
+
+
+def test_approved_new_with_children_renders_purpose_summary_instead_of_code_snippet(tmp_path: Path) -> None:
+    block = _responsibility(
+        responsibility_id="example",
+        purpose="",
+        status="active",
+        path="src/bpfw/catalog/example.py",
+        symbol="ExampleService",
+    )
+    block["detected"] = {
+        "methods": ["ExampleService.run"],
+        "functions": ["ExampleService.Helper"],
+        "docstring": "Build service state.",
+    }
+    output: list[str] = []
+    render_inspector_screen(
+        project_root=tmp_path,
+        issue_type="approved_new",
+        block=block,
+        index=0,
+        total=1,
+        purpose_suggestions=suggest_purposes(block),
+        domain_suggestions=suggest_domains(block),
+        print_func=output.append,
+    )
+    rendered = "\n".join(output)
+    assert "Internal members (leaf-first review):" in rendered
+    assert "ExampleService.run | kind=method" in rendered
+    assert "ExampleService.Helper | kind=nested_class" in rendered
+    assert "Purpose: Build service state." in rendered
+    assert "Children detected. Parent preview is collapsed." not in rendered
+
+
+def test_sort_approved_new_issues_orders_leaf_first_then_dependency_order() -> None:
+    parent_issue = InspectIssue(
+        issue_type="approved_new",
+        block=_responsibility(
+            responsibility_id="service_parent",
+            purpose="",
+            status="active",
+            path="src/demo.py",
+            symbol="Service",
+        ),
+    )
+    parent_issue.block["code"]["kind"] = "class"
+    child_issue = InspectIssue(
+        issue_type="approved_new",
+        block=_responsibility(
+            responsibility_id="service_child",
+            purpose="",
+            status="active",
+            path="src/demo.py",
+            symbol="Service.run",
+        ),
+    )
+    child_issue.block["code"]["kind"] = "method"
+
+    sorted_issues = _sort_approved_new_issues(
+        issues=[parent_issue, child_issue],
+        discovered_units=[
+            DiscoveredCodeUnit(
+                path="src/demo.py",
+                module="src.demo",
+                symbol="Service.run",
+                symbol_type="method",
+                qualified_name="src.demo.Service.run",
+            ),
+            DiscoveredCodeUnit(
+                path="src/demo.py",
+                module="src.demo",
+                symbol="Service",
+                symbol_type="class",
+                qualified_name="src.demo.Service",
+            ),
+        ],
+    )
+    assert [issue.block["code"]["symbol"] for issue in sorted_issues] == ["Service.run", "Service"]
 
 
 def test_backfill_detected_docstring_from_source(tmp_path: Path) -> None:
@@ -650,9 +731,9 @@ def test_text_inspector_edits_fields_and_accepts(tmp_path: Path) -> None:
     session = load_inspect_session(project_root=tmp_path)
     answers = iter(
         [
-            "6maintain example",
-            "ycatalog",
-            "x",
+            "p maintain example",
+            "d catalog",
+            "l2",
             "o reviewed",
             "",
         ]
@@ -686,7 +767,7 @@ def test_text_inspector_save_next_persists_partial_fields(tmp_path: Path) -> Non
         encoding="utf-8",
     )
     session = load_inspect_session(project_root=tmp_path)
-    answers = iter(["6maintain partial example", ""])
+    answers = iter(["pmaintain partial example", ""])
     output: list[str] = []
 
     exit_code = run_text_inspector_session(
@@ -719,7 +800,7 @@ def test_text_inspector_unknown_command_stays_on_current_item(tmp_path: Path) ->
         encoding="utf-8",
     )
     session = load_inspect_session(project_root=tmp_path)
-    answers = iter(["???", "6maintain example", ""])
+    answers = iter(["???", "p maintain example", ""])
     output: list[str] = []
 
     exit_code = run_text_inspector_session(
@@ -826,7 +907,7 @@ def test_text_inspector_keyboard_interrupt_in_interface_editor_returns_to_main(
         "i",
         "a",
         KeyboardInterrupt(),
-        "6maintain example",
+        "p maintain example",
         "",
     ]
 
@@ -870,9 +951,9 @@ def test_text_inspector_keyboard_interrupt_in_custom_purpose_returns_to_main(tmp
     session = load_inspect_session(project_root=tmp_path)
     output: list[str] = []
     command_stream: list[object] = [
-        "6",
+        "p",
         KeyboardInterrupt(),
-        "6maintain example",
+        "p maintain example",
         "",
     ]
 
@@ -916,9 +997,9 @@ def test_text_inspector_keyboard_interrupt_in_custom_domain_returns_to_main(tmp_
     session = load_inspect_session(project_root=tmp_path)
     output: list[str] = []
     command_stream: list[object] = [
-        "y",
+        "d",
         KeyboardInterrupt(),
-        "ydemo_domain",
+        "ddemo_domain",
         "",
     ]
 
@@ -978,8 +1059,9 @@ def test_text_inspector_accepts_new_detected_code(tmp_path: Path) -> None:
     output: list[str] = []
     answers = iter(
         [
-            "6maintain extra func",
-            "y demo",
+            "1",
+            "pmaintain extra func",
+            "d demo",
             "",
         ]
     )
@@ -993,7 +1075,9 @@ def test_text_inspector_accepts_new_detected_code(tmp_path: Path) -> None:
     rendered = "\n".join(output)
     saved = blueprint_path.read_text(encoding="utf-8")
     assert exit_code == 0
+    assert "BPFW DRIFT GATE" in rendered
     assert "Blueprint Framework Inspector" in rendered
+    assert "Drift decisions: 1 approved for metadata." in rendered
     assert "maintain extra func" in saved
     assert "extra_func" in saved
 
@@ -1027,7 +1111,7 @@ def test_text_inspector_back_returns_to_saved_previous_item(tmp_path: Path) -> N
         encoding="utf-8",
     )
     session = load_inspect_session(project_root=tmp_path)
-    answers = iter(["6first purpose", "yfirst_domain", "", "b", "quit"])
+    answers = iter(["pfirst purpose", "dfirst_domain", "", "b", "quit"])
     output: list[str] = []
 
     exit_code = run_text_inspector_session(
@@ -1044,6 +1128,116 @@ def test_text_inspector_back_returns_to_saved_previous_item(tmp_path: Path) -> N
     # Purpose and domain values are shown, not old labels
     assert "first purpose" in rendered
     assert "first_domain" in rendered
+
+
+def test_text_inspector_quit_saves_current_block_and_snapshot_points_next(tmp_path: Path) -> None:
+    blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
+    blueprint_path.parent.mkdir(parents=True)
+    blueprint_path.write_text(
+        "version: 1\n"
+        "blocks:\n"
+        "  - id: first\n"
+        "    name: FirstService\n"
+        "    domain: ''\n"
+        "    status: ''\n"
+        "    purpose: ''\n"
+        "    code:\n"
+        "      path: src/bpfw/catalog/first.py\n"
+        "      symbol: FirstService\n"
+        "      kind: class\n"
+        "  - id: second\n"
+        "    name: SecondService\n"
+        "    domain: ''\n"
+        "    status: ''\n"
+        "    purpose: ''\n"
+        "    code:\n"
+        "      path: src/bpfw/catalog/second.py\n"
+        "      symbol: SecondService\n"
+        "      kind: class\n",
+        encoding="utf-8",
+    )
+    session = load_inspect_session(project_root=tmp_path)
+    answers = iter(["pfirst purpose", "dfirst_domain", "l1", "quit"])
+    output: list[str] = []
+
+    exit_code = run_text_inspector_session(
+        session=session,
+        input_func=lambda _prompt: next(answers),
+        print_func=output.append,
+    )
+
+    rendered = "\n".join(output)
+    saved = blueprint_path.read_text(encoding="utf-8")
+    assert exit_code == 0
+    assert "Saved and exited." in rendered
+    assert "first purpose" in saved
+    assert "first_domain" in saved
+
+    snapshot = InspectorStateRepository(tmp_path).load()
+    assert snapshot is not None
+    assert snapshot.current_index == 1
+
+
+def test_text_inspector_resume_session_prefers_snapshot_before_drift(tmp_path: Path) -> None:
+    blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
+    blueprint_path.parent.mkdir(parents=True)
+    blueprint_path.write_text(
+        "version: 1\n"
+        "project:\n"
+        "  source_roots:\n"
+        "    - src\n"
+        "blocks:\n"
+        "  - id: first\n"
+        "    name: FirstService\n"
+        "    domain: ''\n"
+        "    status: ''\n"
+        "    purpose: ''\n"
+        "    code:\n"
+        "      path: src/demo/app.py\n"
+        "      symbol: first\n"
+        "      kind: function\n"
+        "  - id: second\n"
+        "    name: SecondService\n"
+        "    domain: ''\n"
+        "    status: ''\n"
+        "    purpose: ''\n"
+        "    code:\n"
+        "      path: src/demo/app.py\n"
+        "      symbol: second\n"
+        "      kind: function\n",
+        encoding="utf-8",
+    )
+    source_path = tmp_path / "src" / "demo" / "app.py"
+    source_path.parent.mkdir(parents=True)
+    source_path.write_text(
+        "def first():\n"
+        "    return 1\n"
+        "\n"
+        "def second():\n"
+        "    return 2\n",
+        encoding="utf-8",
+    )
+
+    initial_output: list[str] = []
+    initial_answers = iter(["pfirst purpose", "dfirst_domain", "l1", "quit"])
+    first_exit = run_text_inspector(
+        project_root=tmp_path,
+        input_func=lambda _prompt: next(initial_answers),
+        print_func=initial_output.append,
+    )
+    assert first_exit == 0
+
+    resumed_output: list[str] = []
+    resumed_answers = iter(["psecond purpose", "dsecond_domain", "l1", ""])
+    second_exit = run_text_inspector(
+        project_root=tmp_path,
+        input_func=lambda _prompt: next(resumed_answers),
+        print_func=resumed_output.append,
+    )
+
+    rendered = "\n".join(resumed_output)
+    assert second_exit == 0
+    assert "Inspector resume: restored pending editing session." in rendered
 
 
 def test_text_inspector_custom_purpose_uses_slot_six_with_prompt(tmp_path: Path) -> None:
@@ -1064,7 +1258,7 @@ def test_text_inspector_custom_purpose_uses_slot_six_with_prompt(tmp_path: Path)
         encoding="utf-8",
     )
     session = load_inspect_session(project_root=tmp_path)
-    answers = iter(["6", "prompted custom purpose", ""])
+    answers = iter(["p", "prompted custom purpose", ""])
     output: list[str] = []
 
     exit_code = run_text_inspector_session(
@@ -1166,7 +1360,7 @@ def test_suggest_domains_behavior_slots_are_dash_without_valid_history() -> None
         symbol="AuthorityIndex.save",
     )
     block["detected"] = {"docstring": "Save the authority index to the project root."}
-    project_blocks = [{**_responsibility("blank_domain", "x", "active"), "domain": "-"}, block]
+    project_blocks = [{**_responsibility("blank_domain", "s2", "active"), "domain": "-"}, block]
 
     suggestions = suggest_domains(block, project_blocks=project_blocks)
     assert suggestions[0] == "-"
@@ -1183,17 +1377,17 @@ def test_inspector_help_explains_suggestion_sources() -> None:
     rendered = "\n".join(render_help_block(resolve_inspector_view_mode_from_flag(show_all=False)))
 
     assert "Purpose suggestions" in rendered
-    assert "[1] Existing purpose from blueprint matches this block." in rendered
-    assert "[2] Learned purpose previously accepted by the user." in rendered
-    assert "[3] Symbol or block name, such as class/function name." in rendered
-    assert "[4] Docstring first sentence or supported docstring pattern." in rendered
-    assert "[5] Blended evidence from history, symbol, and docstring." in rendered
+    assert "[p1] Existing purpose from blueprint matches this block." in rendered
+    assert "[p2] Learned purpose previously accepted by the user." in rendered
+    assert "[p3] Symbol or block name, such as class/function name." in rendered
+    assert "[p4] Docstring first sentence or supported docstring pattern." in rendered
+    assert "[p5] Blended evidence from history, symbol, and docstring." in rendered
     assert "Domain suggestions" in rendered
-    assert "[q] Existing domain best matched by block behavior." in rendered
-    assert "[w] Second existing domain matched by block behavior." in rendered
-    assert "[e] Third existing domain matched by block behavior." in rendered
-    assert "[r] Symbol-based domain from the class/function name." in rendered
-    assert "[t] Previous domain used for the same code origin." in rendered
+    assert "[d1] Existing domain best matched by block behavior." in rendered
+    assert "[d2] Second existing domain matched by block behavior." in rendered
+    assert "[d3] Third existing domain matched by block behavior." in rendered
+    assert "[d4] Symbol-based domain from the class/function name." in rendered
+    assert "[d5] Previous domain used for the same code origin." in rendered
 
 
 def test_compact_inspector_help_omits_full_mode_details() -> None:

@@ -166,7 +166,7 @@ def suggest_behavior_domains(
         current_identity: Stable identity tuple for excluding the current block.
 
     Returns:
-        Exactly three strings for inspector slots ``[q]``, ``[w]``, and ``[e]``.
+        Exactly three strings for inspector slots ``[d1]``, ``[d2]``, and ``[d3]``.
     """
 
     current_fingerprint = extract_behavior_fingerprint(block, for_profile=False)

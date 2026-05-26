@@ -205,6 +205,10 @@ def build_core_shard(discovered_units: List[DiscoveredCodeUnit]) -> Dict[str, An
                 "kind": normalized_symbol_type,
                 "methods": unit.methods,
                 "functions": unit.functions,
+                "docstring": unit.docstring,
+                "signature": unit.signature,
+                "normalized_body_hash": unit.normalized_body_hash,
+                "dangerous_capabilities": unit.dangerous_capabilities,
             },
             interface=interface_data,
         )

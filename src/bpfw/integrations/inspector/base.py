@@ -1,6 +1,6 @@
 """Shared inspector behavior for BPFW catalog completion."""
 import ast
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, TYPE_CHECKING
 
@@ -9,10 +9,12 @@ from bpfw.core.catalog.loader import BlueprintLoader
 from bpfw.core.catalog.models import (
     AUTHORITY_STATE_INVALID,
     AUTHORITY_STATE_MISSING,
+    BlueprintLoadResult,
     DiscoveredCodeUnit,
 )
 from bpfw.core.catalog.models import ScanResult
-from bpfw.core.catalog.verify import run_verify, scan_project_from_blueprint
+from bpfw.core.catalog.scan_cache import cached_scan_python_project
+from bpfw.core.catalog.verify import read_ignored_paths, read_source_roots, run_verify, scan_project_from_blueprint
 from bpfw.core.errors import BlueprintLockedError
 from bpfw.reports.finding import Finding
 from bpfw.shared.text import to_snake_case
@@ -47,6 +49,7 @@ class InspectIssue:
     issue_type: str
     block: Dict[str, Any]
     add_on_accept: bool = False
+    context_lines: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -60,10 +63,14 @@ class InspectLoadResult:
     issues: list[InspectIssue]
     authority_state: str
     authority_document: Any | None = None
+    load_result: BlueprintLoadResult | None = None
     discovered_count: int = 0
     undeclared_count: int = 0
     missing_declared_count: int = 0
     drift_findings: list[Finding] | None = None
+    scan_result: ScanResult | None = None
+    verify_report: "VerificationReport | None" = None
+    pre_inspection_context_lines: list[str] = field(default_factory=list)
     message: str | None = None
     exit_code: int = 0
 
@@ -117,7 +124,7 @@ def load_inspect_session(
             incomplete=[],
             issues=[],
             authority_state=load_result.state,
-            message="No blueprint found. Run bpfw init first.",
+            message="BPFW Inspector\n\nInspector blocked.\nReason: No blueprint authority file was found.\nExpected: bpfw/blueprint.yaml\nNext: Run bpfw init first.",
             exit_code=1,
         )
 
@@ -129,7 +136,7 @@ def load_inspect_session(
             incomplete=[],
             issues=[],
             authority_state=load_result.state,
-            message="Blueprint is invalid. Fix bpfw/blueprint.yaml before running inspect.",
+            message="BPFW Inspector\n\nInspector blocked.\nReason: Blueprint authority could not be loaded.\nFile: bpfw/blueprint.yaml\nError: Invalid YAML syntax.\nNext: Fix bpfw/blueprint.yaml and run bpfw inspector again.",
             exit_code=1,
         )
 
@@ -143,7 +150,7 @@ def load_inspect_session(
             incomplete=[],
             issues=[],
             authority_state=load_result.state,
-            message="Blueprint is locked. Run bpfw unlock before editing.",
+            message="BPFW Inspector\n\nInspector blocked.\nReason: Authority is locked.\nProtected files: bpfw/blueprint.yaml bpfw/blocks/*.yaml\nNext: Run bpfw unlock before editing metadata.",
             exit_code=1,
         )
 
@@ -163,11 +170,15 @@ def load_inspect_session(
             blueprint_data = load_result.data
 
     with _profiler.measure("inspector.scan_project"):
-        # Only scan if we don't have a precomputed result
+        # Only scan if we don't have a precomputed result. Inspector/editor workflows
+        # can write cache files, so they use the incremental scan cache.
         if scan_result is None:
-            scan_result = scan_project_from_blueprint(
+            source_roots = read_source_roots(blueprint_data, domain_document=load_result.domain_document)
+            ignored_paths = read_ignored_paths(blueprint_data, domain_document=load_result.domain_document)
+            scan_result = cached_scan_python_project(
                 project_root=resolved_root,
-                blueprint_data=blueprint_data,
+                source_roots=source_roots,
+                ignored_paths=ignored_paths,
             )
 
     with _profiler.measure("inspector.run_verify"):
@@ -200,11 +211,116 @@ def load_inspect_session(
         issues=issues,
         authority_state=load_result.state,
         authority_document=authority_document,
+        load_result=load_result,
         discovered_count=report.discovered_count,
         undeclared_count=report.undeclared_count,
         missing_declared_count=report.missing_declared_count,
         drift_findings=drift_findings,
+        scan_result=scan_result,
+        verify_report=report,
     )
+
+
+def load_metadata_inspect_session(project_root: Path) -> InspectLoadResult:
+    """Load inspector metadata work without scanning or running verify.
+
+    The fast path first tries a persisted Inspector work cache. When authority
+    files have not changed, this avoids reparsing all shards and rebuilding the
+    same incomplete-metadata queue on every Inspector startup.
+
+    Args:
+        project_root: Root directory of the project.
+
+    Returns:
+        InspectLoadResult containing metadata-only inspector issues.
+    """
+    from bpfw.core.authority import AuthorityRepository
+    from bpfw.integrations.inspector.work_cache import (
+        InspectorWorkCacheRepository,
+        build_authority_signature,
+    )
+
+    resolved_root = project_root.resolve()
+    with _profiler.measure("inspector.metadata_only.authority_signature"):
+        authority_signature = build_authority_signature(resolved_root)
+    cache_repository = InspectorWorkCacheRepository(resolved_root)
+    with _profiler.measure("inspector.metadata_only.load_work_cache"):
+        cached_session = cache_repository.load_metadata_session(authority_signature)
+    if cached_session is not None:
+        try:
+            ensure_blueprint_can_be_written(project_root=resolved_root)
+        except BlueprintLockedError:
+            cached_session.message = "BPFW Inspector\n\nInspector blocked.\nReason: Authority is locked.\nProtected files: bpfw/blueprint.yaml bpfw/blocks/*.yaml\nNext: Run bpfw unlock before editing metadata."
+            cached_session.exit_code = 1
+        return cached_session
+
+    with _profiler.measure("inspector.metadata_only.load_blueprint"):
+        loader = BlueprintLoader(project_root=resolved_root)
+        load_result = loader.load()
+
+    if load_result.state == AUTHORITY_STATE_MISSING:
+        return InspectLoadResult(
+            project_root=resolved_root,
+            blueprint_path=None,
+            blueprint_data={},
+            incomplete=[],
+            issues=[],
+            authority_state=load_result.state,
+            message="BPFW Inspector\n\nInspector blocked.\nReason: No blueprint authority file was found.\nExpected: bpfw/blueprint.yaml\nNext: Run bpfw init first.",
+            exit_code=1,
+        )
+
+    if load_result.state == AUTHORITY_STATE_INVALID:
+        return InspectLoadResult(
+            project_root=resolved_root,
+            blueprint_path=Path(load_result.path),
+            blueprint_data={},
+            incomplete=[],
+            issues=[],
+            authority_state=load_result.state,
+            message="BPFW Inspector\n\nInspector blocked.\nReason: Blueprint authority could not be loaded.\nFile: bpfw/blueprint.yaml\nError: Invalid YAML syntax.\nNext: Fix bpfw/blueprint.yaml and run bpfw inspector again.",
+            exit_code=1,
+        )
+
+    try:
+        ensure_blueprint_can_be_written(project_root=resolved_root)
+    except BlueprintLockedError:
+        return InspectLoadResult(
+            project_root=resolved_root,
+            blueprint_path=Path(load_result.path),
+            blueprint_data=load_result.data,
+            incomplete=[],
+            issues=[],
+            authority_state=load_result.state,
+            message="BPFW Inspector\n\nInspector blocked.\nReason: Authority is locked.\nProtected files: bpfw/blueprint.yaml bpfw/blocks/*.yaml\nNext: Run bpfw unlock before editing metadata.",
+            exit_code=1,
+        )
+
+    blueprint_data = load_result.data
+    authority_document = None
+    if _has_sharded_authority_layout(blueprint_data):
+        with _profiler.measure("inspector.metadata_only.load_authority_document"):
+            repository = AuthorityRepository(resolved_root)
+            authority_document = repository.load()
+            blueprint_data = authority_document.blueprint_data
+
+    with _profiler.measure("inspector.metadata_only.build_issues"):
+        incomplete = get_incomplete_blocks(blueprint_data)
+        issues = [InspectIssue(issue_type=ISSUE_DRAFT, block=block) for block in incomplete]
+    session = InspectLoadResult(
+        project_root=resolved_root,
+        blueprint_path=Path(load_result.path),
+        blueprint_data=blueprint_data,
+        incomplete=incomplete,
+        issues=issues,
+        authority_state=load_result.state,
+        authority_document=authority_document,
+        load_result=load_result,
+        pre_inspection_context_lines=["Drift state: unchanged since last inspection."],
+    )
+    with _profiler.measure("inspector.metadata_only.save_work_cache"):
+        cache_repository.save_metadata_session(authority_signature, session)
+    return session
 
 
 def _responsibility_key(block: Dict[str, Any]) -> tuple[str, str, str] | None:
@@ -254,6 +370,8 @@ def build_new_detected_responsibility(unit: DiscoveredCodeUnit) -> Dict[str, Any
             "decorators": unit.decorators,
             "docstring": unit.docstring,
             "signature": unit.signature,
+            "normalized_body_hash": unit.normalized_body_hash,
+            "dangerous_capabilities": unit.dangerous_capabilities,
         },
         "entrypoints": [],
         "connections": [],
@@ -308,17 +426,8 @@ def build_inspect_issues(
         if key is not None
     }
 
-    for unit in scan_result.discovered_units:
-        if _discovered_key(unit) in declared_keys:
-            continue
-        issues.append(
-            InspectIssue(
-                issue_type=ISSUE_NEW_DETECTED,
-                block=build_new_detected_responsibility(unit),
-                add_on_accept=True,
-            )
-        )
-
+    # New undeclared code is handled by Drift Gate before metadata inspection.
+    # Inspector only receives new-code issues after a human approves them.
     return issues
 
 

@@ -2,9 +2,13 @@
 
 from typing import List
 
-from bpfw.integrations.inspector.commands import CUSTOM_DOMAIN_KEY, DOMAIN_SUGGESTION_KEYS
+from bpfw.integrations.inspector.commands import (
+    CUSTOM_DOMAIN_KEY,
+    CUSTOM_PURPOSE_KEY,
+    DOMAIN_SUGGESTION_KEYS,
+    PURPOSE_SUGGESTION_KEYS,
+)
 from bpfw.integrations.inspector.view_modes.base import InspectorViewMode
-from bpfw.integrations.shared.cli_runtime import quit_command_label
 from bpfw.integrations.shared.visual_theme import COMMAND_SEPARATOR
 from bpfw.integrations.shared.visual_width import pad_text
 
@@ -33,13 +37,13 @@ class FullInspectorViewMode(InspectorViewMode):
         """Return the full command lines."""
 
         return [
-            _format_command_row("[1-5] purpose suggestion", "[6] custom purpose"),
+            _format_command_row(f"[{'|'.join(PURPOSE_SUGGESTION_KEYS)}] purpose", f"[{CUSTOM_PURPOSE_KEY}] custom purpose"),
             _format_command_row(f"[{'|'.join(DOMAIN_SUGGESTION_KEYS)}] domain", f"[{CUSTOM_DOMAIN_KEY}] custom domain"),
-            _format_command_row("[z|x|c|v] status", "[n] name", "[i] interface"),
-            _format_command_row("[o] notes", "[h] help", quit_command_label()),
+            _format_command_row("[l1|l2|l3|l4] lifecycle", "[n] name", "[i] interface"),
+            _format_command_row("[o] notes", "[h] help", "[q] quit"),
             _format_command_row("[Enter] save + next", "[b] back", "[a] compact view"),
             COMMAND_SEPARATOR,
-            "Note: press ctrl+c to quit. Type a command key and press Enter, for example 1 + Enter.",
+            "Note: q/Q or ctrl+c quits. Type a command key and press Enter, for example p1 + Enter.",
         ]
 
 

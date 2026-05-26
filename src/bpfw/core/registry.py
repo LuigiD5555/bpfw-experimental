@@ -3,8 +3,6 @@
 from dataclasses import dataclass
 
 from bpfw.core.catalog.paths import CANONICAL_BLUEPRINT_FILE
-from bpfw.core.catalog.verify import run_verify
-from bpfw.core.catalog.writer import run_init
 from bpfw.core.pipeline import Pipeline, PipelineStep
 from bpfw.core.result import ResultStatus, StepResult
 from bpfw.core.errors import BlueprintLockedError
@@ -21,6 +19,24 @@ from bpfw.core.protection.authority import (
 from bpfw.core.protection.runtime_lease import runtime_blueprint_write_lease
 
 
+def run_verify(project_root: object, precomputed_scan_result: object | None = None) -> object:
+    """Run catalog verification through a lazy import.
+
+    Args:
+        project_root: Project root directory.
+        precomputed_scan_result: Optional precomputed scan result.
+
+    Returns:
+        Verification report and exit code from the catalog verifier.
+    """
+    from bpfw.core.catalog.verify import run_verify as run_catalog_verify
+
+    return run_catalog_verify(
+        project_root=project_root,
+        precomputed_scan_result=precomputed_scan_result,
+    )
+
+
 @dataclass(slots=True)
 class InitProjectStep(PipelineStep):
     """Initialize the catalog blueprint file."""
@@ -28,6 +44,8 @@ class InitProjectStep(PipelineStep):
     name: str = "catalog.init"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
+        from bpfw.core.catalog.writer import run_init
+
         try:
             with runtime_blueprint_write_lease(
                 project_root=context.project_root,

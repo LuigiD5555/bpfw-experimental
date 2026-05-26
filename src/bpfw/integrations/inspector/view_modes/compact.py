@@ -3,7 +3,6 @@
 from typing import List
 
 from bpfw.integrations.inspector.view_modes.base import InspectorViewMode
-from bpfw.integrations.shared.cli_runtime import quit_command_label
 from bpfw.integrations.shared.visual_theme import COMMAND_SEPARATOR
 from bpfw.integrations.shared.visual_width import pad_text
 
@@ -32,10 +31,10 @@ class CompactInspectorViewMode(InspectorViewMode):
         """Return the compact command lines."""
 
         return [
-            _format_command_row("[h] help", quit_command_label()),
+            _format_command_row("[h] help", "[q] quit"),
             _format_command_row("[Enter] save + next", "[b] back", "[a] full view"),
             COMMAND_SEPARATOR,
-            "Note: press ctrl+c to quit. Type a command key and press Enter, for example a + Enter.",
+            "Note: q/Q or ctrl+c quits. Type a command key and press Enter, for example p1 + Enter.",
         ]
 
 

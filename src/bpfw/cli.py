@@ -4,23 +4,22 @@ import argparse
 import json
 from pathlib import Path
 
-from bpfw.core.catalog.paths import CANONICAL_BLUEPRINT_FILE
-from bpfw.core.catalog.verify import run_verify
-from bpfw.core.catalog.writer import run_init
-from bpfw.runner import run_command_after_verify
-from bpfw.watch import WatchDependencyError, run_watch
-from bpfw.core.engine import BlueprintEngine, build_command
-from bpfw.core.protection.authority import (
-    MISSING_BLUEPRINT_STATUS,
-    ProtectionResult,
-    get_authority_protection_status,
-    lock_authority,
-    unlock_authority,
-)
-from bpfw.reports.status_report import run_status
-from bpfw.reports.verify_report import VERIFY_FINDING_FILTERS, render_verify_report
 from bpfw.shared.text import normalize_text_command
-from bpfw.core.protection.runtime_lease import runtime_blueprint_write_lease
+
+
+def run_command_after_verify(project_root: Path, command: list[str]) -> int:
+    """Run a command after verification through a lazy import.
+
+    Args:
+        project_root: Project root directory.
+        command: Subprocess command to run after verification passes.
+
+    Returns:
+        Subprocess or verification exit code.
+    """
+    from bpfw.runner import run_command_after_verify as run_after_verify
+
+    return run_after_verify(project_root=project_root, command=command)
 
 
 MVP_COMMANDS = (
@@ -151,6 +150,8 @@ def resolve_cli_command(command: str, subcommand: str | None) -> str:
             raise ValueError("init does not accept subcommands")
         return "init"
     if normalized_command == "verify":
+        from bpfw.reports.verify_report import VERIFY_FINDING_FILTERS
+
         if normalized_subcommand is not None and normalized_subcommand not in VERIFY_FINDING_FILTERS:
             valid_filters = ", ".join(sorted(VERIFY_FINDING_FILTERS))
             raise ValueError(
@@ -171,7 +172,7 @@ def resolve_cli_command(command: str, subcommand: str | None) -> str:
     raise ValueError(f"Unknown command: {normalized_command}")
 
 
-def _format_protected_resources(result: ProtectionResult) -> str:
+def _format_protected_resources(result: "ProtectionResult") -> str:
     """Format protected resources for CLI output."""
 
     lines = []
@@ -271,6 +272,9 @@ def main() -> int:
 
     # init is handled directly by the catalog writer
     if normalized_command == "init":
+        from bpfw.core.catalog.writer import run_init
+        from bpfw.core.protection.runtime_lease import runtime_blueprint_write_lease
+
         project_root = Path(parsed_arguments.project_root).resolve()
         try:
             with runtime_blueprint_write_lease(project_root=project_root, tool_name="init"):
@@ -286,6 +290,9 @@ def main() -> int:
 
     # verify is handled directly by the catalog verify pipeline
     if normalized_command == "verify":
+        from bpfw.core.catalog.verify import run_verify
+        from bpfw.reports.verify_report import VERIFY_FINDING_FILTERS, render_verify_report
+
         project_root = Path(parsed_arguments.project_root).resolve()
         selected_filter = normalize_text_command(parsed_arguments.subcommand) if parsed_arguments.subcommand else None
         selected_codes = None if selected_filter in {None, "all"} else sorted(VERIFY_FINDING_FILTERS[selected_filter])
@@ -320,6 +327,8 @@ def main() -> int:
 
     # watch is handled directly by the lightweight watch service
     if normalized_command == "watch":
+        from bpfw.watch import WatchDependencyError, run_watch
+
         project_root = Path(parsed_arguments.project_root).resolve()
         try:
             return run_watch(
@@ -333,6 +342,8 @@ def main() -> int:
 
     # status is handled directly by the status report pipeline
     if normalized_command == "status":
+        from bpfw.reports.status_report import run_status
+
         project_root = Path(parsed_arguments.project_root).resolve()
         output, exit_code = run_status(project_root=project_root)
         print(output)
@@ -340,6 +351,9 @@ def main() -> int:
 
     # lock is handled directly by the protection authority
     if normalized_command == "lock":
+        from bpfw.core.catalog.paths import CANONICAL_BLUEPRINT_FILE
+        from bpfw.core.protection.authority import MISSING_BLUEPRINT_STATUS, lock_authority
+
         project_root = Path(parsed_arguments.project_root).resolve()
         lock_result = lock_authority(project_root=project_root)
         if lock_result.status == MISSING_BLUEPRINT_STATUS:
@@ -390,6 +404,13 @@ def main() -> int:
 
     # unlock is handled directly by the protection authority
     if normalized_command == "unlock":
+        from bpfw.core.catalog.paths import CANONICAL_BLUEPRINT_FILE
+        from bpfw.core.protection.authority import (
+            MISSING_BLUEPRINT_STATUS,
+            get_authority_protection_status,
+            unlock_authority,
+        )
+
         project_root = Path(parsed_arguments.project_root).resolve()
         current_lock_state = get_authority_protection_status(project_root=project_root).status
         if current_lock_state == MISSING_BLUEPRINT_STATUS:
@@ -420,6 +441,8 @@ def main() -> int:
             "  Run bpfw verify before locking again."
         )
         return 0
+
+    from bpfw.core.engine import BlueprintEngine, build_command
 
     engine = BlueprintEngine()
     command_arguments: dict[str, str] = {}

@@ -24,11 +24,11 @@ def suggest_domains(
     """Suggest domains using fixed evidence slots.
 
     The slot order is fixed:
-    [q] behavior_based_match_1
-    [w] behavior_based_match_2
-    [e] behavior_based_match_3
-    [r] symbol_based
-    [t] previous_domain_for_origin
+    [d1] behavior_based_match_1
+    [d2] behavior_based_match_2
+    [d3] behavior_based_match_3
+    [d4] symbol_based
+    [d5] previous_domain_for_origin
     [y] custom_domain
 
     Args:

@@ -8,8 +8,18 @@ from bpfw.integrations.inspector.base import InspectIssue
 from bpfw.integrations.shared.cli_runtime import is_quit_command, normalize_command
 
 InputFunc = Callable[[str], str]
-DOMAIN_SUGGESTION_KEYS = ("q", "w", "e", "r", "t")
-CUSTOM_DOMAIN_KEY = "y"
+PURPOSE_SUGGESTION_KEYS = ("p1", "p2", "p3", "p4", "p5")
+CUSTOM_PURPOSE_KEY = "p"
+LEGACY_CUSTOM_PURPOSE_KEY = "p6"
+DOMAIN_SUGGESTION_KEYS = ("d1", "d2", "d3", "d4", "d5")
+CUSTOM_DOMAIN_KEY = "d"
+LEGACY_CUSTOM_DOMAIN_KEY = "d6"
+LIFECYCLE_KEYS = {
+    "l1": "active",
+    "l2": "experimental",
+    "l3": "legacy",
+    "l4": "deprecated",
+}
 
 
 def _read_optional_value(input_func: InputFunc, prompt: str) -> str | None:
@@ -48,8 +58,8 @@ def apply_inspector_command(
     if stripped_command == "":
         return InspectorAction.SAVE_NEXT
 
-    if stripped_command in {"1", "2", "3", "4", "5"}:
-        suggestion_index = int(stripped_command) - 1
+    if stripped_command in PURPOSE_SUGGESTION_KEYS:
+        suggestion_index = PURPOSE_SUGGESTION_KEYS.index(stripped_command)
         if suggestion_index < len(purpose_suggestions):
             suggestion_text = purpose_suggestions[suggestion_index].text.strip()
             normalized_text = " ".join(suggestion_text.strip().lower().split())
@@ -57,8 +67,20 @@ def apply_inspector_command(
                 issue.block["purpose"] = normalized_text
         return InspectorAction.STAY
 
-    if stripped_command.startswith("6"):
-        value = stripped_command[1:].strip()
+    if (
+        stripped_command == CUSTOM_PURPOSE_KEY
+        or stripped_command.startswith(CUSTOM_PURPOSE_KEY)
+        or stripped_command == LEGACY_CUSTOM_PURPOSE_KEY
+        or stripped_command.startswith(f"{LEGACY_CUSTOM_PURPOSE_KEY} ")
+    ):
+        if stripped_command.startswith(f"{LEGACY_CUSTOM_PURPOSE_KEY} "):
+            value = stripped_command[len(LEGACY_CUSTOM_PURPOSE_KEY):].strip()
+        elif stripped_command == LEGACY_CUSTOM_PURPOSE_KEY:
+            value = ""
+        elif stripped_command.startswith(CUSTOM_PURPOSE_KEY):
+            value = stripped_command[len(CUSTOM_PURPOSE_KEY):].strip()
+        else:
+            value = ""
         if not value:
             prompt_value = _read_optional_value(input_func=input_func, prompt="purpose: ")
             if prompt_value is None:
@@ -77,19 +99,26 @@ def apply_inspector_command(
                 issue.block["domain"] = " ".join(domain_text.strip().lower().split())
         return InspectorAction.STAY
 
-    # Then check status keys (z, x, c, v)
-    if stripped_command in {"z", "x", "c", "v"}:
-        issue.block["status"] = {
-            "z": "active",
-            "x": "experimental",
-            "c": "legacy",
-            "v": "deprecated",
-        }[stripped_command]
+    # Then check lifecycle keys (l1, l2, l3, l4).
+    if stripped_command in LIFECYCLE_KEYS:
+        issue.block["status"] = LIFECYCLE_KEYS[stripped_command]
         return InspectorAction.STAY
 
     # Custom domain input.
-    if stripped_command.startswith(CUSTOM_DOMAIN_KEY):
-        value = stripped_command[len(CUSTOM_DOMAIN_KEY):].strip()
+    if (
+        stripped_command == CUSTOM_DOMAIN_KEY
+        or stripped_command.startswith(CUSTOM_DOMAIN_KEY)
+        or stripped_command == LEGACY_CUSTOM_DOMAIN_KEY
+        or stripped_command.startswith(f"{LEGACY_CUSTOM_DOMAIN_KEY} ")
+    ):
+        if stripped_command.startswith(f"{LEGACY_CUSTOM_DOMAIN_KEY} "):
+            value = stripped_command[len(LEGACY_CUSTOM_DOMAIN_KEY):].strip()
+        elif stripped_command == LEGACY_CUSTOM_DOMAIN_KEY:
+            value = ""
+        elif stripped_command.startswith(CUSTOM_DOMAIN_KEY):
+            value = stripped_command[len(CUSTOM_DOMAIN_KEY):].strip()
+        else:
+            value = ""
         if not value:
             prompt_value = _read_optional_value(input_func=input_func, prompt="domain: ")
             if prompt_value is None:

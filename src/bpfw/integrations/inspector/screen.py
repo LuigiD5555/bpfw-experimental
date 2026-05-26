@@ -14,7 +14,13 @@ from bpfw.integrations.inspector.base import (
     clean_string,
     display_value,
 )
-from bpfw.integrations.inspector.commands import CUSTOM_DOMAIN_KEY, DOMAIN_SUGGESTION_KEYS
+from bpfw.integrations.inspector.commands import (
+    CUSTOM_DOMAIN_KEY,
+    CUSTOM_PURPOSE_KEY,
+    DOMAIN_SUGGESTION_KEYS,
+    LIFECYCLE_KEYS,
+    PURPOSE_SUGGESTION_KEYS,
+)
 from bpfw.integrations.inspector.view_modes import resolve_inspector_view_mode_from_flag
 from bpfw.integrations.inspector.view_modes.base import InspectorViewMode
 from bpfw.integrations.shared.visual_width import display_width, fit_text, measure_lines, pad_text
@@ -49,6 +55,7 @@ def render_inspector_screen(
     print_func: PrintFunc = print,
     show_all: bool = False,
     view_mode: InspectorViewMode | None = None,
+    pre_inspection_context_lines: list[str] | None = None,
 ) -> None:
     """Render the direct MVP inspector screen."""
 
@@ -56,13 +63,16 @@ def render_inspector_screen(
     print_func("")
     header_meta = f"{index + 1}/{total} {issue_type} "
     file_path = block.get("code", {}).get("path", "")
-    snippet_lines = build_code_lines(project_root, block)[:26]
+    snippet_lines = build_code_lines(project_root, block)
     nested_lines = build_nested_snippet_lines(block)
     hierarchy_lines = build_hierarchy_lines(block)
+    is_approved_new = issue_type == "approved_new"
     code_lines: List[str] = []
     if file_path:
         code_lines.append(file_path)
-    if nested_lines:
+    if nested_lines and is_approved_new:
+        code_lines.extend(_build_hierarchical_purpose_summary_lines(block))
+    elif nested_lines:
         code_lines.append("Children detected. Parent preview is collapsed.")
         code_lines.extend(hierarchy_lines)
     else:
@@ -80,21 +90,21 @@ def render_inspector_screen(
     current_lifecycle = clean_string(block.get("status")) or ""
     lifecycle_lines = []
     for lifecycle_value, lifecycle_label in (
-        ("active", " [z] active"),
-        ("experimental", " [x] experimental"),
-        ("legacy", " [c] legacy"),
-        ("deprecated", " [v] deprecated"),
+        ("active", " [l1] active"),
+        ("experimental", " [l2] experimental"),
+        ("legacy", " [l3] legacy"),
+        ("deprecated", " [l4] deprecated"),
     ):
         marker = " *" if lifecycle_value == current_lifecycle else ""
         lifecycle_lines.append(f"{lifecycle_label}{marker}")
 
     purpose_lines: List[str] = []
-    for suggestion_index in range(1, 6):
+    for suggestion_index, purpose_label in enumerate(PURPOSE_SUGGESTION_KEYS):
         suggestion_text = "-"
-        if suggestion_index - 1 < len(purpose_suggestions):
-            suggestion_text = purpose_suggestions[suggestion_index - 1].text
-        purpose_lines.append(f" [{suggestion_index}] {suggestion_text}")
-    purpose_lines.append(" [6] write custom purpose")
+        if suggestion_index < len(purpose_suggestions):
+            suggestion_text = purpose_suggestions[suggestion_index].text
+        purpose_lines.append(f" [{purpose_label}] {suggestion_text}")
+    purpose_lines.append(f" [{CUSTOM_PURPOSE_KEY}] write custom purpose")
 
     domain_lines: List[str] = []
     for domain_index, domain_label in enumerate(DOMAIN_SUGGESTION_KEYS):
@@ -116,6 +126,7 @@ def render_inspector_screen(
         content_width=120,
         max_lines=6,
     )
+    context_lines = list(pre_inspection_context_lines or [])
     global_inner_width = _compute_layout_width(
         header_meta=header_meta,
         code_lines=code_lines,
@@ -127,17 +138,26 @@ def render_inspector_screen(
         domain_lines=domain_lines,
         purpose_lines=purpose_lines,
         command_lines=command_lines,
+        pre_inspection_context_lines=context_lines,
     )
 
     for header_line in _build_header(title=header_title, meta="", width=global_inner_width):
         print_func(header_line)
 
+    if context_lines:
+        for line in render_box(
+            title="Pre-inspection context",
+            lines=[f" {line}" for line in context_lines],
+            width=global_inner_width,
+        ):
+            print_func(line)
+
     code_panel_lines = list(code_lines)
-    if file_path:
+    if file_path and not (nested_lines and is_approved_new):
         code_panel_lines = [
             _compose_left_right_line(left=f" {file_path}", right=header_meta, width=global_inner_width),
             "─" * global_inner_width,
-            *snippet_lines,
+            *snippet_lines[:26],
         ]
     for line in render_box(title="Code Block", lines=code_panel_lines, width=global_inner_width):
         print_func(line)
@@ -218,6 +238,68 @@ def _build_header(title: str, meta: str, width: int) -> List[str]:
         left_width = width - display_width(meta) - 1
         header_line = pad_text(title, left_width) + " " + meta
     return render_header(title=header_line, width=width, theme=DEFAULT_THEME, centered=False)
+
+
+def _build_hierarchical_purpose_summary_lines(block: Dict[str, Any]) -> list[str]:
+    """Build purpose-first summary lines for approved new container blocks."""
+
+    location = block.get("code", {})
+    if not isinstance(location, dict):
+        return ["  -  No source location detected."]
+
+    symbol = clean_string(location.get("symbol")) or "-"
+    kind = clean_string(location.get("kind")) or "symbol"
+    lines = [
+        f"  Container: {symbol} ({kind})",
+        f"  Purpose: {_purpose_fallback_text(block)}",
+        "  Review state: pending",
+        "",
+        "  Internal members (leaf-first review):",
+    ]
+
+    detected = block.get("detected")
+    methods = detected.get("methods", []) if isinstance(detected, dict) else []
+    functions = detected.get("functions", []) if isinstance(detected, dict) else []
+    added_children = 0
+
+    for method_symbol in methods:
+        child_symbol = clean_string(method_symbol)
+        if child_symbol is None:
+            continue
+        lines.append(f"  - {child_symbol} | kind=method | purpose=- | state=pending")
+        added_children += 1
+
+    for function_symbol in functions:
+        child_symbol = clean_string(function_symbol)
+        if child_symbol is None:
+            continue
+        child_name = child_symbol.split(".")[-1]
+        child_kind = "nested_class" if child_name[:1].isupper() else "nested_function"
+        lines.append(f"  - {child_symbol} | kind={child_kind} | purpose=- | state=pending")
+        added_children += 1
+
+    if added_children == 0:
+        lines.append("  - none")
+    return lines
+
+
+def _purpose_fallback_text(block: Dict[str, Any]) -> str:
+    """Return purpose text using deterministic fallback order."""
+
+    purpose_value = clean_string(block.get("purpose"))
+    if purpose_value is not None:
+        return purpose_value
+    detected = block.get("detected")
+    if isinstance(detected, dict):
+        docstring_value = clean_string(detected.get("docstring"))
+        if docstring_value is not None:
+            first_line = docstring_value.splitlines()[0].strip()
+            if first_line:
+                return first_line
+        signature_value = clean_string(detected.get("signature"))
+        if signature_value is not None:
+            return signature_value
+    return "-"
 
 
 def _build_observation_panel_lines(
@@ -344,6 +426,7 @@ def _compute_layout_width(
     domain_lines: list[str],
     purpose_lines: list[str],
     command_lines: list[str],
+    pre_inspection_context_lines: list[str] | None = None,
 ) -> int:
     """Compute one global inner width for all panels."""
 
@@ -353,6 +436,7 @@ def _compute_layout_width(
     observations_required = measure_lines(observation_preview_lines)
     interface_required = measure_lines(interface_preview_lines)
     commands_required = measure_lines(command_lines)
+    context_required = measure_lines(pre_inspection_context_lines or [])
     authority_required = max(
         display_width("Block Status") + 3,
         measure_lines(authority_lines),
@@ -378,6 +462,7 @@ def _compute_layout_width(
         observations_required,
         interface_required,
         commands_required,
+        context_required,
         two_col_required_authority,
         two_col_required_suggestions,
     ) + (HORIZONTAL_PADDING * 2)

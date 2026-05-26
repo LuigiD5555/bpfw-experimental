@@ -12,7 +12,7 @@ ExitChecker = Callable[[], bool]
 
 QUIT_COMMAND_KEY = "ctrl+c"
 QUIT_COMMAND = "quit"
-QUIT_COMMAND_ALIASES = frozenset({QUIT_COMMAND, QUIT_COMMAND_KEY, "ctrl + c"})
+QUIT_COMMAND_ALIASES = frozenset({QUIT_COMMAND, QUIT_COMMAND_KEY, "ctrl + c", "q"})
 
 
 def command_label(shortcut: str, description: str) -> str:
@@ -31,7 +31,7 @@ def normalize_command(raw_value: str) -> str:
     """Return normalized command text for dispatch."""
 
     command = raw_value.strip().lower()
-    if command in {QUIT_COMMAND_KEY, "ctrl + c", QUIT_COMMAND}:
+    if command in {QUIT_COMMAND_KEY, "ctrl + c", QUIT_COMMAND, "q"}:
         return QUIT_COMMAND
     return command
 

@@ -16,6 +16,7 @@ def test_normalize_command_lowers_and_strips() -> None:
     assert normalize_command("ctrl+c") == QUIT_COMMAND
     assert normalize_command("ctrl + c") == QUIT_COMMAND
     assert normalize_command(QUIT_COMMAND) == QUIT_COMMAND
+    assert normalize_command("q") == QUIT_COMMAND
 
 
 def test_command_labels_use_shared_quit_key() -> None:
@@ -27,7 +28,7 @@ def test_command_labels_use_shared_quit_key() -> None:
 def test_back_and_quit_aliases() -> None:
     assert is_back_command("b")
     assert is_back_command("back")
-    assert not is_quit_command("q")
+    assert is_quit_command("q")
     assert is_quit_command(QUIT_COMMAND)
     assert is_quit_command("quit")
 

@@ -11,11 +11,14 @@ from bpfw.core.errors import BlueprintLockedError
 from bpfw.integrations.inspector.base import InspectIssue, InspectLoadResult, save_blueprint
 from bpfw.integrations.inspector.commands import (
     CUSTOM_DOMAIN_KEY,
+    CUSTOM_PURPOSE_KEY,
     DOMAIN_SUGGESTION_KEYS,
     InspectorAction,
+    PURPOSE_SUGGESTION_KEYS,
     run_interface_edit_submode,
 )
 from bpfw.integrations.inspector.input_adapter import InspectorInputReader
+from bpfw.integrations.inspector.inspector_state import InspectorResumeState, InspectorStateRepository, now_iso_utc
 from bpfw.integrations.inspector.state import InspectorViewState
 from bpfw.integrations.inspector.validation import validate_required_fields
 from bpfw.integrations.inspector.view_modes.base import InspectorViewMode
@@ -38,6 +41,7 @@ class InspectorController:
         session: InspectLoadResult,
         input_reader: InspectorInputReader,
         print_func,
+        input_signature: str | None = None,
     ) -> None:
         """Initialize the inspector controller.
 
@@ -50,6 +54,16 @@ class InspectorController:
         self._session = session
         self._input_reader = input_reader
         self._print_func = print_func
+        self._input_signature = input_signature
+
+    def _build_input_signature(self) -> str:
+        """Build drift-compatible signature to validate inspector snapshots."""
+
+        if self._input_signature is not None:
+            return self._input_signature
+        from bpfw.integrations.inspector.drift_state import DriftStateRepository
+
+        return DriftStateRepository(self._session.project_root).build_input_signature()
 
     def handle_action(
         self,
@@ -75,6 +89,32 @@ class InspectorController:
             return InspectorControllerResult()
 
         if action == InspectorAction.QUIT:
+            missing_fields = validate_required_fields(issue.block)
+            resume_index = state.current_index
+            if not missing_fields:
+                try:
+                    persisted = save_issue(session=self._session, issue=issue)
+                except BlueprintLockedError as error:
+                    self._print_func(str(error))
+                    state.stop()
+                    return InspectorControllerResult(exit_code=1)
+                if persisted:
+                    self._print_func("Saved and exited.")
+                    resume_index = min(state.current_index + 1, max(0, len(self._session.issues) - 1))
+                else:
+                    self._print_func("Exited without saving: blueprint path is unavailable.")
+            else:
+                self._print_func("Exited with pending invalid block; progress snapshot saved.")
+            repository = InspectorStateRepository(self._session.project_root)
+            repository.save(
+                InspectorResumeState(
+                    input_signature=self._build_input_signature(),
+                    current_index=resume_index,
+                    mode_name=state.mode_name,
+                    issues=list(self._session.issues),
+                    saved_at=now_iso_utc(),
+                )
+            )
             self._print_func("Inspector stopped.")
             state.stop()
             return InspectorControllerResult(exit_code=0)
@@ -171,6 +211,18 @@ def save_issue(session: InspectLoadResult, issue: InspectIssue) -> bool:
         blueprint_data=session.blueprint_data,
         authority_document=session.authority_document,
     )
+    if issue.issue_type == "approved_new":
+        from bpfw.integrations.inspector.drift_state import DriftStateRepository
+
+        repository = DriftStateRepository(session.project_root)
+        state = repository.load()
+        if state.mark_approved_issue_resolved(issue.block):
+            repository.save(state)
+    from bpfw.integrations.inspector.work_cache import invalidate_inspector_work_cache
+    from bpfw.integrations.inspector.verify_snapshot import VerifySnapshotRepository
+
+    invalidate_inspector_work_cache(session.project_root)
+    VerifySnapshotRepository(session.project_root).invalidate()
     return True
 
 
@@ -219,7 +271,7 @@ def render_unknown_command_notification() -> list[str]:
     from bpfw.integrations.shared.visual_notifications import render_notification_block
 
     lines = [
-        "Use 1/2/3/4/5/6, q/w/e/r/t/y, z/x/c/v, n, i, o(notes), Enter, b, a, h, or ctrl+c to quit."
+        "Use p1-p5 for purpose suggestions, p for custom purpose, d1-d5 for domain suggestions, d for custom domain, l1-l4 for lifecycle, n, i, o(notes), Enter, b, a, h, q, or ctrl+c."
     ]
     return render_notification_block(
         title="Unknown command",
@@ -255,21 +307,28 @@ def render_help_block(view_mode: InspectorViewMode) -> list[str]:
         "",
         "  Purpose suggestions",
         "  ───────────────────",
-        "  [1] Existing purpose from blueprint matches this block.",
-        "  [2] Learned purpose previously accepted by the user.",
-        "  [3] Symbol or block name, such as class/function name.",
-        "  [4] Docstring first sentence or supported docstring pattern.",
-        "  [5] Blended evidence from history, symbol, and docstring.",
-        "  [6] write custom purpose",
+        "  [p1] Existing purpose from blueprint matches this block.",
+        "  [p2] Learned purpose previously accepted by the user.",
+        "  [p3] Symbol or block name, such as class/function name.",
+        "  [p4] Docstring first sentence or supported docstring pattern.",
+        "  [p5] Blended evidence from history, symbol, and docstring.",
+        "  [p] write custom purpose",
         "",
         "  Domain suggestions",
         "  ──────────────────",
-        "  [q] Existing domain best matched by block behavior.",
-        "  [w] Second existing domain matched by block behavior.",
-        "  [e] Third existing domain matched by block behavior.",
-        "  [r] Symbol-based domain from the class/function name.",
-        "  [t] Previous domain used for the same code origin.",
+        "  [d1] Existing domain best matched by block behavior.",
+        "  [d2] Second existing domain matched by block behavior.",
+        "  [d3] Third existing domain matched by block behavior.",
+        "  [d4] Symbol-based domain from the class/function name.",
+        "  [d5] Previous domain used for the same code origin.",
         f"  [{CUSTOM_DOMAIN_KEY}] write custom domain",
+        "",
+        "  Lifecycle shortcuts",
+        "  ───────────────────",
+        "  [l1] active",
+        "  [l2] experimental",
+        "  [l3] legacy",
+        "  [l4] deprecated",
         "",
         "  View mode",
         "  ─────────",
@@ -305,7 +364,7 @@ def render_help_block(view_mode: InspectorViewMode) -> list[str]:
             "  [Enter]    Save and continue",
             "  [b]        Back",
             "  [h]        Toggle help",
-            f"  {quit_command_label('Quit'):<10}",
+            "  [q]        Quit. Ctrl+c also quits.",
             "",
         ]
     )
