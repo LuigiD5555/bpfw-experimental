@@ -1,6 +1,7 @@
 """Python AST scanner for BPFW MVP Catalog Mode."""
 
 import ast
+import hashlib
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -152,6 +153,7 @@ def _scan_python_file(
             imports=imports,
             parent_symbols=[],
             parent_kind=None,
+            source_text=file_content,
         )
     )
 
@@ -165,6 +167,7 @@ def _extract_code_units(
     imports: List[str],
     parent_symbols: List[str],
     parent_kind: str | None,
+    source_text: str,
 ) -> List[DiscoveredCodeUnit]:
     """Extract top-level and nested code units from AST nodes."""
 
@@ -188,6 +191,7 @@ def _extract_code_units(
                 imports=imports,
                 symbol=".".join(symbol_parts),
                 symbol_type=_class_symbol_type(parent_symbols),
+                source_text=source_text,
             )
             if unit:
                 discovered_units.append(unit)
@@ -199,24 +203,14 @@ def _extract_code_units(
                     imports=imports,
                     parent_symbols=symbol_parts,
                     parent_kind="class",
+                    source_text=source_text,
                 )
             )
             continue
 
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            # Filter out private methods (except dunder methods)
-            if node.name.startswith("_") and not (
-                node.name.startswith("__") and node.name.endswith("__")
-            ):
-                continue
             # Filter out nested functions in decorators
             if _is_decorator_nested_function(node, parent_kind, parent_symbols):
-                continue
-            # Filter out tiny nested functions (< 5 lines of code)
-            if parent_kind == "function" and _is_tiny_nested_function(node):
-                continue
-            # Filter out trivial methods (getters/setters with minimal logic)
-            if parent_kind == "class" and _is_trivial_method(node):
                 continue
             # Filter out property-like methods in schema.py
             if _is_schema_wrapper_function(node, module):
@@ -234,6 +228,7 @@ def _extract_code_units(
                         parent_symbols=parent_symbols,
                         parent_kind=parent_kind,
                     ),
+                    source_text=source_text,
                 )
                 if unit:
                     discovered_units.append(unit)
@@ -245,6 +240,7 @@ def _extract_code_units(
                     imports=imports,
                     parent_symbols=symbol_parts,
                     parent_kind="function",
+                    source_text=source_text,
                 )
             )
 
@@ -319,6 +315,100 @@ def _function_symbol_type(parent_symbols: List[str], parent_kind: str | None) ->
     return "function"
 
 
+def _normalized_body_hash(node: ast.AST) -> str:
+    """Return a stable hash for a code unit body independent of its name.
+
+    Args:
+        node: Class or function AST node.
+
+    Returns:
+        SHA-256 hash of the normalized body AST.
+    """
+    body = getattr(node, "body", [])
+    normalized_module = ast.Module(body=list(body), type_ignores=[])
+    normalized_dump = ast.dump(normalized_module, include_attributes=False)
+    return hashlib.sha256(normalized_dump.encode("utf-8")).hexdigest()
+
+
+def _detect_dangerous_capabilities(node: ast.AST) -> dict[str, bool]:
+    """Detect high-risk side-effect capabilities used by a code unit.
+
+    Args:
+        node: Class or function AST node.
+
+    Returns:
+        Capability flags for conservative drift decisions.
+    """
+    capabilities = {
+        "writes_files": False,
+        "deletes_files": False,
+        "opens_network": False,
+        "uses_subprocess": False,
+    }
+    dangerous_delete_names = {"remove", "unlink", "rmtree", "rmdir"}
+    network_roots = {"socket", "requests", "httpx", "urllib"}
+
+    for child in ast.walk(node):
+        if not isinstance(child, ast.Call):
+            continue
+        call_name = _call_name(child.func)
+        if call_name is None:
+            continue
+        if call_name.startswith("subprocess.") or call_name in {"run", "Popen", "call", "check_call", "check_output"}:
+            capabilities["uses_subprocess"] = True
+        if call_name in {"open", "Path.open"} or call_name.endswith(".open"):
+            if _call_uses_write_mode(child):
+                capabilities["writes_files"] = True
+        if any(call_name == name or call_name.endswith(f".{name}") for name in dangerous_delete_names):
+            capabilities["deletes_files"] = True
+        if any(call_name == root or call_name.startswith(f"{root}.") for root in network_roots):
+            capabilities["opens_network"] = True
+
+    return capabilities
+
+
+def _call_name(node: ast.AST) -> str | None:
+    """Return a dotted call name from an AST expression.
+
+    Args:
+        node: AST expression used as call target.
+
+    Returns:
+        Dotted call name when it can be derived.
+    """
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        parent_name = _call_name(node.value)
+        if parent_name is None:
+            return node.attr
+        return f"{parent_name}.{node.attr}"
+    return None
+
+
+def _call_uses_write_mode(node: ast.Call) -> bool:
+    """Return whether an open-like call uses a write-capable mode.
+
+    Args:
+        node: Open call AST node.
+
+    Returns:
+        True when the call mode can write or append.
+    """
+    write_modes = {"w", "a", "x", "+"}
+    candidate_values: list[ast.AST] = []
+    if len(node.args) >= 2:
+        candidate_values.append(node.args[1])
+    for keyword in node.keywords:
+        if keyword.arg == "mode":
+            candidate_values.append(keyword.value)
+    for value in candidate_values:
+        if isinstance(value, ast.Constant) and isinstance(value.value, str):
+            if any(mode in value.value for mode in write_modes):
+                return True
+    return False
+
+
 def _should_discover_function(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
     parent_kind: str | None,
@@ -326,20 +416,11 @@ def _should_discover_function(
 ) -> bool:
     """
     Return whether a function-like node should become a block.
-    Filters out:
-    - All dunder methods in classes (__init__, __str__, etc.)
-    - Trivial getters/setters (less than 3 lines of actual code)
-    - Very small nested functions (less than 5 lines)
+
+    Hierarchical inspection requires full containment coverage, so function-like
+    units are not excluded by private naming, dunder naming, or trivial size.
     """
-    # Exclude all dunder methods in classes
-    if parent_kind == "class" and node.name.startswith("__") and node.name.endswith("__"):
-        return False
-    # Exclude trivial getters/setters in classes (less than 3 lines of actual code)
-    if parent_kind == "class" and _is_trivial_method(node):
-        return False
-    # Exclude very small nested functions (less than 5 lines)
-    if parent_kind == "function" and _is_tiny_nested_function(node):
-        return False
+    _ = (node, parent_kind, module)
     return True
 
 
@@ -405,6 +486,7 @@ def _extract_class_unit(
     imports: List[str],
     symbol: str,
     symbol_type: str,
+    source_text: str,
 ) -> Optional[DiscoveredCodeUnit]:
     """
     Extract class information from AST node.
@@ -463,6 +545,8 @@ def _extract_class_unit(
         interface_inputs=interface_inputs,
         interface_output=interface_output,
         calls=calls,
+        normalized_body_hash=_normalized_body_hash(node),
+        dangerous_capabilities=_detect_dangerous_capabilities(node),
     )
 
 
@@ -473,6 +557,7 @@ def _extract_function_unit(
     imports: List[str],
     symbol: str,
     symbol_type: str,
+    source_text: str,
 ) -> Optional[DiscoveredCodeUnit]:
     """
     Extract function information from AST node.
@@ -526,6 +611,8 @@ def _extract_function_unit(
         interface_inputs=interface_inputs,
         interface_output=interface_output,
         calls=calls,
+        normalized_body_hash=_normalized_body_hash(node),
+        dangerous_capabilities=_detect_dangerous_capabilities(node),
     )
 
 
@@ -587,10 +674,6 @@ def _extract_direct_child_function_qualified_names(
     for node in nodes:
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
-        if node.name.startswith("_") and not (
-            node.name.startswith("__") and node.name.endswith("__")
-        ):
-            continue
         if skip_dunder and node.name.startswith("__") and node.name.endswith("__"):
             continue
         child_symbol = f"{parent_symbol}.{node.name}"
@@ -623,10 +706,6 @@ def _extract_direct_child_function_symbols(
     child_symbols: List[str] = []
     for node in nodes:
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            continue
-        if node.name.startswith("_") and not (
-            node.name.startswith("__") and node.name.endswith("__")
-        ):
             continue
         if skip_dunder and node.name.startswith("__") and node.name.endswith("__"):
             continue

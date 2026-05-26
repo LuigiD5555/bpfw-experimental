@@ -34,6 +34,8 @@ class DiscoveredCodeUnit:
     interface_output: Optional[Dict[str, Any]] = None
     calls: List[Dict[str, Any]] = field(default_factory=list)
     """Structured call references extracted from AST. Each dict has 'context' and 'name' keys."""
+    normalized_body_hash: Optional[str] = None
+    dangerous_capabilities: Dict[str, bool] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
