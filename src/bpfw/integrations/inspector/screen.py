@@ -56,6 +56,7 @@ def render_inspector_screen(
     show_all: bool = False,
     view_mode: InspectorViewMode | None = None,
     pre_inspection_context_lines: list[str] | None = None,
+    project_blocks: list[dict[str, Any]] | None = None,
 ) -> None:
     """Render the direct MVP inspector screen."""
 
@@ -63,20 +64,10 @@ def render_inspector_screen(
     print_func("")
     header_meta = f"{index + 1}/{total} {issue_type} "
     file_path = block.get("code", {}).get("path", "")
-    snippet_lines = build_code_lines(project_root, block)
+    snippet_lines = build_code_lines(project_root, block, project_blocks=project_blocks)[:42]
     nested_lines = build_nested_snippet_lines(block)
     hierarchy_lines = build_hierarchy_lines(block)
-    is_approved_new = issue_type == "approved_new"
-    code_lines: List[str] = []
-    if file_path:
-        code_lines.append(file_path)
-    if nested_lines and is_approved_new:
-        code_lines.extend(_build_hierarchical_purpose_summary_lines(block))
-    elif nested_lines:
-        code_lines.append("Children detected. Parent preview is collapsed.")
-        code_lines.extend(hierarchy_lines)
-    else:
-        code_lines.extend(snippet_lines)
+    code_lines: List[str] = list(snippet_lines)
 
     authority_lines = [
         "",
@@ -90,10 +81,10 @@ def render_inspector_screen(
     current_lifecycle = clean_string(block.get("status")) or ""
     lifecycle_lines = []
     for lifecycle_value, lifecycle_label in (
-        ("active", " [l1] active"),
-        ("experimental", " [l2] experimental"),
-        ("legacy", " [l3] legacy"),
-        ("deprecated", " [l4] deprecated"),
+        ("active", " [s1] active"),
+        ("experimental", " [s2] experimental"),
+        ("legacy", " [s3] legacy"),
+        ("deprecated", " [s4] deprecated"),
     ):
         marker = " *" if lifecycle_value == current_lifecycle else ""
         lifecycle_lines.append(f"{lifecycle_label}{marker}")
@@ -152,13 +143,11 @@ def render_inspector_screen(
         ):
             print_func(line)
 
-    code_panel_lines = list(code_lines)
-    if file_path and not (nested_lines and is_approved_new):
-        code_panel_lines = [
-            _compose_left_right_line(left=f" {file_path}", right=header_meta, width=global_inner_width),
-            "─" * global_inner_width,
-            *snippet_lines[:26],
-        ]
+    code_panel_lines = [
+        _compose_left_right_line(left=f" {file_path}", right=header_meta, width=global_inner_width),
+        "─" * global_inner_width,
+        *code_lines,
+    ] if file_path else list(code_lines)
     for line in render_box(title="Code Block", lines=code_panel_lines, width=global_inner_width):
         print_func(line)
 
@@ -238,68 +227,6 @@ def _build_header(title: str, meta: str, width: int) -> List[str]:
         left_width = width - display_width(meta) - 1
         header_line = pad_text(title, left_width) + " " + meta
     return render_header(title=header_line, width=width, theme=DEFAULT_THEME, centered=False)
-
-
-def _build_hierarchical_purpose_summary_lines(block: Dict[str, Any]) -> list[str]:
-    """Build purpose-first summary lines for approved new container blocks."""
-
-    location = block.get("code", {})
-    if not isinstance(location, dict):
-        return ["  -  No source location detected."]
-
-    symbol = clean_string(location.get("symbol")) or "-"
-    kind = clean_string(location.get("kind")) or "symbol"
-    lines = [
-        f"  Container: {symbol} ({kind})",
-        f"  Purpose: {_purpose_fallback_text(block)}",
-        "  Review state: pending",
-        "",
-        "  Internal members (leaf-first review):",
-    ]
-
-    detected = block.get("detected")
-    methods = detected.get("methods", []) if isinstance(detected, dict) else []
-    functions = detected.get("functions", []) if isinstance(detected, dict) else []
-    added_children = 0
-
-    for method_symbol in methods:
-        child_symbol = clean_string(method_symbol)
-        if child_symbol is None:
-            continue
-        lines.append(f"  - {child_symbol} | kind=method | purpose=- | state=pending")
-        added_children += 1
-
-    for function_symbol in functions:
-        child_symbol = clean_string(function_symbol)
-        if child_symbol is None:
-            continue
-        child_name = child_symbol.split(".")[-1]
-        child_kind = "nested_class" if child_name[:1].isupper() else "nested_function"
-        lines.append(f"  - {child_symbol} | kind={child_kind} | purpose=- | state=pending")
-        added_children += 1
-
-    if added_children == 0:
-        lines.append("  - none")
-    return lines
-
-
-def _purpose_fallback_text(block: Dict[str, Any]) -> str:
-    """Return purpose text using deterministic fallback order."""
-
-    purpose_value = clean_string(block.get("purpose"))
-    if purpose_value is not None:
-        return purpose_value
-    detected = block.get("detected")
-    if isinstance(detected, dict):
-        docstring_value = clean_string(detected.get("docstring"))
-        if docstring_value is not None:
-            first_line = docstring_value.splitlines()[0].strip()
-            if first_line:
-                return first_line
-        signature_value = clean_string(detected.get("signature"))
-        if signature_value is not None:
-            return signature_value
-    return "-"
 
 
 def _build_observation_panel_lines(

@@ -15,10 +15,10 @@ DOMAIN_SUGGESTION_KEYS = ("d1", "d2", "d3", "d4", "d5")
 CUSTOM_DOMAIN_KEY = "d"
 LEGACY_CUSTOM_DOMAIN_KEY = "d6"
 LIFECYCLE_KEYS = {
-    "l1": "active",
-    "l2": "experimental",
-    "l3": "legacy",
-    "l4": "deprecated",
+    "s1": "active",
+    "s2": "experimental",
+    "s3": "legacy",
+    "s4": "deprecated",
 }
 
 
@@ -99,7 +99,7 @@ def apply_inspector_command(
                 issue.block["domain"] = " ".join(domain_text.strip().lower().split())
         return InspectorAction.STAY
 
-    # Then check lifecycle keys (l1, l2, l3, l4).
+    # Then check lifecycle keys (s1, s2, s3, s4).
     if stripped_command in LIFECYCLE_KEYS:
         issue.block["status"] = LIFECYCLE_KEYS[stripped_command]
         return InspectorAction.STAY

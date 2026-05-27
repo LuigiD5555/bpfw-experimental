@@ -12,11 +12,8 @@ from bpfw.integrations.inspector.base import (
     load_inspect_session,
 )
 from bpfw.integrations.inspector.commands import InspectorAction, apply_inspector_command
-from bpfw.integrations.inspector.drift_gate import _sort_approved_new_issues
-from bpfw.integrations.inspector.inspector_state import InspectorStateRepository
 from bpfw.integrations.inspector.screen import render_inspector_screen
 from bpfw.integrations.inspector.session import run_text_inspector, run_text_inspector_session
-from bpfw.core.catalog.models import DiscoveredCodeUnit
 
 
 def _responsibility(
@@ -284,10 +281,10 @@ def test_text_inspector_renders_expected_sections(tmp_path: Path) -> None:
     assert "Interface" not in rendered
     assert "Notes" not in rendered
     assert "[a] full view" in rendered
-    assert "[l1] active" in rendered
-    assert "[l2] experimental" in rendered
-    assert "[l3] legacy" in rendered
-    assert "[l4] deprecated" in rendered
+    assert "[s1] active" in rendered
+    assert "[s2] experimental" in rendered
+    assert "[s3] legacy" in rendered
+    assert "[s4] deprecated" in rendered
     assert "[Enter] save + next" in rendered
     assert "Type a command key and press Enter" in rendered
     assert "p1 + Enter" in rendered
@@ -296,7 +293,7 @@ def test_text_inspector_renders_expected_sections(tmp_path: Path) -> None:
     assert "purpose" not in commands_section
     assert "custom purpose" not in commands_section
     assert "custom domain" not in commands_section
-    assert "[l1|l2|l3|l4] lifecycle" not in commands_section
+    assert "[s1|s2|s3|s4] lifecycle" not in commands_section
     assert "[n] name" not in commands_section
     assert "[i] interface" not in commands_section
     assert "[o] notes" not in commands_section
@@ -344,89 +341,11 @@ def test_text_inspector_all_view_renders_extended_sections(tmp_path: Path) -> No
     assert "purpose" in commands_section
     assert "custom purpose" in commands_section
     assert "custom domain" in commands_section
-    assert "[l1|l2|l3|l4] lifecycle" in commands_section
+    assert "[s1|s2|s3|s4] lifecycle" in commands_section
     assert "[n] name" in commands_section
     assert "[i] interface" in commands_section
     assert "[o] notes" in commands_section
     assert "p1 + Enter" in commands_section
-
-
-def test_approved_new_with_children_renders_purpose_summary_instead_of_code_snippet(tmp_path: Path) -> None:
-    block = _responsibility(
-        responsibility_id="example",
-        purpose="",
-        status="active",
-        path="src/bpfw/catalog/example.py",
-        symbol="ExampleService",
-    )
-    block["detected"] = {
-        "methods": ["ExampleService.run"],
-        "functions": ["ExampleService.Helper"],
-        "docstring": "Build service state.",
-    }
-    output: list[str] = []
-    render_inspector_screen(
-        project_root=tmp_path,
-        issue_type="approved_new",
-        block=block,
-        index=0,
-        total=1,
-        purpose_suggestions=suggest_purposes(block),
-        domain_suggestions=suggest_domains(block),
-        print_func=output.append,
-    )
-    rendered = "\n".join(output)
-    assert "Internal members (leaf-first review):" in rendered
-    assert "ExampleService.run | kind=method" in rendered
-    assert "ExampleService.Helper | kind=nested_class" in rendered
-    assert "Purpose: Build service state." in rendered
-    assert "Children detected. Parent preview is collapsed." not in rendered
-
-
-def test_sort_approved_new_issues_orders_leaf_first_then_dependency_order() -> None:
-    parent_issue = InspectIssue(
-        issue_type="approved_new",
-        block=_responsibility(
-            responsibility_id="service_parent",
-            purpose="",
-            status="active",
-            path="src/demo.py",
-            symbol="Service",
-        ),
-    )
-    parent_issue.block["code"]["kind"] = "class"
-    child_issue = InspectIssue(
-        issue_type="approved_new",
-        block=_responsibility(
-            responsibility_id="service_child",
-            purpose="",
-            status="active",
-            path="src/demo.py",
-            symbol="Service.run",
-        ),
-    )
-    child_issue.block["code"]["kind"] = "method"
-
-    sorted_issues = _sort_approved_new_issues(
-        issues=[parent_issue, child_issue],
-        discovered_units=[
-            DiscoveredCodeUnit(
-                path="src/demo.py",
-                module="src.demo",
-                symbol="Service.run",
-                symbol_type="method",
-                qualified_name="src.demo.Service.run",
-            ),
-            DiscoveredCodeUnit(
-                path="src/demo.py",
-                module="src.demo",
-                symbol="Service",
-                symbol_type="class",
-                qualified_name="src.demo.Service",
-            ),
-        ],
-    )
-    assert [issue.block["code"]["symbol"] for issue in sorted_issues] == ["Service.run", "Service"]
 
 
 def test_backfill_detected_docstring_from_source(tmp_path: Path) -> None:
@@ -733,7 +652,7 @@ def test_text_inspector_edits_fields_and_accepts(tmp_path: Path) -> None:
         [
             "p maintain example",
             "d catalog",
-            "l2",
+            "s2",
             "o reviewed",
             "",
         ]
@@ -1130,116 +1049,6 @@ def test_text_inspector_back_returns_to_saved_previous_item(tmp_path: Path) -> N
     assert "first_domain" in rendered
 
 
-def test_text_inspector_quit_saves_current_block_and_snapshot_points_next(tmp_path: Path) -> None:
-    blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
-    blueprint_path.parent.mkdir(parents=True)
-    blueprint_path.write_text(
-        "version: 1\n"
-        "blocks:\n"
-        "  - id: first\n"
-        "    name: FirstService\n"
-        "    domain: ''\n"
-        "    status: ''\n"
-        "    purpose: ''\n"
-        "    code:\n"
-        "      path: src/bpfw/catalog/first.py\n"
-        "      symbol: FirstService\n"
-        "      kind: class\n"
-        "  - id: second\n"
-        "    name: SecondService\n"
-        "    domain: ''\n"
-        "    status: ''\n"
-        "    purpose: ''\n"
-        "    code:\n"
-        "      path: src/bpfw/catalog/second.py\n"
-        "      symbol: SecondService\n"
-        "      kind: class\n",
-        encoding="utf-8",
-    )
-    session = load_inspect_session(project_root=tmp_path)
-    answers = iter(["pfirst purpose", "dfirst_domain", "l1", "quit"])
-    output: list[str] = []
-
-    exit_code = run_text_inspector_session(
-        session=session,
-        input_func=lambda _prompt: next(answers),
-        print_func=output.append,
-    )
-
-    rendered = "\n".join(output)
-    saved = blueprint_path.read_text(encoding="utf-8")
-    assert exit_code == 0
-    assert "Saved and exited." in rendered
-    assert "first purpose" in saved
-    assert "first_domain" in saved
-
-    snapshot = InspectorStateRepository(tmp_path).load()
-    assert snapshot is not None
-    assert snapshot.current_index == 1
-
-
-def test_text_inspector_resume_session_prefers_snapshot_before_drift(tmp_path: Path) -> None:
-    blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
-    blueprint_path.parent.mkdir(parents=True)
-    blueprint_path.write_text(
-        "version: 1\n"
-        "project:\n"
-        "  source_roots:\n"
-        "    - src\n"
-        "blocks:\n"
-        "  - id: first\n"
-        "    name: FirstService\n"
-        "    domain: ''\n"
-        "    status: ''\n"
-        "    purpose: ''\n"
-        "    code:\n"
-        "      path: src/demo/app.py\n"
-        "      symbol: first\n"
-        "      kind: function\n"
-        "  - id: second\n"
-        "    name: SecondService\n"
-        "    domain: ''\n"
-        "    status: ''\n"
-        "    purpose: ''\n"
-        "    code:\n"
-        "      path: src/demo/app.py\n"
-        "      symbol: second\n"
-        "      kind: function\n",
-        encoding="utf-8",
-    )
-    source_path = tmp_path / "src" / "demo" / "app.py"
-    source_path.parent.mkdir(parents=True)
-    source_path.write_text(
-        "def first():\n"
-        "    return 1\n"
-        "\n"
-        "def second():\n"
-        "    return 2\n",
-        encoding="utf-8",
-    )
-
-    initial_output: list[str] = []
-    initial_answers = iter(["pfirst purpose", "dfirst_domain", "l1", "quit"])
-    first_exit = run_text_inspector(
-        project_root=tmp_path,
-        input_func=lambda _prompt: next(initial_answers),
-        print_func=initial_output.append,
-    )
-    assert first_exit == 0
-
-    resumed_output: list[str] = []
-    resumed_answers = iter(["psecond purpose", "dsecond_domain", "l1", ""])
-    second_exit = run_text_inspector(
-        project_root=tmp_path,
-        input_func=lambda _prompt: next(resumed_answers),
-        print_func=resumed_output.append,
-    )
-
-    rendered = "\n".join(resumed_output)
-    assert second_exit == 0
-    assert "Inspector resume: restored pending editing session." in rendered
-
-
 def test_text_inspector_custom_purpose_uses_slot_six_with_prompt(tmp_path: Path) -> None:
     blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
     blueprint_path.parent.mkdir(parents=True)
@@ -1440,3 +1249,119 @@ def test_inspector_input_reader_uses_custom_input_function() -> None:
 
     assert reader.read("purpose: ") == "scripted value"
     assert received_prompts == ["purpose: "]
+
+
+def test_hierarchical_preview_keeps_parent_and_folds_children_by_purpose(tmp_path: Path) -> None:
+    """Parent preview keeps the real class shape and folds child methods."""
+    source_path = tmp_path / "src" / "bpfw" / "authority" / "patch"
+    source_path.mkdir(parents=True)
+    (source_path / "engine.py").write_text(
+        "class AuthorityPatchEngine:\n"
+        "    \"\"\"Apply an AuthorityPatchPlan safely to authority files.\"\"\"\n"
+        "\n"
+        "    def __init__(self, project_root: Path) -> None:\n"
+        "        \"\"\"Initialize the engine.\"\"\"\n"
+        "        self.project_root = project_root\n"
+        "\n"
+        "    def preview(self, plan: AuthorityPatchPlan) -> AuthorityPatchResult:\n"
+        "        \"\"\"Preview affected files without writing.\"\"\"\n"
+        "        return AuthorityPatchResult()\n"
+        "\n"
+        "    def apply(self, plan: AuthorityPatchPlan) -> AuthorityPatchResult:\n"
+        "        \"\"\"Apply the plan safely.\"\"\"\n"
+        "        return self.preview(plan)\n",
+        encoding="utf-8",
+    )
+    block = _responsibility(
+        responsibility_id="authority_patch_engine",
+        purpose="",
+        status="active",
+        path="src/bpfw/authority/patch/engine.py",
+        symbol="AuthorityPatchEngine",
+    )
+    block["code"]["start_line"] = 1
+    block["code"]["end_line"] = 14
+    project_blocks = [
+        {
+            **_responsibility(
+                responsibility_id="preview_authority_files",
+                purpose="preview affected authority files",
+                status="active",
+                path="src/bpfw/authority/patch/engine.py",
+                symbol="AuthorityPatchEngine.preview",
+            ),
+            "code": {
+                "path": "src/bpfw/authority/patch/engine.py",
+                "symbol": "AuthorityPatchEngine.preview",
+                "kind": "method",
+            },
+        },
+        {
+            **_responsibility(
+                responsibility_id="apply_authority_patch_plan",
+                purpose="apply authority patch plan safely",
+                status="active",
+                path="src/bpfw/authority/patch/engine.py",
+                symbol="AuthorityPatchEngine.apply",
+            ),
+            "code": {
+                "path": "src/bpfw/authority/patch/engine.py",
+                "symbol": "AuthorityPatchEngine.apply",
+                "kind": "method",
+            },
+        },
+    ]
+
+    rendered = "\n".join(build_code_lines(tmp_path, block, project_blocks=project_blocks))
+
+    assert "class AuthorityPatchEngine:" in rendered
+    assert "def __init__(self, project_root: Path)" in rendered
+    assert "self.project_root = project_root" in rendered
+    assert "[reviewed] preview affected authority files(plan)" in rendered
+    assert "[reviewed] apply authority patch plan safely(plan)" in rendered
+    assert "return AuthorityPatchResult" not in rendered
+
+
+def test_hierarchical_preview_replaces_known_call_arguments_without_inventing_args(tmp_path: Path) -> None:
+    """Known call replacements preserve real call-site arguments."""
+    source_path = tmp_path / "src" / "bpfw" / "authority" / "patch"
+    source_path.mkdir(parents=True)
+    (source_path / "engine.py").write_text(
+        "class AuthorityPatchEngine:\n"
+        "    def preview(self, plan):\n"
+        "        return plan\n"
+        "\n"
+        "    def apply(self, pending_plan):\n"
+        "        result = self.preview(pending_plan)\n"
+        "        return result\n",
+        encoding="utf-8",
+    )
+    block = _responsibility(
+        responsibility_id="apply_authority_patch_plan",
+        purpose="apply authority patch plan safely",
+        status="active",
+        path="src/bpfw/authority/patch/engine.py",
+        symbol="AuthorityPatchEngine.apply",
+    )
+    block["code"].update({"kind": "method", "start_line": 5, "end_line": 7})
+    project_blocks = [
+        {
+            **_responsibility(
+                responsibility_id="preview_authority_files",
+                purpose="preview affected authority files",
+                status="active",
+                path="src/bpfw/authority/patch/engine.py",
+                symbol="AuthorityPatchEngine.preview",
+            ),
+            "code": {
+                "path": "src/bpfw/authority/patch/engine.py",
+                "symbol": "AuthorityPatchEngine.preview",
+                "kind": "method",
+            },
+        }
+    ]
+
+    rendered = "\n".join(build_code_lines(tmp_path, block, project_blocks=project_blocks))
+
+    assert "result = [reviewed] preview affected authority files(pending_plan)" in rendered
+    assert "args" not in rendered

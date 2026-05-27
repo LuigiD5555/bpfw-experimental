@@ -19,6 +19,7 @@ from bpfw.core.errors import BlueprintLockedError
 from bpfw.reports.finding import Finding
 from bpfw.shared.text import to_snake_case
 from bpfw.core.profiling import RuntimeProfiler
+from bpfw.integrations.inspector.hierarchical_preview import _HierarchicalCodePreviewRenderer
 
 if TYPE_CHECKING:
     from bpfw.reports.verify_report import VerificationReport
@@ -574,8 +575,27 @@ def backfill_detected_docstring_from_source(project_root: Path, block: Dict[str,
 def build_code_lines(
     project_root: Path,
     block: Dict[str, Any],
+    project_blocks: list[dict[str, Any]] | None = None,
 ) -> list[str]:
-    """Build numbered source lines for the block code location."""
+    """Build numbered source lines for the block code location.
+
+    Args:
+        project_root: Project root containing the source file.
+        block: Inspector block being rendered.
+        project_blocks: Current authority blocks used for purpose-based child folding.
+
+    Returns:
+        Numbered source preview lines. Parent blocks use a hierarchical folded
+        preview when direct children are present.
+    """
+
+    folded_preview = _HierarchicalCodePreviewRenderer(
+        project_root=project_root,
+        block=block,
+        project_blocks=project_blocks,
+    ).render()
+    if folded_preview is not None:
+        return folded_preview
 
     location = block.get("code", {})
     if not isinstance(location, dict):

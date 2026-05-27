@@ -18,7 +18,6 @@ from bpfw.integrations.inspector.commands import (
     run_interface_edit_submode,
 )
 from bpfw.integrations.inspector.input_adapter import InspectorInputReader
-from bpfw.integrations.inspector.inspector_state import InspectorResumeState, InspectorStateRepository, now_iso_utc
 from bpfw.integrations.inspector.state import InspectorViewState
 from bpfw.integrations.inspector.validation import validate_required_fields
 from bpfw.integrations.inspector.view_modes.base import InspectorViewMode
@@ -41,7 +40,6 @@ class InspectorController:
         session: InspectLoadResult,
         input_reader: InspectorInputReader,
         print_func,
-        input_signature: str | None = None,
     ) -> None:
         """Initialize the inspector controller.
 
@@ -54,16 +52,6 @@ class InspectorController:
         self._session = session
         self._input_reader = input_reader
         self._print_func = print_func
-        self._input_signature = input_signature
-
-    def _build_input_signature(self) -> str:
-        """Build drift-compatible signature to validate inspector snapshots."""
-
-        if self._input_signature is not None:
-            return self._input_signature
-        from bpfw.integrations.inspector.drift_state import DriftStateRepository
-
-        return DriftStateRepository(self._session.project_root).build_input_signature()
 
     def handle_action(
         self,
@@ -89,32 +77,6 @@ class InspectorController:
             return InspectorControllerResult()
 
         if action == InspectorAction.QUIT:
-            missing_fields = validate_required_fields(issue.block)
-            resume_index = state.current_index
-            if not missing_fields:
-                try:
-                    persisted = save_issue(session=self._session, issue=issue)
-                except BlueprintLockedError as error:
-                    self._print_func(str(error))
-                    state.stop()
-                    return InspectorControllerResult(exit_code=1)
-                if persisted:
-                    self._print_func("Saved and exited.")
-                    resume_index = min(state.current_index + 1, max(0, len(self._session.issues) - 1))
-                else:
-                    self._print_func("Exited without saving: blueprint path is unavailable.")
-            else:
-                self._print_func("Exited with pending invalid block; progress snapshot saved.")
-            repository = InspectorStateRepository(self._session.project_root)
-            repository.save(
-                InspectorResumeState(
-                    input_signature=self._build_input_signature(),
-                    current_index=resume_index,
-                    mode_name=state.mode_name,
-                    issues=list(self._session.issues),
-                    saved_at=now_iso_utc(),
-                )
-            )
             self._print_func("Inspector stopped.")
             state.stop()
             return InspectorControllerResult(exit_code=0)
@@ -211,18 +173,9 @@ def save_issue(session: InspectLoadResult, issue: InspectIssue) -> bool:
         blueprint_data=session.blueprint_data,
         authority_document=session.authority_document,
     )
-    if issue.issue_type == "approved_new":
-        from bpfw.integrations.inspector.drift_state import DriftStateRepository
-
-        repository = DriftStateRepository(session.project_root)
-        state = repository.load()
-        if state.mark_approved_issue_resolved(issue.block):
-            repository.save(state)
     from bpfw.integrations.inspector.work_cache import invalidate_inspector_work_cache
-    from bpfw.integrations.inspector.verify_snapshot import VerifySnapshotRepository
 
     invalidate_inspector_work_cache(session.project_root)
-    VerifySnapshotRepository(session.project_root).invalidate()
     return True
 
 
@@ -271,7 +224,7 @@ def render_unknown_command_notification() -> list[str]:
     from bpfw.integrations.shared.visual_notifications import render_notification_block
 
     lines = [
-        "Use p1-p5 for purpose suggestions, p for custom purpose, d1-d5 for domain suggestions, d for custom domain, l1-l4 for lifecycle, n, i, o(notes), Enter, b, a, h, q, or ctrl+c."
+        "Use p1-p5 for purpose suggestions, p for custom purpose, d1-d5 for domain suggestions, d for custom domain, s1-s4 for lifecycle, n, i, o(notes), Enter, b, a, h, q, or ctrl+c."
     ]
     return render_notification_block(
         title="Unknown command",
@@ -325,10 +278,10 @@ def render_help_block(view_mode: InspectorViewMode) -> list[str]:
         "",
         "  Lifecycle shortcuts",
         "  ───────────────────",
-        "  [l1] active",
-        "  [l2] experimental",
-        "  [l3] legacy",
-        "  [l4] deprecated",
+        "  [s1] active",
+        "  [s2] experimental",
+        "  [s3] legacy",
+        "  [s4] deprecated",
         "",
         "  View mode",
         "  ─────────",

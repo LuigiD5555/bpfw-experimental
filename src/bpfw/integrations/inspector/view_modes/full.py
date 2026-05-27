@@ -39,7 +39,7 @@ class FullInspectorViewMode(InspectorViewMode):
         return [
             _format_command_row(f"[{'|'.join(PURPOSE_SUGGESTION_KEYS)}] purpose", f"[{CUSTOM_PURPOSE_KEY}] custom purpose"),
             _format_command_row(f"[{'|'.join(DOMAIN_SUGGESTION_KEYS)}] domain", f"[{CUSTOM_DOMAIN_KEY}] custom domain"),
-            _format_command_row("[l1|l2|l3|l4] lifecycle", "[n] name", "[i] interface"),
+            _format_command_row("[s1|s2|s3|s4] lifecycle", "[n] name", "[i] interface"),
             _format_command_row("[o] notes", "[h] help", "[q] quit"),
             _format_command_row("[Enter] save + next", "[b] back", "[a] compact view"),
             COMMAND_SEPARATOR,

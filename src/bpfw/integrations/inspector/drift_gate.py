@@ -141,7 +141,6 @@ class DriftGateRunner:
             input_signature: Optional precomputed input signature.
         """
         self.session = session
-        self.project_root = session.project_root
         self.input_func = input_func
         self.print_func = print_func
         self.review_service = DiffReviewService(session.project_root)
@@ -185,6 +184,10 @@ class DriftGateRunner:
             human_items = self._filter_known_human_decisions(self.cached_human_items)
             return self._review_human_items(human_items=human_items, snapshot=None)
 
+        cached_result = self._reuse_unchanged_drift_state()
+        if cached_result is not None:
+            return cached_result
+
         snapshot = self._load_review_snapshot()
         self.result.safe_mechanical_updates = self._apply_safe_mechanical_updates(snapshot)
         if self.result.safe_mechanical_updates:
@@ -210,10 +213,6 @@ class DriftGateRunner:
             Drift gate result.
         """
         if not human_items:
-            self.result.inspector_issues = _sort_approved_new_issues(
-                issues=self.result.inspector_issues,
-                discovered_units=[],
-            )
             self.drift_state.replace_pending_items([])
             self._save_drift_state(pending_human_decisions=0)
             return self.result
@@ -244,12 +243,23 @@ class DriftGateRunner:
             if not should_continue:
                 return self.result
             decision_index += 1
-        self.result.inspector_issues = _sort_approved_new_issues(
-            issues=self.result.inspector_issues,
-            discovered_units=snapshot.scan_result.discovered_units if snapshot and snapshot.scan_result else [],
-        )
         self.drift_state.replace_pending_items([])
         self._save_drift_state(pending_human_decisions=self.result.skipped_count)
+        return self.result
+
+    def _reuse_unchanged_drift_state(self) -> DriftGateResult | None:
+        """Return cached Drift Gate result when project drift inputs are unchanged.
+
+        Returns:
+            Drift gate result when the previous state can be reused, otherwise None.
+        """
+        if not self.drift_state.is_reusable_for_signature(self.input_signature):
+            return None
+        self.result.cache_hit = True
+        for issue in self.drift_state.restored_inspector_issues():
+            self.result.approved_count += 1
+            self.result.inspector_issues.append(issue)
+        self.result.reused_decision_count = len(self.drift_state.decisions)
         return self.result
 
     def _filter_known_human_decisions(self, human_items: list[DiffItem]) -> list[DiffItem]:
@@ -1037,6 +1047,12 @@ class DriftGateRunner:
                     self.print_func("Decision recorded: Candidate approved as experimental responsibility.")
                 return True
             if command == "4":
+                self._mark_existing_block(item=item, status="deprecated")
+                return True
+            if command == "5":
+                self._mark_existing_block(item=item, status="legacy")
+                return True
+            if command == "6":
                 self._remove_existing_block(item=item)
                 return True
             self.print_func("Unknown command.")
@@ -1097,7 +1113,13 @@ class DriftGateRunner:
             self.print_func("  [3] This is different experimental code")
             self.print_func("      Add candidate as experimental responsibility.")
         self.print_func("")
-        self.print_func("  [4] Old declaration should be removed")
+        self.print_func("  [4] Old declaration is deprecated")
+        self.print_func("      Keep the old declaration, but mark it deprecated.")
+        self.print_func("")
+        self.print_func("  [5] Old declaration is legacy")
+        self.print_func("      Keep the old declaration as legacy authority.")
+        self.print_func("")
+        self.print_func("  [6] Old declaration should be removed")
         self.print_func("      Delete the old declaration from blueprint.")
         self.print_func("")
         self.print_func("  [s] Skip for now")
@@ -1132,10 +1154,10 @@ class DriftGateRunner:
                 self.print_func("Decision skipped: This duplicate remains unresolved.")
                 return True
             blocks = list(item.related_blocks)
-            if command in {"1", "2"} and len(blocks) >= 2:
-                keep_index = 0 if command == "1" else 1
+            if command in {"1", "2", "3", "4"} and len(blocks) >= 2:
+                keep_index = 0 if command in {"1", "3"} else 1
                 change_index = 1 if keep_index == 0 else 0
-                status = "experimental"
+                status = "experimental" if command in {"1", "2"} else "deprecated"
                 if self._mark_target_status(blocks[change_index], status=status):
                     self._record_decision(
                         item=item,
@@ -1148,11 +1170,11 @@ class DriftGateRunner:
                         f"{blocks[change_index].block_id} marked {status}."
                     )
                 return True
-            if command == "3":
+            if command == "5":
                 self._mark_duplicate_intentional(item=item)
                 return True
-            if command in {"4", "5"} and len(blocks) >= 2:
-                selected_index = 0 if command == "4" else 1
+            if command in {"6", "7"} and len(blocks) >= 2:
+                selected_index = 0 if command == "6" else 1
                 issue = self._issue_from_blueprint_target(
                     target=blocks[selected_index],
                     issue_type="duplicate_code",
@@ -1203,13 +1225,19 @@ class DriftGateRunner:
         self.print_func("  [2] Keep B active, mark A experimental")
         self.print_func("      B becomes the main implementation. A is kept for review.")
         self.print_func("")
-        self.print_func("  [3] This duplicate is intentional")
+        self.print_func("  [3] Keep A active, mark B deprecated")
+        self.print_func("      A remains active. B is marked as no longer preferred.")
+        self.print_func("")
+        self.print_func("  [4] Keep B active, mark A deprecated")
+        self.print_func("      B remains active. A is marked as no longer preferred.")
+        self.print_func("")
+        self.print_func("  [5] This duplicate is intentional")
         self.print_func("      Keep both, but require explicit authority metadata.")
         self.print_func("")
-        self.print_func("  [4] Send A to Inspector")
+        self.print_func("  [6] Send A to Inspector")
         self.print_func("      Review A before deciding.")
         self.print_func("")
-        self.print_func("  [5] Send B to Inspector")
+        self.print_func("  [7] Send B to Inspector")
         self.print_func("      Review B before deciding.")
         self.print_func("")
         self.print_func("  [s] Skip for now")
@@ -1765,45 +1793,12 @@ def merge_drift_gate_into_session(session: InspectLoadResult, result: DriftGateR
     if not _has_meaningful_context(result):
         return
     existing_issues = [issue for issue in session.issues if issue.issue_type != ISSUE_NEW_DETECTED]
-    existing_blocks = session.blueprint_data.get("blocks", [])
-    if not isinstance(existing_blocks, list):
-        existing_blocks = []
-
-    complete_declared_keys = {
-        key
-        for block in existing_blocks
-        if isinstance(block, dict)
-        for key in [_code_key_from_block(block)]
-        if key is not None and _is_complete_block(block)
-    }
-    incomplete_declared_keys = {
-        key
-        for block in existing_blocks
-        if isinstance(block, dict)
-        for key in [_code_key_from_block(block)]
-        if key is not None and not _is_complete_block(block)
-    }
-    incoming_seen_keys: set[tuple[str, str, str]] = set()
-    filtered_incoming_issues: list[InspectIssue] = []
-
     for issue in result.inspector_issues:
-        code_key = _code_key_from_block(issue.block)
-        if code_key is not None:
-            if code_key in complete_declared_keys:
-                continue
-            if code_key in incomplete_declared_keys:
-                # Existing incomplete authority block already handles this work.
-                continue
-            if code_key in incoming_seen_keys:
-                continue
-            incoming_seen_keys.add(code_key)
         issue.context_lines = [*base_context, *issue.context_lines]
-        filtered_incoming_issues.append(issue)
-
     for issue in existing_issues:
         if not issue.context_lines:
             issue.context_lines = list(base_context)
-    session.issues = [*filtered_incoming_issues, *existing_issues]
+    session.issues = [*result.inspector_issues, *existing_issues]
     session.pre_inspection_context_lines = base_context
 
 
@@ -1837,33 +1832,6 @@ def _has_meaningful_context(result: DriftGateResult) -> bool:
             result.attached_count,
         )
     )
-
-
-def _code_key_from_block(block: dict[str, Any]) -> tuple[str, str, str] | None:
-    """Return (path, symbol, kind) code key for one block-like dictionary."""
-
-    code = block.get("code")
-    if not isinstance(code, dict):
-        return None
-    path = clean_string(code.get("path"))
-    symbol = clean_string(code.get("symbol"))
-    kind = clean_string(code.get("kind"))
-    if path is None or symbol is None or kind is None:
-        return None
-    return path, symbol, kind
-
-
-def _is_complete_block(block: dict[str, Any]) -> bool:
-    """Return whether a block has required metadata fields complete."""
-
-    required_fields = ("purpose", "domain", "name", "status")
-    for field_name in required_fields:
-        value = block.get(field_name)
-        if value is None:
-            return False
-        if isinstance(value, str) and not value.strip():
-            return False
-    return True
 
 
 def _unit_by_key(snapshot: DiffReviewSnapshot) -> dict[tuple[str, str, str], DiscoveredCodeUnit]:
@@ -2002,45 +1970,6 @@ def _existing_blocks_from_session(session: InspectLoadResult) -> list[BlueprintT
             )
         )
     return targets
-
-
-def _sort_approved_new_issues(
-    issues: list[InspectIssue],
-    discovered_units: list[DiscoveredCodeUnit],
-) -> list[InspectIssue]:
-    """Sort approved-new inspector issues from inner to outer.
-
-    Order priority:
-    1. Symbol depth descending (leaf-first).
-    2. Dependency-first order from discovered units.
-    3. Stable source order fallback (path, start_line, symbol).
-    """
-
-    if not issues:
-        return []
-
-    dependency_index: dict[tuple[str, str, str], int] = {}
-    for index, unit in enumerate(discovered_units):
-        dependency_index[(unit.path, unit.symbol, unit.symbol_type)] = index
-
-    def issue_sort_key(issue: InspectIssue) -> tuple[int, int, str, int, str]:
-        code = issue.block.get("code", {}) if isinstance(issue.block, dict) else {}
-        if not isinstance(code, dict):
-            return (0, 10**9, "", 10**9, "")
-
-        path = str(code.get("path") or "")
-        symbol = str(code.get("symbol") or "")
-        kind = str(code.get("kind") or "")
-        start_line_value = code.get("start_line")
-        start_line = start_line_value if isinstance(start_line_value, int) else 10**9
-        depth = symbol.count(".")
-        dependency_rank = dependency_index.get((path, symbol, kind), 10**9)
-        return (-depth, dependency_rank, path, start_line, symbol)
-
-    approved_new = [issue for issue in issues if issue.issue_type == "approved_new"]
-    others = [issue for issue in issues if issue.issue_type != "approved_new"]
-    approved_new.sort(key=issue_sort_key)
-    return [*approved_new, *others]
 
 
 def _target_location(target: BlueprintTarget | None) -> str:

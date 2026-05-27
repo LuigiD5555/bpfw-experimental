@@ -263,7 +263,7 @@ class DriftState:
             input_signature: Current project input signature.
 
         Returns:
-            True when signature is unchanged and no pending human decisions remain.
+            True when the signature is unchanged and no pending human decisions remain.
         """
         return self.input_signature == input_signature and self.pending_human_decisions == 0
 
@@ -304,39 +304,17 @@ class DriftState:
         return list(self.pending_items)
 
     def restored_inspector_issues(self) -> list[InspectIssue]:
-        """Return approved inspector issues restored from persisted decisions."""
+        """Return inspector issues restored from approved pending decisions.
 
+        Returns:
+            Restored inspector issues.
+        """
         issues: list[InspectIssue] = []
         for record in self.decisions.values():
             issue = record.to_inspect_issue()
             if issue is not None:
                 issues.append(issue)
         return issues
-
-    def mark_approved_issue_resolved(self, block: dict[str, Any]) -> bool:
-        """Mark matching approved inspector issue decisions as resolved.
-
-        Args:
-            block: Persisted authority block data.
-
-        Returns:
-            True when at least one decision was updated.
-        """
-        target_key = _code_key_from_block_data(block)
-        if target_key is None:
-            return False
-        changed = False
-        for record in self.decisions.values():
-            if record.status != "approved_for_inspector":
-                continue
-            if record.block_data is None:
-                continue
-            if _code_key_from_block_data(record.block_data) != target_key:
-                continue
-            record.status = "resolved"
-            record.decided_at = _utc_now()
-            changed = True
-        return changed
 
 
 class DriftStateRepository:
@@ -628,20 +606,6 @@ def _optional_string(value: Any) -> str | None:
         return None
     text = str(value).strip()
     return text or None
-
-
-def _code_key_from_block_data(block_data: dict[str, Any]) -> tuple[str, str, str] | None:
-    """Return (path, symbol, kind) for one block payload."""
-
-    code = block_data.get("code")
-    if not isinstance(code, dict):
-        return None
-    path = _optional_string(code.get("path"))
-    symbol = _optional_string(code.get("symbol"))
-    kind = _optional_string(code.get("kind"))
-    if path is None or symbol is None or kind is None:
-        return None
-    return path, symbol, kind
 
 
 def _safe_int(value: Any) -> int:
