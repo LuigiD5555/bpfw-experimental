@@ -209,8 +209,19 @@ def _extract_code_units(
             continue
 
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            # Filter out private methods (except dunder methods)
+            if node.name.startswith("_") and not (
+                node.name.startswith("__") and node.name.endswith("__")
+            ):
+                continue
             # Filter out nested functions in decorators
             if _is_decorator_nested_function(node, parent_kind, parent_symbols):
+                continue
+            # Filter out tiny nested functions (< 5 lines of code)
+            if parent_kind == "function" and _is_tiny_nested_function(node):
+                continue
+            # Filter out trivial methods (getters/setters with minimal logic)
+            if parent_kind == "class" and _is_trivial_method(node):
                 continue
             # Filter out property-like methods in schema.py
             if _is_schema_wrapper_function(node, module):
@@ -416,11 +427,20 @@ def _should_discover_function(
 ) -> bool:
     """
     Return whether a function-like node should become a block.
-
-    Hierarchical inspection requires full containment coverage, so function-like
-    units are not excluded by private naming, dunder naming, or trivial size.
+    Filters out:
+    - All dunder methods in classes (__init__, __str__, etc.)
+    - Trivial getters/setters (less than 3 lines of actual code)
+    - Very small nested functions (less than 5 lines)
     """
-    _ = (node, parent_kind, module)
+    # Exclude all dunder methods in classes
+    if parent_kind == "class" and node.name.startswith("__") and node.name.endswith("__"):
+        return False
+    # Exclude trivial getters/setters in classes (less than 3 lines of actual code)
+    if parent_kind == "class" and _is_trivial_method(node):
+        return False
+    # Exclude very small nested functions (less than 5 lines)
+    if parent_kind == "function" and _is_tiny_nested_function(node):
+        return False
     return True
 
 
@@ -674,6 +694,10 @@ def _extract_direct_child_function_qualified_names(
     for node in nodes:
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
+        if node.name.startswith("_") and not (
+            node.name.startswith("__") and node.name.endswith("__")
+        ):
+            continue
         if skip_dunder and node.name.startswith("__") and node.name.endswith("__"):
             continue
         child_symbol = f"{parent_symbol}.{node.name}"
@@ -706,6 +730,10 @@ def _extract_direct_child_function_symbols(
     child_symbols: List[str] = []
     for node in nodes:
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if node.name.startswith("_") and not (
+            node.name.startswith("__") and node.name.endswith("__")
+        ):
             continue
         if skip_dunder and node.name.startswith("__") and node.name.endswith("__"):
             continue

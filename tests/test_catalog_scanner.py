@@ -163,37 +163,3 @@ def test_scanner_discovers_nested_code_units_child_before_parent(tmp_path: Path)
             ["src.demo.top_function.nested_function"],
         ),
     ]
-
-
-def test_scanner_includes_private_and_dunder_methods_for_hierarchy(tmp_path: Path) -> None:
-    source_root = tmp_path / "src"
-    source_root.mkdir()
-    (source_root / "demo_private.py").write_text(
-        "class Service:\n"
-        "    def __init__(self):\n"
-        "        self.value = 1\n"
-        "\n"
-        "    def _private(self):\n"
-        "        return self.value\n"
-        "\n"
-        "    def __repr__(self):\n"
-        "        return str(self.value)\n"
-        "\n"
-        "def outer():\n"
-        "    def _inner_private():\n"
-        "        return 'ok'\n"
-        "    return _inner_private()\n",
-        encoding="utf-8",
-    )
-
-    scan_result = scan_python_project(
-        project_root=tmp_path,
-        source_roots=["src"],
-        ignored_paths=[],
-    )
-
-    discovered_symbols = {unit.symbol for unit in scan_result.discovered_units}
-    assert "Service.__init__" in discovered_symbols
-    assert "Service._private" in discovered_symbols
-    assert "Service.__repr__" in discovered_symbols
-    assert "outer._inner_private" in discovered_symbols

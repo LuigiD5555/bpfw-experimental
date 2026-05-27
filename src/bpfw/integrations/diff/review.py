@@ -197,7 +197,7 @@ class DiffReviewService:
             )
             if item is not None:
                 items.append(item)
-        return items
+        return _order_undeclared_items_by_scan_review_order(items, discovered_units)
 
     def _build_item_from_finding(
         self,
@@ -491,6 +491,76 @@ def _code_target_from_unit(unit: DiscoveredCodeUnit) -> CodeTarget:
         start_line=unit.start_line,
         end_line=unit.end_line,
         qualified_name=unit.qualified_name,
+    )
+
+
+def _order_undeclared_items_by_scan_review_order(
+    items: list[DiffItem],
+    discovered_units: list[DiscoveredCodeUnit],
+) -> list[DiffItem]:
+    """Order undeclared-code items with the scanner review order.
+
+    The verifier can emit findings in an order that is convenient for
+    validation, but the Inspector must review new code from the deepest
+    meaningful units toward their containers. This function preserves all
+    non-undeclared item slots and only reorders undeclared-code items among
+    themselves using the already-computed scan order.
+
+    Args:
+        items: Diff items produced from verification findings.
+        discovered_units: Code units already ordered by the scanner.
+
+    Returns:
+        Diff items with undeclared-code decisions ordered for hierarchical
+        review.
+    """
+    if not items or not discovered_units:
+        return items
+
+    rank_by_key = {
+        (unit.path, unit.symbol, unit.symbol_type): index
+        for index, unit in enumerate(discovered_units)
+    }
+    undeclared_items = [item for item in items if item.kind == DiffItemKind.UNDECLARED_CODE]
+    if len(undeclared_items) < 2:
+        return items
+
+    ordered_undeclared = sorted(
+        undeclared_items,
+        key=lambda item: _scan_rank_for_item(item, rank_by_key),
+    )
+    ordered_iterator = iter(ordered_undeclared)
+    reordered: list[DiffItem] = []
+    for item in items:
+        if item.kind == DiffItemKind.UNDECLARED_CODE:
+            reordered.append(next(ordered_iterator))
+        else:
+            reordered.append(item)
+    return reordered
+
+
+def _scan_rank_for_item(
+    item: DiffItem,
+    rank_by_key: dict[tuple[str, str, str], int],
+) -> tuple[int, str, str, str]:
+    """Return a deterministic scan-order rank for one diff item.
+
+    Args:
+        item: Diff item to rank.
+        rank_by_key: Scanner rank keyed by path, symbol, and kind.
+
+    Returns:
+        Rank tuple that keeps unknown targets stable near the end.
+    """
+    target = item.code_target
+    if target is None:
+        return len(rank_by_key), "", "", ""
+    key = (target.path or "", target.symbol or "", target.kind or "")
+    return (
+        rank_by_key.get(key, len(rank_by_key)),
+        target.path or "",
+        target.symbol or "",
+        target.kind or "",
     )
 
 
