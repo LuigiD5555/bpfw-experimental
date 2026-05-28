@@ -5,6 +5,7 @@ from typing import Any
 
 from bpfw.core.catalog.access_control import ensure_blueprint_can_be_written
 from bpfw.core.authority.errors import InvalidAuthorityIndexError
+from bpfw.core.yaml_io import dump_yaml_data, load_yaml_text
 
 
 class AuthorityIndex:
@@ -113,11 +114,6 @@ class AuthorityIndex:
             InvalidAuthorityIndexError: If the index cannot be loaded or is invalid.
             FileNotFoundError: If the blueprint.yaml does not exist.
         """
-        try:
-            import yaml
-        except ImportError as error:
-            raise ImportError("PyYAML is required to load bpfw/blueprint.yaml.") from error
-
         blueprint_path = project_root / "bpfw" / "blueprint.yaml"
 
         if not blueprint_path.exists():
@@ -139,8 +135,8 @@ class AuthorityIndex:
             )
 
         try:
-            data = yaml.safe_load(content)
-        except yaml.YAMLError as error:
+            data = load_yaml_text(content)
+        except Exception as error:
             raise InvalidAuthorityIndexError(
                 f"Invalid YAML in blueprint index: {error}"
             ) from error
@@ -159,11 +155,6 @@ class AuthorityIndex:
         # Re-validate before saving
         self._validate()
 
-        try:
-            import yaml
-        except ImportError as error:
-            raise ImportError("PyYAML is required to save bpfw/blueprint.yaml.") from error
-
         blueprint_path = project_root / "bpfw" / "blueprint.yaml"
         ensure_blueprint_can_be_written(project_root=project_root)
 
@@ -171,7 +162,7 @@ class AuthorityIndex:
         blueprint_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Write YAML
-        rendered = yaml.safe_dump(self.data, sort_keys=False, allow_unicode=True)
+        rendered = dump_yaml_data(self.data, sort_keys=False, allow_unicode=True)
 
         try:
             blueprint_path.write_text(rendered, encoding="utf-8")

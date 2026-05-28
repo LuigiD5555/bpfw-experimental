@@ -1,0 +1,33 @@
+blocks:
+- id: run_command_after_verify
+  purpose: execute command after verification
+  name: run_command_after_verify
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/cli.py
+    symbol: run_command_after_verify
+    kind: function
+    start_line: 10
+    end_line: 22
+  detected:
+    qualified_name: src.bpfw.cli.run_command_after_verify
+    kind: function
+    methods: []
+    functions: []
+    docstring: "Run a command after verification through a lazy import.\n\nArgs:\n
+      \   project_root: Project root directory.\n    command: Subprocess command to
+      run after verification passes.\n\nReturns:\n    Subprocess or verification exit
+      code."
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: execute_command_after_verification
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null

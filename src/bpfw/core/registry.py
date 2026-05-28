@@ -19,12 +19,13 @@ from bpfw.core.protection.authority import (
 from bpfw.core.protection.runtime_lease import runtime_blueprint_write_lease
 
 
-def run_verify(project_root: object, precomputed_scan_result: object | None = None) -> object:
+def run_verify(project_root: object, precomputed_scan_result: object | None = None, precomputed_load_result: object | None = None) -> object:
     """Run catalog verification through a lazy import.
 
     Args:
         project_root: Project root directory.
         precomputed_scan_result: Optional precomputed scan result.
+        precomputed_load_result: Optional precomputed blueprint load result.
 
     Returns:
         Verification report and exit code from the catalog verifier.
@@ -34,6 +35,7 @@ def run_verify(project_root: object, precomputed_scan_result: object | None = No
     return run_catalog_verify(
         project_root=project_root,
         precomputed_scan_result=precomputed_scan_result,
+        precomputed_load_result=precomputed_load_result,
     )
 
 

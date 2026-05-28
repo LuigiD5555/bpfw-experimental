@@ -17,7 +17,7 @@ class AuthorityRepository:
     - Loads the authority index and all shard files
     - Composes a unified blueprint_data dictionary
     - Tracks block origins
-    - Validates for duplicate IDs and code declarations
+    - Validates for duplicate IDs and reports duplicate code declarations
     - Saves documents through the persistence engine
     """
 
@@ -42,7 +42,6 @@ class AuthorityRepository:
             InvalidAuthorityShardError: If any shard is invalid.
             MissingShardError: If a referenced shard is missing.
             DuplicateBlockIdError: If duplicate block IDs are found.
-            DuplicateCodeDeclarationError: If duplicate code declarations are found.
         """
         # Load index
         index = AuthorityIndex.load(self.project_root)
@@ -103,13 +102,12 @@ class AuthorityRepository:
                     f"Duplicate block ID '{block_id}' found in shards: {locations}"
                 )
 
-        # Check for duplicate code declarations
-        for code_key, block_ids in seen_code_declarations.items():
-            if len(block_ids) > 1:
-                from bpfw.core.authority.errors import DuplicateCodeDeclarationError
-                raise DuplicateCodeDeclarationError(
-                    f"Duplicate code declaration '{code_key}' found in blocks: {block_ids}"
-                )
+        # Duplicate code declarations are validation findings, not load errors.
+        # Loading must remain possible so Inspector and Drift Gate can show and
+        # repair the conflicting declarations instead of crashing before the UI
+        # opens. Duplicate block IDs still block loading because origins would be
+        # ambiguous, but duplicate code targets can be represented safely.
+        _ = seen_code_declarations
 
         # Compose unified blueprint_data
         blueprint_data = index.data.copy()

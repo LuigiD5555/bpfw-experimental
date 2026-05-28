@@ -6,6 +6,7 @@ from typing import Any
 
 from bpfw.core.authority.errors import InvalidAuthorityShardError
 from bpfw.core.catalog.access_control import ensure_blueprint_can_be_written
+from bpfw.core.yaml_io import dump_yaml_data, load_yaml_text
 
 
 @dataclass(frozen=True)
@@ -83,11 +84,6 @@ class AuthorityShard:
             InvalidAuthorityShardError: If the shard cannot be loaded or is invalid.
             FileNotFoundError: If the shard file does not exist.
         """
-        try:
-            import yaml
-        except ImportError as error:
-            raise ImportError("PyYAML is required to load shard files.") from error
-
         # Resolve shard path relative to project root
         absolute_path = project_root / shard_path
 
@@ -109,8 +105,8 @@ class AuthorityShard:
             return cls(path=shard_path, blocks=[])
 
         try:
-            data = yaml.safe_load(content)
-        except yaml.YAMLError as error:
+            data = load_yaml_text(content)
+        except Exception as error:
             raise InvalidAuthorityShardError(
                 f"Invalid YAML in shard file {shard_path}: {error}"
             ) from error
@@ -154,11 +150,6 @@ class AuthorityShard:
         # Re-validate before saving
         self._validate()
 
-        try:
-            import yaml
-        except ImportError as error:
-            raise ImportError("PyYAML is required to save shard files.") from error
-
         # Resolve shard path relative to project root
         absolute_path = project_root / self.path
         ensure_blueprint_can_be_written(project_root=project_root)
@@ -170,7 +161,7 @@ class AuthorityShard:
         shard_data = {"blocks": self._blocks}
 
         # Write YAML with deterministic ordering
-        rendered = yaml.safe_dump(shard_data, sort_keys=False, allow_unicode=True)
+        rendered = dump_yaml_data(shard_data, sort_keys=False, allow_unicode=True)
 
         try:
             absolute_path.write_text(rendered, encoding="utf-8")

@@ -25,6 +25,7 @@ from bpfw.core.authority.patch.actions import (
     UpdateBlockLocationOperation,
     UpdateBlockMetadataOperation,
     UpdateBlockSymbolOperation,
+    _validate_shard_path,
 )
 
 PatchOperation = Union[
@@ -221,9 +222,101 @@ class AuthorityPatchPlan:
             Empty list when valid, otherwise validation messages.
         """
         errors: list[str] = []
+        code_reference_updates: list[UpdateBlockCodeReferenceOperation] = []
         for operation in self._operations:
+            if operation.kind == PatchOperationKind.UPDATE_BLOCK_CODE_REFERENCE:
+                code_reference_updates.append(operation)  # type: ignore[arg-type]
+                continue
             try:
                 operation.validate(project_root)
             except AuthorityError as error:
                 errors.append(f"[{operation.kind.value}] {error}")
+        errors.extend(_validate_code_reference_updates(project_root, code_reference_updates))
         return errors
+
+
+def _validate_code_reference_updates(
+    project_root: Path,
+    operations: list[UpdateBlockCodeReferenceOperation],
+) -> list[str]:
+    """Validate code-reference updates without loading the same shard repeatedly.
+
+    Args:
+        project_root: Project root directory.
+        operations: Code-reference update operations to validate.
+
+    Returns:
+        Readable validation errors.
+    """
+    if not operations:
+        return []
+
+    errors: list[str] = []
+    operations_by_shard: dict[Path, list[UpdateBlockCodeReferenceOperation]] = {}
+    for operation in operations:
+        operation_errors = _validate_code_reference_update_payload(operation)
+        if operation_errors:
+            errors.extend(operation_errors)
+            continue
+        operations_by_shard.setdefault(operation.source_shard_path, []).append(operation)
+
+    from bpfw.core.authority.shard import AuthorityShard
+
+    for shard_path, shard_operations in operations_by_shard.items():
+        source_absolute = project_root / shard_path
+        if not source_absolute.exists():
+            for operation in shard_operations:
+                errors.append(
+                    f"[{operation.kind.value}] Source shard does not exist: {shard_path}"
+                )
+            continue
+        try:
+            shard = AuthorityShard.load(project_root, shard_path)
+        except AuthorityError as error:
+            for operation in shard_operations:
+                errors.append(f"[{operation.kind.value}] {error}")
+            continue
+
+        block_ids = {
+            block.get("id")
+            for block in shard.get_blocks()
+            if isinstance(block, dict) and isinstance(block.get("id"), str)
+        }
+        for operation in shard_operations:
+            if operation.block_id not in block_ids:
+                errors.append(
+                    f"[{operation.kind.value}] Block '{operation.block_id}' not found "
+                    f"in source shard {shard_path}."
+                )
+    return errors
+
+
+def _validate_code_reference_update_payload(
+    operation: UpdateBlockCodeReferenceOperation,
+) -> list[str]:
+    """Validate one code-reference update payload without reading a shard.
+
+    Args:
+        operation: Code-reference update operation to validate.
+
+    Returns:
+        Readable validation errors.
+    """
+    errors: list[str] = []
+    try:
+        _validate_shard_path(operation.source_shard_path)
+    except AuthorityError as error:
+        errors.append(f"[{operation.kind.value}] {error}")
+    if not isinstance(operation.block_id, str) or not operation.block_id.strip():
+        errors.append(f"[{operation.kind.value}] Operation requires a non-empty block_id.")
+    if not isinstance(operation.new_path, str) or not operation.new_path.strip():
+        errors.append(
+            f"[{operation.kind.value}] UpdateBlockCodeReferenceOperation requires a non-empty new_path."
+        )
+    if not isinstance(operation.new_symbol, str) or not operation.new_symbol.strip():
+        errors.append(
+            f"[{operation.kind.value}] UpdateBlockCodeReferenceOperation requires a non-empty new_symbol."
+        )
+    if operation.new_kind is not None and not operation.new_kind.strip():
+        errors.append(f"[{operation.kind.value}] new_kind must be non-empty when provided.")
+    return errors

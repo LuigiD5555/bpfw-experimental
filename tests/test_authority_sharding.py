@@ -403,8 +403,16 @@ def test_duplicate_code_declaration_across_shards_blocks(tmp_path: Path):
         }, f)
     
     repository = AuthorityRepository(project_root=tmp_path)
-    with pytest.raises(DuplicateCodeDeclarationError):
-        repository.load()
+    document = repository.load()
+    findings = repository.validate(document)
+
+    duplicate_findings = [
+        finding
+        for finding in findings
+        if finding.code == "DUPLICATE_CODE_DECLARATION"
+    ]
+    assert len(duplicate_findings) == 1
+    assert duplicate_findings[0].evidence["blocks"] == ["block_a", "block_b"]
 
 
 def test_inspector_save_moves_block_after_domain_change(project_root: Path):

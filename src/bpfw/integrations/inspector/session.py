@@ -7,13 +7,19 @@ from pathlib import Path
 from bpfw.integrations.inspector.suggestions.domain.engine import suggest_domains
 from bpfw.core.catalog.models import AUTHORITY_STATE_EMPTY
 from bpfw.integrations.inspector.base import (
+    ISSUE_DRAFT,
     ISSUE_NEW_DETECTED,
+    REQUIRED_HUMAN_FIELDS,
+    InspectIssue,
     InspectLoadResult,
     apply_suggestions,
     backfill_detected_docstring_from_source,
     collect_existing_purposes,
     load_inspect_session,
+    has_uninspectable_source_issues,
     load_metadata_inspect_session,
+    sort_inspect_issues_hierarchically,
+    split_issues_by_source_availability,
 )
 from bpfw.integrations.inspector.commands import apply_inspector_command
 from bpfw.integrations.inspector.drift_gate import (
@@ -61,7 +67,20 @@ class CachedDriftPreflight:
     state: DriftState
     input_signature: str
     trusted_pending_snapshot: bool = False
-    trusted_pending_snapshot: bool = False
+
+
+@dataclass(slots=True)
+class RestoredIssueFilterResult:
+    """Filtered inspector issues restored from persisted Drift Gate decisions.
+
+    Attributes:
+        issues: Issues that are still valid metadata work.
+        stale_count: Number of restored approvals that no longer point to an
+            inspectable source file.
+    """
+
+    issues: list[InspectIssue]
+    stale_count: int = 0
 
 
 def run_text_inspector(
@@ -149,8 +168,61 @@ def run_text_inspector(
             if session.blocked:
                 print_func(session.message or "Inspector blocked.")
                 return session.exit_code
+            if (
+                not drift_gate_result.inspector_issues
+                and has_uninspectable_source_issues(project_root=session.project_root, issues=session.issues)
+            ):
+                session = load_inspect_session(project_root=project_root)
+                if session.blocked:
+                    print_func(session.message or "Inspector blocked.")
+                    return session.exit_code
+                fresh_input_signature = preflight.repository.build_input_signature()
+                try:
+                    drift_gate_result = run_drift_gate(
+                        session=session,
+                        input_func=input_func,
+                        print_func=print_func,
+                        drift_state=preflight.state,
+                        input_signature=fresh_input_signature,
+                    )
+                except EOFError:
+                    print_func("Interactive inspector input unavailable.")
+                    print_func("")
+                    print_func("Next:")
+                    print_func("  Run bpfw inspector in an interactive terminal.")
+                    return 1
+                except KeyboardInterrupt:
+                    print_func("Inspector stopped.")
+                    return 0
+                if drift_gate_result.stopped:
+                    return drift_gate_result.exit_code
+                if drift_gate_result.changed_project_state():
+                    session = load_inspect_session(project_root=project_root)
+                    if session.blocked:
+                        print_func(session.message or "Inspector blocked.")
+                        return session.exit_code
+                    rebuild_metadata_issues_after_authority_changes(session)
 
         merge_drift_gate_into_session(session=session, result=drift_gate_result)
+
+        inspectable_issues, stale_issues = split_issues_by_source_availability(
+            project_root=session.project_root,
+            issues=session.issues,
+        )
+        if stale_issues and _should_block_on_stale_metadata_queue(drift_gate_result):
+            print_func("Inspector blocked.")
+            print_func("Reason: Metadata queue contains code references whose source files no longer exist.")
+            print_func("These are structural drift items and must be resolved in Drift Gate before metadata inspection.")
+            return 1
+        if stale_issues:
+            session.pre_inspection_context_lines = [
+                *session.pre_inspection_context_lines,
+                (
+                    "Metadata queue: discarded "
+                    f"{len(stale_issues)} stale code references after Drift Gate reconciliation."
+                ),
+            ]
+        session.issues = inspectable_issues
 
         if not session.issues:
             _render_no_inspector_work(session=session, drift_gate_result=drift_gate_result, print_func=print_func)
@@ -163,6 +235,33 @@ def run_text_inspector(
             print_func=print_func,
             show_all=show_all,
         )
+
+
+
+def _should_block_on_stale_metadata_queue(drift_gate_result: DriftGateResult) -> bool:
+    """Return whether stale metadata issues should block Inspector startup.
+
+    Stale source references are structural drift when they are found while
+    resuming metadata work from cache. However, after a fresh Drift Gate pass or
+    after authority changes have just been applied, stale metadata issues are
+    obsolete cached work. Blocking at that point prevents Inspector from opening
+    even though Drift Gate already had the chance to resolve the structural
+    drift.
+
+    Args:
+        drift_gate_result: Result produced by the current Drift Gate run.
+
+    Returns:
+        True when Inspector should stop and force Drift Gate, otherwise False so
+        the stale metadata items can be discarded.
+    """
+
+    return (
+        drift_gate_result.cache_hit
+        and drift_gate_result.reviewed_human_item_count == 0
+        and drift_gate_result.approved_count == 0
+        and not drift_gate_result.changed_project_state()
+    )
 
 
 def _load_drift_preflight(project_root: Path) -> CachedDriftPreflight:
@@ -245,7 +344,7 @@ def _try_load_cached_preflight(
     project_root: Path,
     preflight: CachedDriftPreflight | None = None,
 ) -> tuple[InspectLoadResult, DriftGateResult] | None:
-    """Load metadata-only session when drift state proves inputs unchanged.
+    """Load metadata-only session when drift state can resume inspector work.
 
     Args:
         project_root: Project root directory.
@@ -257,15 +356,191 @@ def _try_load_cached_preflight(
     """
     if preflight is None:
         preflight = _load_drift_preflight(project_root=project_root)
+
+    approved_resume = _try_load_approved_metadata_resume(
+        project_root=project_root,
+        preflight=preflight,
+    )
+    if approved_resume is not None:
+        return approved_resume
+
     if not preflight.state.is_reusable_for_signature(preflight.input_signature):
         return None
     session = load_metadata_inspect_session(project_root=project_root)
+    if has_uninspectable_source_issues(project_root=session.project_root, issues=session.issues):
+        return None
+
     result = DriftGateResult(cache_hit=True)
-    for issue in preflight.state.restored_inspector_issues():
+    restored_result = _filter_restored_inspector_issues(
+        state=preflight.state,
+        session=session,
+    )
+    if restored_result.stale_count:
+        return None
+
+    for issue in restored_result.issues:
         result.approved_count += 1
         result.inspector_issues.append(issue)
     result.reused_decision_count = len(preflight.state.decisions)
     return session, result
+
+
+def _try_load_approved_metadata_resume(
+    project_root: Path,
+    preflight: CachedDriftPreflight,
+) -> tuple[InspectLoadResult, DriftGateResult] | None:
+    """Resume approved Drift Gate items before running full drift again.
+
+    Approved ``approved_for_inspector`` decisions are durable user work. When
+    any of those approved blocks still needs metadata, Inspector should open
+    directly on the remaining metadata queue instead of recomputing verify and
+    showing Drift Gate again.
+
+    Args:
+        project_root: Project root directory.
+        preflight: Loaded drift preflight state.
+
+    Returns:
+        Metadata-only session and DriftGateResult when there is unfinished
+        approved metadata work, otherwise None.
+    """
+    if not preflight.state.has_approved_inspector_work():
+        return None
+
+    session = load_metadata_inspect_session(project_root=project_root)
+
+    result = DriftGateResult(cache_hit=True)
+    restored_result = _filter_restored_inspector_issues(
+        state=preflight.state,
+        session=session,
+    )
+    if not restored_result.issues:
+        return None
+
+    if restored_result.stale_count:
+        session.pre_inspection_context_lines = [
+            *session.pre_inspection_context_lines,
+            (
+                "Metadata queue: ignored "
+                f"{restored_result.stale_count} stale approved Drift Gate references while resuming Inspector."
+            ),
+        ]
+
+    for issue in restored_result.issues:
+        result.approved_count += 1
+        result.inspector_issues.append(issue)
+    result.reused_decision_count = len(preflight.state.decisions)
+    return session, result
+
+
+def _filter_restored_inspector_issues(
+    state: DriftState,
+    session: InspectLoadResult,
+) -> RestoredIssueFilterResult:
+    """Return restored inspector issues that still need user metadata.
+
+    Args:
+        state: Persisted Drift Gate state.
+        session: Current metadata-only inspector session.
+
+    Returns:
+        Filter result containing valid metadata issues and the number of stale
+        restored approvals discarded from the resume queue.
+    """
+    current_blocks = session.blueprint_data.get("blocks", [])
+    if not isinstance(current_blocks, list):
+        current_blocks = []
+
+    current_blocks_by_key = {
+        key: block
+        for block in current_blocks
+        if isinstance(block, dict)
+        for key in [_block_key(block)]
+        if key is not None
+    }
+
+    restored_issues: list[InspectIssue] = []
+    for issue in state.restored_inspector_issues():
+        key = _block_key(issue.block)
+        if key is None:
+            restored_issues.append(issue)
+            continue
+
+        current_block = current_blocks_by_key.get(key)
+        if current_block is None:
+            restored_issues.append(issue)
+            continue
+
+        if _block_has_required_metadata(current_block):
+            continue
+
+        restored_issues.append(
+            InspectIssue(
+                issue_type=ISSUE_DRAFT,
+                block=current_block,
+                add_on_accept=False,
+                context_lines=list(issue.context_lines),
+            )
+        )
+
+    inspectable_issues, stale_issues = split_issues_by_source_availability(
+        project_root=session.project_root,
+        issues=restored_issues,
+    )
+    return RestoredIssueFilterResult(
+        issues=sort_inspect_issues_hierarchically(inspectable_issues),
+        stale_count=len(stale_issues),
+    )
+
+
+def _block_key(block: dict) -> tuple[str, str, str] | None:
+    """Return the path, symbol, kind key for a blueprint block.
+
+    Args:
+        block: Blueprint block data.
+
+    Returns:
+        Stable code key, or None when unavailable.
+    """
+    code_data = block.get("code")
+    if not isinstance(code_data, dict):
+        return None
+    path = _clean_string(code_data.get("path"))
+    symbol = _clean_string(code_data.get("symbol"))
+    kind = _clean_string(code_data.get("kind"))
+    if path is None or symbol is None or kind is None:
+        return None
+    return path, symbol, kind
+
+
+def _block_has_required_metadata(block: dict) -> bool:
+    """Return whether a block has all required human metadata.
+
+    Args:
+        block: Blueprint block data.
+
+    Returns:
+        True when Inspector does not need to show the block again.
+    """
+    for field_name in REQUIRED_HUMAN_FIELDS:
+        if _clean_string(block.get(field_name)) is None:
+            return False
+    return True
+
+
+def _clean_string(value: object) -> str | None:
+    """Return a stripped string or None for blank values.
+
+    Args:
+        value: Raw value.
+
+    Returns:
+        Clean string or None.
+    """
+    if value is None:
+        return None
+    cleaned = str(value).strip()
+    return cleaned or None
 
 
 def _render_no_inspector_work(session: InspectLoadResult, drift_gate_result, print_func: PrintFunc) -> None:  # noqa: ANN001

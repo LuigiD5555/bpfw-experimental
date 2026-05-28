@@ -1,5 +1,6 @@
 """Shared inspector behavior for BPFW catalog completion."""
 import ast
+from functools import cmp_to_key
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, TYPE_CHECKING
@@ -161,8 +162,10 @@ def load_inspect_session(
         authority_document = None
 
         if _has_sharded_authority_layout(blueprint_for_authority_check):
-            repository = AuthorityRepository(resolved_root)
-            authority_document = repository.load()
+            authority_document = load_result.authority_document
+            if authority_document is None:
+                repository = AuthorityRepository(resolved_root)
+                authority_document = repository.load()
 
             # Always use canonical sharded authority data from repository.
             blueprint_data = authority_document.blueprint_data
@@ -188,6 +191,7 @@ def load_inspect_session(
             report, _exit_code = run_verify(
                 project_root=resolved_root,
                 precomputed_scan_result=scan_result,
+                precomputed_load_result=load_result,
             )
 
     drift_findings = [
@@ -301,13 +305,17 @@ def load_metadata_inspect_session(project_root: Path) -> InspectLoadResult:
     authority_document = None
     if _has_sharded_authority_layout(blueprint_data):
         with _profiler.measure("inspector.metadata_only.load_authority_document"):
-            repository = AuthorityRepository(resolved_root)
-            authority_document = repository.load()
+            authority_document = load_result.authority_document
+            if authority_document is None:
+                repository = AuthorityRepository(resolved_root)
+                authority_document = repository.load()
             blueprint_data = authority_document.blueprint_data
 
     with _profiler.measure("inspector.metadata_only.build_issues"):
         incomplete = get_incomplete_blocks(blueprint_data)
-        issues = [InspectIssue(issue_type=ISSUE_DRAFT, block=block) for block in incomplete]
+        issues = sort_inspect_issues_hierarchically(
+            [InspectIssue(issue_type=ISSUE_DRAFT, block=block) for block in incomplete]
+        )
     session = InspectLoadResult(
         project_root=resolved_root,
         blueprint_path=Path(load_result.path),
@@ -337,6 +345,155 @@ def _responsibility_key(block: Dict[str, Any]) -> tuple[str, str, str] | None:
     if path is None or symbol is None or symbol_type is None:
         return None
     return path, symbol, symbol_type
+
+
+
+def split_issues_by_source_availability(
+    project_root: Path,
+    issues: list[InspectIssue],
+) -> tuple[list[InspectIssue], list[InspectIssue]]:
+    """Split inspector issues by whether their source file can be inspected.
+
+    Metadata inspection is not allowed to handle structural drift. If a block
+    points to a file that no longer exists, the item must go back through Drift
+    Gate where the user can choose a package move, removal, legacy state, or a
+    different structural decision.
+
+    Args:
+        project_root: Project root directory.
+        issues: Candidate inspector issues.
+
+    Returns:
+        A tuple containing inspectable issues and structurally stale issues.
+    """
+
+    inspectable_issues: list[InspectIssue] = []
+    stale_issues: list[InspectIssue] = []
+    for issue in issues:
+        if _issue_source_is_available(project_root=project_root, issue=issue):
+            inspectable_issues.append(issue)
+        else:
+            stale_issues.append(issue)
+    return inspectable_issues, stale_issues
+
+
+def has_uninspectable_source_issues(project_root: Path, issues: list[InspectIssue]) -> bool:
+    """Return whether any inspector issue points to unavailable source code.
+
+    Args:
+        project_root: Project root directory.
+        issues: Inspector issues to validate.
+
+    Returns:
+        True when at least one issue cannot be resolved to an existing source
+        file and therefore must be handled by Drift Gate.
+    """
+
+    return any(
+        not _issue_source_is_available(project_root=project_root, issue=issue)
+        for issue in issues
+    )
+
+
+def _issue_source_is_available(project_root: Path, issue: InspectIssue) -> bool:
+    """Return whether an issue can be shown safely in Inspector.
+
+    Args:
+        project_root: Project root directory.
+        issue: Inspector issue to validate.
+
+    Returns:
+        True when the referenced source file exists.
+    """
+
+    code_data = issue.block.get("code")
+    if not isinstance(code_data, dict):
+        return False
+    relative_path = clean_string(code_data.get("path"))
+    if relative_path is None:
+        return False
+    source_path = project_root / relative_path
+    return source_path.exists()
+
+
+def sort_inspect_issues_hierarchically(issues: list[InspectIssue]) -> list[InspectIssue]:
+    """Return inspector issues in contained-to-container order.
+
+    The Inspector should review child responsibilities before the parent that
+    summarizes them. This preserves source order for unrelated blocks while
+    forcing a parent such as ``AuthorityDocument`` to appear after children
+    such as ``AuthorityDocument.get_blocks``.
+
+    Args:
+        issues: Inspector issues to order.
+
+    Returns:
+        Ordered inspector issues.
+    """
+
+    indexed_issues = list(enumerate(issues))
+
+    def compare(left: tuple[int, InspectIssue], right: tuple[int, InspectIssue]) -> int:
+        left_index, left_issue = left
+        right_index, right_issue = right
+        left_key = _issue_sort_data(left_issue)
+        right_key = _issue_sort_data(right_issue)
+
+        if left_key[0] != right_key[0]:
+            return -1 if left_key[0] < right_key[0] else 1
+
+        left_symbol = left_key[1]
+        right_symbol = right_key[1]
+        if _is_parent_symbol(left_symbol, right_symbol):
+            return 1
+        if _is_parent_symbol(right_symbol, left_symbol):
+            return -1
+
+        if left_key[2] != right_key[2]:
+            return -1 if left_key[2] < right_key[2] else 1
+        if left_key[3] != right_key[3]:
+            return -1 if left_key[3] > right_key[3] else 1
+        return left_index - right_index
+
+    return [issue for _, issue in sorted(indexed_issues, key=cmp_to_key(compare))]
+
+
+def _issue_sort_data(issue: InspectIssue) -> tuple[str, str, int, int]:
+    """Return sortable code data for one inspector issue.
+
+    Args:
+        issue: Inspector issue.
+
+    Returns:
+        Path, symbol, start line, and symbol depth.
+    """
+
+    code_data = issue.block.get("code")
+    if not isinstance(code_data, dict):
+        return "", "", 10**9, 0
+    path = clean_string(code_data.get("path")) or ""
+    symbol = clean_string(code_data.get("symbol")) or ""
+    start_line = code_data.get("start_line")
+    if not isinstance(start_line, int):
+        start_line = 10**9
+    depth = len([part for part in symbol.split(".") if part])
+    return path, symbol, start_line, depth
+
+
+def _is_parent_symbol(parent_symbol: str, child_symbol: str) -> bool:
+    """Return whether ``parent_symbol`` is a direct or indirect parent.
+
+    Args:
+        parent_symbol: Possible parent symbol.
+        child_symbol: Possible child symbol.
+
+    Returns:
+        True when child is nested below parent.
+    """
+
+    if not parent_symbol or not child_symbol:
+        return False
+    return child_symbol.startswith(f"{parent_symbol}.")
 
 
 def _discovered_key(unit: DiscoveredCodeUnit) -> tuple[str, str, str]:
@@ -410,10 +567,9 @@ def build_inspect_issues(
 ) -> list[InspectIssue]:
     """Build ordered inspect issues from incomplete and newly detected code."""
 
-    issues = [
-        InspectIssue(issue_type=ISSUE_DRAFT, block=block)
-        for block in incomplete
-    ]
+    issues = sort_inspect_issues_hierarchically(
+        [InspectIssue(issue_type=ISSUE_DRAFT, block=block) for block in incomplete]
+    )
 
     blocks = blueprint_data.get("blocks", [])
     if not isinstance(blocks, list):
@@ -665,6 +821,10 @@ def _resolve_snippet_start_line(
     decorators = getattr(matching_node, "decorator_list", None)
     if decorators:
         return min(decorator.lineno for decorator in decorators)
+
+    resolved_start_line = getattr(matching_node, "lineno", None)
+    if isinstance(resolved_start_line, int):
+        return resolved_start_line
     return fallback_start_line
 
 

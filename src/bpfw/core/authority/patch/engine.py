@@ -132,6 +132,14 @@ class AuthorityPatchEngine:
                     result.messages.append(f"Rolled back: {restored_path}")
                 return result
 
+            if result.skipped_operations:
+                result.error_message = "Apply failed: one or more operations were skipped."
+                restored_paths = backup.rollback()
+                result.rolled_back = True
+                for restored_path in restored_paths:
+                    result.messages.append(f"Rolled back: {restored_path}")
+                return result
+
             yaml_errors = self._validate_yaml_files(affected_files)
             if yaml_errors:
                 result.messages.append("YAML validation warning after apply:")

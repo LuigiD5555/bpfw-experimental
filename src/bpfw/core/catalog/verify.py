@@ -14,6 +14,7 @@ from bpfw.core.catalog.models import (
     AUTHORITY_STATE_MISSING,
     VerificationReport,
     ScanResult,
+    BlueprintLoadResult,
 )
 from bpfw.core.catalog.scanner import scan_python_project
 from bpfw.core.catalog.security import validate_no_blueprint_secrets
@@ -278,6 +279,7 @@ def _build_report(
 def run_verify(
     project_root: Path,
     precomputed_scan_result: ScanResult | None = None,
+    precomputed_load_result: BlueprintLoadResult | None = None,
 ) -> Tuple[VerificationReport, int]:
     """Execute the complete MVP verify pipeline.
 
@@ -295,8 +297,11 @@ def run_verify(
     resolved_root = project_root.resolve()
 
     # Step 1-2: Load blueprint
-    loader = BlueprintLoader(project_root=resolved_root)
-    load_result = loader.load()
+    if precomputed_load_result is None:
+        loader = BlueprintLoader(project_root=resolved_root)
+        load_result = loader.load()
+    else:
+        load_result = precomputed_load_result
 
     # Step 2.5: Validate sharded authority structure
     shard_findings = _validate_sharded_authority(resolved_root, load_result)

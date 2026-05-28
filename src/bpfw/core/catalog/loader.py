@@ -46,6 +46,7 @@ class BlueprintLoader:
             BlueprintLoadResult with state, data, and findings.
         """
         domain_document = None
+        authority_document = None
         if not self.blueprint_path.exists():
             finding = Finding(
                 source="bpfw",
@@ -67,6 +68,7 @@ class BlueprintLoader:
             repository_load_result = repository.load()
             blueprint_data = repository_load_result.raw_data
             domain_document = repository_load_result.document
+            authority_document = repository_load_result.authority_document
         except (
             InvalidAuthorityIndexError,
             InvalidAuthorityShardError,
@@ -122,6 +124,7 @@ class BlueprintLoader:
                 path=str(self.blueprint_path),
                 data=blueprint_data,
                 domain_document=domain_document,
+                authority_document=authority_document,
                 findings=[finding],
             )
 
@@ -137,6 +140,7 @@ class BlueprintLoader:
                 path=str(self.blueprint_path),
                 data=blueprint_data,
                 domain_document=domain_document,
+                authority_document=authority_document,
                 findings=[finding],
             )
 
@@ -153,6 +157,7 @@ class BlueprintLoader:
                 path=str(self.blueprint_path),
                 data=blueprint_data,
                 domain_document=domain_document,
+                authority_document=authority_document,
                 findings=[],
             )
 
@@ -161,6 +166,7 @@ class BlueprintLoader:
             path=str(self.blueprint_path),
             data=blueprint_data,
             domain_document=domain_document,
+            authority_document=authority_document,
             findings=[],
         )
 

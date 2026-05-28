@@ -6,9 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 from bpfw.core.authority import AuthorityRepository
+from bpfw.core.yaml_io import dump_yaml_data, load_yaml_text
 from bpfw.core.catalog.access_control import ensure_blueprint_can_be_written
 from bpfw.core.catalog.domain.mapper import BlueprintMapper
 from bpfw.core.catalog.domain.models import BlueprintDocument
@@ -45,7 +44,7 @@ class BlueprintRepository:
         if not self.blueprint_path.exists():
             return RepositoryLoadResult(document=BlueprintDocument(), raw_data={})
 
-        raw_blueprint_data = yaml.safe_load(self.blueprint_path.read_text(encoding="utf-8")) or {}
+        raw_blueprint_data = load_yaml_text(self.blueprint_path.read_text(encoding="utf-8")) or {}
         if not isinstance(raw_blueprint_data, dict):
             raw_blueprint_data = {}
 
@@ -72,7 +71,7 @@ class BlueprintRepository:
             AuthorityRepository(self.project_root).save(authority_document)
             return
 
-        rendered = yaml.safe_dump(raw_blueprint_data, sort_keys=False, allow_unicode=True)
+        rendered = dump_yaml_data(raw_blueprint_data, sort_keys=False, allow_unicode=True)
         ensure_blueprint_can_be_written(project_root=self.project_root)
         self.blueprint_path.parent.mkdir(parents=True, exist_ok=True)
         self.blueprint_path.write_text(rendered, encoding="utf-8")

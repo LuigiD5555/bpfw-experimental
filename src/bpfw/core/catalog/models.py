@@ -46,6 +46,7 @@ class BlueprintLoadResult:
     path: str
     data: Dict[str, Any]
     domain_document: Any | None = None
+    authority_document: Any | None = None
     findings: List[Finding] = field(default_factory=list)
 
 

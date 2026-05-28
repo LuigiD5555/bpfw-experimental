@@ -316,6 +316,19 @@ class DriftState:
                 issues.append(issue)
         return issues
 
+    def has_approved_inspector_work(self) -> bool:
+        """Return whether approved Drift Gate items still need metadata inspection.
+
+        Returns:
+            True when at least one Drift Gate decision produced an inspector issue.
+        """
+        return any(
+            record.status == "approved_for_inspector"
+            and record.issue_type is not None
+            and record.block_data is not None
+            for record in self.decisions.values()
+        )
+
 
 class DriftStateRepository:
     """Load and save persistent Drift Gate state."""
@@ -573,11 +586,13 @@ def _blueprint_target_payload(item: DiffItem) -> dict[str, Any] | None:
         "path": target.path,
         "symbol": target.symbol,
         "kind": target.kind,
+        "source_shard_path": target.source_shard_path.as_posix() if target.source_shard_path else None,
         "purpose": target.purpose,
         "name": target.name,
         "domain": target.domain,
         "status": target.status,
         "detected": detected if isinstance(detected, dict) else None,
+        "block_data": target.block_data if isinstance(target.block_data, dict) else {},
     }
 
 

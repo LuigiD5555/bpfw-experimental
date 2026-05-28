@@ -196,3 +196,191 @@ def test_cached_pending_preflight_uses_minimal_session(tmp_path: Path) -> None:
     assert session.scan_result is None
     assert session.verify_report is None
     assert len(pending_items) == 1
+
+
+def _write_simple_blueprint(project_root: Path, block_yaml: str = "") -> None:
+    """Write a minimal blueprint.yaml for drift-state resume tests.
+
+    Args:
+        project_root: Temporary project root.
+        block_yaml: YAML block list body to write under blocks.
+    """
+    blueprint_path = project_root / "bpfw" / "blueprint.yaml"
+    blueprint_path.parent.mkdir(parents=True)
+    if block_yaml:
+        blueprint_path.write_text("version: 1\nblocks:\n" + block_yaml, encoding="utf-8")
+    else:
+        blueprint_path.write_text("version: 1\nblocks: []\n", encoding="utf-8")
+
+
+def _approved_issue() -> InspectIssue:
+    """Build one approved inspector issue for resume tests.
+
+    Returns:
+        Approved inspector issue.
+    """
+    return InspectIssue(
+        issue_type="approved_new",
+        block={
+            "id": "payment_validator",
+            "purpose": None,
+            "name": "PaymentValidator",
+            "domain": "payments",
+            "status": "active",
+            "code": {
+                "path": "src/app/payments.py",
+                "symbol": "PaymentValidator",
+                "kind": "class",
+            },
+        },
+        add_on_accept=True,
+        context_lines=["Current item: approved new active responsibility from Drift Gate."],
+    )
+
+
+def test_cached_preflight_resumes_approved_metadata_even_when_signature_changed(tmp_path: Path) -> None:
+    """Approved metadata work should open Inspector before full drift recomputation."""
+    from bpfw.integrations.inspector.session import _try_load_cached_preflight
+
+    _write_simple_blueprint(tmp_path)
+    source_path = tmp_path / "src" / "app" / "payments.py"
+    source_path.parent.mkdir(parents=True)
+    source_path.write_text("class PaymentValidator:\n    pass\n", encoding="utf-8")
+
+    repository = DriftStateRepository(tmp_path)
+    state = DriftState(input_signature="stale-signature", pending_human_decisions=0)
+    state.record_decision(
+        item=_undeclared_item(),
+        status="approved_for_inspector",
+        decision="APPROVED_ACTIVE",
+        issue=_approved_issue(),
+    )
+    repository.save(state)
+
+    cached = _try_load_cached_preflight(project_root=tmp_path)
+
+    assert cached is not None
+    session, drift_result = cached
+    assert drift_result.cache_hit
+    assert drift_result.approved_count == 1
+    assert session.scan_result is None
+    assert session.verify_report is None
+    assert len(drift_result.inspector_issues) == 1
+    assert drift_result.inspector_issues[0].block["name"] == "PaymentValidator"
+
+
+def test_cached_preflight_skips_completed_approved_metadata(tmp_path: Path) -> None:
+    """Completed approved blocks should not be reopened by Drift Gate state."""
+    from bpfw.integrations.inspector.session import _try_load_cached_preflight
+
+    _write_simple_blueprint(
+        tmp_path,
+        "  - id: payment_validator\n"
+        "    purpose: validate payment data\n"
+        "    name: PaymentValidator\n"
+        "    domain: payments\n"
+        "    status: active\n"
+        "    code:\n"
+        "      path: src/app/payments.py\n"
+        "      symbol: PaymentValidator\n"
+        "      kind: class\n",
+    )
+    source_path = tmp_path / "src" / "app" / "payments.py"
+    source_path.parent.mkdir(parents=True)
+    source_path.write_text("class PaymentValidator:\n    pass\n", encoding="utf-8")
+
+    repository = DriftStateRepository(tmp_path)
+    state = DriftState(input_signature="stale-signature", pending_human_decisions=0)
+    state.record_decision(
+        item=_undeclared_item(),
+        status="approved_for_inspector",
+        decision="APPROVED_ACTIVE",
+        issue=_approved_issue(),
+    )
+    repository.save(state)
+
+    cached = _try_load_cached_preflight(project_root=tmp_path)
+
+    assert cached is None
+
+
+def test_cached_preflight_resumes_incomplete_existing_approved_metadata(tmp_path: Path) -> None:
+    """Saved but incomplete approved blocks should resume as draft work only once."""
+    from bpfw.integrations.inspector.session import _try_load_cached_preflight
+
+    _write_simple_blueprint(
+        tmp_path,
+        "  - id: payment_validator\n"
+        "    purpose: null\n"
+        "    name: PaymentValidator\n"
+        "    domain: payments\n"
+        "    status: active\n"
+        "    code:\n"
+        "      path: src/app/payments.py\n"
+        "      symbol: PaymentValidator\n"
+        "      kind: class\n",
+    )
+    source_path = tmp_path / "src" / "app" / "payments.py"
+    source_path.parent.mkdir(parents=True)
+    source_path.write_text("class PaymentValidator:\n    pass\n", encoding="utf-8")
+
+    repository = DriftStateRepository(tmp_path)
+    state = DriftState(input_signature="stale-signature", pending_human_decisions=0)
+    state.record_decision(
+        item=_undeclared_item(),
+        status="approved_for_inspector",
+        decision="APPROVED_ACTIVE",
+        issue=_approved_issue(),
+    )
+    repository.save(state)
+
+    cached = _try_load_cached_preflight(project_root=tmp_path)
+
+    assert cached is not None
+    session, drift_result = cached
+    assert drift_result.approved_count == 1
+    assert len(drift_result.inspector_issues) == 1
+    assert drift_result.inspector_issues[0].issue_type == "draft"
+    assert not drift_result.inspector_issues[0].add_on_accept
+    assert len(session.issues) == 1
+
+
+def test_cached_preflight_resumes_approved_metadata_with_unrelated_stale_drafts(tmp_path: Path) -> None:
+    """Approved metadata work should resume even when other drafts are stale."""
+    from bpfw.integrations.inspector.session import _try_load_cached_preflight
+
+    _write_simple_blueprint(
+        tmp_path,
+        "  - id: stale_authority_block\n"
+        "    purpose: null\n"
+        "    name: StaleAuthorityBlock\n"
+        "    domain: authority\n"
+        "    status: active\n"
+        "    code:\n"
+        "      path: src/bpfw/authority/stale.py\n"
+        "      symbol: StaleAuthorityBlock\n"
+        "      kind: class\n",
+    )
+    source_path = tmp_path / "src" / "app" / "payments.py"
+    source_path.parent.mkdir(parents=True)
+    source_path.write_text("class PaymentValidator:\n    pass\n", encoding="utf-8")
+
+    repository = DriftStateRepository(tmp_path)
+    state = DriftState(input_signature="stale-signature", pending_human_decisions=0)
+    state.record_decision(
+        item=_undeclared_item(),
+        status="approved_for_inspector",
+        decision="APPROVED_ACTIVE",
+        issue=_approved_issue(),
+    )
+    repository.save(state)
+
+    cached = _try_load_cached_preflight(project_root=tmp_path)
+
+    assert cached is not None
+    session, drift_result = cached
+    assert drift_result.cache_hit
+    assert drift_result.approved_count == 1
+    assert len(drift_result.inspector_issues) == 1
+    assert drift_result.inspector_issues[0].block["name"] == "PaymentValidator"
+    assert any("stale" in line.lower() for line in session.pre_inspection_context_lines)

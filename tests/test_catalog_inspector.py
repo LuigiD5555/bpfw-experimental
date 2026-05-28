@@ -447,6 +447,42 @@ def test_code_preview_includes_blank_lines_before_snippet(tmp_path: Path) -> Non
     assert "  4  def looks_like_absolute_path" in rendered
 
 
+def test_code_preview_includes_declaration_when_stored_start_line_points_to_docstring(tmp_path: Path) -> None:
+    """A stale stored start line must not hide the function declaration."""
+    source_path = tmp_path / "src" / "bpfw"
+    source_path.mkdir(parents=True)
+    (source_path / "cli.py").write_text(
+        "class BpfwArgumentParser:\n"
+        "    \"\"\"Render curated command help.\"\"\"\n"
+        "\n"
+        "    def format_help(self) -> str:\n"
+        "        \"\"\"Return the curated top-level BPFW help text.\"\"\"\n"
+        "\n"
+        "        return MAIN_HELP_TEXT + \"\\\\n\"\n",
+        encoding="utf-8",
+    )
+    block = _responsibility(
+        responsibility_id="format_help",
+        purpose=None,
+        status="active",
+        path="src/bpfw/cli.py",
+        symbol="BpfwArgumentParser.format_help",
+    )
+    block["code"]["kind"] = "method"
+    block["code"]["start_line"] = 5
+    block["code"]["end_line"] = 7
+
+    rendered = "\n".join(
+        build_code_lines(
+            project_root=tmp_path,
+            block=block,
+        )
+    )
+
+    assert "  4      def format_help(self) -> str:" in rendered
+    assert "Return the curated top-level BPFW help text." in rendered
+
+
 def test_code_preview_does_not_cross_into_next_top_level_snippet(tmp_path: Path) -> None:
     source_path = tmp_path / "src" / "bpfw" / "catalog"
     source_path.mkdir(parents=True)
