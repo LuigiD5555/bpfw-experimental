@@ -1,15 +1,14 @@
-"""Domain suggestion models for inspector integration."""
+"""PURPOSE domain suggestion models for inspector tool
+DOMAIN  domain suggestions
+"""
 
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True)
 class DomainSuggestion:
-    """Represent one deterministic domain suggestion candidate.
-
-    Attributes:
-        text: Suggested domain text.
-        evidence: Deterministic evidence labels used to produce this suggestion.
+    """PURPOSE store information about one stable domain suggestion candidate
+    DOMAIN  domain suggestions
     """
 
     text: str
@@ -18,15 +17,8 @@ class DomainSuggestion:
 
 @dataclass(frozen=True, slots=True)
 class DomainEvidence:
-    """Store normalized domain evidence extracted from one block.
-
-    Attributes:
-        path_parts: Normalized source path segments.
-        module_parts: Normalized module segments.
-        symbol_tokens: Tokenized symbol identifier.
-        file_stem: File stem extracted from block path.
-        docstring_tokens: Tokenized docstring terms.
-        origin_key: Stable key used for origin-based domain history.
+    """PURPOSE store clean domain evidence extracted from one block
+    DOMAIN  domain suggestions
     """
 
     path_parts: tuple[str, ...]

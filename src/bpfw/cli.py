@@ -1,4 +1,6 @@
-"""Command line interface for Blueprint Framework MVP Catalog Mode."""
+"""PURPOSE run Blueprint Framework catalog commands in the terminal
+DOMAIN  terminal commands
+"""
 
 import argparse
 import json
@@ -8,14 +10,9 @@ from bpfw.shared.text import normalize_text_command
 
 
 def run_command_after_verify(project_root: Path, command: list[str]) -> int:
-    """Run a command after verification through a lazy import.
+    """PURPOSE run a command after verification only after it is needed
+        DOMAIN  terminal commands
 
-    Args:
-        project_root: Project root directory.
-        command: Subprocess command to run after verification passes.
-
-    Returns:
-        Subprocess or verification exit code.
     """
     from bpfw.runner import run_command_after_verify as run_after_verify
 
@@ -82,22 +79,31 @@ Verify filters:
 
 
 class BpfwArgumentParser(argparse.ArgumentParser):
-    """Argument parser that renders the curated BPFW command help."""
+    """PURPOSE show BPFW help messages in the terminal
+    DOMAIN  terminal help
+    """
 
     def format_help(self) -> str:
-        """Return the curated top-level BPFW help text."""
+        """PURPOSE show the full BPFW help screen
+        DOMAIN  terminal help
+        """
 
         return f"{MAIN_HELP_TEXT}\n"
 
     def format_usage(self) -> str:
-        """Return concise command usage for parser errors."""
+        """PURPOSE show the short command format when input is wrong
+        DOMAIN  terminal help
+        """
 
         return "Usage:\n  bpfw <command> [options]\n"
 
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Create CLI parser for BPFW MVP commands."""
+    """PURPOSE create terminal command reader for BPFW commands
+        DOMAIN  terminal commands
+
+    """
 
     parser = BpfwArgumentParser(prog="bpfw")
     parser.add_argument("command", choices=MVP_COMMANDS)
@@ -120,7 +126,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def resolve_cli_command(command: str, subcommand: str | None) -> str:
-    """Map CLI tokens into engine command names for MVP."""
+    """PURPOSE map terminal command words to engine command names
+    DOMAIN  terminal commands
+    """
 
     normalized_command = normalize_text_command(command)
     normalized_subcommand = normalize_text_command(subcommand) if subcommand is not None else None
@@ -173,7 +181,9 @@ def resolve_cli_command(command: str, subcommand: str | None) -> str:
 
 
 def _format_protected_resources(result: "ProtectionResult") -> str:
-    """Format protected resources for CLI output."""
+    """PURPOSE format protected resources for terminal command output
+    DOMAIN  terminal commands
+    """
 
     lines = []
     for resource in result.protected_resources:
@@ -185,7 +195,9 @@ def _format_protected_resources(result: "ProtectionResult") -> str:
 
 
 def _build_payload(result) -> dict:  # noqa: ANN001
-    """Serialize engine result into a JSON-friendly payload dict."""
+    """PURPOSE convert engine result into data that can be written as JSON
+    DOMAIN  terminal commands
+    """
 
     severity_rank = {"ok": 0, "info": 1, "warning": 2, "block": 3, "critical": 4}
     serialized_steps = [
@@ -217,7 +229,9 @@ def _build_payload(result) -> dict:  # noqa: ANN001
 
 
 def _print_human(payload: dict) -> None:
-    """Print human-readable output for MVP commands."""
+    """PURPOSE print human-readable output for commands
+    DOMAIN  terminal commands
+    """
 
     # verify: print OK on success, error message otherwise
     if payload["command_name"] == "verify":
@@ -257,7 +271,9 @@ def _print_human(payload: dict) -> None:
 
 
 def main() -> int:
-    """Entry point for BPFW MVP CLI."""
+    """PURPOSE entry point for BPFW terminal command
+    DOMAIN  terminal commands
+    """
 
     parser = build_parser()
     parsed_arguments, remaining_arguments = parser.parse_known_args()

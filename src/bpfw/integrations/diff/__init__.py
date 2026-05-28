@@ -1,4 +1,6 @@
-"""Diff integration for BPFW drift decisions."""
+"""PURPOSE diff tool for BPFW drift decisions
+DOMAIN  optional integrations
+"""
 
 import sys
 from pathlib import Path
@@ -9,22 +11,15 @@ from bpfw.integrations.result import OptionalIntegrationResult
 
 
 def can_use_interactive_terminal() -> bool:
-    """Return True when standard streams support interactive diff input.
-
-    Returns:
-        True when stdin and stdout are attached to a terminal.
+    """PURPOSE check whether standard streams support interactive diff input
+    DOMAIN  optional integrations
     """
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
 def run_diff(project_root: Path) -> int:
-    """Run the interactive diff decision manager.
-
-    Args:
-        project_root: Root directory of the project being reviewed.
-
-    Returns:
-        Process exit code.
+    """PURPOSE run the interactive diff decision manager
+    DOMAIN  optional integrations
     """
     if not can_use_interactive_terminal():
         print(
@@ -42,15 +37,15 @@ def run_diff(project_root: Path) -> int:
 
 
 class DiffIntegration(OptionalIntegration):
-    """Optional integration that resolves blueprint-vs-code drift decisions."""
+    """PURPOSE optional tool that resolves blueprint-vs-code drift decisions
+    DOMAIN  optional integrations
+    """
 
     name = "diff"
 
     def is_available(self) -> bool:
-        """Return True when the diff integration can run.
-
-        Returns:
-            Always True for the bundled terminal diff manager.
+        """PURPOSE check whether the diff tool can run
+        DOMAIN  optional integrations
         """
         return True
 
@@ -59,14 +54,8 @@ class DiffIntegration(OptionalIntegration):
         project_root: Path,
         command_arguments: dict[str, str] | None = None,
     ) -> OptionalIntegrationResult:
-        """Run diff against the given project root.
-
-        Args:
-            project_root: Root directory of the project being reviewed.
-            command_arguments: Runtime options forwarded from the CLI command.
-
-        Returns:
-            Integration result containing the diff exit code.
+        """PURPOSE run diff against the given project root
+        DOMAIN  optional integrations
         """
         _ = command_arguments
         exit_code = run_diff(project_root=project_root)

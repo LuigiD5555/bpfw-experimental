@@ -1,9 +1,5 @@
-"""Mechanical authority patch operations for Blueprint Engine.
-
-Each operation describes one explicit mutation to files under ``bpfw/``.
-Operations do not detect drift and do not decide whether a change is valid
-product-wise. They only validate mechanical preconditions before the engine
-applies an already approved change.
+"""PURPOSE file-change authority patch operations for Blueprint Engine
+DOMAIN  blueprint file changes
 """
 
 from dataclasses import dataclass, field
@@ -15,7 +11,9 @@ from bpfw.core.authority.errors import AuthorityError, InvalidShardPathError
 
 
 class PatchOperationKind(Enum):
-    """Stable labels identifying each mechanical patch operation type."""
+    """PURPOSE stable labels identifying each file change operation type
+        DOMAIN  blueprint file changes
+        """
 
     MOVE_BLOCK = "move_block"
     CREATE_BLOCK = "create_block"
@@ -35,13 +33,8 @@ class PatchOperationKind(Enum):
 
 
 def _validate_bpfw_path(relative_path: Path) -> None:
-    """Verify that a path is inside the BPFW authority directory.
-
-    Args:
-        relative_path: Project-relative path to validate.
-
-    Raises:
-        InvalidShardPathError: If the path escapes the ``bpfw/`` directory.
+    """PURPOSE verify that a path is inside the BPFW authority directory
+    DOMAIN  blueprint file changes
     """
 
     parts = relative_path.parts
@@ -56,13 +49,8 @@ def _validate_bpfw_path(relative_path: Path) -> None:
 
 
 def _validate_shard_path(shard_path: Path) -> None:
-    """Verify that a shard path is inside ``bpfw/blocks/``.
-
-    Args:
-        shard_path: Project-relative shard path to validate.
-
-    Raises:
-        InvalidShardPathError: If the path is outside ``bpfw/blocks/``.
+    """PURPOSE verify that a shard path is inside bpfw/blocks/
+    DOMAIN  blueprint file changes
     """
 
     _validate_bpfw_path(shard_path)
@@ -78,13 +66,8 @@ def _validate_shard_path(shard_path: Path) -> None:
 
 
 def _validate_blueprint_path(relative_path: Path) -> None:
-    """Verify that a path points to the root blueprint file.
-
-    Args:
-        relative_path: Project-relative path to validate.
-
-    Raises:
-        InvalidShardPathError: If the path is not ``bpfw/blueprint.yaml``.
+    """PURPOSE verify that a path points to the root blueprint file
+    DOMAIN  blueprint file changes
     """
 
     _validate_bpfw_path(relative_path)
@@ -95,15 +78,8 @@ def _validate_blueprint_path(relative_path: Path) -> None:
 
 
 def _validate_block_exists(project_root: Path, shard_path: Path, block_id: str) -> None:
-    """Validate that a block exists in a shard.
-
-    Args:
-        project_root: Project root directory.
-        shard_path: Project-relative shard path.
-        block_id: Block identifier to find.
-
-    Raises:
-        AuthorityError: If the shard or block does not exist.
+    """PURPOSE check that a block exists in a shard
+    DOMAIN  blueprint file changes
     """
 
     from bpfw.core.authority.shard import AuthorityShard
@@ -124,43 +100,29 @@ def _validate_block_exists(project_root: Path, shard_path: Path, block_id: str) 
 
 @dataclass(frozen=True)
 class PatchOperation:
-    """Base data container for a single authority patch operation.
-
-    Attributes:
-        kind: Discriminator identifying the operation type.
+    """PURPOSE base data container for a single authority patch operation
+    DOMAIN  blueprint file changes
     """
 
     kind: PatchOperationKind
 
     def affected_files(self) -> set[Path]:
-        """Return project-relative files this operation may modify.
-
-        Returns:
-            Set of affected project-relative paths.
+        """PURPOSE get project-relative files this operation may modify
+        DOMAIN  blueprint file changes
         """
         return set()
 
     def validate(self, project_root: Path) -> None:
-        """Validate preconditions without modifying files.
-
-        Args:
-            project_root: Project root directory.
-
-        Raises:
-            AuthorityError: When a precondition is violated.
+        """PURPOSE check required conditions without modifying files
+        DOMAIN  blueprint file changes
         """
         return None
 
 
 @dataclass(frozen=True)
 class MoveBlockOperation:
-    """Move a block from one shard file to another.
-
-    Attributes:
-        block_id: Identifier of the block to move.
-        source_shard_path: Project-relative shard that currently contains the block.
-        target_shard_path: Project-relative shard that should receive the block.
-        create_target_if_missing: Whether to create the target shard if missing.
+    """PURPOSE move a block from one shard file to another
+    DOMAIN  blueprint file changes
     """
 
     kind: PatchOperationKind = field(default=PatchOperationKind.MOVE_BLOCK, init=False)
@@ -170,17 +132,14 @@ class MoveBlockOperation:
     create_target_if_missing: bool = False
 
     def affected_files(self) -> set[Path]:
-        """Return source and target shard paths."""
+        """PURPOSE get source and target shard paths
+        DOMAIN  blueprint file changes
+        """
         return {self.source_shard_path, self.target_shard_path}
 
     def validate(self, project_root: Path) -> None:
-        """Validate that the block move is mechanically safe.
-
-        Args:
-            project_root: Project root directory.
-
-        Raises:
-            AuthorityError: If the source, target, or block state is invalid.
+        """PURPOSE check that the block move is safe
+        DOMAIN  blueprint file changes
         """
         from bpfw.core.authority.shard import AuthorityShard
 
@@ -205,12 +164,8 @@ class MoveBlockOperation:
 
 @dataclass(frozen=True)
 class CreateBlockOperation:
-    """Create a new authority block in a target shard.
-
-    Attributes:
-        block_data: Complete block dictionary including ``id``.
-        target_shard_path: Project-relative shard where the block will be created.
-        create_target_if_missing: Whether to create the target shard if missing.
+    """PURPOSE create a new authority block in a target shard
+    DOMAIN  blueprint file changes
     """
 
     kind: PatchOperationKind = field(default=PatchOperationKind.CREATE_BLOCK, init=False)
@@ -219,17 +174,14 @@ class CreateBlockOperation:
     create_target_if_missing: bool = False
 
     def affected_files(self) -> set[Path]:
-        """Return the target shard path."""
+        """PURPOSE get the target shard path
+        DOMAIN  blueprint file changes
+        """
         return {self.target_shard_path}
 
     def validate(self, project_root: Path) -> None:
-        """Validate that the block can be created safely.
-
-        Args:
-            project_root: Project root directory.
-
-        Raises:
-            AuthorityError: If the block data or target shard is invalid.
+        """PURPOSE check that the block can be created
+        DOMAIN  blueprint file changes
         """
         from bpfw.core.authority.shard import AuthorityShard
 
@@ -258,11 +210,8 @@ class CreateBlockOperation:
 
 @dataclass(frozen=True)
 class DeleteBlockOperation:
-    """Remove a block from an authority shard.
-
-    Attributes:
-        block_id: Identifier of the block to delete.
-        source_shard_path: Project-relative shard containing the block.
+    """PURPOSE remove a block from an authority shard
+    DOMAIN  blueprint file changes
     """
 
     kind: PatchOperationKind = field(default=PatchOperationKind.DELETE_BLOCK, init=False)
@@ -270,14 +219,14 @@ class DeleteBlockOperation:
     source_shard_path: Path = field(default_factory=lambda: Path("."))
 
     def affected_files(self) -> set[Path]:
-        """Return the source shard path."""
+        """PURPOSE get the source shard path
+        DOMAIN  blueprint file changes
+        """
         return {self.source_shard_path}
 
     def validate(self, project_root: Path) -> None:
-        """Validate that the block can be deleted.
-
-        Args:
-            project_root: Project root directory.
+        """PURPOSE check that the block can be deleted
+        DOMAIN  blueprint file changes
         """
         _validate_shard_path(self.source_shard_path)
         _validate_block_exists(project_root, self.source_shard_path, self.block_id)
@@ -285,12 +234,8 @@ class DeleteBlockOperation:
 
 @dataclass(frozen=True)
 class UpdateBlockMetadataOperation:
-    """Edit metadata fields for an existing authority block.
-
-    Attributes:
-        block_id: Identifier of the block to update.
-        source_shard_path: Project-relative shard containing the block.
-        metadata_changes: Top-level block metadata changes to apply.
+    """PURPOSE edit metadata fields for an authority block
+    DOMAIN  blueprint file changes
     """
 
     kind: PatchOperationKind = field(default=PatchOperationKind.UPDATE_BLOCK_METADATA, init=False)
@@ -319,17 +264,14 @@ class UpdateBlockMetadataOperation:
     )
 
     def affected_files(self) -> set[Path]:
-        """Return the source shard path."""
+        """PURPOSE get the source shard path
+        DOMAIN  blueprint file changes
+        """
         return {self.source_shard_path}
 
     def validate(self, project_root: Path) -> None:
-        """Validate that the metadata update can be applied.
-
-        Args:
-            project_root: Project root directory.
-
-        Raises:
-            AuthorityError: If fields, lifecycle, or block state are invalid.
+        """PURPOSE check that the metadata update can be applied
+        DOMAIN  blueprint file changes
         """
         _validate_shard_path(self.source_shard_path)
         _validate_block_exists(project_root, self.source_shard_path, self.block_id)
@@ -356,12 +298,8 @@ class UpdateBlockMetadataOperation:
 
 @dataclass(frozen=True)
 class UpdateBlockLocationOperation:
-    """Update the code path of an existing authority block.
-
-    Attributes:
-        block_id: Identifier of the block to update.
-        source_shard_path: Project-relative shard containing the block.
-        new_path: New project-relative source code path.
+    """PURPOSE update the code path of an authority block
+    DOMAIN  blueprint file changes
     """
 
     kind: PatchOperationKind = field(default=PatchOperationKind.UPDATE_BLOCK_LOCATION, init=False)
@@ -370,14 +308,14 @@ class UpdateBlockLocationOperation:
     new_path: str = ""
 
     def affected_files(self) -> set[Path]:
-        """Return the source shard path."""
+        """PURPOSE get the source shard path
+        DOMAIN  blueprint file changes
+        """
         return {self.source_shard_path}
 
     def validate(self, project_root: Path) -> None:
-        """Validate that the location update can be applied.
-
-        Args:
-            project_root: Project root directory.
+        """PURPOSE check that the location update can be applied
+        DOMAIN  blueprint file changes
         """
         _validate_shard_path(self.source_shard_path)
         _validate_block_exists(project_root, self.source_shard_path, self.block_id)
@@ -387,13 +325,8 @@ class UpdateBlockLocationOperation:
 
 @dataclass(frozen=True)
 class UpdateBlockSymbolOperation:
-    """Update the code symbol of an existing authority block.
-
-    Attributes:
-        block_id: Identifier of the block to update.
-        source_shard_path: Project-relative shard containing the block.
-        new_symbol: New symbol name.
-        new_name: Optional authority display name update.
+    """PURPOSE update the code symbol of an authority block
+    DOMAIN  blueprint file changes
     """
 
     kind: PatchOperationKind = field(default=PatchOperationKind.UPDATE_BLOCK_SYMBOL, init=False)
@@ -403,14 +336,14 @@ class UpdateBlockSymbolOperation:
     new_name: str | None = None
 
     def affected_files(self) -> set[Path]:
-        """Return the source shard path."""
+        """PURPOSE get the source shard path
+        DOMAIN  blueprint file changes
+        """
         return {self.source_shard_path}
 
     def validate(self, project_root: Path) -> None:
-        """Validate that the symbol update can be applied.
-
-        Args:
-            project_root: Project root directory.
+        """PURPOSE check that the symbol update can be applied
+        DOMAIN  blueprint file changes
         """
         _validate_shard_path(self.source_shard_path)
         _validate_block_exists(project_root, self.source_shard_path, self.block_id)
@@ -420,15 +353,8 @@ class UpdateBlockSymbolOperation:
 
 @dataclass(frozen=True)
 class UpdateBlockCodeReferenceOperation:
-    """Update path, symbol, and optional kind/name for an existing block.
-
-    Attributes:
-        block_id: Identifier of the block to update.
-        source_shard_path: Project-relative shard containing the block.
-        new_path: New source path.
-        new_symbol: New source symbol.
-        new_kind: Optional source symbol kind.
-        new_name: Optional authority display name.
+    """PURPOSE update path, symbol, and kind/name for an block
+    DOMAIN  blueprint file changes
     """
 
     kind: PatchOperationKind = field(default=PatchOperationKind.UPDATE_BLOCK_CODE_REFERENCE, init=False)
@@ -440,14 +366,14 @@ class UpdateBlockCodeReferenceOperation:
     new_name: str | None = None
 
     def affected_files(self) -> set[Path]:
-        """Return the source shard path."""
+        """PURPOSE get the source shard path
+        DOMAIN  blueprint file changes
+        """
         return {self.source_shard_path}
 
     def validate(self, project_root: Path) -> None:
-        """Validate that the code reference update can be applied.
-
-        Args:
-            project_root: Project root directory.
+        """PURPOSE check that the code reference update can be applied
+        DOMAIN  blueprint file changes
         """
         _validate_shard_path(self.source_shard_path)
         _validate_block_exists(project_root, self.source_shard_path, self.block_id)
@@ -461,11 +387,8 @@ class UpdateBlockCodeReferenceOperation:
 
 @dataclass(frozen=True)
 class AddIgnoreRuleOperation:
-    """Add a deliberate ignored-code rule to the root blueprint.
-
-    Attributes:
-        rule_data: Dictionary describing the ignored path/symbol and reason.
-        blueprint_path: Root blueprint path, normally ``bpfw/blueprint.yaml``.
+    """PURPOSE add a deliberate ignored-code rule to the root blueprint
+    DOMAIN  blueprint file changes
     """
 
     kind: PatchOperationKind = field(default=PatchOperationKind.ADD_IGNORE_RULE, init=False)
@@ -473,14 +396,14 @@ class AddIgnoreRuleOperation:
     blueprint_path: Path = field(default_factory=lambda: Path("bpfw/blueprint.yaml"))
 
     def affected_files(self) -> set[Path]:
-        """Return the root blueprint path."""
+        """PURPOSE get the root blueprint path
+        DOMAIN  blueprint file changes
+        """
         return {self.blueprint_path}
 
     def validate(self, project_root: Path) -> None:
-        """Validate that the ignore rule can be added.
-
-        Args:
-            project_root: Project root directory.
+        """PURPOSE check that the ignore rule can be added
+        DOMAIN  blueprint file changes
         """
         _validate_blueprint_path(self.blueprint_path)
         if not (project_root / self.blueprint_path).exists():
@@ -495,11 +418,8 @@ class AddIgnoreRuleOperation:
 
 @dataclass(frozen=True)
 class RemoveIgnoreRuleOperation:
-    """Remove a deliberate ignored-code rule from the root blueprint.
-
-    Attributes:
-        rule_data: Dictionary used to find the ignored-code rule.
-        blueprint_path: Root blueprint path, normally ``bpfw/blueprint.yaml``.
+    """PURPOSE remove a deliberate ignored-code rule from the root blueprint
+    DOMAIN  blueprint file changes
     """
 
     kind: PatchOperationKind = field(default=PatchOperationKind.REMOVE_IGNORE_RULE, init=False)
@@ -507,14 +427,14 @@ class RemoveIgnoreRuleOperation:
     blueprint_path: Path = field(default_factory=lambda: Path("bpfw/blueprint.yaml"))
 
     def affected_files(self) -> set[Path]:
-        """Return the root blueprint path."""
+        """PURPOSE get the root blueprint path
+        DOMAIN  blueprint file changes
+        """
         return {self.blueprint_path}
 
     def validate(self, project_root: Path) -> None:
-        """Validate that the ignore rule can be removed.
-
-        Args:
-            project_root: Project root directory.
+        """PURPOSE check that the ignore rule can be removed
+        DOMAIN  blueprint file changes
         """
         _validate_blueprint_path(self.blueprint_path)
         if not (project_root / self.blueprint_path).exists():
@@ -525,14 +445,8 @@ class RemoveIgnoreRuleOperation:
 
 @dataclass(frozen=True)
 class AddCoveredCodeOperation:
-    """Add a covered-code relation to the root blueprint.
-
-    Covered code is real code that is intentionally governed by an existing
-    authority block instead of being declared as a separate block.
-
-    Attributes:
-        rule_data: Dictionary describing the covered path, symbol, owner block, and reason.
-        blueprint_path: Root blueprint path, normally ``bpfw/blueprint.yaml``.
+    """PURPOSE add a covered-code relation to the root blueprint
+    DOMAIN  blueprint file changes
     """
 
     kind: PatchOperationKind = field(default=PatchOperationKind.ADD_COVERED_CODE, init=False)
@@ -540,21 +454,14 @@ class AddCoveredCodeOperation:
     blueprint_path: Path = field(default_factory=lambda: Path("bpfw/blueprint.yaml"))
 
     def affected_files(self) -> set[Path]:
-        """Return the root blueprint path.
-
-        Returns:
-            Set containing the project-relative root blueprint path.
+        """PURPOSE get the root blueprint path
+        DOMAIN  blueprint file changes
         """
         return {self.blueprint_path}
 
     def validate(self, project_root: Path) -> None:
-        """Validate that the covered-code rule can be added.
-
-        Args:
-            project_root: Project root directory.
-
-        Raises:
-            AuthorityError: If the rule is incomplete or the blueprint is missing.
+        """PURPOSE check that the covered-code rule can be added
+        DOMAIN  blueprint file changes
         """
         _validate_blueprint_path(self.blueprint_path)
         if not (project_root / self.blueprint_path).exists():
@@ -570,11 +477,8 @@ class AddCoveredCodeOperation:
 
 @dataclass(frozen=True)
 class RemoveCoveredCodeOperation:
-    """Remove a covered-code relation from the root blueprint.
-
-    Attributes:
-        rule_data: Dictionary used to find the covered-code rule.
-        blueprint_path: Root blueprint path, normally ``bpfw/blueprint.yaml``.
+    """PURPOSE remove a covered-code relation from the root blueprint
+    DOMAIN  blueprint file changes
     """
 
     kind: PatchOperationKind = field(default=PatchOperationKind.REMOVE_COVERED_CODE, init=False)
@@ -582,21 +486,14 @@ class RemoveCoveredCodeOperation:
     blueprint_path: Path = field(default_factory=lambda: Path("bpfw/blueprint.yaml"))
 
     def affected_files(self) -> set[Path]:
-        """Return the root blueprint path.
-
-        Returns:
-            Set containing the project-relative root blueprint path.
+        """PURPOSE get the root blueprint path
+        DOMAIN  blueprint file changes
         """
         return {self.blueprint_path}
 
     def validate(self, project_root: Path) -> None:
-        """Validate that the covered-code rule can be removed.
-
-        Args:
-            project_root: Project root directory.
-
-        Raises:
-            AuthorityError: If the rule is incomplete or the blueprint is missing.
+        """PURPOSE check that the covered-code rule can be removed
+        DOMAIN  blueprint file changes
         """
         _validate_blueprint_path(self.blueprint_path)
         if not (project_root / self.blueprint_path).exists():
@@ -607,11 +504,8 @@ class RemoveCoveredCodeOperation:
 
 @dataclass(frozen=True)
 class CreateShardFileOperation:
-    """Create a new YAML shard file.
-
-    Attributes:
-        shard_path: Project-relative path for the new shard file.
-        initial_blocks: Optional blocks to write immediately.
+    """PURPOSE create a new YAML shard file
+    DOMAIN  blueprint file changes
     """
 
     kind: PatchOperationKind = field(default=PatchOperationKind.CREATE_SHARD_FILE, init=False)
@@ -619,14 +513,14 @@ class CreateShardFileOperation:
     initial_blocks: list[dict[str, Any]] = field(default_factory=list)
 
     def affected_files(self) -> set[Path]:
-        """Return the shard path."""
+        """PURPOSE get the shard path
+        DOMAIN  blueprint file changes
+        """
         return {self.shard_path}
 
     def validate(self, project_root: Path) -> None:
-        """Validate that the shard file can be created.
-
-        Args:
-            project_root: Project root directory.
+        """PURPOSE check that the shard file can be created
+        DOMAIN  blueprint file changes
         """
         _validate_shard_path(self.shard_path)
         target_absolute = project_root / self.shard_path
@@ -636,11 +530,8 @@ class CreateShardFileOperation:
 
 @dataclass(frozen=True)
 class DeleteShardFileOperation:
-    """Delete a YAML shard file.
-
-    Attributes:
-        shard_path: Project-relative shard file to delete.
-        require_empty: Whether deletion is refused when the shard contains blocks.
+    """PURPOSE delete a YAML shard file
+    DOMAIN  blueprint file changes
     """
 
     kind: PatchOperationKind = field(default=PatchOperationKind.DELETE_SHARD_FILE, init=False)
@@ -648,14 +539,14 @@ class DeleteShardFileOperation:
     require_empty: bool = True
 
     def affected_files(self) -> set[Path]:
-        """Return the shard path."""
+        """PURPOSE get the shard path
+        DOMAIN  blueprint file changes
+        """
         return {self.shard_path}
 
     def validate(self, project_root: Path) -> None:
-        """Validate that the shard file can be deleted.
-
-        Args:
-            project_root: Project root directory.
+        """PURPOSE check that the shard file can be deleted
+        DOMAIN  blueprint file changes
         """
         from bpfw.core.authority.shard import AuthorityShard
 
@@ -674,11 +565,8 @@ class DeleteShardFileOperation:
 
 @dataclass(frozen=True)
 class RenameShardFileOperation:
-    """Rename a YAML shard file.
-
-    Attributes:
-        source_shard_path: Current project-relative shard path.
-        target_shard_path: Desired project-relative shard path after renaming.
+    """PURPOSE rename a YAML shard file
+    DOMAIN  blueprint file changes
     """
 
     kind: PatchOperationKind = field(default=PatchOperationKind.RENAME_SHARD_FILE, init=False)
@@ -686,14 +574,14 @@ class RenameShardFileOperation:
     target_shard_path: Path = field(default_factory=lambda: Path("."))
 
     def affected_files(self) -> set[Path]:
-        """Return source and target paths."""
+        """PURPOSE get source and target paths
+        DOMAIN  blueprint file changes
+        """
         return {self.source_shard_path, self.target_shard_path}
 
     def validate(self, project_root: Path) -> None:
-        """Validate that the shard rename can be performed.
-
-        Args:
-            project_root: Project root directory.
+        """PURPOSE check that the shard rename can be performed
+        DOMAIN  blueprint file changes
         """
         _validate_shard_path(self.source_shard_path)
         _validate_shard_path(self.target_shard_path)
@@ -707,11 +595,8 @@ class RenameShardFileOperation:
 
 @dataclass(frozen=True)
 class MoveShardFileOperation:
-    """Move a YAML shard file to another shard location.
-
-    Attributes:
-        source_shard_path: Current project-relative shard path.
-        target_shard_path: Desired project-relative shard path after moving.
+    """PURPOSE move a YAML shard file to another shard location
+    DOMAIN  blueprint file changes
     """
 
     kind: PatchOperationKind = field(default=PatchOperationKind.MOVE_SHARD_FILE, init=False)
@@ -719,14 +604,14 @@ class MoveShardFileOperation:
     target_shard_path: Path = field(default_factory=lambda: Path("."))
 
     def affected_files(self) -> set[Path]:
-        """Return source and target paths."""
+        """PURPOSE get source and target paths
+        DOMAIN  blueprint file changes
+        """
         return {self.source_shard_path, self.target_shard_path}
 
     def validate(self, project_root: Path) -> None:
-        """Validate that the shard move can be performed.
-
-        Args:
-            project_root: Project root directory.
+        """PURPOSE check that the shard move can be performed
+        DOMAIN  blueprint file changes
         """
         _validate_shard_path(self.source_shard_path)
         _validate_shard_path(self.target_shard_path)

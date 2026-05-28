@@ -1,15 +1,14 @@
-"""Temporary unified blueprint YAML persistence for interactive authority sessions."""
+"""PURPOSE temporary unified blueprint YAML persistence for interactive authority sessions
+DOMAIN  temporary blueprint sessions
+"""
 
 from pathlib import Path
 from typing import Any
 
 
 def write_unified_blueprint(temporary_path: Path, blueprint_data: dict[str, Any]) -> None:
-    """Write a unified blueprint document to the pending session file.
-
-    Args:
-        temporary_path: Absolute path to the pending session YAML file.
-        blueprint_data: Unified blueprint dictionary with version, project, policy, and blocks.
+    """PURPOSE write a unified blueprint document to the pending session file
+    DOMAIN  temporary blueprint sessions
     """
 
     import yaml
@@ -20,16 +19,8 @@ def write_unified_blueprint(temporary_path: Path, blueprint_data: dict[str, Any]
 
 
 def read_unified_blueprint(temporary_path: Path) -> dict[str, Any]:
-    """Read a unified blueprint document from the pending session file.
-
-    Args:
-        temporary_path: Absolute path to the pending session YAML file.
-
-    Returns:
-        Parsed unified blueprint dictionary.
-
-    Raises:
-        ValueError: If the YAML content is empty or not a dictionary.
+    """PURPOSE read a unified blueprint document from the pending session file
+    DOMAIN  temporary blueprint sessions
     """
 
     import yaml

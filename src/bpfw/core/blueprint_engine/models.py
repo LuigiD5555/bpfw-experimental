@@ -1,8 +1,5 @@
-"""Data models for the authority Blueprint Engine.
-
-These models describe approved authority changes. They are intentionally
-separate from drift findings: findings detect problems, while change requests
-express what an authorized tool wants the engine to modify under ``bpfw/``.
+"""PURPOSE data models for the authority Blueprint Engine
+DOMAIN  approved blueprint changes
 """
 
 from dataclasses import dataclass, field
@@ -14,7 +11,9 @@ from bpfw.core.authority.patch.result import AuthorityPatchResult
 
 
 class BlueprintChangeKind(Enum):
-    """Stable labels for supported Blueprint Engine change requests."""
+    """PURPOSE stable labels for supported Blueprint Engine change requests
+    DOMAIN  approved blueprint changes
+    """
 
     CREATE_BLOCK = "create_block"
     DELETE_BLOCK = "delete_block"
@@ -34,7 +33,9 @@ class BlueprintChangeKind(Enum):
 
 
 class BlueprintChangeSource(Enum):
-    """Origin of a Blueprint Engine change request."""
+    """PURPOSE origin of a Blueprint Engine change request
+    DOMAIN  approved blueprint changes
+    """
 
     INSPECTOR = "inspector"
     EDITOR = "editor"
@@ -47,17 +48,9 @@ class BlueprintChangeSource(Enum):
 
 @dataclass(frozen=True)
 class MechanicalChangeEvidence:
-    """Evidence required for automatic mechanical updates.
-
-    Attributes:
-        exact_content_match: Whether the old and new code fingerprints match.
-        one_to_one_match: Whether exactly one old block maps to one new candidate.
-        symbol_kind_matches: Whether both sides are the same symbol kind.
-        purpose_preserved: Whether authority purpose is not being changed.
-        dangerous_capability_added: Whether the new candidate introduces risky capabilities.
-        competing_candidates: Number of competing candidates detected.
-        description: Human-readable reason or hash summary.
-    """
+    """PURPOSE evidence required for automatic safe file updates
+        DOMAIN  approved blueprint changes
+        """
 
     exact_content_match: bool = False
     one_to_one_match: bool = False
@@ -68,11 +61,9 @@ class MechanicalChangeEvidence:
     description: str | None = None
 
     def is_safe_mechanical_match(self) -> bool:
-        """Return whether evidence allows an automatic mechanical update.
-
-        Returns:
-            True when the evidence satisfies all safe-update requirements.
-        """
+        """PURPOSE check whether evidence allows an automatic safe file update
+                DOMAIN  approved blueprint changes
+                """
         return (
             self.exact_content_match
             and self.one_to_one_match
@@ -85,15 +76,8 @@ class MechanicalChangeEvidence:
 
 @dataclass(frozen=True)
 class BlueprintChangeRequest:
-    """Approved or candidate request to modify BPFW authority files.
-
-    Attributes:
-        kind: Mechanical change kind.
-        source: Tool or workflow that produced the request.
-        payload: Operation-specific data used to build a patch plan.
-        human_confirmed: Whether a human explicitly approved the change.
-        mechanical_evidence: Evidence for no-confirmation mechanical updates.
-        reason: Optional human-readable reason for audit output.
+    """PURPOSE approved or candidate request to modify BPFW authority files
+    DOMAIN  approved blueprint changes
     """
 
     kind: BlueprintChangeKind
@@ -106,14 +90,8 @@ class BlueprintChangeRequest:
 
 @dataclass(frozen=True)
 class BlueprintChangePreview:
-    """Read-only preview of a Blueprint Engine change request.
-
-    Attributes:
-        allowed: Whether the request can be applied.
-        operation_count: Number of patch operations that would run.
-        affected_files: Project-relative files that would be modified.
-        messages: Human-readable preview and validation messages.
-        blocked_reason: Reason the preview is blocked, if any.
+    """PURPOSE read-only preview of a Blueprint Engine change request
+    DOMAIN  approved blueprint changes
     """
 
     allowed: bool
@@ -125,13 +103,8 @@ class BlueprintChangePreview:
 
 @dataclass
 class BlueprintChangeResult:
-    """Result returned by Blueprint Engine apply methods.
-
-    Attributes:
-        success: Whether the change applied successfully.
-        patch_result: Low-level patch result returned by the patch engine.
-        messages: Human-readable result messages.
-        blocked_reason: Reason the change was blocked before patching, if any.
+    """PURPOSE result returned by Blueprint Engine apply methods
+    DOMAIN  approved blueprint changes
     """
 
     success: bool = False

@@ -1,4 +1,6 @@
-"""OS-level file lock backend for BPFW MVP Catalog Mode."""
+"""PURPOSE oS-level file lock backend for BPFW catalog mode
+DOMAIN  framework core
+"""
 
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -102,23 +104,33 @@ def _read_recorded_bool(lock_path: Path, key: str) -> bool:
 
 
 class LockStrategy(ABC):
-    """Platform-specific locking strategy."""
+    """PURPOSE platform-specific locking strategy
+    DOMAIN  framework core
+    """
 
     @abstractmethod
     def lock_file(self, project_root: Path, relative_path: str) -> str:
-        """Lock a project-relative file against direct local writes."""
+        """PURPOSE lock a project-relative file against direct local writes
+        DOMAIN  framework core
+        """
 
     @abstractmethod
     def unlock_file(self, project_root: Path, relative_path: str) -> str:
-        """Unlock a project-relative file for local writes."""
+        """PURPOSE unlock a project-relative file for local writes
+        DOMAIN  framework core
+        """
 
     @abstractmethod
     def get_file_lock_state(self, project_root: Path, relative_path: str) -> str:
-        """Read whether a project-relative file is locked against writes."""
+        """PURPOSE read whether a project-relative file is locked against writes
+        DOMAIN  framework core
+        """
 
 
 class PosixLockStrategy(LockStrategy):
-    """POSIX strategy for Linux and macOS."""
+    """PURPOSE pOSIX strategy for Linux and macOS
+    DOMAIN  framework core
+    """
 
     def __init__(self, platform_name: str) -> None:
         self.platform_name = platform_name
@@ -411,7 +423,9 @@ class PosixLockStrategy(LockStrategy):
 
 
 class WindowsLockStrategy(LockStrategy):
-    """Windows strategy using the native read-only attribute."""
+    """PURPOSE windows strategy using the native read-only attribute
+    DOMAIN  framework core
+    """
 
     def lock_file(self, project_root: Path, relative_path: str) -> str:
         target_path = project_root / relative_path
@@ -516,7 +530,9 @@ class WindowsLockStrategy(LockStrategy):
 
 
 class UnsupportedLockStrategy(LockStrategy):
-    """Fallback strategy for unsupported platforms."""
+    """PURPOSE fallback strategy for unsupported platforms
+    DOMAIN  framework core
+    """
 
     def lock_file(self, project_root: Path, relative_path: str) -> str:
         target_path = project_root / relative_path
@@ -542,7 +558,9 @@ def _build_lock_strategy(platform_name: str) -> LockStrategy:
 
 
 def _resolve_exact_lock_arguments(path: Path) -> tuple[Path, str]:
-    """Resolve an exact file path into the lock strategy root and resource identifier."""
+    """PURPOSE find an exact file path into the lock strategy root and resource identifier
+    DOMAIN  framework core
+    """
 
     resolved_path = path.resolve()
     if resolved_path.name == "blueprint.yaml" and resolved_path.parent.name == "bpfw":
@@ -551,7 +569,9 @@ def _resolve_exact_lock_arguments(path: Path) -> tuple[Path, str]:
 
 
 def _resolve_project_lock_arguments(project_root: Path, path: Path) -> tuple[Path, str]:
-    """Resolve a file path into a project-rooted lock resource identifier."""
+    """PURPOSE find a file path into a project-rooted lock resource identifier
+    DOMAIN  framework core
+    """
 
     resolved_root = project_root.resolve()
     resolved_path = path.resolve()
@@ -563,7 +583,9 @@ def _resolve_project_lock_arguments(project_root: Path, path: Path) -> tuple[Pat
 
 
 def lock_file(path: Path) -> str:
-    """Lock an exact file path against direct local writes."""
+    """PURPOSE lock an exact file path against direct local writes
+    DOMAIN  framework core
+    """
 
     if not path.exists():
         return MISSING
@@ -576,7 +598,9 @@ def lock_file(path: Path) -> str:
 
 
 def lock_project_file(project_root: Path, path: Path) -> str:
-    """Lock a file while storing its marker under the project bpfw directory."""
+    """PURPOSE lock a file while storing its marker under the project bpfw directory
+    DOMAIN  framework core
+    """
 
     if not path.exists():
         return MISSING
@@ -592,7 +616,9 @@ def lock_project_file(project_root: Path, path: Path) -> str:
 
 
 def unlock_file(path: Path) -> str:
-    """Unlock an exact file path for local writes."""
+    """PURPOSE unlock an exact file path for local writes
+    DOMAIN  framework core
+    """
 
     if not path.exists():
         return MISSING
@@ -605,7 +631,9 @@ def unlock_file(path: Path) -> str:
 
 
 def unlock_project_file(project_root: Path, path: Path) -> str:
-    """Unlock a file whose marker is stored under the project bpfw directory."""
+    """PURPOSE unlock a file whose marker is stored under the project bpfw directory
+    DOMAIN  framework core
+    """
 
     if not path.exists():
         return MISSING
@@ -621,7 +649,9 @@ def unlock_project_file(project_root: Path, path: Path) -> str:
 
 
 def get_file_lock_state(path: Path) -> str:
-    """Read whether an exact file path is locked against writes."""
+    """PURPOSE read whether an exact file path is locked against writes
+    DOMAIN  framework core
+    """
 
     if not path.exists():
         return MISSING
@@ -634,7 +664,9 @@ def get_file_lock_state(path: Path) -> str:
 
 
 def get_project_file_lock_state(project_root: Path, path: Path) -> str:
-    """Read a file lock state from the project bpfw marker directory."""
+    """PURPOSE read a file lock state from the project bpfw marker directory
+    DOMAIN  framework core
+    """
 
     if not path.exists():
         return MISSING

@@ -1,4 +1,6 @@
-"""Blueprint assembler for converting PlannerState to YAML."""
+"""PURPOSE blueprint assembler for converting PlannerState to YAML
+DOMAIN  planner workflow
+"""
 
 from pathlib import Path
 from typing import Any, Dict, List
@@ -8,17 +10,15 @@ from bpfw.integrations.planner.models import PlannerBox, PlannerConnection, Plan
 
 
 class BlueprintAssembler:
-    """Convert PlannerState to blueprint.yaml dictionary."""
-    
+    """PURPOSE convert PlannerState to blueprint.yaml dictionaryionary
+        DOMAIN  planner workflow
+
+    """
+
     @staticmethod
     def assemble(state: PlannerState) -> Dict[str, Any]:
-        """Assemble planner state into blueprint data.
-        
-        Args:
-            state: Current planner state.
-        
-        Returns:
-            Dictionary ready for YAML serialization.
+        """PURPOSE assemble planner state into blueprint data
+        DOMAIN  planner workflow
         """
         blueprint_data = {
             "version": 1,
@@ -26,21 +26,16 @@ class BlueprintAssembler:
             "policy": BlueprintAssembler._assemble_policy(state),
             "blocks": BlueprintAssembler._assemble_blocks(state),
         }
-        
+
         return blueprint_data
-    
+
     @staticmethod
     def _assemble_project(state: PlannerState) -> Dict[str, Any]:
-        """Assemble project section.
-        
-        Args:
-            state: Current planner state.
-        
-        Returns:
-            Project dictionary.
+        """PURPOSE assemble project section
+        DOMAIN  planner workflow
         """
         config = state.project_config
-        
+
         return {
             "id": config.project_id,
             "name": config.project_name,
@@ -49,19 +44,14 @@ class BlueprintAssembler:
             "source_roots": config.source_roots,
             "ignored_paths": config.ignored_paths,
         }
-    
+
     @staticmethod
     def _assemble_policy(state: PlannerState) -> Dict[str, Any]:
-        """Assemble policy section.
-        
-        Args:
-            state: Current planner state.
-        
-        Returns:
-            Policy dictionary.
+        """PURPOSE assemble policy section
+        DOMAIN  planner workflow
         """
         config = state.project_config
-        
+
         policy = {
             "mode": config.policy_mode,
             "empty_blueprint_allows_execution": config.empty_blueprint_allows_execution,
@@ -76,21 +66,16 @@ class BlueprintAssembler:
                 "detected_detail_level": config.security.detected_detail_level,
             },
         }
-        
+
         return policy
-    
+
     @staticmethod
     def _assemble_blocks(state: PlannerState) -> List[Dict[str, Any]]:
-        """Assemble blocks section.
-        
-        Args:
-            state: Current planner state.
-        
-        Returns:
-            List of block dictionaries.
+        """PURPOSE assemble blocks section
+        DOMAIN  planner workflow
         """
         blocks = []
-        
+
         # Build a mapping of connections by source box
         connections_by_source: Dict[str, List[PlannerConnection]] = {}
         for conn in state.connections:
@@ -99,29 +84,23 @@ class BlueprintAssembler:
             if conn.source_box_id not in connections_by_source:
                 connections_by_source[conn.source_box_id] = []
             connections_by_source[conn.source_box_id].append(conn)
-        
+
         for box in state.boxes:
             block = BlueprintAssembler._assemble_block(
                 box,
                 connections_by_source.get(box.id, []),
             )
             blocks.append(block)
-        
+
         return blocks
-    
+
     @staticmethod
     def _assemble_block(
         box: PlannerBox,
         connections: List[PlannerConnection],
     ) -> Dict[str, Any]:
-        """Assemble a single block.
-        
-        Args:
-            box: The box to convert.
-            connections: Connections from this box.
-        
-        Returns:
-            Block dictionary.
+        """PURPOSE assemble a single block
+        DOMAIN  planner workflow
         """
         # Build connections from accepted planner connections
         block_connections = []
@@ -130,7 +109,7 @@ class BlueprintAssembler:
                 "target": conn.target_box_id,
                 "meaning": conn.relationship,
             })
-        
+
         # Build code metadata
         code = {
             "path": box.path,
@@ -140,13 +119,13 @@ class BlueprintAssembler:
             "start_line": None,
             "end_line": None,
         }
-        
+
         # Build detected section
         detected = {
             "qualified_name": box.qualified_name,
             "kind": box.symbol_type,
         }
-        
+
         # Build uniqueness metadata
         uniqueness = {
             "group": box.duplicate_group,
@@ -154,14 +133,14 @@ class BlueprintAssembler:
             "forbid_active_duplicates": True,
             "suspected_duplicates": [],
         }
-        
+
         # Build replacement section
         replacement = {
             "replaces": None,
             "replaced_by": None,
             "reason": None,
         }
-        
+
         # Build block
         block = {
             "id": box.id,
@@ -177,11 +156,11 @@ class BlueprintAssembler:
             "replacement": replacement,
             "notes": box.notes,
         }
-        
+
         # Add interface if present
         if box.interface:
             interface_data = {}
-            
+
             if box.interface.inputs:
                 interface_data["inputs"] = [
                     {
@@ -193,38 +172,37 @@ class BlueprintAssembler:
                     }
                     for inp in box.interface.inputs
                 ]
-            
+
             if box.interface.output:
                 interface_data["output"] = {
                     "type": box.interface.output.type,
                     "description": box.interface.output.description,
                 }
-            
+
             if interface_data:
                 block["interface"] = interface_data
-        
+
         return block
 
 
 class BlueprintYamlWriter:
-    """Write assembled blueprint data to YAML file."""
-    
+    """PURPOSE write assembled blueprint data to YAML file
+    DOMAIN  planner workflow
+    """
+
     @staticmethod
     def write(blueprint_path: Path, blueprint_data: Dict[str, Any]) -> None:
-        """Write blueprint data to YAML file using AuthorityRepository.
-        
-        Args:
-            blueprint_path: Path to the blueprint file.
-            blueprint_data: Blueprint data to write.
+        """PURPOSE write blueprint data to YAML file using AuthorityRepository
+        DOMAIN  planner workflow
         """
         from bpfw.core.authority import AuthorityRepository
-        
+
         # Get project root from blueprint path
         project_root = blueprint_path.parent.parent
-        
+
         # Use AuthorityRepository to save sharded authority
         repository = AuthorityRepository(project_root)
-        
+
         # Load current document to preserve authority config
         try:
             document = repository.load()

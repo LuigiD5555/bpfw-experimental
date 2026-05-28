@@ -1,7 +1,5 @@
-"""Authority package for BPFW blueprint files.
-
-This package provides loading, validation, persistence, and Blueprint Engine
-operations used to apply approved mechanical changes under ``bpfw/``.
+"""PURPOSE authority package for BPFW blueprint files
+DOMAIN  blueprint files
 """
 
 from bpfw.core.blueprint_engine import (

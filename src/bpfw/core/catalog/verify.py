@@ -1,4 +1,6 @@
-"""Catalog Mode verify pipeline for BPFW MVP."""
+"""PURPOSE catalog mode verify pipeline for BPFW
+DOMAIN  blueprint checks
+"""
 
 from pathlib import Path
 from typing import Any, List, Tuple
@@ -44,7 +46,9 @@ def read_source_roots(
     blueprint_data: dict,
     domain_document: BlueprintDocument | None = None,
 ) -> List[str]:
-    """Read project.source_roots from blueprint, or return defaults."""
+    """PURPOSE read project.source_roots from blueprint, or return defaults
+    DOMAIN  blueprint checks
+    """
     if domain_document is not None and domain_document.project.get("source_roots"):
         return [str(root) for root in domain_document.project.get("source_roots", [])]
 
@@ -60,7 +64,9 @@ def read_ignored_paths(
     blueprint_data: dict,
     domain_document: BlueprintDocument | None = None,
 ) -> List[str]:
-    """Read project.ignored_paths from blueprint, or return defaults."""
+    """PURPOSE read project.ignored_paths from blueprint, or return defaults
+    DOMAIN  blueprint checks
+    """
     if domain_document is not None and domain_document.project.get("ignored_paths"):
         return [str(path) for path in domain_document.project.get("ignored_paths", [])]
 
@@ -77,7 +83,10 @@ def scan_project_from_blueprint(
     blueprint_data: dict,
     domain_document: BlueprintDocument | None = None,
 ) -> ScanResult:
-    """Run one AST scan using source and ignore settings from blueprint data."""
+    """PURPOSE run one Python code tree scan using source and ignore settings from blueprint data
+        DOMAIN  blueprint checks
+
+    """
 
     source_roots = read_source_roots(blueprint_data, domain_document=domain_document)
     ignored_paths = read_ignored_paths(blueprint_data, domain_document=domain_document)
@@ -89,17 +98,11 @@ def scan_project_from_blueprint(
 
 
 def _validate_sharded_authority(project_root: Path, load_result: Any) -> List[Finding]:
-    """Validate sharded authority structure and detect shard drift.
-    
-    Args:
-        project_root: Project root directory.
-        load_result: BlueprintLoader load result.
-    
-    Returns:
-        List of shard validation findings.
+    """PURPOSE check sharded authority structure and detect shard drift
+    DOMAIN  blueprint checks
     """
     findings = []
-    
+
     # Check if authority section exists
     authority = load_result.data.get("authority")
     if not isinstance(authority, dict):
@@ -113,7 +116,7 @@ def _validate_sharded_authority(project_root: Path, load_result: Any) -> List[Fi
             )
         )
         return findings
-    
+
     # Validate layout is sharded
     layout = authority.get("layout")
     if layout != "sharded":
@@ -127,7 +130,7 @@ def _validate_sharded_authority(project_root: Path, load_result: Any) -> List[Fi
             )
         )
         return findings
-    
+
     # Validate includes exists and is a list
     includes = load_result.data.get("includes")
     if not isinstance(includes, list) or not includes:
@@ -141,7 +144,7 @@ def _validate_sharded_authority(project_root: Path, load_result: Any) -> List[Fi
             )
         )
         return findings
-    
+
     # Validate each include
     for include_path in includes:
         if not isinstance(include_path, str):
@@ -155,7 +158,7 @@ def _validate_sharded_authority(project_root: Path, load_result: Any) -> List[Fi
                 )
             )
             continue
-        
+
         # Check for glob patterns
         if "*" in include_path or "?" in include_path:
             findings.append(
@@ -168,7 +171,7 @@ def _validate_sharded_authority(project_root: Path, load_result: Any) -> List[Fi
                 )
             )
             continue
-        
+
         # Check include is under bpfw/blocks
         if not include_path.startswith("bpfw/blocks/"):
             findings.append(
@@ -181,7 +184,7 @@ def _validate_sharded_authority(project_root: Path, load_result: Any) -> List[Fi
                 )
             )
             continue
-        
+
         # Check include file exists
         full_path = project_root / include_path
         if not full_path.exists():
@@ -194,7 +197,7 @@ def _validate_sharded_authority(project_root: Path, load_result: Any) -> List[Fi
                     evidence={"include": include_path, "full_path": str(full_path)},
                 )
             )
-    
+
     # Check for root-level blocks in the raw authority index only.
     # load_result.data is unified and intentionally includes shard blocks.
     try:
@@ -212,13 +215,13 @@ def _validate_sharded_authority(project_root: Path, load_result: Any) -> List[Fi
                 evidence={"file": "bpfw/blueprint.yaml", "block_count": len(blocks)},
             )
         )
-    
+
     # Use AuthorityRepository to validate for duplicates and drift
     try:
         repository = AuthorityRepository(project_root)
         document = repository.load()
         validation_findings = repository.validate(document)
-        
+
         # Convert authority validation findings to verify findings
         for vf in validation_findings:
             findings.append(
@@ -240,7 +243,7 @@ def _validate_sharded_authority(project_root: Path, load_result: Any) -> List[Fi
                 evidence={"error": str(e)},
             )
         )
-    
+
     return findings
 
 
@@ -250,7 +253,9 @@ def _build_report(
     declared_count: int = 0,
     discovered_count: int = 0,
 ) -> VerificationReport:
-    """Build a VerificationReport with computed counts and allowed flag."""
+    """PURPOSE build a VerificationReport with computed counts and allowed flag
+    DOMAIN  blueprint checks
+    """
     missing_declared_count = sum(1 for finding in findings if finding.code == CODE_MISSING_DECLARED)
     undeclared_count = sum(1 for finding in findings if finding.code == CODE_UNDECLARED)
     duplicate_active_purpose_count = sum(1 for finding in findings if finding.code == CODE_DUPLICATE_ACTIVE_PURPOSE)
@@ -281,18 +286,8 @@ def run_verify(
     precomputed_scan_result: ScanResult | None = None,
     precomputed_load_result: BlueprintLoadResult | None = None,
 ) -> Tuple[VerificationReport, int]:
-    """Execute the complete MVP verify pipeline.
-
-    Parameters
-    ----------
-    project_root:
-        Root directory of the project to verify.
-
-    Returns
-    -------
-    tuple[VerificationReport, int]
-        The verification report and the exit code (0 = allowed,
-        1 = blocked).
+    """PURPOSE execute the complete verify pipeline
+    DOMAIN  blueprint checks
     """
     resolved_root = project_root.resolve()
 

@@ -1,8 +1,12 @@
-"""Common navigation actions for interactive integrations."""
+"""PURPOSE common navigation actions for interactive tools
+DOMAIN  terminal UI
+"""
 
 
 class NavigationAction:
-    """Define common navigation actions for interactive integrations."""
+    """PURPOSE define common navigation actions for interactive tools
+    DOMAIN  terminal UI
+    """
 
     STAY = "stay"
     NEXT = "next"

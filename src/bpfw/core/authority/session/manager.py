@@ -1,4 +1,6 @@
-"""Authority session manager for temporary unified interactive persistence."""
+"""PURPOSE authority session manager for temporary unified interactive persistence
+DOMAIN  temporary blueprint sessions
+"""
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -28,7 +30,9 @@ from bpfw.core.protection.authority import (
 
 @dataclass(slots=True)
 class AuthoritySessionState:
-    """In-memory state for one tool authority session."""
+    """PURPOSE in-memory state for one tool authority session
+    DOMAIN  temporary blueprint sessions
+    """
 
     tool_name: str
     project_root: Path
@@ -38,14 +42,13 @@ class AuthoritySessionState:
 
 
 class AuthoritySessionManager:
-    """Coordinate pending unified session persistence and one-shot finalization."""
+    """PURPOSE coordinate pending unified session persistence and one-shot finalization
+    DOMAIN  temporary blueprint sessions
+    """
 
     def __init__(self, project_root: Path, tool_name: str) -> None:
-        """Initialize a session manager for one interactive tool.
-
-        Args:
-            project_root: Root directory of the target project.
-            tool_name: Tool identifier used to name pending session files.
+        """PURPOSE set up a session manager for one interactive tool
+        DOMAIN  temporary blueprint sessions
         """
 
         self.project_root = project_root.resolve()
@@ -61,14 +64,8 @@ class AuthoritySessionManager:
         input_func: Callable[[str], str] | None = None,
         print_func: Callable[[str], None] = print,
     ) -> AuthoritySessionState:
-        """Start or recover an interactive authority session.
-
-        Args:
-            input_func: Optional prompt callback to choose recovery actions.
-            print_func: Output callback for user-facing recovery messages.
-
-        Returns:
-            Active authority session state with mutable unified blueprint data.
+        """PURPOSE start or recover an interactive authority session
+        DOMAIN  temporary blueprint sessions
         """
 
         self._ensure_pending_directory_exists()
@@ -114,16 +111,8 @@ class AuthoritySessionManager:
         return self.state
 
     def _ensure_pending_directory_exists(self) -> None:
-        """Ensure the tool pending directory exists even when authority is locked.
-
-        This method first attempts a normal directory creation. If that fails with a
-        permission error and temporary unlock authorization is active, it temporarily
-        unlocks authority resources, creates `bpfw/.pending`, and then re-locks.
-
-        Raises:
-            BlueprintLockedError: If pending directory creation requires unlock but
-                unlock authorization is missing or unlock/re-lock fails.
-            PermissionError: If the directory still cannot be created.
+        """PURPOSE make sure the tool pending directory exists even when authority is locked
+        DOMAIN  temporary blueprint sessions
         """
 
         try:
@@ -156,7 +145,9 @@ class AuthoritySessionManager:
                     )
 
     def persist(self) -> None:
-        """Persist only the temporary unified blueprint and keep session pending."""
+        """PURPOSE save only the temporary unified blueprint and keep session pending
+        DOMAIN  temporary blueprint sessions
+        """
 
         if self.state is None:
             raise RuntimeError("Authority session has not been started.")
@@ -176,13 +167,8 @@ class AuthoritySessionManager:
         )
 
     def finalize(self, print_func: Callable[[str], None] = print) -> int:
-        """Apply pending unified blueprint to protected sharded authority.
-
-        Args:
-            print_func: Output callback for failure recovery messaging.
-
-        Returns:
-            Exit code where 0 means authority apply succeeded.
+        """PURPOSE apply pending unified blueprint to protected sharded authority
+        DOMAIN  temporary blueprint sessions
         """
 
         if not self.temporary_path.exists():
@@ -237,7 +223,9 @@ class AuthoritySessionManager:
         return 0
 
     def discard(self) -> None:
-        """Discard pending unified session files for this tool."""
+        """PURPOSE discard pending unified session files for this tool
+        DOMAIN  temporary blueprint sessions
+        """
 
         self.temporary_path.unlink(missing_ok=True)
         self.meta_path.unlink(missing_ok=True)
@@ -249,7 +237,9 @@ class AuthoritySessionManager:
         input_func: Callable[[str], str] | None,
         print_func: Callable[[str], None],
     ) -> str:
-        """Resolve recovery action for existing pending or failed session files."""
+        """PURPOSE find recovery action for pending or failed session files
+        DOMAIN  temporary blueprint sessions
+        """
 
         if input_func is None:
             return "resume"
@@ -265,13 +255,8 @@ class AuthoritySessionManager:
         return "resume"
 
     def _validate_pending_blueprint_for_inspector(self, blueprint_data: dict[str, Any]) -> str | None:
-        """Validate pending inspector blueprint data before sharded final apply.
-
-        Args:
-            blueprint_data: Unified pending blueprint dictionary.
-
-        Returns:
-            None when validation is allowed; otherwise a blocking message.
+        """PURPOSE check pending inspector blueprint data before sharded final apply
+        DOMAIN  temporary blueprint sessions
         """
 
         scan_result = scan_project_from_blueprint(

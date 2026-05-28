@@ -1,4 +1,6 @@
-"""Blueprint state loader for the Planner integration."""
+"""PURPOSE blueprint state loader for the Planner tool
+DOMAIN  planner workflow
+"""
 
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -21,71 +23,53 @@ from bpfw.integrations.planner.utils import get_project_defaults
 
 
 class BlueprintStateLoader:
-    """Load blueprint.yaml into PlannerState or create new state."""
-    
+    """PURPOSE read blueprint.yaml into PlannerState or create new state
+    DOMAIN  planner workflow
+    """
+
     @staticmethod
     def load(project_root: Path) -> PlannerState:
-        """Load blueprint state from project.
-        
-        Args:
-            project_root: Root directory of the project.
-        
-        Returns:
-            PlannerState with loaded or default configuration.
+        """PURPOSE read blueprint state from project
+        DOMAIN  planner workflow
         """
         blueprint_path = resolve_blueprint_path(project_root)
-        
+
         if not blueprint_path.exists():
             return BlueprintStateLoader._create_new_state(project_root, blueprint_path)
-        
+
         return BlueprintStateLoader._load_existing_blueprint(project_root, blueprint_path)
-    
+
     @staticmethod
     def _create_new_state(project_root: Path, blueprint_path: Path) -> PlannerState:
-        """Create a new planner state with defaults.
-        
-        Args:
-            project_root: Root directory of the project.
-            blueprint_path: Path where blueprint.yaml should be created.
-        
-        Returns:
-            New PlannerState with defaults.
+        """PURPOSE create a new planner state with defaults
+        DOMAIN  planner workflow
         """
         defaults = get_project_defaults(project_root)
-        
+
         project_config = PlannerProjectConfig(
             project_id=defaults["project_id"],
             project_name=defaults["project_name"],
             language=defaults["language"],
             source_roots=defaults["source_roots"],
         )
-        
+
         return PlannerState(
             project_config=project_config,
             blueprint_path=blueprint_path,
             source_mode="new_plan",
         )
-    
+
     @staticmethod
     def _load_existing_blueprint(project_root: Path, blueprint_path: Path) -> PlannerState:
-        """Load existing blueprint.yaml into PlannerState.
-        
-        Args:
-            project_root: Root directory of the project.
-            blueprint_path: Path to existing blueprint.yaml.
-        
-        Returns:
-            PlannerState loaded from existing blueprint.
-        
-        Raises:
-            ValueError: If YAML is invalid.
+        """PURPOSE read blueprint.yaml into PlannerState
+        DOMAIN  planner workflow
         """
         # Check if file is empty
         if blueprint_path.stat().st_size == 0:
             state = BlueprintStateLoader._create_new_state(project_root, blueprint_path)
             state.source_mode = "empty_blueprint"
             return state
-        
+
         try:
             repository = BlueprintRepository(project_root=project_root)
             repository_load_result = repository.load()
@@ -95,22 +79,22 @@ class BlueprintStateLoader:
                 f"Invalid YAML in {blueprint_path}: {e}\n"
                 f"Planner cannot overwrite invalid YAML. Fix the file or restore a valid blueprint first."
             )
-        
+
         # Check if blueprint_data is None (empty file with comments only)
         if blueprint_data is None:
             state = BlueprintStateLoader._create_new_state(project_root, blueprint_path)
             state.source_mode = "empty_blueprint"
             return state
-        
+
         # Load project configuration
         project_config = BlueprintStateLoader._load_project_config(blueprint_data)
-        
+
         # Load boxes from blocks
         boxes = BlueprintStateLoader._load_boxes(blueprint_data)
-        
+
         # Load connections from block connections (and detect broken ones)
         connections, broken_connections = BlueprintStateLoader._load_connections(blueprint_data, boxes)
-        
+
         # Merge with inferred connections
         inferred_connections = detect_connections(
             boxes=boxes,
@@ -122,7 +106,7 @@ class BlueprintStateLoader:
             blueprint_connections=connections,
             inferred_connections=inferred_connections,
         )
-        
+
         source_mode = "existing_blueprint"
         if not boxes:
             source_mode = "empty_blueprint"
@@ -135,27 +119,22 @@ class BlueprintStateLoader:
             source_mode=source_mode,
             broken_connections=broken_connections,
         )
-    
+
     @staticmethod
     def _load_project_config(blueprint_data: Dict[str, Any]) -> PlannerProjectConfig:
-        """Load project configuration from blueprint data.
-        
-        Args:
-            blueprint_data: The parsed blueprint.yaml data.
-        
-        Returns:
-            PlannerProjectConfig instance.
+        """PURPOSE read project configuration from blueprint data
+        DOMAIN  planner workflow
         """
         project = blueprint_data.get("project", {})
         policy = blueprint_data.get("policy", {})
         security_data = policy.get("security", {})
-        
+
         security = PlannerSecurityConfig(
             no_secrets_in_blueprint=security_data.get("no_secrets_in_blueprint", True),
             public_safe_mode=security_data.get("public_safe_mode", True),
             detected_detail_level=security_data.get("detected_detail_level", "minimal"),
         )
-        
+
         return PlannerProjectConfig(
             project_id=project.get("id", "unknown"),
             project_name=project.get("name", "unknown"),
@@ -174,20 +153,15 @@ class BlueprintStateLoader:
             missing_declared_code_blocks=policy.get("missing_declared_code_blocks", True),
             security=security,
         )
-    
+
     @staticmethod
     def _load_boxes(blueprint_data: Dict[str, Any]) -> List[PlannerBox]:
-        """Load boxes from blocks section.
-        
-        Args:
-            blueprint_data: The parsed blueprint.yaml data.
-        
-        Returns:
-            List of PlannerBox instances.
+        """PURPOSE read boxes from blocks section
+        DOMAIN  planner workflow
         """
         blocks = blueprint_data.get("blocks", [])
         boxes = []
-        
+
         for resp in blocks:
             # Load interface if present
             interface = None
@@ -202,7 +176,7 @@ class BlueprintStateLoader:
                         required=input_data.get("required", True),
                         description=input_data.get("description"),
                     ))
-                
+
                 output = None
                 output_data = interface_data.get("output")
                 if output_data:
@@ -210,14 +184,14 @@ class BlueprintStateLoader:
                         type=output_data.get("type"),
                         description=output_data.get("description"),
                     )
-                
+
                 interface = PlannerInterface(inputs=inputs, output=output)
-            
+
             # Get code data
             code = resp.get("code", {})
             if not isinstance(code, dict):
                 code = {}
-            
+
             box = PlannerBox(
                 name=resp.get("name", ""),
                 domain=resp.get("domain", ""),
@@ -229,43 +203,37 @@ class BlueprintStateLoader:
                 interface=interface,
                 notes=resp.get("notes"),
             )
-            
+
             # Override derived fields from blueprint if present
             if "id" in resp:
                 box.id = resp["id"]
-            
+
             if code.get("module"):
                 box.module = code.get("module")
-            
+
             detected = resp.get("detected", {})
             if isinstance(detected, dict) and detected.get("qualified_name"):
                 box.qualified_name = detected.get("qualified_name")
-            
+
             uniqueness = resp.get("uniqueness", {})
             if not isinstance(uniqueness, dict):
                 uniqueness = {}
             if uniqueness.get("group"):
                 box.duplicate_group = uniqueness.get("group")
-            
+
             boxes.append(box)
-        
+
         return boxes
-    
+
     @staticmethod
     def _load_connections(blueprint_data: Dict[str, Any], boxes: List[PlannerBox]) -> tuple[List[PlannerConnection], List[PlannerConnection]]:
-        """Load connections from block connections sections.
-        
-        Args:
-            blueprint_data: The parsed blueprint.yaml data.
-            boxes: List of loaded boxes for ID mapping.
-        
-        Returns:
-            Tuple of (valid_connections, broken_connections).
+        """PURPOSE read connections from block connections sections
+        DOMAIN  planner workflow
         """
         blocks = blueprint_data.get("blocks", [])
         connections = []
         broken_connections = []
-        
+
         box_ids = {box.id for box in boxes}
 
         for resp in blocks:
@@ -273,14 +241,14 @@ class BlueprintStateLoader:
             block_connections = resp.get("connections", [])
             if not isinstance(block_connections, list):
                 block_connections = []
-            
+
             for rel in block_connections:
                 target_id = rel.get("target")
                 relationship = rel.get("meaning") if isinstance(rel, dict) else None
-                
+
                 if not resp_id or not target_id or not relationship:
                     continue
-                
+
                 # Check if both source and target exist
                 if resp_id not in box_ids or target_id not in box_ids:
                     # This is a broken connection (orphan reference)
@@ -305,5 +273,5 @@ class BlueprintStateLoader:
                         status="accepted",
                         notes=rel.get("notes"),
                     ))
-        
+
         return connections, broken_connections

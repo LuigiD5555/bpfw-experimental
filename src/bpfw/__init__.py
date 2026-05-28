@@ -1,4 +1,6 @@
-"""Blueprint Framework (BPFW)."""
+"""PURPOSE blueprint Framework (BPFW)
+DOMAIN  framework code
+"""
 
 from bpfw.core.engine import BlueprintEngine
 from bpfw.core.result import EngineResult, ResultStatus, StepResult

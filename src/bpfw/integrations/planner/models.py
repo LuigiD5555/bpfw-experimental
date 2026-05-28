@@ -1,4 +1,6 @@
-"""Data models for the Planner integration."""
+"""PURPOSE data models for the Planner tool
+DOMAIN  planner workflow
+"""
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -25,8 +27,10 @@ VALID_RELATIONSHIPS = list(RELATIONSHIP_LABELS.keys())
 
 @dataclass
 class PlannerSecurityConfig:
-    """Security configuration for the project."""
-    
+    """PURPOSE security configuration for the project
+    DOMAIN  planner workflow
+    """
+
     no_secrets_in_blueprint: bool = True
     public_safe_mode: bool = True
     detected_detail_level: str = "minimal"
@@ -34,8 +38,10 @@ class PlannerSecurityConfig:
 
 @dataclass
 class PlannerProjectConfig:
-    """Global project configuration."""
-    
+    """PURPOSE global project configuration
+    DOMAIN  planner workflow
+    """
+
     project_id: str
     project_name: str
     root: str = "."
@@ -58,8 +64,11 @@ class PlannerProjectConfig:
 
 @dataclass
 class PlannerInterfaceInput:
-    """Input parameter for a block interface."""
-    
+    """PURPOSE input value for a block inputs and output
+        DOMAIN  planner workflow
+
+    """
+
     name: str
     type: Optional[str] = None
     default: Any = None
@@ -69,24 +78,32 @@ class PlannerInterfaceInput:
 
 @dataclass
 class PlannerInterfaceOutput:
-    """Output specification for a block interface."""
-    
+    """PURPOSE output description for a block inputs and output
+        DOMAIN  planner workflow
+
+    """
+
     type: Optional[str] = None
     description: Optional[str] = None
 
 
 @dataclass
 class PlannerInterface:
-    """Interface specification for a block."""
-    
+    """PURPOSE input/output description for a block
+        DOMAIN  planner workflow
+
+    """
+
     inputs: List[PlannerInterfaceInput] = field(default_factory=list)
     output: Optional[PlannerInterfaceOutput] = None
 
 
 @dataclass
 class PlannerBox:
-    """Black box representing a system block."""
-    
+    """PURPOSE black box representing a system block
+    DOMAIN  planner workflow
+    """
+
     name: str
     domain: str
     purpose: str
@@ -96,15 +113,17 @@ class PlannerBox:
     symbol: Optional[str] = None
     interface: Optional[PlannerInterface] = None
     notes: Optional[str] = None
-    
+
     # Derived fields (computed, not set by user)
     id: str = field(init=False)
     module: Optional[str] = field(init=False)
     qualified_name: Optional[str] = field(init=False)
     duplicate_group: Optional[str] = field(init=False)
-    
+
     def __post_init__(self) -> None:
-        """Compute derived fields after initialization."""
+        """PURPOSE calculate derived fields after initialization
+        DOMAIN  planner workflow
+        """
         self.name = str(self.name or "").strip()
         self.domain = str(self.domain or "").strip()
         self.purpose = str(self.purpose or "").strip()
@@ -119,25 +138,27 @@ class PlannerBox:
             generate_qualified_name,
             normalize_purpose_for_duplicate_group,
         )
-        
+
         self.id = generate_box_id(self.domain, self.name)
-        
+
         if self.path:
             self.module = generate_module_from_path(self.path)
         else:
             self.module = None
-        
+
         if self.symbol and self.module:
             self.qualified_name = generate_qualified_name(self.module, self.symbol)
         else:
             self.qualified_name = None
-        
+
         self.duplicate_group = normalize_purpose_for_duplicate_group(self.purpose)
 
 @dataclass
 class PlannerConnection:
-    """Connection between two blocks."""
-    
+    """PURPOSE connection between two blocks
+    DOMAIN  planner workflow
+    """
+
     source_box_id: str
     target_box_id: str
     relationship: str
@@ -150,8 +171,10 @@ class PlannerConnection:
 
 @dataclass
 class PlannerState:
-    """Complete state of the planner session."""
-    
+    """PURPOSE complete state of the planner session
+    DOMAIN  planner workflow
+    """
+
     project_config: PlannerProjectConfig
     boxes: List[PlannerBox] = field(default_factory=list)
     connections: List[PlannerConnection] = field(default_factory=list)
@@ -162,17 +185,17 @@ class PlannerState:
     dirty: bool = False
     blueprint_path: Path = field(default_factory=lambda: Path("bpfw/blueprint.yaml"))
     source_mode: str = "new_plan"
-    
+
     # Screen state for UI navigation
     screen: str = "welcome"
-    
+
     # Change tracking for unsaved changes dialog
     boxes_added: int = 0
     boxes_edited: int = 0
     boxes_deleted: int = 0
     connections_added: int = 0
     connections_removed: int = 0
-    
+
     # Broken connections (orphan references in YAML)
     broken_connections: List[PlannerConnection] = field(default_factory=list)
     modal_data: Dict[str, Any] = field(default_factory=dict)

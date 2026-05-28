@@ -1,4 +1,6 @@
-"""Utility functions for the Planner integration."""
+"""PURPOSE utility functions for the Planner tool
+DOMAIN  planner workflow
+"""
 
 from pathlib import Path
 
@@ -6,14 +8,8 @@ from bpfw.shared.text import to_snake_case
 
 
 def generate_box_id(domain: object, name: object) -> str:
-    """Generate a box ID from domain and name.
-
-    Args:
-        domain: The domain of the box.
-        name: The name of the box.
-
-    Returns:
-        A box ID in snake_case format.
+    """PURPOSE generate a box ID from domain and name
+    DOMAIN  planner workflow
     """
     domain_snake = to_snake_case(domain)
     name_snake = to_snake_case(name)
@@ -28,15 +24,8 @@ def generate_box_id(domain: object, name: object) -> str:
 
 
 def generate_box_path(source_root: object, domain: object, name: object) -> str:
-    """Generate a suggested path for a box.
-
-    Args:
-        source_root: The source root directory, such as "src".
-        domain: The domain of the box.
-        name: The name of the box.
-
-    Returns:
-        A suggested file path.
+    """PURPOSE generate a suggested path for a box
+    DOMAIN  planner workflow
     """
     source_root_text = str(source_root or "src").strip() or "src"
     domain_path = to_snake_case(domain) or "unassigned"
@@ -45,13 +34,8 @@ def generate_box_path(source_root: object, domain: object, name: object) -> str:
 
 
 def generate_box_symbol(name: object) -> str:
-    """Generate a symbol name from a box name.
-
-    Args:
-        name: The name of the box.
-
-    Returns:
-        A symbol name.
+    """PURPOSE generate a symbol name from a box name
+    DOMAIN  planner workflow
     """
     value = str(name or "").strip()
     if value:
@@ -60,13 +44,8 @@ def generate_box_symbol(name: object) -> str:
 
 
 def generate_module_from_path(path: object) -> str:
-    """Generate a module name from a file path.
-
-    Args:
-        path: The file path, such as "src/ingestion/invoice_parser.py".
-
-    Returns:
-        The module name, such as "src.ingestion.invoice_parser".
+    """PURPOSE generate a module name from a file path
+    DOMAIN  planner workflow
     """
     path_text = str(path or "").strip()
     if not path_text:
@@ -76,14 +55,8 @@ def generate_module_from_path(path: object) -> str:
 
 
 def generate_qualified_name(module: object, symbol: object) -> str:
-    """Generate a qualified name from module and symbol.
-
-    Args:
-        module: The module name.
-        symbol: The symbol name.
-
-    Returns:
-        The qualified name.
+    """PURPOSE generate a qualified name from module and symbol
+    DOMAIN  planner workflow
     """
     module_text = str(module or "").strip()
     symbol_text = str(symbol or "").strip()
@@ -93,13 +66,8 @@ def generate_qualified_name(module: object, symbol: object) -> str:
 
 
 def normalize_purpose_for_duplicate_group(purpose: object) -> str:
-    """Normalize purpose text for duplicate grouping.
-
-    Args:
-        purpose: The purpose text.
-
-    Returns:
-        Normalized purpose text suitable for duplicate grouping.
+    """PURPOSE clean purpose text for duplicate grouping
+    DOMAIN  planner workflow
     """
     purpose_text = str(purpose or "").strip()
     if not purpose_text:
@@ -108,13 +76,8 @@ def normalize_purpose_for_duplicate_group(purpose: object) -> str:
 
 
 def detect_existing_source_roots(project_root: Path) -> list[str]:
-    """Detect existing source roots in the project.
-
-    Args:
-        project_root: The project root directory.
-
-    Returns:
-        List of detected source roots.
+    """PURPOSE find source roots in the project
+    DOMAIN  planner workflow
     """
     source_roots: list[str] = []
     common_roots = ["src", "app", "lib", "core"]
@@ -127,13 +90,8 @@ def detect_existing_source_roots(project_root: Path) -> list[str]:
 
 
 def get_project_defaults(project_root: Path) -> dict[str, object]:
-    """Get default project configuration values.
-
-    Args:
-        project_root: The project root directory.
-
-    Returns:
-        Dictionary of default values.
+    """PURPOSE get default project configuration values
+    DOMAIN  planner workflow
     """
     return {
         "project_id": to_snake_case(project_root.name),

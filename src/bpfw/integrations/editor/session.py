@@ -1,8 +1,5 @@
-"""Editor session — search-first block launcher for BPFW Editor.
-
-The editor searches blueprint blocks and delegates editing to Inspector.
-It does not edit fields directly — it locates a block and opens the
-inspector in target mode.
+"""PURPOSE editor session — search-first block launcher for BPFW Editor
+DOMAIN  editor workflow
 """
 
 from pathlib import Path
@@ -28,13 +25,17 @@ from bpfw.integrations.shared.cli_runtime import is_quit_command, normalize_comm
 
 
 class EditorSession:
-    """Search-first launcher that finds blocks and opens inspector."""
+    """PURPOSE search-first launcher that finds blocks and opens inspector
+    DOMAIN  editor workflow
+    """
 
     def __init__(self, project_root: Path) -> None:
         self.project_root = project_root
 
     def run(self) -> int:
-        """Run the editor session. Returns exit code."""
+        """PURPOSE run the editor session
+        DOMAIN  editor workflow
+        """
 
         # Check blueprint exists
         loader = BlueprintLoader(project_root=self.project_root)
@@ -76,7 +77,9 @@ class EditorSession:
 
 
     def _run_search_loop(self, all_records: list[SearchRecord]) -> int:
-        """Main search loop: search → results → inspect → search again."""
+        """PURPOSE main search loop: search → results → inspect → search again
+        DOMAIN  editor workflow
+        """
 
         current_records = all_records
         query = ""
@@ -193,7 +196,9 @@ class EditorSession:
 
 
     def _handle_filter(self, filter_state: FilterState) -> str:
-        """Handle the filter input flow. Returns 'continue' or 'quit'."""
+        """PURPOSE handle the filter input flow
+        DOMAIN  editor workflow
+        """
 
         render_filter_screen()
         raw_input = read_input("filter: ")
@@ -216,7 +221,9 @@ class EditorSession:
 
 
     def _open_inspector(self, record: SearchRecord) -> str:
-        """Open the inspector in target mode for a given record."""
+        """PURPOSE open the inspector in target mode for a given record
+        DOMAIN  editor workflow
+        """
 
         from bpfw.integrations.inspector.target import run_inspector_target
 
@@ -236,7 +243,9 @@ class EditorSession:
 
 
     def _reload_records(self) -> list[SearchRecord] | None:
-        """Reload blueprint and rebuild search records. Returns None on failure."""
+        """PURPOSE reload blueprint and rebuild search records
+        DOMAIN  editor workflow
+        """
 
         loader = BlueprintLoader(project_root=self.project_root)
         load_result = loader.load()
@@ -250,7 +259,9 @@ class EditorSession:
 
 
     def _show_help(self) -> None:
-        """Render editor help and wait for user confirmation."""
+        """PURPOSE show editor help and wait for user confirmation
+        DOMAIN  editor workflow
+        """
 
         render_editor_help_screen()
         print("")

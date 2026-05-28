@@ -1,4 +1,6 @@
-"""Interactive terminal session for ``bpfw diff``."""
+"""PURPOSE interactive terminal session for bpfw diff
+DOMAIN  optional integrations
+"""
 
 from collections.abc import Callable
 from pathlib import Path
@@ -39,7 +41,9 @@ PrintFunc = Callable[[str], None]
 
 
 class DiffSession:
-    """Run the diff decision manager in an interactive terminal."""
+    """PURPOSE run the diff decision manager in an interactive terminal
+    DOMAIN  optional integrations
+    """
 
     def __init__(
         self,
@@ -47,12 +51,8 @@ class DiffSession:
         input_func: InputFunc = input,
         print_func: PrintFunc = print,
     ) -> None:
-        """Initialize the diff session.
-
-        Args:
-            project_root: Project root directory.
-            input_func: Function used to read terminal input.
-            print_func: Function used to print terminal output.
+        """PURPOSE set up the diff session
+        DOMAIN  optional integrations
         """
         self.project_root = project_root.resolve()
         self.input_func = input_func
@@ -64,10 +64,8 @@ class DiffSession:
         self.current_index = 0
 
     def run(self) -> int:
-        """Run the interactive diff session.
-
-        Returns:
-            Process exit code.
+        """PURPOSE run the interactive diff session
+        DOMAIN  optional integrations
         """
         self.snapshot = self.review_service.load()
         if not self.snapshot.items:
@@ -107,7 +105,9 @@ class DiffSession:
             return 0
 
     def _render_home(self) -> None:
-        """Render the diff manager home screen."""
+        """PURPOSE show the diff manager home screen
+        DOMAIN  optional integrations
+        """
         assert self.snapshot is not None
         counts = self._group_counts()
         self.print_func("")
@@ -136,7 +136,9 @@ class DiffSession:
         self.print_func("")
 
     def _render_no_findings(self) -> None:
-        """Render the no-findings screen."""
+        """PURPOSE show the no-findings screen
+        DOMAIN  optional integrations
+        """
         self.print_func("")
         self.print_func("BPFW DIFF MANAGER")
         self.print_func("")
@@ -148,7 +150,9 @@ class DiffSession:
         self.print_func("  bpfw verify")
 
     def _render_filter_not_available(self) -> None:
-        """Render a small MVP filter notice."""
+        """PURPOSE show a small filter notice
+        DOMAIN  optional integrations
+        """
         self.print_func("")
         self.print_func("FILTER DIFFS")
         self.print_func("")
@@ -156,7 +160,9 @@ class DiffSession:
         self.print_func("Use [g] to review a group in this MVP version.")
 
     def _render_help(self) -> None:
-        """Render diff manager help."""
+        """PURPOSE show diff manager help
+        DOMAIN  optional integrations
+        """
         self.print_func("")
         self.print_func("BPFW DIFF HELP")
         self.print_func("")
@@ -170,7 +176,9 @@ class DiffSession:
         self.print_func("")
 
     def _review_all(self) -> None:
-        """Review unresolved diff items in order."""
+        """PURPOSE review unresolved diff items in order
+        DOMAIN  optional integrations
+        """
         assert self.snapshot is not None
         items = list(self.snapshot.items)
         for item in items[self.current_index:]:
@@ -182,17 +190,17 @@ class DiffSession:
             self.current_index += 1
 
     def _review_group(self) -> None:
-        """Prompt for a group and review that group."""
+        """PURPOSE prompt for a group and review that group
+        DOMAIN  optional integrations
+        """
         self._render_group_selection()
         command = normalize_command(self.input_func("Choice: "))
         if command.isdigit():
             self._review_group_by_number(int(command))
 
     def _review_group_by_number(self, group_number: int) -> None:
-        """Review one group by menu number.
-
-        Args:
-            group_number: One-based group index.
+        """PURPOSE review one group by menu number
+        DOMAIN  optional integrations
         """
         groups = self._ordered_group_values()
         selected_index = group_number - 1
@@ -211,7 +219,9 @@ class DiffSession:
                 return
 
     def _render_group_selection(self) -> None:
-        """Render group selector."""
+        """PURPOSE show group selector
+        DOMAIN  optional integrations
+        """
         counts = self._group_counts()
         self.print_func("")
         self.print_func("SELECT DIFF GROUP")
@@ -225,13 +235,8 @@ class DiffSession:
         self.print_func("")
 
     def _review_item(self, item: DiffItem) -> bool:
-        """Review one diff item.
-
-        Args:
-            item: Diff item to review.
-
-        Returns:
-            True to continue reviewing, False to return to the home screen.
+        """PURPOSE review one diff item
+        DOMAIN  optional integrations
         """
         if item.identifier in self.plan.planned_item_ids():
             return self._handle_already_planned(item)
@@ -250,13 +255,8 @@ class DiffSession:
         return self._review_generic_item(item)
 
     def _review_undeclared_code(self, item: DiffItem) -> bool:
-        """Review an undeclared-code item.
-
-        Args:
-            item: Diff item.
-
-        Returns:
-            True to continue review, False to return home.
+        """PURPOSE review an undeclared-code item
+        DOMAIN  optional integrations
         """
         while True:
             self._render_undeclared_code(item)
@@ -286,10 +286,8 @@ class DiffSession:
             self.print_func("Unknown command.")
 
     def _render_undeclared_code(self, item: DiffItem) -> None:
-        """Render the undeclared-code decision screen.
-
-        Args:
-            item: Diff item.
+        """PURPOSE show the undeclared-code decision screen
+        DOMAIN  optional integrations
         """
         code = item.code_target
         self.print_func("")
@@ -325,11 +323,8 @@ class DiffSession:
         self.print_func("")
 
     def _quick_create_block(self, item: DiffItem, status: str) -> None:
-        """Create a block decision with detected metadata.
-
-        Args:
-            item: Diff item.
-            status: Lifecycle/status selected by the user.
+        """PURPOSE create a block decision with detected metadata
+        DOMAIN  optional integrations
         """
         block = self._block_from_code_target(item, status=status)
         if block is None:
@@ -359,11 +354,8 @@ class DiffSession:
             self._create_block_with_metadata_window(item, block)
 
     def _create_block_with_metadata_window(self, item: DiffItem, block: dict[str, Any] | None = None) -> None:
-        """Open metadata window before adding a create-block action.
-
-        Args:
-            item: Diff item.
-            block: Optional prepared block.
+        """PURPOSE open metadata window before adding a create-block action
+        DOMAIN  optional integrations
         """
         prepared_block = block or self._block_from_code_target(item, status="experimental")
         if prepared_block is None:
@@ -385,10 +377,8 @@ class DiffSession:
             self._add_create_block_action(item=item, block=updated_block)
 
     def _render_save_metadata_summary(self, block: dict[str, Any]) -> None:
-        """Render the save-metadata-to-decision summary.
-
-        Args:
-            block: Updated block data.
+        """PURPOSE show the save-metadata-to-decision summary
+        DOMAIN  optional integrations
         """
         self.print_func("")
         self.print_func("SAVE METADATA TO DIFF DECISION")
@@ -412,11 +402,8 @@ class DiffSession:
         self.print_func("")
 
     def _add_create_block_action(self, item: DiffItem, block: dict[str, Any]) -> None:
-        """Add a create-block authority action to the plan.
-
-        Args:
-            item: Diff item.
-            block: Block data to create.
+        """PURPOSE add a create-block authority action to the plan
+        DOMAIN  optional integrations
         """
         assert self.snapshot is not None
         target_shard = self.review_service.decide_shard_for_block(
@@ -447,10 +434,8 @@ class DiffSession:
         self._render_decision_added("CREATE_BLOCK", item, conflicts)
 
     def _attach_to_existing_block(self, item: DiffItem) -> None:
-        """Add a covered-code decision for an undeclared code item.
-
-        Args:
-            item: Diff item.
+        """PURPOSE add a covered-code decision for an undeclared code item
+        DOMAIN  optional integrations
         """
         code = item.code_target
         if code is None:
@@ -521,13 +506,8 @@ class DiffSession:
         self._render_decision_added("ADD_COVERED_CODE", item, conflicts)
 
     def _existing_block_candidates(self, code: CodeTarget) -> list[dict[str, Any]]:
-        """Return existing blocks ordered by simple attachment relevance.
-
-        Args:
-            code: Code target to attach.
-
-        Returns:
-            Candidate blueprint blocks.
+        """PURPOSE get blocks ordered by simple attachment relevance
+        DOMAIN  optional integrations
         """
         assert self.snapshot is not None
         blocks = [
@@ -555,10 +535,8 @@ class DiffSession:
         return sorted(blocks, key=score)[:10]
 
     def _add_ignore_rule(self, item: DiffItem) -> None:
-        """Add an ignore-rule decision for an undeclared code item.
-
-        Args:
-            item: Diff item.
+        """PURPOSE add an ignore-rule decision for an undeclared code item
+        DOMAIN  optional integrations
         """
         code = item.code_target
         if code is None:
@@ -613,10 +591,8 @@ class DiffSession:
         self._render_decision_added("ADD_IGNORE_RULE", item, conflicts)
 
     def _add_source_delete_action(self, item: DiffItem) -> None:
-        """Add a source cleanup candidate to the plan.
-
-        Args:
-            item: Diff item.
+        """PURPOSE add a source cleanup candidate to the plan
+        DOMAIN  optional integrations
         """
         code = item.code_target
         if code is None:
@@ -655,13 +631,8 @@ class DiffSession:
         self._render_decision_added("MARK_FOR_SOURCE_DELETE", item, conflicts)
 
     def _review_missing_declared_code(self, item: DiffItem) -> bool:
-        """Review a missing-declared-code item.
-
-        Args:
-            item: Diff item.
-
-        Returns:
-            True to continue review, False to return home.
+        """PURPOSE review a missing-declared-code item
+        DOMAIN  optional integrations
         """
         while True:
             self._render_missing_declared_code(item)
@@ -689,10 +660,8 @@ class DiffSession:
             self.print_func("Unknown command.")
 
     def _render_missing_declared_code(self, item: DiffItem) -> None:
-        """Render missing-declared-code screen.
-
-        Args:
-            item: Diff item.
+        """PURPOSE show missing-declared-code screen
+        DOMAIN  optional integrations
         """
         target = item.blueprint_target
         self.print_func("")
@@ -731,10 +700,8 @@ class DiffSession:
         self.print_func("")
 
     def _update_to_selected_candidate(self, item: DiffItem) -> None:
-        """Create an update-location decision using a candidate.
-
-        Args:
-            item: Diff item.
+        """PURPOSE create an update-location decision using a candidate
+        DOMAIN  optional integrations
         """
         target = item.blueprint_target
         if target is None or target.source_shard_path is None:
@@ -784,10 +751,8 @@ class DiffSession:
         self._render_decision_added("UPDATE_BLOCK_CODE_REFERENCE", item, conflicts)
 
     def _remove_declaration(self, item: DiffItem) -> None:
-        """Add delete-block decision for a missing declaration.
-
-        Args:
-            item: Diff item.
+        """PURPOSE add delete-block decision for a missing declaration
+        DOMAIN  optional integrations
         """
         target = item.blueprint_target
         if target is None or target.source_shard_path is None:
@@ -815,11 +780,8 @@ class DiffSession:
         self._render_decision_added("DELETE_BLOCK", item, conflicts)
 
     def _mark_block_status(self, item: DiffItem, status: str) -> None:
-        """Add metadata update for block status.
-
-        Args:
-            item: Diff item.
-            status: New status.
+        """PURPOSE add metadata update for block status
+        DOMAIN  optional integrations
         """
         target = item.blueprint_target
         if target is None or target.source_shard_path is None:
@@ -848,10 +810,8 @@ class DiffSession:
         self._render_decision_added("UPDATE_BLOCK_METADATA", item, conflicts)
 
     def _metadata_for_existing_block(self, item: DiffItem) -> None:
-        """Open metadata window for an existing block and add update action.
-
-        Args:
-            item: Diff item.
+        """PURPOSE open metadata window for an block and add update action
+        DOMAIN  optional integrations
         """
         target = item.blueprint_target
         if target is None or target.source_shard_path is None:
@@ -892,13 +852,8 @@ class DiffSession:
         self._render_decision_added("UPDATE_BLOCK_METADATA", item, conflicts)
 
     def _review_moved_code_candidate(self, item: DiffItem) -> bool:
-        """Review a possible moved-code item.
-
-        Args:
-            item: Diff item.
-
-        Returns:
-            True to continue, False to return home.
+        """PURPOSE review a possible moved-code item
+        DOMAIN  optional integrations
         """
         while True:
             self._render_moved_code_candidate(item)
@@ -925,10 +880,8 @@ class DiffSession:
             self.print_func("Unknown command.")
 
     def _render_moved_code_candidate(self, item: DiffItem) -> None:
-        """Render the moved-code candidate decision screen.
-
-        Args:
-            item: Diff item.
+        """PURPOSE show the moved-code candidate decision screen
+        DOMAIN  optional integrations
         """
         target = item.blueprint_target
         candidate = item.code_target or (item.candidates[0] if item.candidates else None)
@@ -970,11 +923,8 @@ class DiffSession:
         self.print_func("")
 
     def _add_candidate_as_new_block(self, item: DiffItem, status: str) -> None:
-        """Add the moved-code candidate as a new block.
-
-        Args:
-            item: Diff item.
-            status: Status/lifecycle for the new block.
+        """PURPOSE add the moved-code candidate as a new block
+        DOMAIN  optional integrations
         """
         candidate = item.code_target or (item.candidates[0] if item.candidates else None)
         if candidate is None:
@@ -992,10 +942,8 @@ class DiffSession:
         self._quick_create_block(synthetic, status=status)
 
     def _deprecate_old_and_add_candidate(self, item: DiffItem) -> None:
-        """Add a compound move decision: deprecate old block and create new block.
-
-        Args:
-            item: Diff item.
+        """PURPOSE add a compound move decision: deprecate old block and create new block
+        DOMAIN  optional integrations
         """
         target = item.blueprint_target
         candidate = item.code_target or (item.candidates[0] if item.candidates else None)
@@ -1031,13 +979,8 @@ class DiffSession:
         self._add_create_block_action(synthetic, block)
 
     def _review_duplicate_active_purpose(self, item: DiffItem) -> bool:
-        """Review duplicate active purpose item.
-
-        Args:
-            item: Diff item.
-
-        Returns:
-            True to continue, False to return home.
+        """PURPOSE review duplicate active purpose item
+        DOMAIN  optional integrations
         """
         while True:
             self._render_duplicate_active_purpose(item)
@@ -1059,10 +1002,8 @@ class DiffSession:
             self.print_func("Unknown command.")
 
     def _render_duplicate_active_purpose(self, item: DiffItem) -> None:
-        """Render duplicate-active-purpose screen.
-
-        Args:
-            item: Diff item.
+        """PURPOSE show duplicate-active-purpose screen
+        DOMAIN  optional integrations
         """
         purpose = item.finding.evidence.get("purpose") if item.finding is not None else None
         self.print_func("")
@@ -1090,11 +1031,8 @@ class DiffSession:
         self.print_func("")
 
     def _resolve_duplicate_by_status(self, item: DiffItem, command: str) -> None:
-        """Resolve duplicate active purpose by status update.
-
-        Args:
-            item: Diff item.
-            command: User command.
+        """PURPOSE find duplicate active purpose by status update
+        DOMAIN  optional integrations
         """
         if len(item.related_blocks) < 2:
             self.print_func("Cannot resolve duplicate because related blocks are incomplete.")
@@ -1113,11 +1051,8 @@ class DiffSession:
         self._mark_block_status(synthetic, new_status)
 
     def _metadata_for_related_block(self, item: DiffItem, selected_index: int) -> None:
-        """Open metadata window for a related duplicate block.
-
-        Args:
-            item: Diff item.
-            selected_index: Zero-based related block index.
+        """PURPOSE open metadata window for a related duplicate block
+        DOMAIN  optional integrations
         """
         if selected_index >= len(item.related_blocks):
             self.print_func("Selected block is unavailable.")
@@ -1134,10 +1069,8 @@ class DiffSession:
         self._metadata_for_existing_block(synthetic)
 
     def _mark_intentional_duplicate(self, item: DiffItem) -> None:
-        """Add duplicate-policy metadata to related blocks.
-
-        Args:
-            item: Diff item.
+        """PURPOSE add duplicate-policy metadata to related blocks
+        DOMAIN  optional integrations
         """
         if len(item.related_blocks) < 2:
             self.print_func("Cannot mark duplicate because related blocks are incomplete.")
@@ -1182,13 +1115,8 @@ class DiffSession:
         self._render_decision_added("UPDATE_DUPLICATE_POLICY", item, self.plan.detect_conflicts())
 
     def _review_invalid_authority(self, item: DiffItem) -> bool:
-        """Review invalid authority item.
-
-        Args:
-            item: Diff item.
-
-        Returns:
-            True to continue, False to return home.
+        """PURPOSE review invalid authority item
+        DOMAIN  optional integrations
         """
         self.print_func("")
         self.print_func("DIFF: INVALID_AUTHORITY")
@@ -1210,13 +1138,8 @@ class DiffSession:
         return True
 
     def _review_broken_shard_reference(self, item: DiffItem) -> bool:
-        """Review broken shard reference item.
-
-        Args:
-            item: Diff item.
-
-        Returns:
-            True to continue, False to return home.
+        """PURPOSE review broken shard reference item
+        DOMAIN  optional integrations
         """
         self.print_func("")
         self.print_func("DIFF: BROKEN_SHARD_REFERENCE")
@@ -1230,13 +1153,8 @@ class DiffSession:
         return not is_back_command(command)
 
     def _review_generic_item(self, item: DiffItem) -> bool:
-        """Render an unhandled diff item safely.
-
-        Args:
-            item: Diff item.
-
-        Returns:
-            True to continue.
+        """PURPOSE show an unhandled diff item
+        DOMAIN  optional integrations
         """
         self.print_func("")
         self.print_func(f"DIFF: {item.kind.value}")
@@ -1248,13 +1166,8 @@ class DiffSession:
         return True
 
     def _handle_already_planned(self, item: DiffItem) -> bool:
-        """Handle a diff item that already has a plan action.
-
-        Args:
-            item: Already planned item.
-
-        Returns:
-            True to continue review, False to return home.
+        """PURPOSE handle a diff item that already has a plan action
+        DOMAIN  optional integrations
         """
         self.print_func("")
         self.print_func("DIFF ALREADY PLANNED")
@@ -1275,7 +1188,9 @@ class DiffSession:
         return True
 
     def _view_plan(self) -> None:
-        """Render and handle the apply plan screen."""
+        """PURPOSE show and handle the apply plan screen
+        DOMAIN  optional integrations
+        """
         while True:
             self._render_plan()
             command = normalize_command(self.input_func("Choice: "))
@@ -1294,7 +1209,9 @@ class DiffSession:
             self.print_func("Unknown command.")
 
     def _render_plan(self) -> None:
-        """Render the current apply plan."""
+        """PURPOSE show the apply plan
+        DOMAIN  optional integrations
+        """
         self.print_func("")
         self.print_func("BPFW DIFF APPLY PLAN")
         self.print_func("")
@@ -1335,7 +1252,9 @@ class DiffSession:
         self.print_func("")
 
     def _edit_plan(self) -> None:
-        """Run a minimal plan edit flow."""
+        """PURPOSE run a minimal plan edit flow
+        DOMAIN  optional integrations
+        """
         self.print_func("")
         self.print_func("EDIT APPLY PLAN")
         self.print_func("")
@@ -1355,7 +1274,9 @@ class DiffSession:
                 self.print_func("Action removed.")
 
     def _apply_plan(self) -> None:
-        """Apply authority actions after final confirmation."""
+        """PURPOSE apply authority actions after final confirmation
+        DOMAIN  optional integrations
+        """
         if self.plan.is_empty():
             self.print_func("Plan is empty.")
             return
@@ -1420,7 +1341,9 @@ class DiffSession:
             self.print_func(f"  {message}")
 
     def _render_write_permission_required(self) -> None:
-        """Render final write confirmation."""
+        """PURPOSE show final write confirmation
+        DOMAIN  optional integrations
+        """
         self.print_func("")
         self.print_func("WRITE PERMISSION REQUIRED")
         self.print_func("")
@@ -1445,10 +1368,8 @@ class DiffSession:
         self.print_func("")
 
     def _preview_affected_authority_files(self) -> tuple[Path, ...]:
-        """Preview affected authority files for the current plan.
-
-        Returns:
-            Project-relative authority files.
+        """PURPOSE preview affected authority files for the plan
+        DOMAIN  optional integrations
         """
         if not self.plan.authority_actions:
             return ()
@@ -1456,10 +1377,8 @@ class DiffSession:
         return preview.affected_files
 
     def _handle_quit(self) -> int:
-        """Handle quit when the plan may contain unapplied decisions.
-
-        Returns:
-            Process exit code.
+        """PURPOSE handle quit when the plan may contain unapplied decisions
+        DOMAIN  optional integrations
         """
         if self.plan.is_empty():
             self.print_func("Diff closed.")
@@ -1484,12 +1403,8 @@ class DiffSession:
         return 0
 
     def _render_decision_added(self, action_label: str, item: DiffItem, conflicts: list[Any]) -> None:
-        """Render the decision-added screen.
-
-        Args:
-            action_label: Action label.
-            item: Diff item.
-            conflicts: Conflicts detected after adding.
+        """PURPOSE show the decision-added screen
+        DOMAIN  optional integrations
         """
         self.print_func("")
         self.print_func("DECISION ADDED TO PLAN")
@@ -1519,14 +1434,9 @@ class DiffSession:
             self.print_func("Decision removed from plan.")
 
     def _block_from_code_target(self, item: DiffItem, status: str) -> dict[str, Any] | None:
-        """Build a block dictionary from an undeclared code target.
+        """PURPOSE build a block dictionaryionary from an undeclared code target
+                DOMAIN  optional integrations
 
-        Args:
-            item: Diff item.
-            status: Status/lifecycle value.
-
-        Returns:
-            Block data, or None when code target is missing.
         """
         code = item.code_target
         if code is None:
@@ -1541,13 +1451,8 @@ class DiffSession:
         return block
 
     def _unique_block_id(self, block: dict[str, Any]) -> str:
-        """Return a block id that does not already exist in the snapshot.
-
-        Args:
-            block: Candidate block dictionary.
-
-        Returns:
-            Unique block identifier.
+        """PURPOSE get a block id that does not already exist in the snapshot
+        DOMAIN  optional integrations
         """
         assert self.snapshot is not None
         blocks = self.snapshot.blueprint_data.get("blocks", [])
@@ -1568,10 +1473,8 @@ class DiffSession:
         return f"{base_id}_{sequence}"
 
     def _group_counts(self) -> dict[str, int]:
-        """Return item counts by group.
-
-        Returns:
-            Mapping of action level to count.
+        """PURPOSE get item counts by group
+        DOMAIN  optional integrations
         """
         assert self.snapshot is not None
         counts: dict[str, int] = {}
@@ -1580,10 +1483,8 @@ class DiffSession:
         return counts
 
     def _ordered_group_values(self) -> list[str]:
-        """Return diff groups in stable display order.
-
-        Returns:
-            Ordered group names.
+        """PURPOSE get diff groups in stable display order
+        DOMAIN  optional integrations
         """
         assert self.snapshot is not None
         counts = self._group_counts()
@@ -1596,13 +1497,13 @@ class DiffSession:
 
 
 class _UnitLike:
-    """Minimal object compatible with inspector block creation helpers."""
+    """PURPOSE minimal object compatible with inspector block creation helpers
+    DOMAIN  optional integrations
+    """
 
     def __init__(self, code: CodeTarget) -> None:
-        """Initialize from a code target.
-
-        Args:
-            code: Code target.
+        """PURPOSE set up from a code target
+        DOMAIN  optional integrations
         """
         self.path = code.path
         self.module = _module_from_path(code.path)
@@ -1623,25 +1524,15 @@ class _UnitLike:
 
 
 def _unit_like_from_code_target(code: CodeTarget) -> _UnitLike:
-    """Return a minimal scanner-unit adapter.
-
-    Args:
-        code: Code target.
-
-    Returns:
-        Unit-like object.
+    """PURPOSE get a minimal scanner-unit adapter
+    DOMAIN  optional integrations
     """
     return _UnitLike(code)
 
 
 def _module_from_path(path_value: str) -> str:
-    """Derive a dotted module path from a source path.
-
-    Args:
-        path_value: Project-relative source path.
-
-    Returns:
-        Dotted module name.
+    """PURPOSE derive a dotted module path from a source path
+    DOMAIN  optional integrations
     """
     path = Path(path_value)
     parts = list(path.with_suffix("").parts)

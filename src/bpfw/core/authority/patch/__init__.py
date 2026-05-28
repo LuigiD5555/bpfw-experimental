@@ -1,8 +1,5 @@
-"""Low-level mechanical patch primitives for Blueprint Engine.
-
-This package is internal. It applies explicit operations to files under
-``bpfw/`` after inspector, editor, planner, or a safe mechanical workflow has
-already produced an approved change request.
+"""PURPOSE low-level file-change patch small helpers for Blueprint Engine
+DOMAIN  blueprint file changes
 """
 
 from bpfw.core.authority.patch.actions import (

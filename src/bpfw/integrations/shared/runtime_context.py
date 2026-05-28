@@ -1,4 +1,6 @@
-"""Shared runtime context for passing data between engine and integrations."""
+"""PURPOSE shared runtime context for passing data between engine and tools
+DOMAIN  terminal UI
+"""
 
 from typing import Any
 
@@ -7,25 +9,23 @@ _integration_runtime_cache: dict[str, Any] = {}
 
 
 def set_integration_runtime_cache(cache: dict[str, object]) -> None:
-    """Set the runtime cache for the current integration execution.
-
-    Args:
-        cache: Runtime cache dictionary from engine context.
+    """PURPOSE set the runtime cache for the tool execution
+    DOMAIN  terminal UI
     """
     global _integration_runtime_cache
     _integration_runtime_cache = dict(cache)
 
 
 def get_integration_runtime_cache() -> dict[str, Any]:
-    """Get the runtime cache for the current integration execution.
-
-    Returns:
-        Runtime cache dictionary, or empty dict if not set.
+    """PURPOSE get the runtime cache for the tool execution
+    DOMAIN  terminal UI
     """
     return dict(_integration_runtime_cache)
 
 
 def clear_integration_runtime_cache() -> None:
-    """Clear the runtime cache after integration execution."""
+    """PURPOSE clear the runtime cache after tool execution
+    DOMAIN  terminal UI
+    """
     global _integration_runtime_cache
     _integration_runtime_cache = {}

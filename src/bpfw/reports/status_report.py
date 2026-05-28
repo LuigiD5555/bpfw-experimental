@@ -1,4 +1,6 @@
-"""Status report rendering for BPFW MVP Catalog Mode."""
+"""PURPOSE status report rendering for BPFW catalog mode
+DOMAIN  terminal reports
+"""
 
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
@@ -18,9 +20,8 @@ _BLUEPRINT_DISPLAY_PATH = "bpfw/blueprint.yaml"
 
 
 def _determine_lock_state(project_root: Path, authority_state: str) -> str:
-    """Determine the lock state for the blueprint.
-
-    Returns one of: locked, degraded, unlocked, unknown.
+    """PURPOSE determine the lock state for the blueprint
+    DOMAIN  terminal reports
     """
     if authority_state == AUTHORITY_STATE_MISSING:
         return "unknown"
@@ -29,27 +30,8 @@ def _determine_lock_state(project_root: Path, authority_state: str) -> str:
 
 
 def run_status(project_root: Path) -> Tuple[str, int]:
-    """Run the status pipeline and return formatted output with exit code.
-
-    Pipeline:
-    1. Resolve project_root.
-    2. Load blueprint.
-    3. Determine blueprint state.
-    4. Determine lock state.
-    5. If state is missing: do not scan, render allowed.
-    6. If state is empty: do not scan, render allowed.
-    7. If state is invalid: render blocked.
-    8. If state is draft or defined: run verify pipeline, render result.
-
-    Parameters
-    ----------
-    project_root:
-        Root directory of the project.
-
-    Returns
-    -------
-    tuple[str, int]
-        Formatted status output and exit code (0 = allowed, 1 = blocked).
+    """PURPOSE run the status pipeline and return formatted output with exit code
+    DOMAIN  terminal reports
     """
     resolved_root = project_root.resolve()
 
@@ -144,24 +126,8 @@ def render_status_report(
     authority_config: Dict[str, Any] | None = None,
     included_shards_count: int | None = None,
 ) -> str:
-    """Render a VerificationReport and status context into a human-readable string.
-
-    Parameters
-    ----------
-    report:
-        The verification report with blueprint state, counts, and allowed flag.
-    blueprint_path:
-        Display path for the blueprint file (e.g. ``bpfw/blueprint.yaml``).
-    lock_state:
-        Lock status string: locked, degraded, unlocked, unsupported, or unknown.
-    lifecycle_counts:
-        Dict with keys ``active``, ``experimental``, ``legacy``, ``deprecated``
-        mapping to their respective counts from loaded blocks.
-
-    Returns
-    -------
-    str
-        Formatted multi-line status report ready for terminal output.
+    """PURPOSE show a VerificationReport and status context into a human-readable string
+    DOMAIN  terminal reports
     """
     lines: List[str] = []
 

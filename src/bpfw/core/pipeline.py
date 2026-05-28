@@ -1,4 +1,6 @@
-"""Pipeline types and deterministic execution helpers."""
+"""PURPOSE pipeline types and stable execution helpers
+DOMAIN  framework core
+"""
 
 from dataclasses import dataclass
 from typing import Protocol
@@ -8,17 +10,23 @@ from bpfw.core.result import ResultStatus, StepResult
 
 
 class PipelineStep(Protocol):
-    """Contract implemented by every pipeline step."""
+    """PURPOSE contract implemented by every pipeline step
+    DOMAIN  framework core
+    """
 
     name: str
 
     def run(self, context: ProjectContext) -> StepResult:
-        """Execute a deterministic unit of validation/work."""
+        """PURPOSE execute a stable unit of check/work
+        DOMAIN  framework core
+        """
 
 
 @dataclass(slots=True)
 class Pipeline:
-    """Ordered list of deterministic steps."""
+    """PURPOSE ordered list of stable steps
+    DOMAIN  framework core
+    """
 
     name: str
     steps: list[PipelineStep]
@@ -26,7 +34,9 @@ class Pipeline:
 
 
 def execute_pipeline(pipeline: Pipeline, context: ProjectContext) -> list[StepResult]:
-    """Run steps in order and stop when a blocking result is produced."""
+    """PURPOSE run steps in order and stop when a blocking result is produced
+    DOMAIN  framework core
+    """
 
     step_results: list[StepResult] = []
     for step in pipeline.steps:

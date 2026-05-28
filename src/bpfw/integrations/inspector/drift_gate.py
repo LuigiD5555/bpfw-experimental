@@ -1,4 +1,6 @@
-"""Drift Gate workflow used before inspector metadata editing."""
+"""PURPOSE drift Gate workflow used before inspector metadata editing
+DOMAIN  inspector workflow
+"""
 
 from collections.abc import Callable
 import copy
@@ -47,18 +49,15 @@ BOX_INNER_WIDTH = DRIFT_GATE_WIDTH - 4
 
 
 class _DriftBackRequested(Exception):
-    """Signal that the user wants to return to the previous Drift Gate decision."""
+    """PURPOSE signal that the user wants to return to the previous Drift Gate decision
+    DOMAIN  inspector workflow
+    """
 
 
 @dataclass(slots=True)
 class _DriftReviewEntry:
-    """Single reviewable Drift Gate entry.
-
-    Attributes:
-        kind: Entry kind, either package or item.
-        items: Diff items covered by this review entry.
-        group: Optional package move group.
-        item: Optional single diff item.
+    """PURPOSE single reviewable Drift Gate entry
+    DOMAIN  inspector workflow
     """
 
     kind: str
@@ -69,14 +68,8 @@ class _DriftReviewEntry:
 
 @dataclass(slots=True)
 class _DriftUndoSnapshot:
-    """Undo snapshot for one completed Drift Gate decision.
-
-    Attributes:
-        entry_index: Zero-based review entry index to restore.
-        drift_state_data: Serialized drift state before the decision.
-        result: Drift Gate result before the decision.
-        input_signature: Input signature before the decision.
-        authority_files: Authority file contents before authority mutations.
+    """PURPOSE undo snapshot for one completed Drift Gate decision
+    DOMAIN  inspector workflow
     """
 
     entry_index: int
@@ -88,19 +81,8 @@ class _DriftUndoSnapshot:
 
 @dataclass(slots=True)
 class DriftGateResult:
-    """Result produced by a Drift Gate pass.
-
-    Attributes:
-        safe_mechanical_updates: Number of safe mechanical authority updates applied automatically.
-        approved_count: Number of drift decisions approved for metadata inspection.
-        ignored_count: Number of code targets deliberately ignored.
-        rejected_count: Number of code targets marked as source deletion candidates.
-        skipped_count: Number of drift items skipped by the user.
-        attached_count: Number of code targets attached to an existing responsibility.
-        changed_authority_count: Number of authority changes applied during Drift Gate.
-        inspector_issues: Inspector issues created by accepted drift decisions.
-        stopped: Whether the user quit Drift Gate before inspection.
-        exit_code: Exit code to return when stopped.
+    """PURPOSE result produced by a Drift Gate pass
+    DOMAIN  inspector workflow
     """
 
     safe_mechanical_updates: int = 0
@@ -118,18 +100,14 @@ class DriftGateResult:
     exit_code: int = 0
 
     def changed_project_state(self) -> bool:
-        """Return whether authority files were changed and should be reloaded.
-
-        Returns:
-            True when a post-gate reload is useful.
+        """PURPOSE check whether authority files were changed and should be reloaded
+        DOMAIN  inspector workflow
         """
         return self.safe_mechanical_updates > 0 or self.changed_authority_count > 0
 
     def build_context_lines(self) -> list[str]:
-        """Build inspector context lines for decisions made before metadata editing.
-
-        Returns:
-            Lines suitable for the inspector pre-inspection context panel.
+        """PURPOSE build inspector context lines for decisions made before metadata editing
+        DOMAIN  inspector workflow
         """
         lines: list[str] = []
         if self.safe_mechanical_updates:
@@ -164,7 +142,9 @@ class DriftGateResult:
 
 
 class DriftGateRunner:
-    """Run safe auto-sync and human drift decisions before metadata inspection."""
+    """PURPOSE run safe auto-sync and human drift decisions before metadata inspection
+    DOMAIN  inspector workflow
+    """
 
     def __init__(
         self,
@@ -175,15 +155,8 @@ class DriftGateRunner:
         drift_state: DriftState | None = None,
         input_signature: str | None = None,
     ) -> None:
-        """Initialize the Drift Gate runner.
-
-        Args:
-            session: Loaded inspector session.
-            input_func: Function used to read user input.
-            print_func: Function used to print terminal output.
-            cached_human_items: Optional cached pending human decisions.
-            drift_state: Optional preloaded drift state.
-            input_signature: Optional precomputed input signature.
+        """PURPOSE set up the Drift Gate runner
+        DOMAIN  inspector workflow
         """
         self.session = session
         self.project_root = session.project_root
@@ -204,10 +177,8 @@ class DriftGateRunner:
         self.result = DriftGateResult()
 
     def _load_review_snapshot(self) -> DiffReviewSnapshot:
-        """Load a diff review snapshot without duplicating work when possible.
-
-        Returns:
-            Diff review snapshot.
+        """PURPOSE read a diff review snapshot without duplicating work when possible
+        DOMAIN  inspector workflow
         """
         if (
             self.session.load_result is not None
@@ -223,10 +194,8 @@ class DriftGateRunner:
         return self.review_service.load()
 
     def run(self) -> DriftGateResult:
-        """Run auto-sync and Drift Gate decisions.
-
-        Returns:
-            Drift gate result.
+        """PURPOSE run auto-sync and Drift Gate decisions
+        DOMAIN  inspector workflow
         """
         if self.cached_human_items:
             self.result.cache_hit = True
@@ -252,14 +221,8 @@ class DriftGateRunner:
         human_items: list[DiffItem],
         snapshot: DiffReviewSnapshot | None,
     ) -> DriftGateResult:
-        """Review human drift items with in-session transactional back support.
-
-        Args:
-            human_items: Human-decision drift items.
-            snapshot: Optional full review snapshot.
-
-        Returns:
-            Drift gate result.
+        """PURPOSE review human drift items with in-session transactional back support
+        DOMAIN  inspector workflow
         """
         if not human_items:
             self.drift_state.replace_pending_items([])
@@ -330,14 +293,8 @@ class DriftGateRunner:
         package_groups: list[PackageMoveGroup],
         ungrouped_items: list[DiffItem],
     ) -> list[_DriftReviewEntry]:
-        """Build the linear Drift Gate review queue.
-
-        Args:
-            package_groups: Package move groups to review first.
-            ungrouped_items: Individual drift items.
-
-        Returns:
-            Review entries in the order shown to the user.
+        """PURPOSE build the linear Drift Gate review queue
+        DOMAIN  inspector workflow
         """
         entries: list[_DriftReviewEntry] = []
         for group in package_groups:
@@ -353,16 +310,8 @@ class DriftGateRunner:
         total: int,
         snapshot: DiffReviewSnapshot | None,
     ) -> bool:
-        """Review one linear Drift Gate entry.
-
-        Args:
-            entry: Review entry.
-            index: One-based decision index.
-            total: Total review entries.
-            snapshot: Optional full review snapshot.
-
-        Returns:
-            True to continue, False to stop.
+        """PURPOSE review one linear Drift Gate entry
+        DOMAIN  inspector workflow
         """
         if entry.kind == "package" and entry.group is not None:
             return self._review_package_move(group=entry.group, index=index, total=total, snapshot=snapshot)
@@ -375,14 +324,8 @@ class DriftGateRunner:
         review_entries: list[_DriftReviewEntry],
         next_entry_index: int,
     ) -> list[DiffItem]:
-        """Return diff items covered by entries that have not been reviewed yet.
-
-        Args:
-            review_entries: Linear review entries.
-            next_entry_index: First entry that remains pending.
-
-        Returns:
-            Remaining pending diff items.
+        """PURPOSE get diff items covered by entries that have not been reviewed yet
+        DOMAIN  inspector workflow
         """
         remaining_items: list[DiffItem] = []
         for entry in review_entries[next_entry_index:]:
@@ -390,13 +333,8 @@ class DriftGateRunner:
         return remaining_items
 
     def _capture_undo_snapshot(self, entry_index: int) -> _DriftUndoSnapshot:
-        """Capture the reversible state before one Drift Gate decision.
-
-        Args:
-            entry_index: Review entry index being displayed.
-
-        Returns:
-            Undo snapshot for the current decision.
+        """PURPOSE capture the reversible state before one Drift Gate decision
+        DOMAIN  inspector workflow
         """
         return _DriftUndoSnapshot(
             entry_index=entry_index,
@@ -406,22 +344,20 @@ class DriftGateRunner:
         )
 
     def _can_go_back(self) -> bool:
-        """Return whether a previous Drift Gate decision can be restored.
-
-        Returns:
-            True when the in-session undo stack has at least one decision.
+        """PURPOSE check whether a previous Drift Gate decision can be restored
+        DOMAIN  inspector workflow
         """
         return bool(self._decision_undo_stack)
 
     def _request_back(self) -> None:
-        """Request restoring the previous Drift Gate decision."""
+        """PURPOSE request restoring the previous Drift Gate decision
+        DOMAIN  inspector workflow
+        """
         raise _DriftBackRequested()
 
     def _restore_previous_decision(self) -> int | None:
-        """Restore the previous Drift Gate decision snapshot.
-
-        Returns:
-            Entry index to display again, or None when there is no history.
+        """PURPOSE restore the previous Drift Gate decision snapshot
+        DOMAIN  inspector workflow
         """
         if not self._decision_undo_stack:
             return None
@@ -436,10 +372,8 @@ class DriftGateRunner:
         return snapshot.entry_index
 
     def _ensure_current_undo_has_authority_files(self) -> None:
-        """Attach authority file contents to the active undo snapshot once.
-
-        Authority snapshots are captured lazily so metadata-only decisions do not
-        copy YAML files unnecessarily.
+        """PURPOSE attach authority file contents to the active undo snapshot once
+        DOMAIN  inspector workflow
         """
         snapshot = self._current_undo_snapshot
         if snapshot is None or snapshot.authority_files is not None:
@@ -447,10 +381,8 @@ class DriftGateRunner:
         snapshot.authority_files = self._read_authority_file_snapshot()
 
     def _read_authority_file_snapshot(self) -> dict[str, str]:
-        """Read current authority files into a small in-memory snapshot.
-
-        Returns:
-            Mapping of project-relative authority file path to file content.
+        """PURPOSE read authority files into a small loaded snapshot
+        DOMAIN  inspector workflow
         """
         authority_root = self.project_root / "bpfw"
         file_contents: dict[str, str] = {}
@@ -469,10 +401,8 @@ class DriftGateRunner:
         return file_contents
 
     def _restore_authority_files(self, snapshot: _DriftUndoSnapshot) -> None:
-        """Restore authority files captured by an undo snapshot.
-
-        Args:
-            snapshot: Undo snapshot to restore.
+        """PURPOSE restore authority files captured by an undo snapshot
+        DOMAIN  inspector workflow
         """
         if snapshot.authority_files is None:
             return
@@ -501,10 +431,8 @@ class DriftGateRunner:
                 self.print_func(f"Back warning: could not restore {relative_path}: {error}")
 
     def _reuse_unchanged_drift_state(self) -> DriftGateResult | None:
-        """Return cached Drift Gate result when project drift inputs are unchanged.
-
-        Returns:
-            Drift gate result when the previous state can be reused, otherwise None.
+        """PURPOSE get cached Drift Gate result when project drift inputs are unchanged
+        DOMAIN  inspector workflow
         """
         if not self.drift_state.is_reusable_for_signature(self.input_signature):
             return None
@@ -516,13 +444,8 @@ class DriftGateRunner:
         return self.result
 
     def _filter_known_human_decisions(self, human_items: list[DiffItem]) -> list[DiffItem]:
-        """Remove already-decided drift items from the current review list.
-
-        Args:
-            human_items: Human-decision drift items from the current snapshot.
-
-        Returns:
-            Items that still require Drift Gate review.
+        """PURPOSE remove already-decided drift items from the review list
+        DOMAIN  inspector workflow
         """
         pending_items: list[DiffItem] = []
         for item in human_items:
@@ -536,13 +459,8 @@ class DriftGateRunner:
         return pending_items
 
     def _apply_cached_decision(self, record: DriftDecisionRecord) -> bool:
-        """Apply a previously recorded decision to the current run.
-
-        Args:
-            record: Persisted decision record.
-
-        Returns:
-            True when the current Drift Gate item should be skipped.
+        """PURPOSE apply a previously recorded decision to the run
+        DOMAIN  inspector workflow
         """
         if record.status == "approved_for_inspector":
             issue = record.to_inspect_issue()
@@ -577,14 +495,8 @@ class DriftGateRunner:
         reason: str | None = None,
         issue: InspectIssue | None = None,
     ) -> None:
-        """Record one Drift Gate decision in the persistent ledger.
-
-        Args:
-            item: Diff item being decided.
-            status: Decision status.
-            decision: Decision label.
-            reason: Optional reason.
-            issue: Optional inspector issue produced by this decision.
+        """PURPOSE record one Drift Gate decision in the persistent ledger
+        DOMAIN  inspector workflow
         """
         self.drift_state.record_decision(
             item=item,
@@ -596,21 +508,16 @@ class DriftGateRunner:
         self._save_current_progress()
 
     def _save_current_progress(self) -> None:
-        """Persist already-taken decisions and remaining pending items.
-
-        This method is intentionally called after every Drift Gate decision so
-        that quitting with q, Ctrl+C, EOF, or a terminal close does not lose
-        decisions already taken during the current session.
+        """PURPOSE save already-taken decisions and remaining pending items
+        DOMAIN  inspector workflow
         """
         remaining_items = self._undecided_active_items()
         self.drift_state.replace_pending_items(remaining_items)
         self._save_drift_state(pending_human_decisions=len(remaining_items))
 
     def _undecided_active_items(self) -> list[DiffItem]:
-        """Return active Drift Gate items without a current decision record.
-
-        Returns:
-            Active pending items that still require human review.
+        """PURPOSE get active Drift Gate items without a decision record
+        DOMAIN  inspector workflow
         """
         return [
             item
@@ -619,10 +526,8 @@ class DriftGateRunner:
         ]
 
     def _save_drift_state(self, pending_human_decisions: int) -> None:
-        """Persist current drift state for later inspector runs.
-
-        Args:
-            pending_human_decisions: Remaining human drift decisions.
+        """PURPOSE save drift state for later inspector runs
+        DOMAIN  inspector workflow
         """
         from datetime import datetime, timezone
 
@@ -632,25 +537,15 @@ class DriftGateRunner:
         self.state_repository.save(self.drift_state)
 
     def _requires_human_decision(self, item: DiffItem) -> bool:
-        """Return whether a diff item should be shown in Drift Gate.
-
-        Args:
-            item: Diff item from review service.
-
-        Returns:
-            True when the item is structural drift, not metadata-only work.
+        """PURPOSE check whether a diff item should be shown in Drift Gate
+        DOMAIN  inspector workflow
         """
         return item.kind not in {DiffItemKind.INCOMPLETE_METADATA, DiffItemKind.METADATA_DRIFT}
 
     def _apply_safe_mechanical_updates(self, snapshot: DiffReviewSnapshot) -> int:
-        """Apply exact safe mechanical updates before human decisions.
-
-        Args:
-            snapshot: Current diff review snapshot.
-
-        Returns:
-            Number of applied mechanical updates.
-        """
+        """PURPOSE apply exact safe safe file updates before human decisions
+                DOMAIN  inspector workflow
+                """
         requests: list[BlueprintChangeRequest] = []
         unit_by_key = _unit_by_key(snapshot)
         for item in snapshot.items:
@@ -687,15 +582,9 @@ class DriftGateRunner:
         item: DiffItem,
         unit_by_key: dict[tuple[str, str, str], DiscoveredCodeUnit],
     ) -> BlueprintChangeRequest | None:
-        """Build a safe mechanical request when exact evidence exists.
-
-        Args:
-            item: Moved-code diff item.
-            unit_by_key: Discovered code units keyed by code target.
-
-        Returns:
-            Safe mechanical request or None.
-        """
+        """PURPOSE build a safe file-change request when exact evidence exists
+                DOMAIN  inspector workflow
+                """
         target = self._hydrated_blueprint_target(item.blueprint_target)
         candidate = item.code_target or (item.candidates[0] if item.candidates else None)
         if target is None or target.source_shard_path is None or candidate is None:
@@ -741,7 +630,9 @@ class DriftGateRunner:
 
 
     def save_current_pending_on_interrupt(self) -> None:
-        """Persist current pending Drift Gate state after interruption."""
+        """PURPOSE save pending Drift Gate state after interruption
+        DOMAIN  inspector workflow
+        """
         if self._active_human_items:
             self._save_current_progress()
 
@@ -752,16 +643,8 @@ class DriftGateRunner:
         total: int,
         snapshot: DiffReviewSnapshot | None,
     ) -> bool:
-        """Review one grouped package move decision.
-
-        Args:
-            group: Package move group.
-            index: One-based decision index.
-            total: Total decision count.
-            snapshot: Optional full review snapshot.
-
-        Returns:
-            True to continue, False to stop.
+        """PURPOSE review one grouped package move decision
+        DOMAIN  inspector workflow
         """
         while True:
             self._render_package_move(group=group, index=index, total=total)
@@ -805,10 +688,8 @@ class DriftGateRunner:
             self.print_func("Unknown command.")
 
     def _render_buffered(self, render_body: Callable[[], None]) -> None:
-        """Render one Drift Gate screen through a single terminal write.
-
-        Args:
-            render_body: Screen renderer that writes lines through ``print_func``.
+        """PURPOSE show one Drift Gate screen through a single terminal write
+        DOMAIN  inspector workflow
         """
         if self._render_buffer_active:
             render_body()
@@ -818,10 +699,8 @@ class DriftGateRunner:
         rendered_lines: list[str] = []
 
         def collect_line(line: str) -> None:
-            """Collect one rendered line for the buffered terminal write.
-
-            Args:
-                line: Rendered line.
+            """PURPOSE collect one rendered line for the buffered terminal write
+            DOMAIN  inspector workflow
             """
             rendered_lines.append(str(line))
 
@@ -837,18 +716,15 @@ class DriftGateRunner:
             original_print_func("\n".join(rendered_lines))
 
     def _print_cache_notice(self) -> None:
-        """Print a compact cache notice when Drift Gate uses cached state."""
+        """PURPOSE print a compact cache notice when Drift Gate uses cached state
+        DOMAIN  inspector workflow
+        """
         if self.result.cache_hit:
             self.print_func("Cache: loaded pending drift snapshot; full scan/verify was skipped.")
 
     def _render_screen_header(self, index: int, total: int, risk: str, subtitle: str | None = None) -> None:
-        """Render the common Drift Gate header.
-
-        Args:
-            index: One-based decision index.
-            total: Total decisions in the current review scope.
-            risk: Risk label shown on the right side of the header.
-            subtitle: Optional line shown below the source line.
+        """PURPOSE show the common Drift Gate header
+        DOMAIN  inspector workflow
         """
         left_text = f"Decision {index} of {total}"
         right_text = f"Risk: {risk}"
@@ -867,11 +743,8 @@ class DriftGateRunner:
         self.print_func("")
 
     def _render_operation_box(self, title: str, lines: list[str]) -> None:
-        """Render the focused operation box used by Drift Gate screens.
-
-        Args:
-            title: Main operation title.
-            lines: Operation details displayed inside the box.
+        """PURPOSE show the focused operation box used by Drift Gate screens
+        DOMAIN  inspector workflow
         """
         prefix = "+-- OPERATION UNDER REVIEW "
         top_line = f"{prefix}{'-' * (DRIFT_GATE_WIDTH - len(prefix) - 1)}+"
@@ -883,10 +756,8 @@ class DriftGateRunner:
         self.print_func("")
 
     def _render_box_line(self, text: str) -> None:
-        """Render one box line and wrap it when needed.
-
-        Args:
-            text: Text to render inside the operation box.
+        """PURPOSE show one box line and wrap it when needed
+        DOMAIN  inspector workflow
         """
         if text == "":
             self.print_func(f"| {' ' * BOX_INNER_WIDTH} |")
@@ -896,23 +767,16 @@ class DriftGateRunner:
             self.print_func(f"| {line.ljust(BOX_INNER_WIDTH)} |")
 
     def _render_progress_footer(self, index: int, total: int) -> None:
-        """Render compact pending counters after a Drift Gate decision prompt.
-
-        Args:
-            index: One-based decision index.
-            total: Total decisions in the current review scope.
+        """PURPOSE show compact pending counters after a Drift Gate decision prompt
+        DOMAIN  inspector workflow
         """
         self.print_func("Progress after this:")
         self.print_func(f"  decisions left:       {max(total - index, 0)}")
         self.print_func(f"  inspector candidates: {len(self.result.inspector_issues)}")
 
     def _render_package_move(self, group: PackageMoveGroup, index: int, total: int) -> None:
-        """Render a grouped package move decision.
-
-        Args:
-            group: Package move group.
-            index: One-based decision index.
-            total: Total decision count.
+        """PURPOSE show a grouped package move decision
+        DOMAIN  inspector workflow
         """
         if not self._render_buffer_active:
             self._render_buffered(lambda: self._render_package_move(group=group, index=index, total=total))
@@ -954,10 +818,8 @@ class DriftGateRunner:
         self.print_func("  fingerprint:        partial or unavailable")
 
     def _accept_package_move(self, group: PackageMoveGroup) -> bool:
-        """Accept one package move and update all covered declarations.
-
-        Args:
-            group: Package move group to apply.
+        """PURPOSE accept one package move and update all covered declarations
+        DOMAIN  inspector workflow
         """
         requests: list[BlueprintChangeRequest] = []
         for item in group.items:
@@ -1019,19 +881,8 @@ class DriftGateRunner:
 
 
     def _ensure_authority_write_ready(self, operation_label: str) -> bool:
-        """Return whether Inspector can write authority immediately.
-
-        Inspector must not silently trigger privileged unlock operations while a
-        Drift Gate decision is being applied. If authority files are locked, the
-        user receives an immediate instruction instead of a hidden sudo/password
-        wait or a progress bar stuck at 0%.
-
-        Args:
-            operation_label: Human readable operation being attempted.
-
-        Returns:
-            True when authority appears writable, False when the operation should
-            stop before applying any change.
+        """PURPOSE check whether Inspector can write authority immediately
+        DOMAIN  inspector workflow
         """
         status = get_authority_protection_status(project_root=self.project_root).status
         if status in {"locked", "degraded"}:
@@ -1055,7 +906,9 @@ class DriftGateRunner:
         return True
 
     def _refresh_input_signature_after_authority_change(self) -> None:
-        """Refresh the drift cache signature after authority files are changed."""
+        """PURPOSE refresh the drift cache signature after authority files are changed
+        DOMAIN  inspector workflow
+        """
         try:
             self.input_signature = self.state_repository.build_input_signature()
         except OSError:
@@ -1067,24 +920,14 @@ class DriftGateRunner:
         title: str,
         total: int,
     ) -> Callable[[int, int, str], None]:
-        """Build a terminal progress reporter for long patch operations.
-
-        Args:
-            title: Human readable operation title.
-            total: Total expected operation count.
-
-        Returns:
-            Callback compatible with the patch engine progress API.
+        """PURPOSE build a terminal progress reporter for long patch operations
+        DOMAIN  inspector workflow
         """
         last_percent = -1
 
         def report(completed: int, callback_total: int, step_label: str) -> None:
-            """Print progress updates without flooding the terminal.
-
-            Args:
-                completed: Completed operation count.
-                callback_total: Total operation count reported by the patch engine.
-                step_label: Current operation label.
+            """PURPOSE print progress updates without flooding the terminal
+            DOMAIN  inspector workflow
             """
             nonlocal last_percent
             effective_total = max(callback_total, total, 1)
@@ -1115,16 +958,8 @@ class DriftGateRunner:
         total: int,
         snapshot: DiffReviewSnapshot | None,
     ) -> bool:
-        """Review one Drift Gate item.
-
-        Args:
-            item: Diff item to review.
-            index: One-based item number.
-            total: Total human decisions.
-            snapshot: Current review snapshot.
-
-        Returns:
-            True to continue, False to stop.
+        """PURPOSE review one Drift Gate item
+        DOMAIN  inspector workflow
         """
         if item.kind == DiffItemKind.UNDECLARED_CODE:
             return self._review_undeclared_code(item=item, index=index, total=total, snapshot=snapshot)
@@ -1141,16 +976,8 @@ class DriftGateRunner:
         total: int,
         snapshot: DiffReviewSnapshot | None,
     ) -> bool:
-        """Review an undeclared code target.
-
-        Args:
-            item: Undeclared-code item.
-            index: One-based item number.
-            total: Total human decisions.
-            snapshot: Current review snapshot.
-
-        Returns:
-            True to continue, False to stop.
+        """PURPOSE review an undeclared code target
+        DOMAIN  inspector workflow
         """
         while True:
             self._render_undeclared_code(item=item, index=index, total=total, snapshot=snapshot)
@@ -1218,14 +1045,8 @@ class DriftGateRunner:
         item: DiffItem,
         snapshot: DiffReviewSnapshot | None,
     ) -> set[str]:
-        """Return commands that can be executed for one undeclared-code item.
-
-        Args:
-            item: Undeclared-code diff item.
-            snapshot: Optional current review snapshot.
-
-        Returns:
-            Normalized commands available for this screen.
+        """PURPOSE get commands that can be executed for one undeclared-code item
+        DOMAIN  inspector workflow
         """
         available_commands = {"s", "q"}
         if self._can_go_back():
@@ -1245,13 +1066,8 @@ class DriftGateRunner:
         total: int,
         snapshot: DiffReviewSnapshot | None = None,
     ) -> None:
-        """Render undeclared-code Drift Gate screen.
-
-        Args:
-            item: Undeclared-code item.
-            index: One-based item number.
-            total: Total human decisions.
-            snapshot: Optional review snapshot used to determine available actions.
+        """PURPOSE show undeclared-code Drift Gate screen
+        DOMAIN  inspector workflow
         """
         if not self._render_buffer_active:
             self._render_buffered(
@@ -1320,16 +1136,8 @@ class DriftGateRunner:
         total: int,
         snapshot: DiffReviewSnapshot | None,
     ) -> bool:
-        """Review a missing declaration or moved-code candidate.
-
-        Args:
-            item: Missing or moved-code item.
-            index: One-based item number.
-            total: Total human decisions.
-            snapshot: Current review snapshot.
-
-        Returns:
-            True to continue, False to stop.
+        """PURPOSE review a missing declaration or moved-code candidate
+        DOMAIN  inspector workflow
         """
         while True:
             self._render_missing_or_moved(item=item, index=index, total=total)
@@ -1399,20 +1207,8 @@ class DriftGateRunner:
                 continue
 
     def _hydrated_blueprint_target(self, target: BlueprintTarget | None) -> BlueprintTarget | None:
-        """Return a blueprint target with current authority origin data when possible.
-
-        Cached pending drift snapshots can be intentionally small, and older
-        snapshots may miss the shard path needed to apply authority patches.
-        This method rehydrates the target from the currently loaded authority
-        document using the stable block ID so actionable options do not
-        disappear just because the cached snapshot was incomplete.
-
-        Args:
-            target: Candidate blueprint target from the current diff item.
-
-        Returns:
-            Hydrated blueprint target when the block still exists, otherwise
-            the original target.
+        """PURPOSE get a blueprint target with authority origin data when possible
+        DOMAIN  inspector workflow
         """
         if target is None:
             return None
@@ -1435,28 +1231,16 @@ class DriftGateRunner:
         )
 
     def _current_authority_target_by_id(self, block_id: str) -> BlueprintTarget | None:
-        """Return the current authority target for one block ID.
-
-        Args:
-            block_id: Authority block identifier.
-
-        Returns:
-            Current blueprint target or None when the block is not available.
+        """PURPOSE get the authority target for one block ID
+        DOMAIN  inspector workflow
         """
         if self._authority_target_cache is None:
             self._authority_target_cache = self._build_authority_target_cache()
         return self._authority_target_cache.get(block_id)
 
     def _build_authority_target_cache(self) -> dict[str, BlueprintTarget]:
-        """Build a block-id lookup from the current authority files.
-
-        The cache must also work when authority currently contains duplicate
-        code declarations. ``AuthorityRepository.load()`` may reject that state,
-        but Drift Gate still needs to inspect and repair the exact blocks that
-        caused it.
-
-        Returns:
-            Mapping from authority block ID to hydrated blueprint target.
+        """PURPOSE build a block-id lookup from the authority files
+        DOMAIN  inspector workflow
         """
         document = self.session.authority_document
         if document is not None:
@@ -1479,13 +1263,8 @@ class DriftGateRunner:
             return {}
 
     def _authority_targets_from_document(self, document: Any) -> dict[str, BlueprintTarget]:
-        """Build authority targets from a loaded authority document.
-
-        Args:
-            document: Loaded authority document.
-
-        Returns:
-            Mapping from block ID to blueprint target.
+        """PURPOSE build authority targets from a loaded authority document
+        DOMAIN  inspector workflow
         """
         targets: dict[str, BlueprintTarget] = {}
         for block in document.get_blocks():
@@ -1507,14 +1286,8 @@ class DriftGateRunner:
         block: dict[str, Any],
         shard_path: Path | None,
     ) -> BlueprintTarget | None:
-        """Return a hydrated authority target for a raw block.
-
-        Args:
-            block: Raw authority block data.
-            shard_path: Project-relative shard path containing the block.
-
-        Returns:
-            Hydrated blueprint target, or None when the block has no ID.
+        """PURPOSE get a hydrated authority target for a raw block
+        DOMAIN  inspector workflow
         """
         block_id = block.get("id")
         if not isinstance(block_id, str) or not block_id.strip():
@@ -1536,17 +1309,8 @@ class DriftGateRunner:
         )
 
     def _available_missing_or_moved_commands(self, item: DiffItem) -> set[str]:
-        """Return commands that can be executed for one missing/moved item.
-
-        The rendered menu and command handler must use this same method so a
-        displayed option is always executable and a hidden option cannot be
-        triggered manually.
-
-        Args:
-            item: Missing or moved-code diff item.
-
-        Returns:
-            Normalized commands available for the current item.
+        """PURPOSE get commands that can be executed for one missing/moved item
+        DOMAIN  inspector workflow
         """
         available_commands = {"1", "s", "q"}
         if self._can_go_back():
@@ -1562,60 +1326,36 @@ class DriftGateRunner:
         return available_commands
 
     def _can_accept_candidate_as_same_responsibility(self, item: DiffItem) -> bool:
-        """Return whether option 2 can update the existing authority target.
-
-        Args:
-            item: Missing or moved-code diff item.
-
-        Returns:
-            True when the candidate and target contain the data required for an
-            UPDATE_CODE_REFERENCE patch.
+        """PURPOSE check whether option 2 can update the authority target
+        DOMAIN  inspector workflow
         """
         target = self._hydrated_blueprint_target(item.blueprint_target)
         candidate = item.code_target or (item.candidates[0] if item.candidates else None)
         return target is not None and target.source_shard_path is not None and candidate is not None
 
     def _can_approve_candidate_as_experimental(self, item: DiffItem) -> bool:
-        """Return whether option 3 can create an inspector issue for a candidate.
-
-        Args:
-            item: Missing or moved-code diff item.
-
-        Returns:
-            True when a candidate code target exists.
+        """PURPOSE check whether option 3 can create an inspector issue for a candidate
+        DOMAIN  inspector workflow
         """
         candidate = item.code_target or (item.candidates[0] if item.candidates else None)
         return candidate is not None
 
     def _can_update_existing_block(self, item: DiffItem) -> bool:
-        """Return whether lifecycle updates can be applied to the old block.
-
-        Args:
-            item: Missing or moved-code diff item.
-
-        Returns:
-            True when the old block and its source shard are known.
+        """PURPOSE check whether lifecycle updates can be applied to the old block
+        DOMAIN  inspector workflow
         """
         target = self._hydrated_blueprint_target(item.blueprint_target)
         return target is not None and target.source_shard_path is not None
 
     def _can_remove_existing_block(self, item: DiffItem) -> bool:
-        """Return whether the old declaration can be deleted from authority.
-
-        Args:
-            item: Missing or moved-code diff item.
-
-        Returns:
-            True when the old block and its source shard are known.
+        """PURPOSE check whether the old declaration can be deleted from authority
+        DOMAIN  inspector workflow
         """
         return self._can_update_existing_block(item)
 
     def _print_unavailable_command(self, command: str, available_commands: set[str]) -> None:
-        """Print a consistent message for unavailable Drift Gate commands.
-
-        Args:
-            command: Normalized command entered by the user.
-            available_commands: Commands allowed on the current screen.
+        """PURPOSE print a consistent message for unavailable Drift Gate commands
+        DOMAIN  inspector workflow
         """
         if command == "":
             self.print_func("Unknown command.")
@@ -1628,12 +1368,8 @@ class DriftGateRunner:
         self.print_func("Unknown command.")
 
     def _render_missing_or_moved(self, item: DiffItem, index: int, total: int) -> None:
-        """Render missing/moved Drift Gate screen.
-
-        Args:
-            item: Missing or moved-code item.
-            index: One-based item number.
-            total: Total human decisions.
+        """PURPOSE show missing/moved Drift Gate screen
+        DOMAIN  inspector workflow
         """
         if not self._render_buffer_active:
             self._render_buffered(lambda: self._render_missing_or_moved(item=item, index=index, total=total))
@@ -1712,15 +1448,8 @@ class DriftGateRunner:
         self.print_func(f"  risk: {item.risk.value}")
 
     def _review_duplicate_active_purpose(self, item: DiffItem, index: int, total: int) -> bool:
-        """Review duplicate active purpose drift.
-
-        Args:
-            item: Duplicate active purpose item.
-            index: One-based item number.
-            total: Total human decisions.
-
-        Returns:
-            True to continue, False to stop.
+        """PURPOSE review duplicate active purpose drift
+        DOMAIN  inspector workflow
         """
         while True:
             self._render_duplicate_active_purpose(item=item, index=index, total=total)
@@ -1776,12 +1505,8 @@ class DriftGateRunner:
             self.print_func("Unknown command.")
 
     def _render_duplicate_active_purpose(self, item: DiffItem, index: int, total: int) -> None:
-        """Render duplicate-active-purpose Drift Gate screen.
-
-        Args:
-            item: Duplicate active purpose item.
-            index: One-based item number.
-            total: Total human decisions.
+        """PURPOSE show duplicate-active-purpose Drift Gate screen
+        DOMAIN  inspector workflow
         """
         if not self._render_buffer_active:
             self._render_buffered(lambda: self._render_duplicate_active_purpose(item=item, index=index, total=total))
@@ -1832,15 +1557,8 @@ class DriftGateRunner:
         self.print_func("  BPFW never allows duplicate active purposes silently.")
 
     def _review_generic(self, item: DiffItem, index: int, total: int) -> bool:
-        """Review a generic structural drift item.
-
-        Args:
-            item: Diff item.
-            index: One-based item number.
-            total: Total human decisions.
-
-        Returns:
-            True to continue, False to stop.
+        """PURPOSE review a generic structural drift item
+        DOMAIN  inspector workflow
         """
         self._render_generic(item=item, index=index, total=total)
         command = normalize_command(self.input_func("Choice: "))
@@ -1855,12 +1573,8 @@ class DriftGateRunner:
         return True
 
     def _render_generic(self, item: DiffItem, index: int, total: int) -> None:
-        """Render a generic structural drift screen.
-
-        Args:
-            item: Diff item.
-            index: One-based item number.
-            total: Total human decisions.
+        """PURPOSE show a generic structural drift screen
+        DOMAIN  inspector workflow
         """
         if not self._render_buffer_active:
             self._render_buffered(lambda: self._render_generic(item=item, index=index, total=total))
@@ -1894,17 +1608,8 @@ class DriftGateRunner:
         issue_type: str,
         context_line: str,
     ) -> InspectIssue | None:
-        """Create an inspector issue from an undeclared code target.
-
-        Args:
-            item: Diff item containing code target.
-            snapshot: Current review snapshot.
-            status: Initial lifecycle/status for the new block.
-            issue_type: Inspector issue type label.
-            context_line: Context line to show in Inspector.
-
-        Returns:
-            Inspector issue or None.
+        """PURPOSE create an inspector issue from an undeclared code target
+        DOMAIN  inspector workflow
         """
         code = item.code_target
         if code is None:
@@ -1927,17 +1632,8 @@ class DriftGateRunner:
         issue_type: str,
         context_line: str,
     ) -> InspectIssue | None:
-        """Create an inspector issue from the first moved-code candidate.
-
-        Args:
-            item: Diff item containing candidates.
-            snapshot: Current review snapshot.
-            status: Initial lifecycle/status for the candidate.
-            issue_type: Inspector issue type label.
-            context_line: Context line to show in Inspector.
-
-        Returns:
-            Inspector issue or None.
+        """PURPOSE create an inspector issue from the first moved-code candidate
+        DOMAIN  inspector workflow
         """
         candidate = item.code_target or (item.candidates[0] if item.candidates else None)
         if candidate is None:
@@ -1965,15 +1661,8 @@ class DriftGateRunner:
         issue_type: str,
         context_line: str,
     ) -> InspectIssue | None:
-        """Create an inspector issue from an existing blueprint target.
-
-        Args:
-            target: Existing authority block target.
-            issue_type: Inspector issue type label.
-            context_line: Context line to show in Inspector.
-
-        Returns:
-            Inspector issue or None.
+        """PURPOSE create an inspector issue from an blueprint target
+        DOMAIN  inspector workflow
         """
         if not target.block_data:
             return None
@@ -1982,14 +1671,8 @@ class DriftGateRunner:
         return issue
 
     def _attach_to_existing(self, item: DiffItem, snapshot: DiffReviewSnapshot | None) -> bool:
-        """Attach undeclared code as covered code under an existing responsibility.
-
-        Args:
-            item: Undeclared-code item.
-            snapshot: Current review snapshot.
-
-        Returns:
-            True when the attach decision was applied and recorded.
+        """PURPOSE attach undeclared code as covered code under an responsibility
+        DOMAIN  inspector workflow
         """
         code = item.code_target
         if code is None:
@@ -2045,13 +1728,8 @@ class DriftGateRunner:
         return False
 
     def _ignore_undeclared_code(self, item: DiffItem) -> bool:
-        """Add an ignored-code rule for an undeclared code target.
-
-        Args:
-            item: Undeclared-code item.
-
-        Returns:
-            True when the ignore decision was applied and recorded.
+        """PURPOSE add an ignored-code rule for an undeclared code target
+        DOMAIN  inspector workflow
         """
         code = item.code_target
         if code is None:
@@ -2110,13 +1788,8 @@ class DriftGateRunner:
         return False
 
     def _reject_undeclared_code(self, item: DiffItem) -> bool:
-        """Record a source deletion candidate without deleting source code.
-
-        Args:
-            item: Undeclared-code item.
-
-        Returns:
-            True when the reject decision was recorded.
+        """PURPOSE record a source deletion candidate without deleting source code
+        DOMAIN  inspector workflow
         """
         code = item.code_target
         if code is None:
@@ -2145,13 +1818,8 @@ class DriftGateRunner:
         return True
 
     def _accept_candidate_as_same_responsibility(self, item: DiffItem) -> bool:
-        """Update or merge an existing block to a candidate code target.
-
-        Args:
-            item: Missing or moved-code item.
-
-        Returns:
-            True when the authority update was applied and the drift item was resolved.
+        """PURPOSE update or merge an block to a candidate code target
+        DOMAIN  inspector workflow
         """
         target = self._hydrated_blueprint_target(item.blueprint_target)
         candidate = item.code_target or (item.candidates[0] if item.candidates else None)
@@ -2190,14 +1858,8 @@ class DriftGateRunner:
         candidate: CodeTarget,
         exclude_block_id: str | None = None,
     ) -> BlueprintTarget | None:
-        """Return an authority target that already declares a candidate.
-
-        Args:
-            candidate: Code target selected by Drift Gate.
-            exclude_block_id: Optional block ID to ignore.
-
-        Returns:
-            Existing authority target, or None when the code is not declared.
+        """PURPOSE get an authority target that already declares a candidate
+        DOMAIN  inspector workflow
         """
         if self._authority_target_cache is None:
             self._authority_target_cache = self._build_authority_target_cache()
@@ -2219,21 +1881,8 @@ class DriftGateRunner:
         existing_target: BlueprintTarget,
         candidate: CodeTarget,
     ) -> bool:
-        """Resolve a moved-code decision when the candidate is already declared.
-
-        When the candidate already has an authority block, updating the old
-        block to the same code target would create a duplicate declaration. In
-        that case the human decision means the old declaration is stale and must
-        be removed while the existing candidate declaration is kept.
-
-        Args:
-            item: Drift item being decided.
-            old_target: Stale authority declaration.
-            existing_target: Current declaration for the candidate code.
-            candidate: Candidate code target selected by the user.
-
-        Returns:
-            True when the stale declaration was removed.
+        """PURPOSE find a moved-code decision when the candidate is already declared
+        DOMAIN  inspector workflow
         """
         if old_target.source_shard_path is None:
             self.print_func("Cannot merge declarations because the stale block shard is unavailable.")
@@ -2254,21 +1903,8 @@ class DriftGateRunner:
         return True
 
     def _apply_fast_code_reference_update(self, target: BlueprintTarget, candidate: CodeTarget) -> bool:
-        """Apply a single code-reference update without reparsing the full shard repeatedly.
-
-        Drift Gate accepts many one-by-one moved-code decisions. Sending every
-        small code-reference update through the full Blueprint Engine is safe,
-        but it is unnecessarily expensive because it reloads, dumps, and
-        validates the entire shard for each decision. This fast path performs a
-        narrow text patch for the already-confirmed block ID while preserving the
-        same authority-write gate.
-
-        Args:
-            target: Existing authority block to update.
-            candidate: Confirmed code target selected by the user.
-
-        Returns:
-            True when the authority shard was updated.
+        """PURPOSE apply a single code-reference update without reparsing the full shard repeatedly
+        DOMAIN  inspector workflow
         """
         if target.source_shard_path is None:
             self.print_func("Cannot update this declaration because source shard is unavailable.")
@@ -2335,13 +1971,8 @@ class DriftGateRunner:
         return True
 
     def _apply_fast_block_delete(self, target: BlueprintTarget) -> bool:
-        """Delete one stale authority block using a narrow text patch.
-
-        Args:
-            target: Authority block to delete.
-
-        Returns:
-            True when the block was removed from its shard.
+        """PURPOSE delete one stale authority block using a narrow text patch
+        DOMAIN  inspector workflow
         """
         if target.source_shard_path is None:
             self.print_func("Cannot remove declaration because source shard is unavailable.")
@@ -2399,14 +2030,8 @@ class DriftGateRunner:
         return True
 
     def _remove_block_from_shard_text(self, original_text: str, block_id: str) -> str | None:
-        """Return shard YAML text with one block removed.
-
-        Args:
-            original_text: Current shard YAML content.
-            block_id: Authority block ID to remove.
-
-        Returns:
-            Updated YAML text, or None when the block cannot be located.
+        """PURPOSE get shard YAML text with one block removed
+        DOMAIN  inspector workflow
         """
         lines = original_text.splitlines(keepends=True)
         block_start = self._find_yaml_block_start(lines=lines, block_id=block_id)
@@ -2425,18 +2050,8 @@ class DriftGateRunner:
         new_kind: str,
         new_name: str,
     ) -> str | None:
-        """Return shard YAML text with one block code reference updated.
-
-        Args:
-            original_text: Current shard YAML content.
-            block_id: Authority block ID to update.
-            new_path: New code path.
-            new_symbol: New code symbol.
-            new_kind: New code kind.
-            new_name: New block display name.
-
-        Returns:
-            Updated YAML text, or None when the block cannot be located.
+        """PURPOSE get shard YAML text with one block code reference updated
+        DOMAIN  inspector workflow
         """
         lines = original_text.splitlines(keepends=True)
         block_start = self._find_yaml_block_start(lines=lines, block_id=block_id)
@@ -2478,14 +2093,8 @@ class DriftGateRunner:
         return "".join(lines)
 
     def _find_yaml_block_start(self, lines: list[str], block_id: str) -> int | None:
-        """Return the line index where a block ID starts.
-
-        Args:
-            lines: YAML lines.
-            block_id: Authority block ID.
-
-        Returns:
-            Zero-based line index, or None when not found.
+        """PURPOSE get the line index where a block ID starts
+        DOMAIN  inspector workflow
         """
         escaped_block_id = re.escape(block_id)
         pattern = re.compile(rf"^\s*-\s+id:\s*(['\"]?){escaped_block_id}\1\s*$")
@@ -2495,14 +2104,8 @@ class DriftGateRunner:
         return None
 
     def _find_yaml_block_end(self, lines: list[str], block_start: int) -> int:
-        """Return the exclusive end index for a YAML block.
-
-        Args:
-            lines: YAML lines.
-            block_start: Start line of the block.
-
-        Returns:
-            Exclusive block end index.
+        """PURPOSE get the exclusive end index for a YAML block
+        DOMAIN  inspector workflow
         """
         for index in range(block_start + 1, len(lines)):
             if re.match(r"^\s*-\s+id:\s*", lines[index]):
@@ -2516,16 +2119,8 @@ class DriftGateRunner:
         block_end: int,
         section_name: str,
     ) -> int | None:
-        """Return the start line for a top-level mapping section in a block.
-
-        Args:
-            lines: YAML lines.
-            block_start: Start line of the block.
-            block_end: Exclusive end line of the block.
-            section_name: Section name to locate.
-
-        Returns:
-            Zero-based line index, or None when absent.
+        """PURPOSE get the start line for a main mapping section in a block
+        DOMAIN  inspector workflow
         """
         pattern = re.compile(rf"^  {re.escape(section_name)}:\s*$")
         for index in range(block_start + 1, block_end):
@@ -2541,14 +2136,8 @@ class DriftGateRunner:
         field_name: str,
         field_value: str,
     ) -> None:
-        """Replace or insert one top-level scalar field in a YAML block.
-
-        Args:
-            lines: Mutable YAML lines.
-            block_start: Start line of the block.
-            block_end: Exclusive end line of the block.
-            field_name: Field name to replace.
-            field_value: Field scalar value.
+        """PURPOSE replace or insert one main scalar field in a YAML block
+        DOMAIN  inspector workflow
         """
         pattern = re.compile(rf"^  {re.escape(field_name)}:")
         replacement = f"  {field_name}: {self._format_yaml_scalar(field_value)}\n"
@@ -2566,14 +2155,8 @@ class DriftGateRunner:
         field_name: str,
         field_value: str,
     ) -> None:
-        """Replace or insert one scalar field under a YAML section.
-
-        Args:
-            lines: Mutable YAML lines.
-            section_start: Line where the parent section starts.
-            block_end: Exclusive end line of the containing block.
-            field_name: Nested field name.
-            field_value: Field scalar value.
+        """PURPOSE replace or insert one scalar field under a YAML section
+        DOMAIN  inspector workflow
         """
         pattern = re.compile(rf"^    {re.escape(field_name)}:")
         replacement = f"    {field_name}: {self._format_yaml_scalar(field_value)}\n"
@@ -2589,13 +2172,8 @@ class DriftGateRunner:
         lines.insert(insert_at, replacement)
 
     def _format_yaml_scalar(self, value: str) -> str:
-        """Format a simple Python string as a safe YAML scalar.
-
-        Args:
-            value: String value to serialize.
-
-        Returns:
-            YAML scalar suitable for one-line values.
+        """PURPOSE format a simple Python string as a safe YAML scalar
+        DOMAIN  inspector workflow
         """
         text = str(value)
         lower_text = text.lower()
@@ -2610,11 +2188,8 @@ class DriftGateRunner:
         return "'" + text.replace("'", "''") + "'"
 
     def _update_hydrated_target_cache(self, target: BlueprintTarget, candidate: CodeTarget) -> None:
-        """Update the current authority target cache after a fast patch.
-
-        Args:
-            target: Updated authority target.
-            candidate: New code target.
+        """PURPOSE update the authority target cache after a fast patch
+        DOMAIN  inspector workflow
         """
         if self._authority_target_cache is None:
             return
@@ -2642,24 +2217,16 @@ class DriftGateRunner:
         )
 
     def _remove_hydrated_target_from_cache(self, block_id: str) -> None:
-        """Remove one block from the current hydrated target cache.
-
-        Args:
-            block_id: Authority block ID to remove.
+        """PURPOSE remove one block from the hydrated target cache
+        DOMAIN  inspector workflow
         """
         if self._authority_target_cache is None:
             return
         self._authority_target_cache.pop(block_id, None)
 
     def _mark_existing_block(self, item: DiffItem, status: str) -> bool:
-        """Mark an existing target block with a lifecycle/status value.
-
-        Args:
-            item: Diff item containing a blueprint target.
-            status: New status value.
-
-        Returns:
-            True when the status update was applied and the drift item was resolved.
+        """PURPOSE mark an target block with a lifecycle/status value
+        DOMAIN  inspector workflow
         """
         target = self._hydrated_blueprint_target(item.blueprint_target)
         if target is None:
@@ -2675,11 +2242,8 @@ class DriftGateRunner:
         return False
 
     def _mark_target_status(self, target: BlueprintTarget, status: str) -> bool:
-        """Apply a status update to an existing target block.
-
-        Args:
-            target: Existing authority target.
-            status: New status value.
+        """PURPOSE apply a status update to an target block
+        DOMAIN  inspector workflow
         """
         if target.source_shard_path is None:
             self.print_func("Cannot update status because source shard is unavailable.")
@@ -2701,13 +2265,8 @@ class DriftGateRunner:
         return False
 
     def _remove_existing_block(self, item: DiffItem) -> bool:
-        """Remove an existing authority declaration after human confirmation.
-
-        Args:
-            item: Diff item containing a blueprint target.
-
-        Returns:
-            True when the declaration was removed and the drift item was resolved.
+        """PURPOSE remove an authority declaration after human confirmation
+        DOMAIN  inspector workflow
         """
         target = self._hydrated_blueprint_target(item.blueprint_target)
         if target is None or target.source_shard_path is None:
@@ -2745,10 +2304,8 @@ class DriftGateRunner:
         return False
 
     def _mark_duplicate_intentional(self, item: DiffItem) -> None:
-        """Mark a duplicate purpose as intentional in memory for current pass.
-
-        Args:
-            item: Duplicate active purpose item.
+        """PURPOSE mark a duplicate purpose as intentional in memory for pass
+        DOMAIN  inspector workflow
         """
         purpose = item.finding.evidence.get("purpose") if item.finding is not None else "duplicate"
         group_id = to_snake_case(str(purpose or "intentional_duplicate"))
@@ -2787,13 +2344,8 @@ class DriftGateRunner:
         self.print_func("Inspector: Not required unless either block has incomplete metadata.")
 
     def _apply_authority_change(self, request: BlueprintChangeRequest) -> bool:
-        """Apply an authority change through Blueprint Engine.
-
-        Args:
-            request: Human-confirmed authority change request.
-
-        Returns:
-            True when the change was applied.
+        """PURPOSE apply an authority change through Blueprint Engine
+        DOMAIN  inspector workflow
         """
         if not self._ensure_authority_write_ready("authority change"):
             return False
@@ -2812,13 +2364,8 @@ class DriftGateRunner:
         return False
 
     def _stop(self, total_unresolved: int) -> bool:
-        """Stop Drift Gate without opening metadata inspection.
-
-        Args:
-            total_unresolved: Number of unresolved decisions left.
-
-        Returns:
-            Always False.
+        """PURPOSE stop Drift Gate without opening metadata inspection
+        DOMAIN  inspector workflow
         """
         self.result.stopped = True
         self._save_current_progress()
@@ -2839,18 +2386,8 @@ def run_drift_gate(
     drift_state: DriftState | None = None,
     input_signature: str | None = None,
 ) -> DriftGateResult:
-    """Run Drift Gate for an inspector session.
-
-    Args:
-        session: Loaded inspector session.
-        input_func: Function used to read user input.
-        print_func: Function used to print terminal output.
-        cached_human_items: Optional cached pending human decisions.
-        drift_state: Optional preloaded drift state.
-        input_signature: Optional precomputed input signature.
-
-    Returns:
-        Drift Gate result.
+    """PURPOSE run Drift Gate for an inspector session
+    DOMAIN  inspector workflow
     """
     runner = DriftGateRunner(
         session=session,
@@ -2868,11 +2405,8 @@ def run_drift_gate(
 
 
 def merge_drift_gate_into_session(session: InspectLoadResult, result: DriftGateResult) -> None:
-    """Merge Drift Gate output into a loaded inspector session.
-
-    Args:
-        session: Inspector session to update.
-        result: Drift Gate result.
+    """PURPOSE merge Drift Gate output into a loaded inspector session
+    DOMAIN  inspector workflow
     """
     base_context = result.build_context_lines()
     if result.stopped:
@@ -2902,13 +2436,8 @@ def merge_drift_gate_into_session(session: InspectLoadResult, result: DriftGateR
 
 
 def _inspect_issue_code_key(issue: InspectIssue) -> tuple[str, str, str] | None:
-    """Return the code target key for an inspector issue.
-
-    Args:
-        issue: Inspector issue.
-
-    Returns:
-        Path, symbol, kind tuple, or None.
+    """PURPOSE get the code target key for an inspector issue
+    DOMAIN  inspector workflow
     """
     code_data = issue.block.get("code")
     if not isinstance(code_data, dict):
@@ -2922,10 +2451,8 @@ def _inspect_issue_code_key(issue: InspectIssue) -> tuple[str, str, str] | None:
 
 
 def rebuild_metadata_issues_after_authority_changes(session: InspectLoadResult) -> None:
-    """Remove stale new-detected issues and keep metadata-only issues.
-
-    Args:
-        session: Inspector session to normalize.
+    """PURPOSE remove stale new-detected issues and keep metadata issues
+    DOMAIN  inspector workflow
     """
     session.incomplete = get_incomplete_blocks(session.blueprint_data)
     session.issues = sort_inspect_issues_hierarchically(
@@ -2934,13 +2461,8 @@ def rebuild_metadata_issues_after_authority_changes(session: InspectLoadResult) 
 
 
 def _has_meaningful_context(result: DriftGateResult) -> bool:
-    """Return whether Drift Gate result should be shown in Inspector context.
-
-    Args:
-        result: Drift Gate result.
-
-    Returns:
-        True when there is a prior action worth explaining.
+    """PURPOSE check whether Drift Gate result should be shown in Inspector context
+    DOMAIN  inspector workflow
     """
     return any(
         value > 0
@@ -2956,13 +2478,8 @@ def _has_meaningful_context(result: DriftGateResult) -> bool:
 
 
 def _unit_by_key(snapshot: DiffReviewSnapshot) -> dict[tuple[str, str, str], DiscoveredCodeUnit]:
-    """Return discovered code units keyed by path, symbol, and kind.
-
-    Args:
-        snapshot: Diff review snapshot.
-
-    Returns:
-        Mapping from code target key to discovered unit.
+    """PURPOSE get discovered code units keyed by path, symbol, and kind
+    DOMAIN  inspector workflow
     """
     if snapshot.scan_result is None:
         return {}
@@ -2973,13 +2490,8 @@ def _unit_by_key(snapshot: DiffReviewSnapshot) -> dict[tuple[str, str, str], Dis
 
 
 def _existing_blocks(snapshot: DiffReviewSnapshot) -> list[BlueprintTarget]:
-    """Return existing authority blocks from a review snapshot.
-
-    Args:
-        snapshot: Diff review snapshot.
-
-    Returns:
-        Blueprint targets for existing blocks.
+    """PURPOSE get authority blocks from a review snapshot
+    DOMAIN  inspector workflow
     """
     blocks = snapshot.blueprint_data.get("blocks", [])
     if not isinstance(blocks, list):
@@ -3011,13 +2523,8 @@ def _existing_blocks(snapshot: DiffReviewSnapshot) -> list[BlueprintTarget]:
 
 
 def _block_from_code_target(code: CodeTarget) -> dict[str, Any]:
-    """Build a minimal block when a discovered unit is unavailable.
-
-    Args:
-        code: Code target.
-
-    Returns:
-        Minimal authority block.
+    """PURPOSE build a minimal block when a discovered unit is unavailable
+    DOMAIN  inspector workflow
     """
     return {
         "id": to_snake_case(code.symbol),
@@ -3056,13 +2563,8 @@ def _block_from_code_target(code: CodeTarget) -> dict[str, Any]:
 
 
 def _existing_blocks_from_session(session: InspectLoadResult) -> list[BlueprintTarget]:
-    """Return existing authority blocks from an inspector session.
-
-    Args:
-        session: Inspector session.
-
-    Returns:
-        Blueprint targets for existing blocks.
+    """PURPOSE get authority blocks from an inspector session
+    DOMAIN  inspector workflow
     """
     blocks = session.blueprint_data.get("blocks", [])
     if not isinstance(blocks, list):
@@ -3094,13 +2596,8 @@ def _existing_blocks_from_session(session: InspectLoadResult) -> list[BlueprintT
 
 
 def _target_location(target: BlueprintTarget | None) -> str:
-    """Return a compact authority location for Drift Gate rendering.
-
-    Args:
-        target: Optional authority target.
-
-    Returns:
-        Human-readable code location.
+    """PURPOSE get a compact authority location for Drift Gate rendering
+    DOMAIN  inspector workflow
     """
     if target is None:
         return "unavailable"
@@ -3110,13 +2607,8 @@ def _target_location(target: BlueprintTarget | None) -> str:
 
 
 def _target_block_id(target: BlueprintTarget | None) -> str:
-    """Return the authority block identifier for Drift Gate rendering.
-
-    Args:
-        target: Optional authority target.
-
-    Returns:
-        Authority block identifier or a placeholder.
+    """PURPOSE get the authority block identifier for Drift Gate rendering
+    DOMAIN  inspector workflow
     """
     if target is None:
         return "unavailable"
@@ -3124,13 +2616,8 @@ def _target_block_id(target: BlueprintTarget | None) -> str:
 
 
 def _wrap_operation_box_text(text: str) -> list[str]:
-    """Wrap one operation-box text line without changing semantic content.
-
-    Args:
-        text: Text to wrap.
-
-    Returns:
-        Wrapped lines sized for the operation box.
+    """PURPOSE wrap one operation-box text line without changing meaning content
+    DOMAIN  inspector workflow
     """
     if len(text) <= BOX_INNER_WIDTH:
         return [text]
@@ -3153,17 +2640,8 @@ def _remaining_items_after_group(
     package_groups: list[PackageMoveGroup],
     current_decision_index: int,
 ) -> list[DiffItem]:
-    """Return remaining items after a package move decision.
-
-    Args:
-        original_items: Original human item list.
-        group: Current group.
-        ungrouped_items: Ungrouped items.
-        package_groups: All package groups.
-        current_decision_index: Current one-based package group index.
-
-    Returns:
-        Remaining pending diff items.
+    """PURPOSE get remaining items after a package move decision
+    DOMAIN  inspector workflow
     """
     if current_decision_index <= 0:
         return list(original_items)

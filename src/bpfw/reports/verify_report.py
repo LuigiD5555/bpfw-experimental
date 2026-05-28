@@ -1,4 +1,6 @@
-"""Verify report rendering for BPFW MVP Catalog Mode."""
+"""PURPOSE verify report rendering for BPFW catalog mode
+DOMAIN  terminal reports
+"""
 
 from collections import defaultdict
 from typing import DefaultDict, Dict, List, Sequence
@@ -61,7 +63,9 @@ VERIFY_FINDING_FILTERS: Dict[str, set[str]] = {
 
 
 def _group_block_findings(findings: List[Finding]) -> DefaultDict[str, List[Finding]]:
-    """Group findings by code while preserving input order inside each group."""
+    """PURPOSE group findings by code while preserving input order inside each group
+    DOMAIN  terminal reports
+    """
     grouped: DefaultDict[str, List[Finding]] = defaultdict(list)
     for finding in findings:
         grouped[finding.code].append(finding)
@@ -69,14 +73,18 @@ def _group_block_findings(findings: List[Finding]) -> DefaultDict[str, List[Find
 
 
 def _compact_location(finding: Finding) -> str:
-    """Return a compact and stable location string."""
+    """PURPOSE get a compact and stable location string
+    DOMAIN  terminal reports
+    """
     path_value = finding.path or "n/a"
     symbol_value = finding.symbol or "n/a"
     return f"{path_value}::{symbol_value}"
 
 
 def _render_block_group(code: str, grouped_findings: List[Finding], max_items: int = 8) -> str:
-    """Render one grouped finding code with compact locations."""
+    """PURPOSE show one grouped finding code with compact locations
+    DOMAIN  terminal reports
+    """
     lines: List[str] = []
     lines.append(f"[{code}] count={len(grouped_findings)}")
 
@@ -112,7 +120,9 @@ def _filter_block_findings(
     block_findings: List[Finding],
     finding_codes: Sequence[str] | None,
 ) -> List[Finding]:
-    """Filter findings by a list of explicit finding codes."""
+    """PURPOSE filter findings by a list of finding codes
+    DOMAIN  terminal reports
+    """
     if not finding_codes:
         return block_findings
     allowed_codes = set(finding_codes)
@@ -124,17 +134,8 @@ def render_verify_report(
     finding_codes: Sequence[str] | None = None,
     max_items_per_group: int = 8,
 ) -> str:
-    """Render a VerificationReport into a human-readable string.
-
-    Parameters
-    ----------
-    report:
-        The verification report to render.
-
-    Returns
-    -------
-    str
-        Formatted multi-line report ready for terminal output.
+    """PURPOSE show a VerificationReport into a human-readable string
+    DOMAIN  terminal reports
     """
     sections: List[str] = []
 

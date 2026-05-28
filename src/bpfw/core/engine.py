@@ -1,4 +1,6 @@
-"""Deterministic engine orchestrating BPFW pipelines."""
+"""PURPOSE stable engine orchestrating BPFW pipelines
+DOMAIN  framework core
+"""
 
 from pathlib import Path
 
@@ -14,7 +16,9 @@ _profiler = RuntimeProfiler()
 
 
 def _is_incomplete_only_verify_block(verify_result: StepResult) -> bool:
-    """Return whether verify is blocked only by incomplete metadata in draft authority."""
+    """PURPOSE check whether verify is blocked only by incomplete metadata in draft authority
+    DOMAIN  framework core
+    """
 
     if verify_result.status not in {ResultStatus.BLOCK, ResultStatus.CRITICAL}:
         return False
@@ -31,7 +35,9 @@ def _is_incomplete_only_verify_block(verify_result: StepResult) -> bool:
 
 
 def _is_root_blocks_only_verify_block(verify_result: StepResult) -> bool:
-    """Return whether verify is blocked only by root-level blocks in blueprint.yaml."""
+    """PURPOSE check whether verify is blocked only by root-level blocks in blueprint.yaml
+    DOMAIN  framework core
+    """
 
     if verify_result.status not in {ResultStatus.BLOCK, ResultStatus.CRITICAL}:
         return False
@@ -40,13 +46,17 @@ def _is_root_blocks_only_verify_block(verify_result: StepResult) -> bool:
 
 
 class BlueprintEngine:
-    """Minimal engine implementation for MVP catalog mode."""
+    """PURPOSE minimal engine implementation for catalog mode
+    DOMAIN  framework core
+    """
 
     def __init__(self, integration_registry: IntegrationRegistry | None = None) -> None:
         self._registry = build_default_registry(integration_registry=integration_registry)
 
     def run(self, command: EngineCommand) -> EngineResult:
-        """Execute command against registry pipeline."""
+        """PURPOSE execute command against registry pipeline
+        DOMAIN  framework core
+        """
 
         pipeline = self._registry.get(command.command_name)
         if pipeline is None:
@@ -111,6 +121,8 @@ class BlueprintEngine:
 
 
 def build_command(command_name: str, project_root: Path, arguments: dict[str, str]) -> EngineCommand:
-    """Normalize runtime arguments into EngineCommand."""
+    """PURPOSE clean runtime arguments into EngineCommand
+    DOMAIN  framework core
+    """
 
     return EngineCommand(command_name=command_name, project_root=project_root, arguments=arguments)

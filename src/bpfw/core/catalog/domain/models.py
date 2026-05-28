@@ -1,4 +1,6 @@
-"""Pydantic domain models for blueprint authority."""
+"""PURPOSE pydantic domain models for blueprint authority
+DOMAIN  blueprint data
+"""
 
 from __future__ import annotations
 
@@ -10,7 +12,9 @@ ALLOWED_LIFECYCLES = {"active", "experimental", "legacy", "deprecated"}
 
 
 class ResponsibilityLocation(BaseModel):
-    """Represent source location metadata for one responsibility."""
+    """PURPOSE store information about source location metadata for one responsibility
+    DOMAIN  blueprint data
+    """
 
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
@@ -20,7 +24,9 @@ class ResponsibilityLocation(BaseModel):
 
 
 class DetectedMetadata(BaseModel):
-    """Represent detected metadata from scanner-derived evidence."""
+    """PURPOSE store information about detected metadata from scanner-derived evidence
+    DOMAIN  blueprint data
+    """
 
     model_config = ConfigDict(extra="allow")
 
@@ -30,7 +36,9 @@ class DetectedMetadata(BaseModel):
 
 
 class Connection(BaseModel):
-    """Represent a responsibility relation entry."""
+    """PURPOSE store information about a responsibility relation entry
+    DOMAIN  blueprint data
+    """
 
     model_config = ConfigDict(extra="allow")
 
@@ -39,7 +47,9 @@ class Connection(BaseModel):
 
 
 class Policy(BaseModel):
-    """Represent policy section used by planner/verify."""
+    """PURPOSE store information about policy section used by planner/verify
+    DOMAIN  blueprint data
+    """
 
     model_config = ConfigDict(extra="allow")
 
@@ -50,7 +60,9 @@ class Policy(BaseModel):
 
 
 class Responsibility(BaseModel):
-    """Represent one blueprint responsibility block."""
+    """PURPOSE store information about one blueprint responsibility block
+    DOMAIN  blueprint data
+    """
 
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
@@ -94,7 +106,9 @@ class Responsibility(BaseModel):
 
 
 class BlueprintDocument(BaseModel):
-    """Represent complete authority document consumed by integrations."""
+    """PURPOSE store information about complete authority document consumed by tools
+    DOMAIN  blueprint data
+    """
 
     model_config = ConfigDict(extra="allow")
 

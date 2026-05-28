@@ -1,7 +1,5 @@
-"""Mechanical authority patch plan for Blueprint Engine.
-
-A plan stores explicit operations that will be applied by the low-level
-``AuthorityPatchEngine``. The plan itself is read-only and never modifies files.
+"""PURPOSE file-change authority patch plan for Blueprint Engine
+DOMAIN  blueprint file changes
 """
 
 from pathlib import Path
@@ -96,54 +94,44 @@ _APPLICATION_ORDER: dict[PatchOperationKind, int] = {
 
 
 class AuthorityPatchPlan:
-    """Represent a list of explicit authority patch operations.
-
-    The plan stores operations, reports affected files, and validates
-    preconditions. It does not decide whether operations are semantically right.
+    """PURPOSE store information about a list of authority patch operations
+    DOMAIN  blueprint file changes
     """
 
     def __init__(self) -> None:
-        """Initialize an empty patch plan."""
+        """PURPOSE set up an empty patch plan
+        DOMAIN  blueprint file changes
+        """
         self._operations: list[PatchOperation] = []
 
     def add_operation(self, operation: PatchOperation) -> None:
-        """Append one operation to the plan.
-
-        Args:
-            operation: Supported mechanical operation to append.
+        """PURPOSE append one operation to the plan
+        DOMAIN  blueprint file changes
         """
         self._operations.append(operation)
 
     @property
     def operations(self) -> list[PatchOperation]:
-        """Return operations in insertion order.
-
-        Returns:
-            Copy of the operation list.
+        """PURPOSE get operations in insertion order
+        DOMAIN  blueprint file changes
         """
         return list(self._operations)
 
     def is_empty(self) -> bool:
-        """Return whether the plan contains no operations.
-
-        Returns:
-            True when no operations are present.
+        """PURPOSE check whether the plan contains no operations
+        DOMAIN  blueprint file changes
         """
         return len(self._operations) == 0
 
     def operation_count(self) -> int:
-        """Return the number of operations in the plan.
-
-        Returns:
-            Operation count.
+        """PURPOSE get the number of operations in the plan
+        DOMAIN  blueprint file changes
         """
         return len(self._operations)
 
     def affected_files(self) -> set[Path]:
-        """Return all project-relative paths touched by the plan.
-
-        Returns:
-            Set of affected paths.
+        """PURPOSE get all project-relative paths touched by the plan
+        DOMAIN  blueprint file changes
         """
         collected: set[Path] = set()
         for operation in self._operations:
@@ -153,10 +141,8 @@ class AuthorityPatchPlan:
         return collected
 
     def affected_authority_files(self) -> set[Path]:
-        """Return YAML authority files affected by this plan.
-
-        Returns:
-            Set of YAML files under ``bpfw/``.
+        """PURPOSE get YAML authority files affected by this plan
+        DOMAIN  blueprint file changes
         """
         return {
             path
@@ -165,10 +151,8 @@ class AuthorityPatchPlan:
         }
 
     def affected_shard_files(self) -> set[Path]:
-        """Return shard files affected by this plan.
-
-        Returns:
-            Set of paths under ``bpfw/blocks/``.
+        """PURPOSE get shard files affected by this plan
+        DOMAIN  blueprint file changes
         """
         return {
             path
@@ -177,11 +161,8 @@ class AuthorityPatchPlan:
         }
 
     def requires_manifest_update(self) -> bool:
-        """Return whether applying the plan requires root include updates.
-
-        Returns:
-            True when shard creation, movement, deletion, or block placement
-            operations may require the root include list to change.
+        """PURPOSE check whether applying the plan requires root include updates
+        DOMAIN  blueprint file changes
         """
         for operation in self._operations:
             if operation.kind in _SHARD_FILE_OPERATIONS:
@@ -191,10 +172,8 @@ class AuthorityPatchPlan:
         return False
 
     def writes_blueprint_index(self) -> bool:
-        """Return whether the plan writes the root blueprint file directly.
-
-        Returns:
-            True when an index-level operation is present.
+        """PURPOSE check whether the plan writes the root blueprint file directly
+        DOMAIN  blueprint file changes
         """
         for operation in self._operations:
             if operation.kind in _BLUEPRINT_INDEX_OPERATIONS:
@@ -202,10 +181,8 @@ class AuthorityPatchPlan:
         return False
 
     def sorted_operations(self) -> list[PatchOperation]:
-        """Return operations in deterministic application order.
-
-        Returns:
-            Sorted operation list.
+        """PURPOSE get operations in stable application order
+        DOMAIN  blueprint file changes
         """
         return sorted(
             self._operations,
@@ -213,13 +190,8 @@ class AuthorityPatchPlan:
         )
 
     def validate(self, project_root: Path) -> list[str]:
-        """Validate all operations and collect readable errors.
-
-        Args:
-            project_root: Project root directory.
-
-        Returns:
-            Empty list when valid, otherwise validation messages.
+        """PURPOSE check all operations and collect readable errors
+        DOMAIN  blueprint file changes
         """
         errors: list[str] = []
         code_reference_updates: list[UpdateBlockCodeReferenceOperation] = []
@@ -239,14 +211,8 @@ def _validate_code_reference_updates(
     project_root: Path,
     operations: list[UpdateBlockCodeReferenceOperation],
 ) -> list[str]:
-    """Validate code-reference updates without loading the same shard repeatedly.
-
-    Args:
-        project_root: Project root directory.
-        operations: Code-reference update operations to validate.
-
-    Returns:
-        Readable validation errors.
+    """PURPOSE check code-reference updates without loading the same shard repeatedly
+    DOMAIN  blueprint file changes
     """
     if not operations:
         return []
@@ -294,13 +260,9 @@ def _validate_code_reference_updates(
 def _validate_code_reference_update_payload(
     operation: UpdateBlockCodeReferenceOperation,
 ) -> list[str]:
-    """Validate one code-reference update payload without reading a shard.
+    """PURPOSE check one code-reference update data without reading a shard
+        DOMAIN  blueprint file changes
 
-    Args:
-        operation: Code-reference update operation to validate.
-
-    Returns:
-        Readable validation errors.
     """
     errors: list[str] = []
     try:

@@ -1,8 +1,5 @@
-"""Blueprint Engine for approved mechanical mutations under ``bpfw/``.
-
-The engine applies explicit authority changes such as creating blocks, moving blocks, updating code references, and
-editing shard files. It never detects drift and never silently synchronizes the
-blueprint from code.
+"""PURPOSE blueprint Engine for approved approved file changes under bpfw/
+DOMAIN  approved blueprint changes
 """
 
 from bpfw.core.blueprint_engine.engine import BlueprintEngine

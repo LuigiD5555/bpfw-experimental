@@ -1,4 +1,6 @@
-"""Reusable terminal layout helpers for interactive integrations."""
+"""PURPOSE reusable terminal layout helpers for interactive tools
+DOMAIN  terminal UI
+"""
 
 from dataclasses import dataclass
 from typing import Sequence, TypeVar
@@ -14,7 +16,9 @@ from bpfw.integrations.shared.visual_theme import (
 
 @dataclass(frozen=True)
 class VisualPanel:
-    """A boxed visual panel with optional command styling."""
+    """PURPOSE a boxed visual panel with command styling
+    DOMAIN  terminal UI
+    """
 
     title: str
     lines: Sequence[str]
@@ -29,7 +33,9 @@ def resolve_uniform_width(
     panels: Sequence[tuple[str, Sequence[str]] | VisualPanel],
     theme: ThemeConfig = DEFAULT_THEME,
 ) -> int:
-    """Compute one shared width for several visual panels."""
+    """PURPOSE calculate one shared width for several visual panels
+    DOMAIN  terminal UI
+    """
 
     panel_widths = [
         compute_panel_width(
@@ -56,7 +62,9 @@ def render_visual_screen(
     theme: ThemeConfig = DEFAULT_THEME,
     spacing: int = 1,
 ) -> list[str]:
-    """Render stacked panels using one uniform adaptive width."""
+    """PURPOSE show stacked panels using one uniform adaptive width
+    DOMAIN  terminal UI
+    """
 
     panel_width = resolve_uniform_width(
         terminal_width=terminal_width,
@@ -75,7 +83,9 @@ def render_visual_screen(
 
 
 def limited_items(items: Sequence[Item], max_items: int) -> tuple[Sequence[Item], int]:
-    """Return visible items and hidden count for large terminal lists."""
+    """PURPOSE get visible items and hidden count for large terminal lists
+    DOMAIN  terminal UI
+    """
 
     if max_items < 0:
         return items, 0
@@ -84,7 +94,9 @@ def limited_items(items: Sequence[Item], max_items: int) -> tuple[Sequence[Item]
 
 
 def append_hidden_count(lines: list[str], hidden_count: int, noun: str) -> None:
-    """Append a standard hidden-count line when a list is truncated."""
+    """PURPOSE append a standard hidden-count line when a list is truncated
+    DOMAIN  terminal UI
+    """
 
     if hidden_count > 0:
         lines.append(f"... {hidden_count} more {noun}")

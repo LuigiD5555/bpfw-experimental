@@ -1,4 +1,6 @@
-"""Terminal text width helpers for interactive integrations."""
+"""PURPOSE terminal text width helpers for interactive tools
+DOMAIN  terminal UI
+"""
 
 import unicodedata
 
@@ -6,7 +8,9 @@ ELLIPSIS = "…"
 
 
 def display_width(text: str) -> int:
-    """Return the visible terminal column width for text."""
+    """PURPOSE get the visible terminal column width for text
+    DOMAIN  terminal UI
+    """
 
     width = 0
     for character in text:
@@ -17,7 +21,9 @@ def display_width(text: str) -> int:
 
 
 def fit_text(text: str, width: int) -> str:
-    """Fit text into fixed terminal width, truncating with ellipsis when needed."""
+    """PURPOSE fit text into fixed terminal width, truncating with ellipsis when needed
+    DOMAIN  terminal UI
+    """
 
     if width <= 0:
         return ""
@@ -41,14 +47,18 @@ def fit_text(text: str, width: int) -> str:
 
 
 def pad_text(text: str, width: int) -> str:
-    """Pad text to a fixed terminal display width."""
+    """PURPOSE pad text to a fixed terminal display width
+    DOMAIN  terminal UI
+    """
 
     fitted = fit_text(text, width)
     return fitted + (" " * max(0, width - display_width(fitted)))
 
 
 def measure_lines(lines: list[str]) -> int:
-    """Return the maximum display width required by the given lines."""
+    """PURPOSE get the maximum display width required by the given lines
+    DOMAIN  terminal UI
+    """
 
     if not lines:
         return 0

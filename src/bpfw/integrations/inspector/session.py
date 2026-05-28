@@ -1,4 +1,6 @@
-"""Interactive session runner for the inspector integration."""
+"""PURPOSE interactive session runner for the inspector tool
+DOMAIN  inspector workflow
+"""
 
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -52,15 +54,8 @@ PrintFunc = Callable[[str], None]
 
 @dataclass(slots=True)
 class CachedDriftPreflight:
-    """Precomputed drift state inputs for inspector startup.
-
-    Attributes:
-        repository: Drift state repository.
-        state: Persisted drift state.
-        input_signature: Current project input signature, or the persisted
-            signature when pending work is restored before filesystem validation.
-        trusted_pending_snapshot: Whether pending work was loaded directly from
-            the persisted snapshot to avoid recomputing drift inputs before UI.
+    """PURPOSE precomputed drift state inputs for inspector startup
+    DOMAIN  inspector workflow
     """
 
     repository: DriftStateRepository
@@ -71,12 +66,8 @@ class CachedDriftPreflight:
 
 @dataclass(slots=True)
 class RestoredIssueFilterResult:
-    """Filtered inspector issues restored from persisted Drift Gate decisions.
-
-    Attributes:
-        issues: Issues that are still valid metadata work.
-        stale_count: Number of restored approvals that no longer point to an
-            inspectable source file.
+    """PURPOSE filtered inspector issues restored from persisted Drift Gate decisions
+    DOMAIN  inspector workflow
     """
 
     issues: list[InspectIssue]
@@ -90,7 +81,9 @@ def run_text_inspector(
     print_func: PrintFunc = print,
     show_all: bool = False,
 ) -> int:
-    """Run the direct MVP inspector UI."""
+    """PURPOSE run the direct inspector UI
+    DOMAIN  inspector workflow
+    """
 
     with _profiler.measure("inspector.open_ui_total"):
         preflight = _load_drift_preflight(project_root=project_root)
@@ -239,21 +232,8 @@ def run_text_inspector(
 
 
 def _should_block_on_stale_metadata_queue(drift_gate_result: DriftGateResult) -> bool:
-    """Return whether stale metadata issues should block Inspector startup.
-
-    Stale source references are structural drift when they are found while
-    resuming metadata work from cache. However, after a fresh Drift Gate pass or
-    after authority changes have just been applied, stale metadata issues are
-    obsolete cached work. Blocking at that point prevents Inspector from opening
-    even though Drift Gate already had the chance to resolve the structural
-    drift.
-
-    Args:
-        drift_gate_result: Result produced by the current Drift Gate run.
-
-    Returns:
-        True when Inspector should stop and force Drift Gate, otherwise False so
-        the stale metadata items can be discarded.
+    """PURPOSE check whether stale metadata issues should block Inspector startup
+    DOMAIN  inspector workflow
     """
 
     return (
@@ -265,18 +245,8 @@ def _should_block_on_stale_metadata_queue(drift_gate_result: DriftGateResult) ->
 
 
 def _load_drift_preflight(project_root: Path) -> CachedDriftPreflight:
-    """Load drift state and compute only the signature required for this run.
-
-    Pending human drift decisions are durable work. When such work exists, the
-    Inspector should show it immediately instead of walking the whole project
-    just to prove what the user has not resolved yet. A full input signature is
-    rebuilt only when no pending snapshot can be reused.
-
-    Args:
-        project_root: Project root directory.
-
-    Returns:
-        Cached drift preflight data.
+    """PURPOSE read drift state and compute only the signature required for this run
+    DOMAIN  inspector workflow
     """
     with _profiler.measure("inspector.preflight.total"):
         repository = DriftStateRepository(project_root)
@@ -298,14 +268,8 @@ def _try_load_cached_pending_preflight(
     project_root: Path,
     preflight: CachedDriftPreflight,
 ) -> tuple[InspectLoadResult, list[DiffItem]] | None:
-    """Load pending Drift Gate items without full scan/verify when inputs are unchanged.
-
-    Args:
-        project_root: Project root directory.
-        preflight: Current drift preflight data.
-
-    Returns:
-        Metadata-only session and cached pending items, or None.
+    """PURPOSE read pending Drift Gate items without full scan/verify when inputs are unchanged
+    DOMAIN  inspector workflow
     """
     if preflight.trusted_pending_snapshot:
         if not preflight.state.has_pending_items():
@@ -317,17 +281,8 @@ def _try_load_cached_pending_preflight(
 
 
 def _build_minimal_pending_drift_session(project_root: Path) -> InspectLoadResult:
-    """Build a minimal session for cached Drift Gate rendering.
-
-    This avoids loading authority, scanning code, or running verify before a
-    cached pending Drift Gate item is shown. Metadata is loaded only after the
-    Drift Gate completes and inspection is actually needed.
-
-    Args:
-        project_root: Project root directory.
-
-    Returns:
-        Minimal inspector load result suitable for cached Drift Gate review.
+    """PURPOSE build a minimal session for cached Drift Gate rendering
+    DOMAIN  inspector workflow
     """
     resolved_root = project_root.resolve()
     return InspectLoadResult(
@@ -344,15 +299,8 @@ def _try_load_cached_preflight(
     project_root: Path,
     preflight: CachedDriftPreflight | None = None,
 ) -> tuple[InspectLoadResult, DriftGateResult] | None:
-    """Load metadata-only session when drift state can resume inspector work.
-
-    Args:
-        project_root: Project root directory.
-        preflight: Optional precomputed drift preflight data.
-
-    Returns:
-        Tuple of metadata-only session and DriftGateResult, or None when full
-        analysis is required.
+    """PURPOSE read metadata session when drift state can resume inspector work
+    DOMAIN  inspector workflow
     """
     if preflight is None:
         preflight = _load_drift_preflight(project_root=project_root)
@@ -389,20 +337,8 @@ def _try_load_approved_metadata_resume(
     project_root: Path,
     preflight: CachedDriftPreflight,
 ) -> tuple[InspectLoadResult, DriftGateResult] | None:
-    """Resume approved Drift Gate items before running full drift again.
-
-    Approved ``approved_for_inspector`` decisions are durable user work. When
-    any of those approved blocks still needs metadata, Inspector should open
-    directly on the remaining metadata queue instead of recomputing verify and
-    showing Drift Gate again.
-
-    Args:
-        project_root: Project root directory.
-        preflight: Loaded drift preflight state.
-
-    Returns:
-        Metadata-only session and DriftGateResult when there is unfinished
-        approved metadata work, otherwise None.
+    """PURPOSE resume approved Drift Gate items before running full drift again
+    DOMAIN  inspector workflow
     """
     if not preflight.state.has_approved_inspector_work():
         return None
@@ -437,15 +373,8 @@ def _filter_restored_inspector_issues(
     state: DriftState,
     session: InspectLoadResult,
 ) -> RestoredIssueFilterResult:
-    """Return restored inspector issues that still need user metadata.
-
-    Args:
-        state: Persisted Drift Gate state.
-        session: Current metadata-only inspector session.
-
-    Returns:
-        Filter result containing valid metadata issues and the number of stale
-        restored approvals discarded from the resume queue.
+    """PURPOSE get restored inspector issues that still need user metadata
+    DOMAIN  inspector workflow
     """
     current_blocks = session.blueprint_data.get("blocks", [])
     if not isinstance(current_blocks, list):
@@ -494,13 +423,8 @@ def _filter_restored_inspector_issues(
 
 
 def _block_key(block: dict) -> tuple[str, str, str] | None:
-    """Return the path, symbol, kind key for a blueprint block.
-
-    Args:
-        block: Blueprint block data.
-
-    Returns:
-        Stable code key, or None when unavailable.
+    """PURPOSE get the path, symbol, kind key for a blueprint block
+    DOMAIN  inspector workflow
     """
     code_data = block.get("code")
     if not isinstance(code_data, dict):
@@ -514,13 +438,8 @@ def _block_key(block: dict) -> tuple[str, str, str] | None:
 
 
 def _block_has_required_metadata(block: dict) -> bool:
-    """Return whether a block has all required human metadata.
-
-    Args:
-        block: Blueprint block data.
-
-    Returns:
-        True when Inspector does not need to show the block again.
+    """PURPOSE check whether a block has all required human metadata
+    DOMAIN  inspector workflow
     """
     for field_name in REQUIRED_HUMAN_FIELDS:
         if _clean_string(block.get(field_name)) is None:
@@ -529,13 +448,8 @@ def _block_has_required_metadata(block: dict) -> bool:
 
 
 def _clean_string(value: object) -> str | None:
-    """Return a stripped string or None for blank values.
-
-    Args:
-        value: Raw value.
-
-    Returns:
-        Clean string or None.
+    """PURPOSE get a stripped string or None for blank values
+    DOMAIN  inspector workflow
     """
     if value is None:
         return None
@@ -544,12 +458,8 @@ def _clean_string(value: object) -> str | None:
 
 
 def _render_no_inspector_work(session: InspectLoadResult, drift_gate_result, print_func: PrintFunc) -> None:  # noqa: ANN001
-    """Render the final no-work inspector message.
-
-    Args:
-        session: Loaded inspector session.
-        drift_gate_result: Result from Drift Gate.
-        print_func: Function used to print output.
+    """PURPOSE show the final no-work inspector message
+    DOMAIN  inspector workflow
     """
     print_func("BPFW Inspector")
     if drift_gate_result.safe_mechanical_updates:
@@ -575,7 +485,9 @@ def run_text_inspector_session(
     print_func: PrintFunc = print,
     show_all: bool = False,
 ) -> int:
-    """Run text inspector against an already loaded session."""
+    """PURPOSE run text inspector against an already loaded session
+    DOMAIN  inspector workflow
+    """
 
     total = len(session.issues)
     input_reader = InspectorInputReader(input_func)

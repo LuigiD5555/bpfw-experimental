@@ -1,8 +1,12 @@
-"""Shared text normalization helpers."""
+"""PURPOSE shared text normalization helpers
+DOMAIN  shared text helpers
+"""
 
 
 def to_snake_case(value: object) -> str:
-    """Convert a value to snake_case, returning an empty string when blank."""
+    """PURPOSE convert a value to snake_case, returning an empty string when blank
+    DOMAIN  shared text helpers
+    """
 
     if value is None:
         return ""
@@ -26,6 +30,8 @@ def to_snake_case(value: object) -> str:
 
 
 def normalize_text_command(raw_value: str) -> str:
-    """Normalize free-form command input for interactive dispatch."""
+    """PURPOSE clean free-form command input for interactive dispatch
+    DOMAIN  shared text helpers
+    """
 
     return raw_value.strip().lower()

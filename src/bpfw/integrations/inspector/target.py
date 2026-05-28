@@ -1,4 +1,6 @@
-"""Targeted inspector entrypoint for opening one blueprint block."""
+"""PURPOSE targeted inspector entrypoint for opening one blueprint block
+DOMAIN  inspector workflow
+"""
 
 from collections.abc import Callable
 from pathlib import Path
@@ -19,17 +21,8 @@ def run_inspector_target(
     input_func: InputFunc = input,
     print_func: PrintFunc = print,
 ) -> str:
-    """Open the inspector focused on one block in target mode.
-
-    Args:
-        project_root: Root directory of the project being inspected.
-        block_id: Identifier of the block that should be opened.
-        header_title: Title rendered by the inspector screen.
-        input_func: Callable used to collect terminal input.
-        print_func: Callable used to print terminal output.
-
-    Returns:
-        The result string returned by the target inspector flow.
+    """PURPOSE open the inspector focused on one block in target mode
+    DOMAIN  inspector workflow
     """
 
     session = load_inspect_session(project_root=project_root)
@@ -78,14 +71,8 @@ def run_inspector_target(
 
 
 def _find_issue_index(issues: list[InspectIssue], block_id: str) -> int | None:
-    """Find the index of an issue matching the block identifier.
-
-    Args:
-        issues: Inspector issues currently available in the session.
-        block_id: Identifier of the target block.
-
-    Returns:
-        The matching issue index, or None when no issue matches.
+    """PURPOSE find the index of an issue matching the block identifier
+    DOMAIN  inspector workflow
     """
 
     for index, issue in enumerate(issues):
@@ -99,14 +86,8 @@ def _find_block_in_blueprint(
     blueprint_data: dict[str, Any],
     block_id: str,
 ) -> dict[str, Any] | None:
-    """Find a block in blueprint data by identifier.
-
-    Args:
-        blueprint_data: Parsed blueprint data.
-        block_id: Identifier of the target block.
-
-    Returns:
-        The matching block dictionary, or None when no block matches.
+    """PURPOSE find a block in blueprint data by identifier
+    DOMAIN  inspector workflow
     """
 
     blocks = blueprint_data.get("blocks", [])

@@ -1,16 +1,14 @@
-"""Data models for purpose suggestion system."""
+"""PURPOSE data models for purpose suggestion system
+DOMAIN  purpose suggestions
+"""
 
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True)
 class PurposeSuggestion:
-    """Represent one deterministic natural-language purpose suggestion.
-
-    Attributes:
-        text: Suggested purpose text shown to the user.
-        source: Deterministic slot source identifier.
-        evidence: Deterministic evidence labels used for the suggestion.
+    """PURPOSE store information about one stable natural-language purpose suggestion
+    DOMAIN  purpose suggestions
     """
 
     text: str

@@ -1,4 +1,6 @@
-"""Shared inspector behavior for BPFW catalog completion."""
+"""PURPOSE shared inspector behavior for BPFW catalog completion
+DOMAIN  inspector workflow
+"""
 import ast
 from functools import cmp_to_key
 from dataclasses import dataclass, field
@@ -34,7 +36,9 @@ ISSUE_NEW_DETECTED = "new_detected"
 
 
 def _has_sharded_authority_layout(blueprint_data: Dict[str, Any] | None) -> bool:
-    """Return True when blueprint data declares sharded authority layout."""
+    """PURPOSE check whether blueprint data declares sharded authority layout
+    DOMAIN  inspector workflow
+    """
 
     if not isinstance(blueprint_data, dict):
         return False
@@ -46,7 +50,9 @@ def _has_sharded_authority_layout(blueprint_data: Dict[str, Any] | None) -> bool
 
 @dataclass(slots=True)
 class InspectIssue:
-    """One block-level item to review in inspector."""
+    """PURPOSE one block-level item to review in inspector
+    DOMAIN  inspector workflow
+    """
 
     issue_type: str
     block: Dict[str, Any]
@@ -56,7 +62,9 @@ class InspectIssue:
 
 @dataclass(slots=True)
 class InspectLoadResult:
-    """Loaded inspect state or a blocking message."""
+    """PURPOSE loaded inspect state or a blocking message
+    DOMAIN  inspector workflow
+    """
 
     project_root: Path
     blueprint_path: Path | None
@@ -78,7 +86,9 @@ class InspectLoadResult:
 
     @property
     def blocked(self) -> bool:
-        """Return True when inspect cannot continue."""
+        """PURPOSE check whether inspect cannot continue
+        DOMAIN  inspector workflow
+        """
 
         return self.exit_code != 0
 
@@ -88,15 +98,8 @@ def load_inspect_session(
     precomputed_scan_result: ScanResult | None = None,
     precomputed_verify_report: "VerificationReport | None" = None,
 ) -> InspectLoadResult:
-    """Load blueprint data and return the inspect work set.
-
-    Args:
-        project_root: Root directory of the project.
-        precomputed_scan_result: Optional scan result from engine to reuse.
-        precomputed_verify_report: Optional verify report from engine to reuse.
-
-    Returns:
-        InspectLoadResult with loaded session data.
+    """PURPOSE read blueprint data and return the inspect work set
+    DOMAIN  inspector workflow
     """
 
     from bpfw.core.authority import AuthorityRepository
@@ -199,7 +202,7 @@ def load_inspect_session(
         for finding in report.findings
         if finding.code in {"UNDECLARED_CODE", "MISSING_DECLARED_CODE"}
     ]
-    
+
     with _profiler.measure("inspector.build_issues"):
         incomplete = get_incomplete_blocks(blueprint_data)
         issues = build_inspect_issues(
@@ -207,7 +210,7 @@ def load_inspect_session(
             incomplete=incomplete,
             scan_result=scan_result,
         )
-    
+
     return InspectLoadResult(
         project_root=resolved_root,
         blueprint_path=Path(load_result.path),
@@ -227,17 +230,8 @@ def load_inspect_session(
 
 
 def load_metadata_inspect_session(project_root: Path) -> InspectLoadResult:
-    """Load inspector metadata work without scanning or running verify.
-
-    The fast path first tries a persisted Inspector work cache. When authority
-    files have not changed, this avoids reparsing all shards and rebuilding the
-    same incomplete-metadata queue on every Inspector startup.
-
-    Args:
-        project_root: Root directory of the project.
-
-    Returns:
-        InspectLoadResult containing metadata-only inspector issues.
+    """PURPOSE read inspector metadata work without scanning or running verify
+    DOMAIN  inspector workflow
     """
     from bpfw.core.authority import AuthorityRepository
     from bpfw.integrations.inspector.work_cache import (
@@ -333,7 +327,9 @@ def load_metadata_inspect_session(project_root: Path) -> InspectLoadResult:
 
 
 def _responsibility_key(block: Dict[str, Any]) -> tuple[str, str, str] | None:
-    """Return the path, symbol, and kind key for a block."""
+    """PURPOSE get the path, symbol, and kind key for a block
+    DOMAIN  inspector workflow
+    """
 
     location = block.get("code", {})
     if not isinstance(location, dict):
@@ -352,19 +348,8 @@ def split_issues_by_source_availability(
     project_root: Path,
     issues: list[InspectIssue],
 ) -> tuple[list[InspectIssue], list[InspectIssue]]:
-    """Split inspector issues by whether their source file can be inspected.
-
-    Metadata inspection is not allowed to handle structural drift. If a block
-    points to a file that no longer exists, the item must go back through Drift
-    Gate where the user can choose a package move, removal, legacy state, or a
-    different structural decision.
-
-    Args:
-        project_root: Project root directory.
-        issues: Candidate inspector issues.
-
-    Returns:
-        A tuple containing inspectable issues and structurally stale issues.
+    """PURPOSE split inspector issues by whether their source file can be inspected
+    DOMAIN  inspector workflow
     """
 
     inspectable_issues: list[InspectIssue] = []
@@ -378,15 +363,8 @@ def split_issues_by_source_availability(
 
 
 def has_uninspectable_source_issues(project_root: Path, issues: list[InspectIssue]) -> bool:
-    """Return whether any inspector issue points to unavailable source code.
-
-    Args:
-        project_root: Project root directory.
-        issues: Inspector issues to validate.
-
-    Returns:
-        True when at least one issue cannot be resolved to an existing source
-        file and therefore must be handled by Drift Gate.
+    """PURPOSE check whether any inspector issue points to unavailable source code
+    DOMAIN  inspector workflow
     """
 
     return any(
@@ -396,14 +374,8 @@ def has_uninspectable_source_issues(project_root: Path, issues: list[InspectIssu
 
 
 def _issue_source_is_available(project_root: Path, issue: InspectIssue) -> bool:
-    """Return whether an issue can be shown safely in Inspector.
-
-    Args:
-        project_root: Project root directory.
-        issue: Inspector issue to validate.
-
-    Returns:
-        True when the referenced source file exists.
+    """PURPOSE check whether an issue can be shown in Inspector
+    DOMAIN  inspector workflow
     """
 
     code_data = issue.block.get("code")
@@ -417,18 +389,8 @@ def _issue_source_is_available(project_root: Path, issue: InspectIssue) -> bool:
 
 
 def sort_inspect_issues_hierarchically(issues: list[InspectIssue]) -> list[InspectIssue]:
-    """Return inspector issues in contained-to-container order.
-
-    The Inspector should review child responsibilities before the parent that
-    summarizes them. This preserves source order for unrelated blocks while
-    forcing a parent such as ``AuthorityDocument`` to appear after children
-    such as ``AuthorityDocument.get_blocks``.
-
-    Args:
-        issues: Inspector issues to order.
-
-    Returns:
-        Ordered inspector issues.
+    """PURPOSE get inspector issues in contained-to-container order
+    DOMAIN  inspector workflow
     """
 
     indexed_issues = list(enumerate(issues))
@@ -459,13 +421,8 @@ def sort_inspect_issues_hierarchically(issues: list[InspectIssue]) -> list[Inspe
 
 
 def _issue_sort_data(issue: InspectIssue) -> tuple[str, str, int, int]:
-    """Return sortable code data for one inspector issue.
-
-    Args:
-        issue: Inspector issue.
-
-    Returns:
-        Path, symbol, start line, and symbol depth.
+    """PURPOSE get sortable code data for one inspector issue
+    DOMAIN  inspector workflow
     """
 
     code_data = issue.block.get("code")
@@ -481,14 +438,8 @@ def _issue_sort_data(issue: InspectIssue) -> tuple[str, str, int, int]:
 
 
 def _is_parent_symbol(parent_symbol: str, child_symbol: str) -> bool:
-    """Return whether ``parent_symbol`` is a direct or indirect parent.
-
-    Args:
-        parent_symbol: Possible parent symbol.
-        child_symbol: Possible child symbol.
-
-    Returns:
-        True when child is nested below parent.
+    """PURPOSE check whether parent_symbol is a direct or indirect parent
+    DOMAIN  inspector workflow
     """
 
     if not parent_symbol or not child_symbol:
@@ -497,13 +448,17 @@ def _is_parent_symbol(parent_symbol: str, child_symbol: str) -> bool:
 
 
 def _discovered_key(unit: DiscoveredCodeUnit) -> tuple[str, str, str]:
-    """Return the path, symbol, and kind key for discovered code."""
+    """PURPOSE get the path, symbol, and kind key for discovered code
+    DOMAIN  inspector workflow
+    """
 
     return unit.path, unit.symbol, unit.symbol_type
 
 
 def build_new_detected_responsibility(unit: DiscoveredCodeUnit) -> Dict[str, Any]:
-    """Build a pending block from one newly detected code unit."""
+    """PURPOSE build a pending block from one newly detected code unit
+    DOMAIN  inspector workflow
+    """
 
     block = {
         "id": to_snake_case(unit.symbol),
@@ -565,7 +520,9 @@ def build_inspect_issues(
     incomplete: List[Dict[str, Any]],
     scan_result: ScanResult,
 ) -> list[InspectIssue]:
-    """Build ordered inspect issues from incomplete and newly detected code."""
+    """PURPOSE build ordered inspect issues from incomplete and newly detected code
+    DOMAIN  inspector workflow
+    """
 
     issues = sort_inspect_issues_hierarchically(
         [InspectIssue(issue_type=ISSUE_DRAFT, block=block) for block in incomplete]
@@ -591,7 +548,9 @@ def build_inspect_issues(
 def get_incomplete_blocks(
     blueprint_data: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
-    """Return blocks that are missing required human fields."""
+    """PURPOSE get blocks that are missing required human fields
+    DOMAIN  inspector workflow
+    """
 
     blocks = blueprint_data.get("blocks", [])
     if not isinstance(blocks, list):
@@ -616,7 +575,9 @@ def get_incomplete_blocks(
 
 
 def clean_string(value: Any) -> str | None:
-    """Return a stripped string or None for blank values."""
+    """PURPOSE get a stripped string or None for blank values
+    DOMAIN  inspector workflow
+    """
 
     if value is None:
         return None
@@ -625,19 +586,16 @@ def clean_string(value: Any) -> str | None:
 
 
 def display_value(value: Any) -> str:
-    """Render blank values consistently."""
+    """PURPOSE show blank values consistently
+    DOMAIN  inspector workflow
+    """
 
     return clean_string(value) or "-"
 
 
 def suggest_domain(block: Dict[str, Any]) -> str | None:
-    """Suggest the first deterministic non-placeholder domain for one block.
-
-    Args:
-        block: Block dictionary.
-
-    Returns:
-        First domain suggestion when it is usable, otherwise ``None``.
+    """PURPOSE suggest the first stable non-placeholder domain for one block
+    DOMAIN  inspector workflow
     """
 
     from bpfw.integrations.inspector.suggestions.domain.engine import suggest_domains as catalog_suggest_domains
@@ -654,7 +612,9 @@ def suggest_domain(block: Dict[str, Any]) -> str | None:
 
 
 def collect_existing_purposes(blueprint_data: Dict[str, Any]) -> tuple[str, ...]:
-    """Collect existing declared purposes from blueprint blocks."""
+    """PURPOSE collect declared purposes from blueprint blocks
+    DOMAIN  inspector workflow
+    """
 
     blocks = blueprint_data.get("blocks", [])
     if not isinstance(blocks, list):
@@ -670,13 +630,17 @@ def collect_existing_purposes(blueprint_data: Dict[str, Any]) -> tuple[str, ...]
 
 
 def suggest_lifecycle(_responsibility: Dict[str, Any]) -> str:
-    """Suggest the default status for catalog mode."""
+    """PURPOSE suggest the default status for catalog mode
+    DOMAIN  inspector workflow
+    """
 
     return "active"
 
 
 def apply_suggestions(block: Dict[str, Any]) -> None:
-    """Apply deterministic suggestions before rendering one block."""
+    """PURPOSE apply stable suggestions before rendering one block
+    DOMAIN  inspector workflow
+    """
 
     if clean_string(block.get("domain")) is None:
         domain = suggest_domain(block)
@@ -687,7 +651,9 @@ def apply_suggestions(block: Dict[str, Any]) -> None:
 
 
 def backfill_detected_docstring_from_source(project_root: Path, block: Dict[str, Any]) -> None:
-    """Populate detected docstring from source when blueprint metadata lacks it."""
+    """PURPOSE populate detected docstring from source when blueprint metadata lacks it
+    DOMAIN  inspector workflow
+    """
 
     detected = block.get("detected")
     if not isinstance(detected, dict):
@@ -733,16 +699,8 @@ def build_code_lines(
     block: Dict[str, Any],
     project_blocks: list[dict[str, Any]] | None = None,
 ) -> list[str]:
-    """Build numbered source lines for the block code location.
-
-    Args:
-        project_root: Project root containing the source file.
-        block: Inspector block being rendered.
-        project_blocks: Current authority blocks used for purpose-based child folding.
-
-    Returns:
-        Numbered source preview lines. Parent blocks use a hierarchical folded
-        preview when direct children are present.
+    """PURPOSE build numbered source lines for the block code location
+    DOMAIN  inspector workflow
     """
 
     folded_preview = _HierarchicalCodePreviewRenderer(
@@ -795,7 +753,9 @@ def _resolve_snippet_start_line(
     location: dict[str, Any],
     fallback_start_line: int,
 ) -> int:
-    """Return decorator-aware block start line when source node can be resolved."""
+    """PURPOSE get decorator-aware block start line when source node can be resolved
+    DOMAIN  inspector workflow
+    """
 
     symbol = clean_string(location.get("symbol"))
     symbol_type = clean_string(location.get("kind"))
@@ -834,7 +794,9 @@ def _find_matching_symbol_node(
     target_name: str,
     node_line: int | None,
 ) -> ast.AST | None:
-    """Find class/function node matching the located symbol."""
+    """PURPOSE find class/function node matching the located symbol
+    DOMAIN  inspector workflow
+    """
 
     normalized_type = symbol_type.lower()
     function_nodes: tuple[type[ast.AST], ...]
@@ -873,7 +835,9 @@ def _find_matching_symbol_node(
 
 
 def _find_display_start_line(source_lines: list[str], start_line: int) -> int:
-    """Include contiguous blank lines before the block."""
+    """PURPOSE include contiguous blank lines before the block
+    DOMAIN  inspector workflow
+    """
 
     displayed_start_line = max(start_line, 1)
     while displayed_start_line > 1:
@@ -888,7 +852,9 @@ def _find_display_end_line(
     source_lines: list[str],
     end_line: int,
 ) -> int:
-    """Include contiguous blank lines after the block."""
+    """PURPOSE include contiguous blank lines after the block
+    DOMAIN  inspector workflow
+    """
 
     displayed_end_line = min(end_line, len(source_lines))
     while displayed_end_line < len(source_lines):
@@ -900,7 +866,9 @@ def _find_display_end_line(
 
 
 def build_authority_lines(block: Dict[str, Any]) -> list[str]:
-    """Build authority field lines for display."""
+    """PURPOSE build authority field lines for display
+    DOMAIN  inspector workflow
+    """
 
     return [
         f"  id              {display_value(block.get('id'))}",
@@ -913,7 +881,9 @@ def build_authority_lines(block: Dict[str, Any]) -> list[str]:
 
 
 def build_suggestion_lines(block: Dict[str, Any]) -> list[str]:
-    """Build deterministic suggestion lines for display."""
+    """PURPOSE build stable suggestion lines for display
+    DOMAIN  inspector workflow
+    """
 
     return [
         f"  domain     {display_value(suggest_domain(block))}",
@@ -922,7 +892,9 @@ def build_suggestion_lines(block: Dict[str, Any]) -> list[str]:
 
 
 def build_nested_snippet_lines(block: Dict[str, Any]) -> list[str]:
-    """Build direct nested block lines for display."""
+    """PURPOSE build direct nested block lines for display
+    DOMAIN  inspector workflow
+    """
 
     detected = block.get("detected")
     if not isinstance(detected, dict):
@@ -942,7 +914,9 @@ def build_nested_snippet_lines(block: Dict[str, Any]) -> list[str]:
 
 
 def build_hierarchy_lines(block: Dict[str, Any]) -> list[str]:
-    """Build contained-to-container hierarchy lines for inspector display."""
+    """PURPOSE build contained-to-container hierarchy lines for inspector display
+    DOMAIN  inspector workflow
+    """
 
     location = block.get("code", {})
     if not isinstance(location, dict):
@@ -981,7 +955,9 @@ def build_hierarchy_lines(block: Dict[str, Any]) -> list[str]:
 
 
 def apply_automatic_authority_fields(blueprint_data: Dict[str, Any]) -> None:
-    """Derive authority fields that do not require interactive review."""
+    """PURPOSE derive authority fields that do not require interactive review
+    DOMAIN  inspector workflow
+    """
 
     blocks = blueprint_data.get("blocks", [])
     if not isinstance(blocks, list):
@@ -1023,12 +999,8 @@ def save_blueprint(
     blueprint_data: Dict[str, Any],
     authority_document: Any | None = None,
 ) -> None:
-    """Save blueprint data to authority using the appropriate method.
-
-    Args:
-        blueprint_path: Path to the blueprint index file.
-        blueprint_data: Unified blueprint data with blocks.
-        authority_document: Optional AuthorityDocument from load_inspect_session.
+    """PURPOSE save blueprint data to authority using the appropriate method
+    DOMAIN  inspector workflow
     """
 
     apply_automatic_authority_fields(blueprint_data)

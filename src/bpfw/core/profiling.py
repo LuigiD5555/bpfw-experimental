@@ -1,4 +1,6 @@
-"""Lightweight runtime profiling for BPFW performance measurement."""
+"""PURPOSE lightweight runtime profiling for BPFW performance measurement
+DOMAIN  framework core
+"""
 
 import os
 import sys
@@ -8,21 +10,20 @@ from typing import Iterator
 
 
 class RuntimeProfiler:
-    """Collect and print lightweight runtime profiling information."""
+    """PURPOSE collect and print lightweight runtime profiling information
+    DOMAIN  framework core
+    """
 
     def __init__(self) -> None:
-        """Initialize the profiler based on the BPFW_PROFILE environment variable."""
+        """PURPOSE set up the profiler based on the BPFW_PROFILE environment variable
+        DOMAIN  framework core
+        """
         self.enabled = os.environ.get("BPFW_PROFILE") == "1"
 
     @contextmanager
     def measure(self, label: str) -> Iterator[None]:
-        """Measure a named runtime stage and print the duration when profiling is enabled.
-
-        Args:
-            label: Descriptive name for the measured operation.
-
-        Yields:
-            None
+        """PURPOSE measure a named runtime stage and print the duration when profiling is enabled
+        DOMAIN  framework core
         """
         if not self.enabled:
             yield

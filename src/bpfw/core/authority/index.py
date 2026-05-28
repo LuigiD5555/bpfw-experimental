@@ -1,4 +1,6 @@
-"""Authority index for BPFW root blueprint.yaml."""
+"""PURPOSE authority index for BPFW root blueprint.yaml
+DOMAIN  blueprint files
+"""
 
 from pathlib import Path
 from typing import Any
@@ -9,37 +11,21 @@ from bpfw.core.yaml_io import dump_yaml_data, load_yaml_text
 
 
 class AuthorityIndex:
-    """Represent the root blueprint.yaml authority index.
-    
-    The root blueprint.yaml is an index file that contains:
-    - version
-    - project
-    - policy
-    - authority
-    - includes
-    
-    It must NOT contain blocks.
+    """PURPOSE store information about the root blueprint.yaml authority index
+    DOMAIN  blueprint files
     """
 
     def __init__(self, path: Path, data: dict[str, Any]) -> None:
-        """Initialize the authority index.
-        
-        Args:
-            path: Path to the blueprint.yaml file.
-            data: Parsed YAML data from the blueprint.yaml file.
-        
-        Raises:
-            InvalidAuthorityIndexError: If the index is invalid.
+        """PURPOSE set up the authority index
+        DOMAIN  blueprint files
         """
         self.path = path
         self.data = data
         self._validate()
 
     def _validate(self) -> None:
-        """Validate the authority index structure.
-        
-        Raises:
-            InvalidAuthorityIndexError: If validation fails.
+        """PURPOSE check the authority index structure
+        DOMAIN  blueprint files
         """
         if not isinstance(self.data, dict):
             raise InvalidAuthorityIndexError(
@@ -102,17 +88,8 @@ class AuthorityIndex:
 
     @classmethod
     def load(cls, project_root: Path) -> "AuthorityIndex":
-        """Load the authority index from the project root.
-        
-        Args:
-            project_root: The project root directory.
-        
-        Returns:
-            Loaded AuthorityIndex instance.
-        
-        Raises:
-            InvalidAuthorityIndexError: If the index cannot be loaded or is invalid.
-            FileNotFoundError: If the blueprint.yaml does not exist.
+        """PURPOSE read the authority index from the project root
+        DOMAIN  blueprint files
         """
         blueprint_path = project_root / "bpfw" / "blueprint.yaml"
 
@@ -144,13 +121,8 @@ class AuthorityIndex:
         return cls(path=blueprint_path, data=data)
 
     def save(self, project_root: Path) -> None:
-        """Save the authority index to the project root.
-        
-        Args:
-            project_root: The project root directory.
-        
-        Raises:
-            InvalidAuthorityIndexError: If the index is invalid or cannot be saved.
+        """PURPOSE save the authority index to the project root
+        DOMAIN  blueprint files
         """
         # Re-validate before saving
         self._validate()
@@ -172,19 +144,15 @@ class AuthorityIndex:
             ) from error
 
     def get_includes(self) -> list[Path]:
-        """Get the list of included shard paths.
-        
-        Returns:
-            List of project-relative shard paths.
+        """PURPOSE get the list of included shard paths
+        DOMAIN  blueprint files
         """
         includes = self.data.get("includes", [])
         return [Path(include_path) for include_path in includes if isinstance(include_path, str)]
 
     def add_include(self, shard_path: Path) -> None:
-        """Add a shard to the includes list.
-        
-        Args:
-            shard_path: Project-relative path to the shard file.
+        """PURPOSE add a shard to the includes list
+        DOMAIN  blueprint files
         """
         includes = self.data.setdefault("includes", [])
         shard_str = str(shard_path)
@@ -193,10 +161,8 @@ class AuthorityIndex:
             includes.append(shard_str)
 
     def remove_include(self, shard_path: Path) -> None:
-        """Remove a shard from the includes list.
-        
-        Args:
-            shard_path: Project-relative path to the shard file.
+        """PURPOSE remove a shard from the includes list
+        DOMAIN  blueprint files
         """
         includes = self.data.get("includes", [])
         shard_str = str(shard_path)
@@ -205,10 +171,8 @@ class AuthorityIndex:
             includes.remove(shard_str)
 
     def get_authority_config(self) -> dict[str, Any]:
-        """Get the authority configuration.
-        
-        Returns:
-            Dictionary containing authority configuration.
+        """PURPOSE get the authority configuration
+        DOMAIN  blueprint files
         """
         authority = self.data.get("authority", {})
         if not isinstance(authority, dict):

@@ -1,4 +1,6 @@
-"""Connection detection for planner flow inference."""
+"""PURPOSE connection detection for planner flow inference
+DOMAIN  planner workflow
+"""
 
 import ast
 from dataclasses import dataclass, field
@@ -10,7 +12,9 @@ from bpfw.integrations.planner.models import PlannerBox
 
 @dataclass(frozen=True)
 class InferredConnection:
-    """Connection inferred from static analysis."""
+    """PURPOSE connection inferred from static analysis
+    DOMAIN  planner workflow
+    """
 
     source_box_id: str
     target_box_id: str
@@ -21,7 +25,9 @@ class InferredConnection:
 
 @dataclass
 class _FileFacts:
-    """Minimal static facts for a scanned file."""
+    """PURPOSE minimal static facts for a scanned file
+    DOMAIN  planner workflow
+    """
 
     imports: Set[str] = field(default_factory=set)
     calls: Set[str] = field(default_factory=set)
@@ -33,7 +39,9 @@ def detect_connections(
     source_roots: List[str],
     ignored_paths: List[str],
 ) -> List[InferredConnection]:
-    """Infer box connections from Python imports and call-sites."""
+    """PURPOSE infer box connections from Python imports and call-sites
+    DOMAIN  planner workflow
+    """
 
     if not boxes:
         return []
@@ -107,7 +115,9 @@ def _scan_project_files(
     source_roots: List[str],
     ignored_paths: List[str],
 ) -> Dict[str, _FileFacts]:
-    """Scan python files and gather import/call facts keyed by module."""
+    """PURPOSE scan python files and gather import/call facts keyed by module
+    DOMAIN  planner workflow
+    """
 
     facts_by_module: Dict[str, _FileFacts] = {}
     ignored = set(ignored_paths)
@@ -132,7 +142,9 @@ def _scan_project_files(
 
 
 def _parse_file(path: Path) -> Optional[_FileFacts]:
-    """Parse a Python file and extract imports and calls."""
+    """PURPOSE parse a Python file and extract imports and calls
+    DOMAIN  planner workflow
+    """
 
     try:
         content = path.read_text(encoding="utf-8")
@@ -156,7 +168,9 @@ def _parse_file(path: Path) -> Optional[_FileFacts]:
 
 
 def _extract_called_name(func_node: ast.expr) -> Optional[str]:
-    """Extract a best-effort called symbol name."""
+    """PURPOSE get a best-effort called symbol name
+    DOMAIN  planner workflow
+    """
 
     if isinstance(func_node, ast.Name):
         return func_node.id
@@ -179,7 +193,9 @@ def _resolve_called_symbol(
     box_by_module_symbol: Dict[Tuple[str, str], PlannerBox],
     box_by_qualified_name: Dict[str, PlannerBox],
 ) -> Optional[PlannerBox]:
-    """Resolve a called symbol to a target box using known mappings."""
+    """PURPOSE find a called symbol to a target box using known mappings
+    DOMAIN  planner workflow
+    """
 
     if called_symbol in box_by_qualified_name:
         return box_by_qualified_name[called_symbol]
@@ -205,7 +221,9 @@ def _upsert_inferred(
     confidence: str,
     evidence: str,
 ) -> None:
-    """Insert/merge an inferred connection by identity."""
+    """PURPOSE insert/merge an inferred connection by identity
+    DOMAIN  planner workflow
+    """
 
     key = (source_box_id, target_box_id, relationship)
     current = inferred.get(key)
@@ -232,7 +250,9 @@ def _upsert_inferred(
 
 
 def _pick_higher_confidence(left: str, right: str) -> str:
-    """Return highest confidence between two levels."""
+    """PURPOSE get highest confidence between two levels
+    DOMAIN  planner workflow
+    """
 
     rank = {"low": 0, "medium": 1, "high": 2}
     return left if rank.get(left, 0) >= rank.get(right, 0) else right

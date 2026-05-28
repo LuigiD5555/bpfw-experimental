@@ -1,4 +1,6 @@
-"""Finding model for BPFW MVP Catalog Mode."""
+"""PURPOSE finding model for BPFW catalog mode
+DOMAIN  terminal reports
+"""
 
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
@@ -11,7 +13,9 @@ FINDING_SEVERITY_INFO = "info"
 
 @dataclass(frozen=True)
 class Finding:
-    """Represent a normalized finding produced by BPFW."""
+    """PURPOSE store information about a clean finding produced by BPFW
+    DOMAIN  terminal reports
+    """
 
     source: str
     code: str

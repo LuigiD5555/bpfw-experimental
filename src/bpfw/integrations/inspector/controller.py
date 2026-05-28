@@ -1,4 +1,6 @@
-"""Inspector controller for navigation and command effects."""
+"""PURPOSE inspector controller for navigation and command effects
+DOMAIN  inspector workflow
+"""
 
 from dataclasses import dataclass
 from typing import List
@@ -26,14 +28,18 @@ from bpfw.integrations.shared.cli_runtime import quit_command_label
 
 @dataclass
 class InspectorControllerResult:
-    """Store the outcome produced by an inspector controller action."""
+    """PURPOSE store the outcome produced by an inspector controller action
+    DOMAIN  inspector workflow
+    """
 
     exit_code: int | None = None
     should_refresh_existing_purposes: bool = False
 
 
 class InspectorController:
-    """Coordinate inspector actions without mixing rendering details."""
+    """PURPOSE coordinate inspector actions without mixing rendering details
+    DOMAIN  inspector workflow
+    """
 
     def __init__(
         self,
@@ -41,12 +47,8 @@ class InspectorController:
         input_reader: InspectorInputReader,
         print_func,
     ) -> None:
-        """Initialize the inspector controller.
-
-        Args:
-            session: Loaded inspector session data.
-            input_reader: Interactive input reader used by submodes.
-            print_func: Function used for user-visible output.
+        """PURPOSE set up the inspector controller
+        DOMAIN  inspector workflow
         """
 
         self._session = session
@@ -62,7 +64,9 @@ class InspectorController:
         domain_suggestions: List[str],
         view_mode: InspectorViewMode,
     ) -> InspectorControllerResult:
-        """Apply one inspector action and return the controller outcome."""
+        """PURPOSE apply one inspector action and return the controller outcome
+        DOMAIN  inspector workflow
+        """
 
         if action == InspectorAction.SAVE_NEXT:
             return self._handle_save_next(
@@ -110,7 +114,9 @@ class InspectorController:
         purpose_suggestions: List[PurposeSuggestion],
         domain_suggestions: List[str],
     ) -> InspectorControllerResult:
-        """Validate, persist, and advance after a save action."""
+        """PURPOSE check, save, and advance after a save action
+        DOMAIN  inspector workflow
+        """
 
         missing_fields = validate_required_fields(issue.block)
         if missing_fields:
@@ -138,7 +144,9 @@ class InspectorController:
         return InspectorControllerResult(should_refresh_existing_purposes=True)
 
     def _handle_help(self, view_mode: InspectorViewMode) -> InspectorControllerResult:
-        """Render help and wait for the user to return to the inspector."""
+        """PURPOSE show help and wait for the user to return to the inspector
+        DOMAIN  inspector workflow
+        """
 
         for line in render_help_block(view_mode=view_mode):
             self._print_func(line)
@@ -154,7 +162,9 @@ class InspectorController:
 
 
 def save_issue(session: InspectLoadResult, issue: InspectIssue) -> bool:
-    """Save one issue and persist the blueprint."""
+    """PURPOSE save one issue and save the blueprint
+    DOMAIN  inspector workflow
+    """
 
     if session.blueprint_path is None:
         return False
@@ -184,7 +194,9 @@ def record_learning_feedback(
     purpose_suggestions: List[PurposeSuggestion],
     domain_suggestions: List[str],
 ) -> None:
-    """Record accepted purpose and domain values for incremental learning."""
+    """PURPOSE record accepted purpose and domain values for incremental learning
+    DOMAIN  inspector workflow
+    """
 
     purpose_value = issue.block.get("purpose")
     if isinstance(purpose_value, str) and purpose_value.strip():
@@ -206,7 +218,9 @@ def record_learning_feedback(
 
 
 def render_missing_fields_notification(missing_fields: list[str]) -> list[str]:
-    """Render notification for missing required fields."""
+    """PURPOSE show notification for missing required fields
+    DOMAIN  inspector workflow
+    """
 
     from bpfw.integrations.shared.visual_notifications import render_notification_block
 
@@ -219,7 +233,9 @@ def render_missing_fields_notification(missing_fields: list[str]) -> list[str]:
 
 
 def render_unknown_command_notification() -> list[str]:
-    """Render notification for an unknown inspector command."""
+    """PURPOSE show notification for an unknown inspector command
+    DOMAIN  inspector workflow
+    """
 
     from bpfw.integrations.shared.visual_notifications import render_notification_block
 
@@ -234,7 +250,9 @@ def render_unknown_command_notification() -> list[str]:
 
 
 def render_help_block(view_mode: InspectorViewMode) -> list[str]:
-    """Render inspector help for field meaning and command options."""
+    """PURPOSE show inspector help for field meaning and command options
+    DOMAIN  inspector workflow
+    """
 
     from bpfw.integrations.shared.visual_notifications import render_notification_block
 
@@ -329,7 +347,9 @@ def render_help_block(view_mode: InspectorViewMode) -> list[str]:
 
 
 def compute_help_width() -> int:
-    """Compute compact dynamic width for the help panel."""
+    """PURPOSE calculate compact dynamic width for the help panel
+    DOMAIN  inspector workflow
+    """
 
     import shutil
     from bpfw.integrations.shared.visual_width import display_width, measure_lines
@@ -347,7 +367,9 @@ def compute_help_width() -> int:
 
 
 def compute_notification_width() -> int:
-    """Compute standard inner width for standalone notification panels."""
+    """PURPOSE calculate standard inner width for standalone notification panels
+    DOMAIN  inspector workflow
+    """
 
     import shutil
 

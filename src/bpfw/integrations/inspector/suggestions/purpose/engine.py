@@ -1,4 +1,6 @@
-"""Deterministic semantic purpose suggestions with fixed slots."""
+"""PURPOSE stable meaning purpose suggestions with fixed slots
+DOMAIN  purpose suggestions
+"""
 
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -12,7 +14,9 @@ from bpfw.integrations.inspector.suggestions.purpose.models import PurposeSugges
 
 
 def _load_json_payload(file_name: str) -> dict[str, Any]:
-    """Load one sibling JSON object safely."""
+    """PURPOSE read one sibling JSON object
+    DOMAIN  purpose suggestions
+    """
 
     payload_path = Path(__file__).with_name(file_name)
     try:
@@ -25,7 +29,9 @@ def _load_json_payload(file_name: str) -> dict[str, Any]:
 
 
 def _load_purpose_semantics() -> tuple[set[str], list[str], set[tuple[str, str]]]:
-    """Load purpose semantics from local JSON file with safe fallbacks."""
+    """PURPOSE read purpose meanings from local JSON file
+        DOMAIN  purpose suggestions
+        """
 
     payload = _load_json_payload("purpose_semantics.json")
     if not payload:
@@ -67,7 +73,9 @@ def _load_purpose_semantics() -> tuple[set[str], list[str], set[tuple[str, str]]
 
 
 def _load_action_aliases() -> dict[str, str]:
-    """Load action aliases from local JSON file with safe fallback."""
+    """PURPOSE read action aliases from local JSON file with safe fallback
+    DOMAIN  purpose suggestions
+    """
 
     payload = _load_json_payload("action_aliases.json")
     if not payload:
@@ -92,7 +100,9 @@ _ACTION_ALIASES = _load_action_aliases()
 
 @dataclass(frozen=True, slots=True)
 class BlockPurposeInput:
-    """Represent normalized purpose-related fields extracted from one block."""
+    """PURPOSE store information about clean purpose-related fields extracted from one block
+    DOMAIN  purpose suggestions
+    """
 
     symbol: str
     symbol_type: str
@@ -103,7 +113,9 @@ class BlockPurposeInput:
 
 @dataclass(frozen=True, slots=True)
 class PurposeFacts:
-    """Represent normalized semantic facts extracted from a code block."""
+    """PURPOSE store information about clean meaning facts extracted from a code block
+    DOMAIN  purpose suggestions
+    """
 
     action: str
     object_text: str
@@ -112,7 +124,9 @@ class PurposeFacts:
 
 
 def compact_purpose_text(text: str) -> str:
-    """Return normalized purpose text for display."""
+    """PURPOSE get clean purpose text for display
+    DOMAIN  purpose suggestions
+    """
 
     return " ".join(str(text).strip().lower().split())
 
@@ -123,7 +137,9 @@ def suggest_purposes(
     existing_purposes: Iterable[str] | None = None,
     vocabulary: Any = None,
 ) -> list[PurposeSuggestion]:
-    """Return six fixed purpose suggestion slots for one code block."""
+    """PURPOSE get six fixed purpose suggestion slots for one code block
+    DOMAIN  purpose suggestions
+    """
 
     del vocabulary
     current_facts, symbol_facts, docstring_facts = extract_purpose_facts(block)
@@ -145,7 +161,9 @@ def suggest_purposes(
 
 
 def _collect_existing_purposes(project_blocks: Iterable[dict[str, Any]], block: dict[str, Any]) -> list[str]:
-    """Collect existing accepted purpose values preserving encounter order."""
+    """PURPOSE collect accepted purpose values preserving encounter order
+    DOMAIN  purpose suggestions
+    """
 
     current_identifier = str(block.get("id", "")).strip()
     result: list[str] = []
@@ -166,13 +184,17 @@ def _collect_existing_purposes(project_blocks: Iterable[dict[str, Any]], block: 
 
 
 def _placeholder(source: str) -> PurposeSuggestion:
-    """Return one empty fixed-slot suggestion placeholder."""
+    """PURPOSE get one empty fixed-slot suggestion placeholder
+    DOMAIN  purpose suggestions
+    """
 
     return PurposeSuggestion(text="-", source=source, evidence=(f"source: {source}",))
 
 
 def _build_block_input(block: dict[str, Any]) -> BlockPurposeInput:
-    """Build normalized block input from nested and top-level keys."""
+    """PURPOSE build clean block input from nested and main keys
+    DOMAIN  purpose suggestions
+    """
 
     def _pick(*paths: tuple[str, ...]) -> str:
         for path in paths:
@@ -208,7 +230,9 @@ def _build_block_input(block: dict[str, Any]) -> BlockPurposeInput:
 
 
 def _tokenize_identifier(text: str) -> list[str]:
-    """Tokenize identifiers into lowercase semantic tokens."""
+    """PURPOSE split identifiers into lowercase meaning tokens into words
+    DOMAIN  purpose suggestions
+    """
 
     if not text:
         return []
@@ -219,13 +243,17 @@ def _tokenize_identifier(text: str) -> list[str]:
 
 
 def _tokenize_sentence(sentence: str) -> list[str]:
-    """Tokenize one sentence into lowercase word tokens."""
+    """PURPOSE split one sentence into lowercase word tokens into words
+    DOMAIN  purpose suggestions
+    """
 
     return [token.lower() for token in re.findall(r"[A-Za-z][A-Za-z0-9]*", sentence)]
 
 
 def _extract_first_docstring_sentence(docstring: str) -> str:
-    """Extract the first semantic docstring sentence before known sections."""
+    """PURPOSE get the first meaning docstring sentence before known sections
+    DOMAIN  purpose suggestions
+    """
 
     if not docstring:
         return ""
@@ -244,7 +272,9 @@ def _extract_first_docstring_sentence(docstring: str) -> str:
 
 
 def _normalize_action(action: str) -> str:
-    """Normalize one action token with canonical semantic aliases."""
+    """PURPOSE clean one action token with canonical meaning aliases
+    DOMAIN  purpose suggestions
+    """
 
     lowered = action.lower().strip()
     if not lowered:
@@ -253,13 +283,17 @@ def _normalize_action(action: str) -> str:
 
 
 def _is_meaningful(token: str) -> bool:
-    """Return whether token is meaningful for action/object extraction."""
+    """PURPOSE check whether token is meaningful for action/object extraction
+    DOMAIN  purpose suggestions
+    """
 
     return bool(token and token not in _STOPWORDS)
 
 
 def _first_meaningful(tokens: Iterable[str]) -> str:
-    """Return first meaningful token, or empty string."""
+    """PURPOSE get first meaningful token, or empty string
+    DOMAIN  purpose suggestions
+    """
 
     for token in tokens:
         if _is_meaningful(token):
@@ -268,7 +302,9 @@ def _first_meaningful(tokens: Iterable[str]) -> str:
 
 
 def extract_primary_action(block_input: BlockPurposeInput) -> str:
-    """Extract the primary operation performed by the code block."""
+    """PURPOSE get the primary operation performed by the code block
+    DOMAIN  purpose suggestions
+    """
 
     symbol_action = ""
     if block_input.symbol:
@@ -285,7 +321,9 @@ def extract_primary_action(block_input: BlockPurposeInput) -> str:
 
 
 def _clean_object_tokens(tokens: list[str], action: str) -> list[str]:
-    """Clean object tokens by removing grammar words and the action token."""
+    """PURPOSE clean object tokens by removing grammar words and the action token
+    DOMAIN  purpose suggestions
+    """
 
     normalized_action = _normalize_action(action)
     cleaned: list[str] = []
@@ -299,7 +337,9 @@ def _clean_object_tokens(tokens: list[str], action: str) -> list[str]:
 
 
 def extract_symbol_object(block_input: BlockPurposeInput, action: str) -> str:
-    """Extract the object operated on by the symbol."""
+    """PURPOSE get the object operated on by the symbol
+    DOMAIN  purpose suggestions
+    """
 
     if not block_input.symbol:
         return ""
@@ -321,7 +361,9 @@ def extract_symbol_object(block_input: BlockPurposeInput, action: str) -> str:
 
 
 def _extract_qualifiers(sentence: str) -> tuple[str, ...]:
-    """Extract simple qualifiers from the first docstring sentence."""
+    """PURPOSE get simple qualifiers from the first docstring sentence
+    DOMAIN  purpose suggestions
+    """
 
     qualifiers: list[str] = []
     for match in re.finditer(r"\b(?:to|from|for|with|in|on)\s+([^,.;]+)", sentence, flags=re.IGNORECASE):
@@ -333,7 +375,9 @@ def _extract_qualifiers(sentence: str) -> tuple[str, ...]:
 
 
 def extract_docstring_facts(block_input: BlockPurposeInput) -> PurposeFacts:
-    """Extract purpose facts from the first docstring sentence only."""
+    """PURPOSE get purpose facts from the first docstring sentence only
+    DOMAIN  purpose suggestions
+    """
 
     sentence = _extract_first_docstring_sentence(block_input.docstring)
     tokens = _tokenize_sentence(sentence)
@@ -360,7 +404,9 @@ def extract_docstring_facts(block_input: BlockPurposeInput) -> PurposeFacts:
 
 
 def extract_purpose_facts(block: dict[str, Any]) -> tuple[PurposeFacts, PurposeFacts, PurposeFacts]:
-    """Extract normalized semantic facts from a code block."""
+    """PURPOSE get clean meaning facts from a code block
+    DOMAIN  purpose suggestions
+    """
 
     block_input = _build_block_input(block)
     symbol_action = extract_primary_action(
@@ -392,7 +438,9 @@ def extract_purpose_facts(block: dict[str, Any]) -> tuple[PurposeFacts, PurposeF
 
 
 def _is_generic_object(object_text: str) -> bool:
-    """Return whether an object phrase is too generic to be preferred."""
+    """PURPOSE check whether an object phrase is too generic to be preferred
+    DOMAIN  purpose suggestions
+    """
 
     generic = {"data", "item", "value", "object", "result", "state", "context"}
     tokens = _tokenize_sentence(object_text)
@@ -400,7 +448,9 @@ def _is_generic_object(object_text: str) -> bool:
 
 
 def _parse_purpose_text(text: str, source: str) -> PurposeFacts:
-    """Parse one purpose text into semantic facts for compatibility checks."""
+    """PURPOSE parse one purpose text into meaning facts for compatibility checks
+    DOMAIN  purpose suggestions
+    """
 
     normalized = compact_purpose_text(text)
     if normalized in {"", "-", "write custom purpose"}:
@@ -430,7 +480,9 @@ def _parse_purpose_text(text: str, source: str) -> PurposeFacts:
 
 
 def _actions_compatible(left: str, right: str) -> bool:
-    """Return whether two actions are semantically compatible."""
+    """PURPOSE check whether two actions are meaningally compatible
+        DOMAIN  purpose suggestions
+        """
 
     if not left or not right:
         return False
@@ -442,7 +494,9 @@ def _actions_compatible(left: str, right: str) -> bool:
 
 
 def _objects_compatible(left: str, right: str) -> bool:
-    """Return whether two object phrases are semantically compatible."""
+    """PURPOSE check whether two object phrases are meaningally compatible
+        DOMAIN  purpose suggestions
+        """
 
     left_norm = compact_purpose_text(left)
     right_norm = compact_purpose_text(right)
@@ -463,7 +517,9 @@ def _objects_compatible(left: str, right: str) -> bool:
 
 
 def _shared_object_tokens(left: str, right: str) -> int:
-    """Return shared non-stopword token count between two object phrases."""
+    """PURPOSE get shared non-stopword token count between two object phrases
+    DOMAIN  purpose suggestions
+    """
 
     left_tokens = {token for token in _tokenize_sentence(compact_purpose_text(left)) if token not in _STOPWORDS}
     right_tokens = {token for token in _tokenize_sentence(compact_purpose_text(right)) if token not in _STOPWORDS}
@@ -471,13 +527,17 @@ def _shared_object_tokens(left: str, right: str) -> int:
 
 
 def _is_lookup_action(action: str) -> bool:
-    """Return whether action belongs to lookup/query family."""
+    """PURPOSE check whether action belongs to lookup/query family
+    DOMAIN  purpose suggestions
+    """
 
     return _normalize_action(action) in {"get", "return", "load"}
 
 
 def suggest_existing_purpose(current_facts: PurposeFacts, existing_purposes: Iterable[str]) -> PurposeSuggestion:
-    """Suggest a compatible existing purpose."""
+    """PURPOSE suggest a compatible purpose
+    DOMAIN  purpose suggestions
+    """
 
     for purpose_text in existing_purposes:
         if not isinstance(purpose_text, str):
@@ -520,7 +580,9 @@ def suggest_existing_purpose(current_facts: PurposeFacts, existing_purposes: Ite
 
 
 def suggest_learned_purpose(current_facts: PurposeFacts, learned_purposes: Iterable[str]) -> PurposeSuggestion:
-    """Suggest a compatible learned purpose."""
+    """PURPOSE suggest a compatible learned purpose
+    DOMAIN  purpose suggestions
+    """
 
     for purpose_text in learned_purposes:
         candidate_facts = _parse_purpose_text(purpose_text, source="learned_based")
@@ -559,7 +621,9 @@ def suggest_learned_purpose(current_facts: PurposeFacts, learned_purposes: Itera
 
 
 def suggest_symbol_purpose(current_facts: PurposeFacts) -> PurposeSuggestion:
-    """Suggest a purpose derived from symbol structure."""
+    """PURPOSE suggest a purpose derived from symbol structure
+    DOMAIN  purpose suggestions
+    """
 
     if not current_facts.action or not current_facts.object_text:
         return _placeholder("name_based")
@@ -571,7 +635,9 @@ def suggest_symbol_purpose(current_facts: PurposeFacts) -> PurposeSuggestion:
 
 
 def suggest_docstring_purpose(docstring_facts: PurposeFacts) -> PurposeSuggestion:
-    """Suggest a purpose derived from the first docstring sentence."""
+    """PURPOSE suggest a purpose derived from the first docstring sentence
+    DOMAIN  purpose suggestions
+    """
 
     if not docstring_facts.action or not docstring_facts.object_text:
         return _placeholder("docstring_based")
@@ -592,7 +658,9 @@ def suggest_fallback_purpose(
     symbol_facts: PurposeFacts,
     docstring_facts: PurposeFacts,
 ) -> PurposeSuggestion:
-    """Suggest a deterministic fallback purpose without blended generation."""
+    """PURPOSE suggest a stable fallback purpose without blended generation
+    DOMAIN  purpose suggestions
+    """
 
     if symbol_facts.action and docstring_facts.object_text:
         text = f"{symbol_facts.action} {docstring_facts.object_text}"
@@ -611,7 +679,9 @@ def suggest_fallback_purpose(
 
 
 def deduplicate_suggestions(suggestions: list[PurposeSuggestion]) -> list[PurposeSuggestion]:
-    """Replace semantically duplicate suggestions with placeholders preserving order."""
+    """PURPOSE replace meaningally duplicate suggestions with placeholders preserving order
+        DOMAIN  purpose suggestions
+        """
 
     seen_identities: set[tuple[str, str, tuple[str, ...]]] = set()
     result: list[PurposeSuggestion] = []
@@ -642,7 +712,9 @@ def deduplicate_suggestions(suggestions: list[PurposeSuggestion]) -> list[Purpos
 
 
 def ensure_fixed_purpose_slots(automatic_suggestions: list[PurposeSuggestion]) -> list[PurposeSuggestion]:
-    """Return exactly six fixed slots, including the custom purpose slot."""
+    """PURPOSE get exactly six fixed slots, including the custom purpose slot
+    DOMAIN  purpose suggestions
+    """
 
     slot_sources = ["existing_purpose", "learned_based", "name_based", "docstring_based", "blended_based"]
     by_source = {item.source: item for item in automatic_suggestions}

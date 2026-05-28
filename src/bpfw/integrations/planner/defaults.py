@@ -1,4 +1,6 @@
-"""Default builders for Planner integration."""
+"""PURPOSE default builders for Planner tool
+DOMAIN  planner workflow
+"""
 
 from dataclasses import dataclass
 from typing import List, Optional
@@ -19,8 +21,10 @@ from bpfw.integrations.planner.utils import (
 
 @dataclass
 class AddBoxInput:
-    """Input data for adding a new box."""
-    
+    """PURPOSE input data for adding a new box
+    DOMAIN  planner workflow
+    """
+
     name: str
     domain: str
     purpose: str
@@ -29,23 +33,20 @@ class AddBoxInput:
 
 
 class PlannerDefaultsBuilder:
-    """Generate intelligent defaults for planner elements."""
-    
+    """PURPOSE generate intelligent defaults for planner elements
+    DOMAIN  planner workflow
+    """
+
     @staticmethod
     def build_project_defaults(project_root_path) -> PlannerProjectConfig:
-        """Build default project configuration.
-        
-        Args:
-            project_root_path: Path to project root.
-        
-        Returns:
-            PlannerProjectConfig with intelligent defaults.
+        """PURPOSE build default project configuration
+        DOMAIN  planner workflow
         """
         from pathlib import Path
-        
+
         project_root = Path(project_root_path)
         defaults = get_project_defaults(project_root)
-        
+
         return PlannerProjectConfig(
             project_id=defaults["project_id"],
             project_name=defaults["project_name"],
@@ -53,26 +54,20 @@ class PlannerDefaultsBuilder:
             language=defaults["language"],
             source_roots=defaults["source_roots"],
         )
-    
+
     @staticmethod
     def build_box_defaults(box_input: AddBoxInput, state: PlannerState) -> PlannerBox:
-        """Build a box with generated default values.
-        
-        Args:
-            box_input: User-provided box data.
-            state: Current planner state.
-        
-        Returns:
-            PlannerBox with all derived fields populated.
+        """PURPOSE build a box with generated default values
+        DOMAIN  planner workflow
         """
         # Get source root for path generation
         source_root = state.project_config.source_roots[0] if state.project_config.source_roots else "src"
-        
+
         # Generate derived values
         path = generate_box_path(source_root, box_input.domain, box_input.name)
         symbol = generate_box_symbol(box_input.name)
         lifecycle = box_input.lifecycle or "active"
-        
+
         # Create box
         box = PlannerBox(
             name=box_input.name,
@@ -84,54 +79,47 @@ class PlannerDefaultsBuilder:
             symbol=symbol,
             interface=None,  # User can add interface later
         )
-        
+
         return box
 
 
 class BoxFactory:
-    """Factory for creating and validating boxes."""
-    
+    """PURPOSE factory for creating and validating boxes
+    DOMAIN  planner workflow
+    """
+
     @staticmethod
     def create_box(input_data: AddBoxInput, state: PlannerState) -> PlannerBox:
-        """Create a new box with validation.
-        
-        Args:
-            input_data: User-provided box data.
-            state: Current planner state.
-        
-        Returns:
-            Validated PlannerBox instance.
-        
-        Raises:
-            ValueError: If validation fails.
+        """PURPOSE create a new box with check
+        DOMAIN  planner workflow
         """
         # Validate name
         if not input_data.name or not input_data.name.strip():
             raise ValueError("Box name cannot be empty")
-        
+
         # Validate domain
         if not input_data.domain or not input_data.domain.strip():
             raise ValueError("Box domain cannot be empty")
-        
+
         # Validate purpose
         if not input_data.purpose or not input_data.purpose.strip():
             raise ValueError("Block purpose cannot be empty")
-        
+
         # Validate symbol_type
         if input_data.symbol_type not in VALID_SYMBOL_TYPES:
             raise ValueError(
                 f"Invalid kind: {input_data.symbol_type}. Must be one of: {VALID_SYMBOL_TYPES}"
             )
-        
+
         # Validate lifecycle if provided
         if input_data.lifecycle:
             allowed_lifecycles = state.project_config.allowed_lifecycles
             if input_data.lifecycle not in allowed_lifecycles:
                 raise ValueError(f"Invalid lifecycle: {input_data.lifecycle}. Must be one of: {allowed_lifecycles}")
-        
+
         # Generate defaults
         box = PlannerDefaultsBuilder.build_box_defaults(input_data, state)
-        
+
         # Ensure ID is unique
         existing_ids = {b.id for b in state.boxes}
         if box.id in existing_ids:
@@ -142,23 +130,13 @@ class BoxFactory:
                 suffix += 1
                 new_id = f"{box.id}_{suffix}"
             box.id = new_id
-        
+
         return box
-    
+
     @staticmethod
     def update_box(box: PlannerBox, updates: dict) -> PlannerBox:
-        """Update an existing box with new values.
-        
-        Args:
-            box: The box to update.
-            updates: Dictionary of fields to update.
-        
-        Returns:
-            Updated PlannerBox instance.
-        
-        Note:
-            This creates a new box instance since PlannerBox is a dataclass.
-            Derived fields will be recalculated automatically.
+        """PURPOSE update an box with new values
+        DOMAIN  planner workflow
         """
         # Create a new box with updated values
         updated_box = PlannerBox(
@@ -172,5 +150,5 @@ class BoxFactory:
             interface=updates.get("interface", box.interface),
             notes=updates.get("notes", box.notes),
         )
-        
+
         return updated_box

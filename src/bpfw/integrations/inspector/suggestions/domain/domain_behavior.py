@@ -1,4 +1,6 @@
-"""Behavior-based domain matching for inspector domain suggestion slots."""
+"""PURPOSE behavior-based domain matching for inspector domain suggestion slots
+DOMAIN  domain suggestions
+"""
 
 from __future__ import annotations
 
@@ -68,28 +70,22 @@ MINIMUM_USEFUL_SCORE = 6.0
 
 
 class BehaviorFingerprint:
-    """Store weighted behavior evidence extracted from one block.
-
-    Attributes:
-        token_weights_by_source: Source-tagged token weight map.
-        phrase2_weights: Two-word phrase weight map.
-        phrase3_weights: Three-word phrase weight map.
+    """PURPOSE store weighted behavior evidence extracted from one block
+    DOMAIN  domain suggestions
     """
 
     def __init__(self) -> None:
-        """Initialize an empty behavior fingerprint."""
+        """PURPOSE set up an empty behavior fingerprint
+        DOMAIN  domain suggestions
+        """
 
         self.token_weights_by_source: dict[str, dict[str, float]] = defaultdict(dict)
         self.phrase2_weights: dict[str, float] = defaultdict(float)
         self.phrase3_weights: dict[str, float] = defaultdict(float)
 
     def add_tokens(self, source: str, tokens: list[str], weight: float) -> None:
-        """Add weighted token and phrase evidence for one source.
-
-        Args:
-            source: Evidence source label.
-            tokens: Normalized tokens from the source.
-            weight: Weight to add per token and phrase.
+        """PURPOSE add weighted token and phrase evidence for one source
+        DOMAIN  domain suggestions
         """
 
         if not tokens:
@@ -108,7 +104,9 @@ class BehaviorFingerprint:
             self.phrase3_weights[phrase3] += weight
 
     def merged_token_weights(self) -> dict[str, float]:
-        """Return token weights merged across all sources."""
+        """PURPOSE get token weights merged across all sources
+        DOMAIN  domain suggestions
+        """
 
         merged: dict[str, float] = defaultdict(float)
         for source_bucket in self.token_weights_by_source.values():
@@ -118,18 +116,14 @@ class BehaviorFingerprint:
 
 
 class DomainBehaviorProfile:
-    """Store one historical domain behavior profile.
-
-    Attributes:
-        domain: Domain name.
-        token_weights: Aggregated token weights.
-        phrase2_weights: Aggregated two-word phrase weights.
-        phrase3_weights: Aggregated three-word phrase weights.
-        contributing_blocks: Number of accepted blocks used in the profile.
+    """PURPOSE store one historical domain behavior profile
+    DOMAIN  domain suggestions
     """
 
     def __init__(self, domain: str) -> None:
-        """Initialize one profile for a domain."""
+        """PURPOSE set up one profile for a domain
+        DOMAIN  domain suggestions
+        """
 
         self.domain = domain
         self.token_weights: dict[str, float] = defaultdict(float)
@@ -138,10 +132,8 @@ class DomainBehaviorProfile:
         self.contributing_blocks = 0
 
     def absorb(self, fingerprint: BehaviorFingerprint) -> None:
-        """Accumulate one block fingerprint into this profile.
-
-        Args:
-            fingerprint: Extracted behavior fingerprint from one accepted block.
+        """PURPOSE accumulate one block fingerprint into this profile
+        DOMAIN  domain suggestions
         """
 
         for token, weight in fingerprint.merged_token_weights().items():
@@ -158,15 +150,8 @@ def suggest_behavior_domains(
     project_blocks: list[dict[str, Any]],
     current_identity: tuple[str, str, str],
 ) -> list[str]:
-    """Return the top 3 existing domains that best match current block behavior.
-
-    Args:
-        block: Current block.
-        project_blocks: Full project blocks used as historical accepted data.
-        current_identity: Stable identity tuple for excluding the current block.
-
-    Returns:
-        Exactly three strings for inspector slots ``[d1]``, ``[d2]``, and ``[d3]``.
+    """PURPOSE get the top 3 domains that best match block behavior
+    DOMAIN  domain suggestions
     """
 
     current_fingerprint = extract_behavior_fingerprint(block, for_profile=False)
@@ -183,14 +168,8 @@ def suggest_behavior_domains(
 
 
 def extract_behavior_fingerprint(block: dict[str, Any], for_profile: bool) -> BehaviorFingerprint:
-    """Extract a behavior fingerprint from one block.
-
-    Args:
-        block: Block dictionary containing code and detected metadata.
-        for_profile: Whether this fingerprint is for historical profile aggregation.
-
-    Returns:
-        Weighted behavior fingerprint.
+    """PURPOSE get a behavior fingerprint from one block
+    DOMAIN  domain suggestions
     """
 
     fingerprint = BehaviorFingerprint()
@@ -217,13 +196,8 @@ def extract_behavior_fingerprint(block: dict[str, Any], for_profile: bool) -> Be
 
 
 def extract_docstring_behavior_terms(docstring: Any) -> tuple[list[str], list[str], list[str]]:
-    """Extract behavior token and phrase evidence from a raw docstring.
-
-    Args:
-        docstring: Raw docstring value.
-
-    Returns:
-        Tuple of ``(tokens, two_word_phrases, three_word_phrases)``.
+    """PURPOSE get behavior token and phrase evidence from a raw docstring
+    DOMAIN  domain suggestions
     """
 
     tokens = _extract_docstring_summary_tokens(docstring)
@@ -242,7 +216,9 @@ def _build_historical_profiles(
     project_blocks: list[dict[str, Any]],
     current_identity: tuple[str, str, str],
 ) -> dict[str, DomainBehaviorProfile]:
-    """Build historical domain profiles from accepted project blocks."""
+    """PURPOSE build historical domain profiles from accepted project blocks
+    DOMAIN  domain suggestions
+    """
 
     profiles: dict[str, DomainBehaviorProfile] = {}
 
@@ -273,7 +249,9 @@ def _rank_profiles(
     current_fingerprint: BehaviorFingerprint,
     profiles: dict[str, DomainBehaviorProfile],
 ) -> list[str]:
-    """Rank profiles by deterministic behavior overlap score."""
+    """PURPOSE rank profiles by stable behavior overlap score
+    DOMAIN  domain suggestions
+    """
 
     scored_domains: list[tuple[float, int, str]] = []
     current_tokens_by_source = current_fingerprint.token_weights_by_source
@@ -330,7 +308,9 @@ def _rank_profiles(
 
 
 def _extract_docstring_summary_tokens(docstring: Any) -> list[str]:
-    """Extract normalized tokens from the first behavior sentence in a docstring."""
+    """PURPOSE get clean tokens from the first behavior sentence in a docstring
+    DOMAIN  domain suggestions
+    """
 
     if not isinstance(docstring, str):
         return []
@@ -364,7 +344,9 @@ def _extract_docstring_summary_tokens(docstring: Any) -> list[str]:
 
 
 def _extract_symbol_tokens(block: dict[str, Any]) -> list[str]:
-    """Extract normalized symbol tokens from block code metadata."""
+    """PURPOSE get clean symbol tokens from block code metadata
+    DOMAIN  domain suggestions
+    """
 
     code = block.get("code")
     if not isinstance(code, dict):
@@ -376,7 +358,9 @@ def _extract_symbol_tokens(block: dict[str, Any]) -> list[str]:
 
 
 def _extract_called_symbol_tokens(detected: dict[str, Any]) -> list[str]:
-    """Extract normalized tokens from called symbol metadata."""
+    """PURPOSE get clean tokens from called symbol metadata
+    DOMAIN  domain suggestions
+    """
 
     called_symbols = detected.get("called_symbols", [])
     if not isinstance(called_symbols, list):
@@ -391,7 +375,9 @@ def _extract_called_symbol_tokens(detected: dict[str, Any]) -> list[str]:
 
 
 def _extract_raised_exception_tokens(detected: dict[str, Any]) -> list[str]:
-    """Extract normalized tokens from raised exception metadata."""
+    """PURPOSE get clean tokens from raised exception metadata
+    DOMAIN  domain suggestions
+    """
 
     raised_exceptions = detected.get("raised_exceptions", [])
     if not isinstance(raised_exceptions, list):
@@ -406,7 +392,9 @@ def _extract_raised_exception_tokens(detected: dict[str, Any]) -> list[str]:
 
 
 def _extract_signature_parameter_tokens(signature: Any) -> list[str]:
-    """Extract normalized parameter-name tokens from a callable signature string."""
+    """PURPOSE get clean parameter-name tokens from a callable signature string
+    DOMAIN  domain suggestions
+    """
 
     if not isinstance(signature, str) or not signature.strip():
         return []
@@ -427,7 +415,9 @@ def _extract_signature_parameter_tokens(signature: Any) -> list[str]:
 
 
 def _extract_import_tokens(detected: dict[str, Any]) -> list[str]:
-    """Extract normalized tokens from import metadata."""
+    """PURPOSE get clean tokens from import metadata
+    DOMAIN  domain suggestions
+    """
 
     import_entries = detected.get("imports", [])
     if not isinstance(import_entries, list):
@@ -443,7 +433,9 @@ def _extract_import_tokens(detected: dict[str, Any]) -> list[str]:
 
 
 def _tokenize_behavior_text(text: str) -> list[str]:
-    """Tokenize free behavior text while preserving action words."""
+    """PURPOSE split free behavior text while preserving action words into words
+    DOMAIN  domain suggestions
+    """
 
     raw_tokens = re.findall(r"[A-Za-z][A-Za-z0-9_]*", text)
     split_tokens: list[str] = []
@@ -453,7 +445,9 @@ def _tokenize_behavior_text(text: str) -> list[str]:
 
 
 def _normalize_tokens(tokens: list[str]) -> list[str]:
-    """Normalize tokens and drop only structural noise words."""
+    """PURPOSE clean tokens and drop only structural noise words
+    DOMAIN  domain suggestions
+    """
 
     normalized: list[str] = []
     for token in tokens:
@@ -467,7 +461,9 @@ def _normalize_tokens(tokens: list[str]) -> list[str]:
 
 
 def _resolve_block_identity(block: dict[str, Any]) -> tuple[str, str, str]:
-    """Return stable identity tuple for one block."""
+    """PURPOSE get stable identity tuple for one block
+    DOMAIN  domain suggestions
+    """
 
     code = block.get("code", {})
     block_id = block.get("id")
@@ -481,7 +477,9 @@ def _resolve_block_identity(block: dict[str, Any]) -> tuple[str, str, str]:
 
 
 def _normalize_domain(value: Any) -> str:
-    """Normalize domain and reject placeholders."""
+    """PURPOSE clean domain and reject placeholders
+    DOMAIN  domain suggestions
+    """
 
     if not isinstance(value, str):
         return ""

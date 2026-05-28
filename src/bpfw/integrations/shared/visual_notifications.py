@@ -1,4 +1,6 @@
-"""Terminal notification rendering helpers for interactive integrations."""
+"""PURPOSE terminal notification rendering helpers for interactive tools
+DOMAIN  terminal UI
+"""
 
 from bpfw.integrations.shared.visual_boxes import _centered_title_bar
 from bpfw.integrations.shared.visual_width import pad_text
@@ -9,7 +11,9 @@ def render_notification_block(
     lines: list[str],
     width: int,
 ) -> list[str]:
-    """Render a terminal notification block as text lines."""
+    """PURPOSE show a terminal notification block as text lines
+    DOMAIN  terminal UI
+    """
 
     top = f"╭{_centered_title_bar(title=title, width=width, fill='─')}╮"
     body = [f"│{pad_text(line, width)}│" for line in lines]

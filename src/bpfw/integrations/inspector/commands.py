@@ -1,4 +1,6 @@
-"""Command handling for the inspector integration."""
+"""PURPOSE command handling for the inspector tool
+DOMAIN  inspector workflow
+"""
 
 from collections.abc import Callable
 from typing import Any, Dict, List
@@ -23,7 +25,9 @@ LIFECYCLE_KEYS = {
 
 
 def _read_optional_value(input_func: InputFunc, prompt: str) -> str | None:
-    """Read one optional value and cancel cleanly on keyboard interrupt."""
+    """PURPOSE read one value and cancel cleanly on keyboard interrupt
+    DOMAIN  inspector workflow
+    """
 
     try:
         return input_func(prompt).strip()
@@ -32,7 +36,9 @@ def _read_optional_value(input_func: InputFunc, prompt: str) -> str | None:
 
 
 class InspectorAction:
-    """Define action names produced by inspector commands."""
+    """PURPOSE define action names produced by inspector commands
+    DOMAIN  inspector workflow
+    """
 
     STAY = "stay"
     SAVE_NEXT = "save_next"
@@ -51,7 +57,9 @@ def apply_inspector_command(
     domain_suggestions: List[str],
     input_func: InputFunc,
 ) -> str:
-    """Apply one inspector command and return the navigation action."""
+    """PURPOSE apply one inspector command and return the navigation action
+    DOMAIN  inspector workflow
+    """
 
     stripped_command = normalize_command(command)
 
@@ -175,19 +183,9 @@ def run_interface_edit_submode(
     input_func: InputFunc,
     print_func: Callable[[str], None],
 ) -> None:
-    """Run interface editing sub-mode for adding/editing interface metadata.
+    """PURPOSE run the input/output editor
+        DOMAIN  inspector workflow
 
-    This is a simple interactive sub-mode that allows editing:
-    - Add input (a)
-    - Edit input by index (1, 2, 3...)
-    - Remove input by index (d1, d2, d3...)
-    - Edit output type/description (o)
-    - Return to main inspector (Enter)
-
-    Args:
-        block: The block dict to modify.
-        input_func: Function for reading user input.
-        print_func: Function for printing output.
     """
     # Ensure interface dict exists
     if "interface" not in block:

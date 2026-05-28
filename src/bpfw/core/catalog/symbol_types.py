@@ -1,4 +1,6 @@
-"""Canonical symbol type vocabulary shared by init and planner."""
+"""PURPOSE canonical symbol type vocabulary shared by init and planner
+DOMAIN  blueprint checks
+"""
 
 from typing import Final
 
@@ -23,7 +25,9 @@ SYMBOL_TYPE_ALIASES: Final[dict[str, str]] = {
 
 
 def normalize_symbol_type(raw_symbol_type: str) -> str:
-    """Return canonical symbol type with safe fallback."""
+    """PURPOSE get canonical symbol type with safe fallback
+    DOMAIN  blueprint checks
+    """
 
     normalized = (raw_symbol_type or "").strip().lower()
     normalized = SYMBOL_TYPE_ALIASES.get(normalized, normalized)

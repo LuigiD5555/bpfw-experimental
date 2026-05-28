@@ -1,4 +1,6 @@
-"""Build low-level patch plans from Blueprint Engine requests."""
+"""PURPOSE build low-level patch plans from Blueprint Engine requests
+DOMAIN  approved blueprint changes
+"""
 
 from pathlib import Path
 from typing import Any
@@ -26,19 +28,13 @@ from bpfw.core.blueprint_engine.models import BlueprintChangeKind, BlueprintChan
 
 
 class BlueprintPlanBuilder:
-    """Convert approved change requests into mechanical patch plans."""
+    """PURPOSE convert approved change requests into file change plans
+        DOMAIN  approved blueprint changes
+        """
 
     def build_plan(self, requests: list[BlueprintChangeRequest]) -> AuthorityPatchPlan:
-        """Build a patch plan from change requests.
-
-        Args:
-            requests: Blueprint change requests to convert.
-
-        Returns:
-            Authority patch plan containing mechanical operations.
-
-        Raises:
-            AuthorityError: If a request payload is missing required data.
+        """PURPOSE build a patch plan from change requests
+        DOMAIN  approved blueprint changes
         """
         plan = AuthorityPatchPlan()
         for request in requests:
@@ -46,13 +42,8 @@ class BlueprintPlanBuilder:
         return plan
 
     def _build_operation(self, request: BlueprintChangeRequest):  # noqa: ANN202
-        """Build one patch operation from a request.
-
-        Args:
-            request: Blueprint change request.
-
-        Returns:
-            Low-level patch operation.
+        """PURPOSE build one patch operation from a request
+        DOMAIN  approved blueprint changes
         """
         kind = request.kind
         payload = request.payload
@@ -143,17 +134,9 @@ class BlueprintPlanBuilder:
         raise AuthorityError(f"Unsupported BlueprintChangeKind: {kind}")
 
     def _required_string(self, payload: dict[str, Any], key: str) -> str:
-        """Read a required non-empty string from a payload.
+        """PURPOSE read a required non-empty string from a data
+                DOMAIN  approved blueprint changes
 
-        Args:
-            payload: Request payload.
-            key: Payload key.
-
-        Returns:
-            String value.
-
-        Raises:
-            AuthorityError: If the value is missing or invalid.
         """
         value = payload.get(key)
         if not isinstance(value, str) or not value.strip():
@@ -161,14 +144,9 @@ class BlueprintPlanBuilder:
         return value
 
     def _optional_string(self, payload: dict[str, Any], key: str) -> str | None:
-        """Read an optional string from a payload.
+        """PURPOSE read an string from a data
+                DOMAIN  approved blueprint changes
 
-        Args:
-            payload: Request payload.
-            key: Payload key.
-
-        Returns:
-            String value or None.
         """
         value = payload.get(key)
         if value is None:
@@ -178,14 +156,9 @@ class BlueprintPlanBuilder:
         return value
 
     def _required_path(self, payload: dict[str, Any], key: str) -> Path:
-        """Read a required path from a payload.
+        """PURPOSE read a required path from a data
+                DOMAIN  approved blueprint changes
 
-        Args:
-            payload: Request payload.
-            key: Payload key.
-
-        Returns:
-            Project-relative path.
         """
         value = payload.get(key)
         if isinstance(value, Path):
@@ -195,14 +168,9 @@ class BlueprintPlanBuilder:
         raise AuthorityError(f"Blueprint change payload requires path '{key}'.")
 
     def _required_dict(self, payload: dict[str, Any], key: str) -> dict[str, Any]:
-        """Read a required dictionary from a payload.
+        """PURPOSE read a required dictionaryionary from a data
+                DOMAIN  approved blueprint changes
 
-        Args:
-            payload: Request payload.
-            key: Payload key.
-
-        Returns:
-            Dictionary value.
         """
         value = payload.get(key)
         if not isinstance(value, dict) or not value:
@@ -210,13 +178,8 @@ class BlueprintPlanBuilder:
         return value
 
     def _optional_blocks(self, payload: dict[str, Any]) -> list[dict[str, Any]]:
-        """Read optional initial shard blocks.
-
-        Args:
-            payload: Request payload.
-
-        Returns:
-            Initial block list.
+        """PURPOSE read initial shard blocks
+        DOMAIN  approved blueprint changes
         """
         value = payload.get("initial_blocks", [])
         if not isinstance(value, list):

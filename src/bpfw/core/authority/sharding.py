@@ -1,4 +1,6 @@
-"""Shard decision engine for BPFW authority sharding."""
+"""PURPOSE shard decision engine for BPFW authority sharding
+DOMAIN  blueprint files
+"""
 
 import re
 from pathlib import Path
@@ -9,26 +11,18 @@ from bpfw.core.authority.errors import InvalidShardPathError
 
 
 class ShardDecisionEngine:
-    """Decide which shard a block should live in based on authority config.
-    
-    Supported strategies:
-    - domain: Use block domain to determine shard
-    - path: Use code path to determine shard
-    - architecture_layer: Use architecture.yaml layer mappings
-    
-    All generated shard paths are confined to bpfw/blocks/.
+    """PURPOSE decide which shard a block should live in based on authority config
+    DOMAIN  blueprint files
     """
 
     SHARD_BASE_DIR = Path("bpfw/blocks")
-    
+
     # Valid shard name characters (alphanumeric, underscore, hyphen)
     VALID_SHARD_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9_\-]+$")
 
     def __init__(self, authority_config: dict[str, Any]) -> None:
-        """Initialize the shard decision engine.
-        
-        Args:
-            authority_config: The authority configuration dictionary.
+        """PURPOSE set up the shard decision engine
+        DOMAIN  blueprint files
         """
         self.authority_config = authority_config or {}
         self.shard_strategy = self.authority_config.get("shard_strategy", "domain")
@@ -40,17 +34,8 @@ class ShardDecisionEngine:
         block: dict[str, Any],
         document: AuthorityDocument | None = None,
     ) -> Path:
-        """Decide which shard a block should live in.
-        
-        Args:
-            block: The block dictionary.
-            document: Optional AuthorityDocument for architecture strategy.
-        
-        Returns:
-            Project-relative path to the expected shard file.
-        
-        Raises:
-            InvalidShardPathError: If the generated shard path is invalid.
+        """PURPOSE decide which shard a block should live in
+        DOMAIN  blueprint files
         """
         strategy = self.shard_strategy
 
@@ -68,13 +53,8 @@ class ShardDecisionEngine:
             return Path(self.default_shard)
 
     def _decide_by_domain(self, block: dict[str, Any]) -> Path:
-        """Decide shard based on block domain.
-        
-        Args:
-            block: The block dictionary.
-        
-        Returns:
-            Project-relative path to the shard file.
+        """PURPOSE decide shard based on block domain
+        DOMAIN  blueprint files
         """
         domain = block.get("domain")
 
@@ -87,13 +67,8 @@ class ShardDecisionEngine:
         return Path(self.default_shard)
 
     def _decide_by_path(self, block: dict[str, Any]) -> Path:
-        """Decide shard based on code path.
-        
-        Args:
-            block: The block dictionary.
-        
-        Returns:
-            Project-relative path to the shard file.
+        """PURPOSE decide shard based on code path
+        DOMAIN  blueprint files
         """
         code = block.get("code")
         if not isinstance(code, dict):
@@ -105,12 +80,12 @@ class ShardDecisionEngine:
 
         # Extract first directory after src/bpfw
         path_parts = Path(code_path).parts
-        
+
         # Look for src/bpfw pattern
         try:
             src_index = path_parts.index("src")
             bpfw_index = path_parts.index("bpfw", src_index)
-            
+
             # Get the next directory after src/bpfw
             if bpfw_index + 1 < len(path_parts):
                 next_dir = path_parts[bpfw_index + 1]
@@ -128,14 +103,8 @@ class ShardDecisionEngine:
         block: dict[str, Any],
         document: AuthorityDocument,
     ) -> Path:
-        """Decide shard based on architecture layer mapping.
-        
-        Args:
-            block: The block dictionary.
-            document: The authority document.
-        
-        Returns:
-            Project-relative path to the shard file.
+        """PURPOSE decide shard based on architecture layer mapping
+        DOMAIN  blueprint files
         """
         code = block.get("code")
         if not isinstance(code, dict):
@@ -200,23 +169,8 @@ class ShardDecisionEngine:
         return self._decide_by_domain(block)
 
     def normalize_shard_name(self, value: str) -> str:
-        """Normalize a value to a safe shard filename.
-        
-        Normalization rules:
-        - Convert to lowercase
-        - Replace spaces with underscores
-        - Replace slashes with underscores
-        - Remove invalid characters
-        - Ensure the result is a valid shard name
-        
-        Args:
-            value: The value to normalize (e.g., domain name).
-        
-        Returns:
-            Normalized shard filename without extension.
-        
-        Raises:
-            InvalidShardPathError: If the value cannot be normalized safely.
+        """PURPOSE clean a value to a safe shard filename
+        DOMAIN  blueprint files
         """
         if not value or not isinstance(value, str):
             return "uncategorized"
@@ -255,13 +209,8 @@ class ShardDecisionEngine:
         return normalized
 
     def is_shard_path_valid(self, shard_path: Path) -> bool:
-        """Check if a shard path is within the allowed directory.
-        
-        Args:
-            shard_path: Project-relative shard path to validate.
-        
-        Returns:
-            True if the path is valid, False otherwise.
+        """PURPOSE check if a shard path is within the allowed directory
+        DOMAIN  blueprint files
         """
         try:
             # Convert to absolute path relative to project root
@@ -278,9 +227,7 @@ class ShardDecisionEngine:
             return False
 
     def get_default_shard(self) -> Path:
-        """Get the default shard path.
-        
-        Returns:
-            Project-relative path to the default shard.
+        """PURPOSE get the default shard path
+        DOMAIN  blueprint files
         """
         return Path(self.default_shard)

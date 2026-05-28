@@ -1,4 +1,6 @@
-"""Merge hybrid connections from blueprint and inferred sources."""
+"""PURPOSE merge hybrid connections from blueprint and inferred sources
+DOMAIN  planner workflow
+"""
 
 from typing import Dict, List, Tuple
 
@@ -10,7 +12,9 @@ def merge_connections(
     blueprint_connections: List[PlannerConnection],
     inferred_connections: List[InferredConnection],
 ) -> List[PlannerConnection]:
-    """Merge connections with blueprint precedence and inferred suggestions."""
+    """PURPOSE merge connections with blueprint precedence and inferred suggestions
+    DOMAIN  planner workflow
+    """
 
     merged: List[PlannerConnection] = []
     by_pair: Dict[Tuple[str, str], List[PlannerConnection]] = {}

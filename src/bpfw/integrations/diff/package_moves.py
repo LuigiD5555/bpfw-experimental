@@ -1,4 +1,6 @@
-"""Package move grouping for repeated moved-code candidates."""
+"""PURPOSE package move grouping for repeated moved-code candidates
+DOMAIN  optional integrations
+"""
 
 from dataclasses import dataclass
 from pathlib import PurePosixPath
@@ -8,13 +10,8 @@ from bpfw.integrations.diff.models import DiffItem, DiffItemKind
 
 @dataclass(frozen=True)
 class PackageMoveGroup:
-    """Represent a repeated path-prefix move as one human decision.
-
-    Attributes:
-        identifier: Stable group identifier for the current review snapshot.
-        old_prefix: Old path prefix declared by authority.
-        new_prefix: New path prefix found in real code.
-        items: Moved-code items covered by this group.
+    """PURPOSE store information about a repeated path-prefix move as one human decision
+    DOMAIN  optional integrations
     """
 
     identifier: str
@@ -24,10 +21,8 @@ class PackageMoveGroup:
 
     @property
     def affected_count(self) -> int:
-        """Return the number of declarations covered by the group.
-
-        Returns:
-            Number of moved-code items in the group.
+        """PURPOSE get the number of declarations covered by the group
+        DOMAIN  optional integrations
         """
         return len(self.items)
 
@@ -36,20 +31,8 @@ def group_package_moves(
     items: list[DiffItem],
     minimum_group_size: int = 2,
 ) -> tuple[list[PackageMoveGroup], list[DiffItem]]:
-    """Group repeated moved-code candidates by path-prefix transformation.
-
-    The grouping intentionally considers multiple possible prefix transforms per
-    item and then selects the most useful non-overlapping groups. This prevents
-    a broad transform such as ``src/bpfw/ -> src/bpfw/core/`` from swallowing a
-    more precise package move such as
-    ``src/bpfw/authority/ -> src/bpfw/core/authority/``.
-
-    Args:
-        items: Human-decision diff items.
-        minimum_group_size: Minimum number of items required to form a group.
-
-    Returns:
-        Tuple of package move groups and ungrouped items.
+    """PURPOSE group repeated moved-code candidates by path-prefix transformation
+    DOMAIN  optional integrations
     """
     candidate_groups: dict[tuple[str, str], list[DiffItem]] = {}
     initially_ungroupable: list[DiffItem] = []
@@ -100,19 +83,8 @@ def group_package_moves(
 
 
 def _group_rank(prefix_pair: tuple[str, str], group_items: list[DiffItem]) -> tuple[int, int, int, int, str, str]:
-    """Return a ranking tuple for package move group selection.
-
-    Prefix pairs where the moved package name is preserved are preferred. For
-    example, ``src/bpfw/authority/ -> src/bpfw/core/authority/`` is better
-    than the broader ``src/bpfw/ -> src/bpfw/core/`` because the final package
-    segment ``authority`` is preserved on both sides.
-
-    Args:
-        prefix_pair: Old and new prefix pair.
-        group_items: Items covered by the pair.
-
-    Returns:
-        Ranking tuple where larger is better.
+    """PURPOSE get a ranking tuple for package move group selection
+    DOMAIN  optional integrations
     """
     old_prefix, new_prefix = prefix_pair
     old_parts = PurePosixPath(old_prefix).parts
@@ -124,13 +96,8 @@ def _group_rank(prefix_pair: tuple[str, str], group_items: list[DiffItem]) -> tu
 
 
 def _prefix_pairs_for_item(item: DiffItem) -> list[tuple[str, str]]:
-    """Return possible old/new prefix pairs for a groupable moved-code item.
-
-    Args:
-        item: Candidate item to inspect.
-
-    Returns:
-        Possible old/new prefix pairs ordered from more specific to broader.
+    """PURPOSE get possible old/new prefix pairs for a groupable moved-code item
+    DOMAIN  optional integrations
     """
     if item.kind != DiffItemKind.MOVED_CODE_CANDIDATE:
         return []
@@ -150,14 +117,8 @@ def _prefix_pairs_for_item(item: DiffItem) -> list[tuple[str, str]]:
 
 
 def _path_prefix_transforms(old_path: str, new_path: str) -> list[tuple[str, str]]:
-    """Find all meaningful prefix transformations that preserve a suffix.
-
-    Args:
-        old_path: Old declared path.
-        new_path: Candidate path.
-
-    Returns:
-        Prefix pairs ordered from more specific to broader.
+    """PURPOSE find all meaningful prefix transformations that preserve a suffix
+    DOMAIN  optional integrations
     """
     old_parts = PurePosixPath(old_path).parts
     new_parts = PurePosixPath(new_path).parts

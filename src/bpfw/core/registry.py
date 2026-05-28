@@ -1,4 +1,6 @@
-"""Command registry for BPFW MVP Catalog Mode."""
+"""PURPOSE command registry for BPFW catalog mode
+DOMAIN  framework core
+"""
 
 from dataclasses import dataclass
 
@@ -20,15 +22,9 @@ from bpfw.core.protection.runtime_lease import runtime_blueprint_write_lease
 
 
 def run_verify(project_root: object, precomputed_scan_result: object | None = None, precomputed_load_result: object | None = None) -> object:
-    """Run catalog verification through a lazy import.
+    """PURPOSE run catalog verification only after it is needed
+        DOMAIN  framework core
 
-    Args:
-        project_root: Project root directory.
-        precomputed_scan_result: Optional precomputed scan result.
-        precomputed_load_result: Optional precomputed blueprint load result.
-
-    Returns:
-        Verification report and exit code from the catalog verifier.
     """
     from bpfw.core.catalog.verify import run_verify as run_catalog_verify
 
@@ -41,7 +37,9 @@ def run_verify(project_root: object, precomputed_scan_result: object | None = No
 
 @dataclass(slots=True)
 class InitProjectStep(PipelineStep):
-    """Initialize the catalog blueprint file."""
+    """PURPOSE set up the catalog blueprint file
+    DOMAIN  framework core
+    """
 
     name: str = "catalog.init"
 
@@ -71,7 +69,9 @@ class InitProjectStep(PipelineStep):
 
 @dataclass(slots=True)
 class IntegrationStep(PipelineStep):
-    """Run a named optional BPFW integration."""
+    """PURPOSE run a named BPFW tool
+    DOMAIN  framework core
+    """
 
     integration_registry: IntegrationRegistry
     integration_name: str
@@ -82,11 +82,11 @@ class IntegrationStep(PipelineStep):
             set_integration_runtime_cache,
             clear_integration_runtime_cache,
         )
-        
+
         try:
             # Pass runtime cache to integration
             set_integration_runtime_cache(context.runtime_cache)
-            
+
             with runtime_blueprint_write_lease(
                 project_root=context.project_root,
                 tool_name=self.integration_name,
@@ -96,7 +96,7 @@ class IntegrationStep(PipelineStep):
                     project_root=context.project_root,
                     command_arguments=context.command_arguments,
                 )
-                
+
             # Clear runtime cache after integration completes
             clear_integration_runtime_cache()
         except BlueprintLockedError as error:
@@ -128,7 +128,9 @@ class IntegrationStep(PipelineStep):
 
 @dataclass(slots=True)
 class VerifyBlueprintStep(PipelineStep):
-    """Run the canonical catalog verify pipeline."""
+    """PURPOSE run the canonical catalog verify pipeline
+    DOMAIN  framework core
+    """
 
     name: str = "catalog.verify"
 
@@ -136,14 +138,14 @@ class VerifyBlueprintStep(PipelineStep):
         from bpfw.core.catalog.loader import BlueprintLoader
         from bpfw.core.catalog.verify import scan_project_from_blueprint
         from bpfw.core.profiling import RuntimeProfiler
-        
+
         profiler = RuntimeProfiler()
-        
+
         with profiler.measure("engine.load_blueprint"):
             # Load blueprint data for scan
             loader = BlueprintLoader(project_root=context.project_root)
             load_result = loader.load()
-        
+
         with profiler.measure("engine.scan_project"):
             # Cache scan result in context runtime_cache
             if load_result.state not in {"missing", "invalid"}:
@@ -157,16 +159,16 @@ class VerifyBlueprintStep(PipelineStep):
                 scan_result = None
                 context.runtime_cache["scan_result"] = None
                 context.runtime_cache["blueprint_data"] = None
-        
+
         with profiler.measure("engine.run_verify"):
             report, exit_code = run_verify(
                 project_root=context.project_root,
                 precomputed_scan_result=scan_result,
             )
-        
+
         # Cache the verification report
         context.runtime_cache["verify_report"] = report
-        
+
         block_findings = [finding for finding in report.findings if finding.severity == "block"]
         details = {
             "authority_state": report.authority_state,
@@ -200,7 +202,9 @@ class VerifyBlueprintStep(PipelineStep):
 
 @dataclass(slots=True)
 class AuthorityLockStep(PipelineStep):
-    """Lock the MVP authority resources."""
+    """PURPOSE lock the authority resources
+    DOMAIN  framework core
+    """
 
     name: str = "protection.lock"
 
@@ -235,7 +239,9 @@ class AuthorityLockStep(PipelineStep):
 
 @dataclass(slots=True)
 class AuthorityUnlockStep(PipelineStep):
-    """Unlock the MVP authority resources."""
+    """PURPOSE unlock the authority resources
+    DOMAIN  framework core
+    """
 
     name: str = "protection.unlock"
 
@@ -259,18 +265,20 @@ class AuthorityUnlockStep(PipelineStep):
 
 @dataclass(slots=True)
 class AuthorityStatusStep(PipelineStep):
-    """Report compact MVP status for engine callers."""
+    """PURPOSE report compact status for engine callers
+    DOMAIN  framework core
+    """
 
     name: str = "catalog.status"
 
     def run(self, context) -> StepResult:  # noqa: ANN001
         from bpfw.core.profiling import RuntimeProfiler
-        
+
         profiler = RuntimeProfiler()
-        
+
         with profiler.measure("status.run_verify"):
             report, _exit_code = run_verify(project_root=context.project_root)
-        
+
         lock_state = get_authority_protection_status(project_root=context.project_root).status
         drift_state = "drift" if report.missing_declared_count or report.undeclared_count else "clean"
         status_state = "invalid" if report.invalid_lifecycle_count else "valid"
@@ -293,7 +301,9 @@ class AuthorityStatusStep(PipelineStep):
 def build_default_registry(
     integration_registry: IntegrationRegistry | None = None,
 ) -> dict[str, Pipeline]:
-    """Build the exact MVP command registry."""
+    """PURPOSE build the exact command registry
+    DOMAIN  framework core
+    """
 
     optional_integrations = integration_registry or build_default_integration_registry()
     return {

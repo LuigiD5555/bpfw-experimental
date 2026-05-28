@@ -1,4 +1,6 @@
-"""Status rules for BPFW MVP Catalog Mode."""
+"""PURPOSE status rules for BPFW catalog mode
+DOMAIN  blueprint checks
+"""
 
 from typing import Any
 
@@ -16,13 +18,18 @@ ALLOWED_STATUSES = (
 
 
 def is_allowed_status(status: str | None) -> bool:
-    """Return True when a status value is allowed in the MVP."""
+    """PURPOSE check whether a status value is allowed in the
+    DOMAIN  blueprint checks
+    """
 
     return status in ALLOWED_STATUSES
 
 
 def count_statuses(blueprint_data: dict[str, Any]) -> dict[str, int]:
-    """Count allowed status values declared in a blueprint payload."""
+    """PURPOSE count allowed status values declared in a blueprint data
+        DOMAIN  blueprint checks
+
+    """
 
     counts = {status: 0 for status in ALLOWED_STATUSES}
     blocks = blueprint_data.get("blocks", [])

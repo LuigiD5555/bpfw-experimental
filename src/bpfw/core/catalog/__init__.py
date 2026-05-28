@@ -1,4 +1,6 @@
-"""Catalog verification support for MVP."""
+"""PURPOSE catalog checks
+DOMAIN  blueprint checks
+"""
 
 from bpfw.core.catalog.status import (
     ALLOWED_STATUSES,

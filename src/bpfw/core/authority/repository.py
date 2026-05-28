@@ -1,4 +1,6 @@
-"""Authority repository for BPFW sharded blueprint loading and validation."""
+"""PURPOSE authority repository for BPFW sharded blueprint loading and check
+DOMAIN  blueprint files
+"""
 
 from pathlib import Path
 from typing import Any
@@ -11,37 +13,21 @@ from bpfw.reports.finding import Finding, FINDING_SEVERITY_BLOCK
 
 
 class AuthorityRepository:
-    """Load, validate, and save sharded authority documents.
-    
-    This repository:
-    - Loads the authority index and all shard files
-    - Composes a unified blueprint_data dictionary
-    - Tracks block origins
-    - Validates for duplicate IDs and reports duplicate code declarations
-    - Saves documents through the persistence engine
+    """PURPOSE load, check, and save sharded authority documents
+    DOMAIN  blueprint files
     """
 
     def __init__(self, project_root: Path) -> None:
-        """Initialize the authority repository.
-        
-        Args:
-            project_root: The project root directory.
+        """PURPOSE set up the authority repository
+        DOMAIN  blueprint files
         """
         self.project_root = project_root
         self._document: AuthorityDocument | None = None
         self._persistence_engine: AuthorityPersistenceEngine | None = None
 
     def load(self) -> AuthorityDocument:
-        """Load the authority document from the project.
-        
-        Returns:
-            Loaded AuthorityDocument.
-        
-        Raises:
-            InvalidAuthorityIndexError: If the index is invalid.
-            InvalidAuthorityShardError: If any shard is invalid.
-            MissingShardError: If a referenced shard is missing.
-            DuplicateBlockIdError: If duplicate block IDs are found.
+        """PURPOSE read the authority document from the project
+        DOMAIN  blueprint files
         """
         # Load index
         index = AuthorityIndex.load(self.project_root)
@@ -127,10 +113,8 @@ class AuthorityRepository:
         return self._document
 
     def save(self, document: AuthorityDocument) -> AuthorityPersistenceResult:
-        """Save the authority document to shards.
-        
-        Args:
-            document: The authority document to save.
+        """PURPOSE save the authority document to shards
+        DOMAIN  blueprint files
         """
         if self._persistence_engine is None:
             self._persistence_engine = AuthorityPersistenceEngine(self.project_root)
@@ -138,13 +122,8 @@ class AuthorityRepository:
         return self._persistence_engine.save_document(document)
 
     def validate(self, document: AuthorityDocument) -> list[Finding]:
-        """Validate the authority document for issues.
-        
-        Args:
-            document: The authority document to validate.
-        
-        Returns:
-            List of findings.
+        """PURPOSE check the authority document for issues
+        DOMAIN  blueprint files
         """
         findings: list[Finding] = []
 
@@ -157,13 +136,8 @@ class AuthorityRepository:
         return findings
 
     def _validate_duplicate_block_ids(self, document: AuthorityDocument) -> list[Finding]:
-        """Validate that there are no duplicate block IDs.
-        
-        Args:
-            document: The authority document to validate.
-        
-        Returns:
-            List of findings for duplicate block IDs.
+        """PURPOSE check that there are no duplicate block IDs
+        DOMAIN  blueprint files
         """
         findings: list[Finding] = []
 
@@ -200,13 +174,8 @@ class AuthorityRepository:
         return findings
 
     def _validate_duplicate_code_declarations(self, document: AuthorityDocument) -> list[Finding]:
-        """Validate that there are no duplicate code declarations.
-        
-        Args:
-            document: The authority document to validate.
-        
-        Returns:
-            List of findings for duplicate code declarations.
+        """PURPOSE check that there are no duplicate code declarations
+        DOMAIN  blueprint files
         """
         findings: list[Finding] = []
 

@@ -1,4 +1,6 @@
-"""Lightweight real-time drift feedback for BPFW."""
+"""PURPOSE lightweight real-time drift feedback for BPFW
+DOMAIN  file watching
+"""
 
 from dataclasses import dataclass
 from hashlib import sha256
@@ -11,17 +13,15 @@ from bpfw.reports.verify_report import render_verify_report
 
 
 class WatchDependencyError(RuntimeError):
-    """Raised when the optional watch dependency is not installed."""
+    """PURPOSE raised when the watch dependency is not installed
+    DOMAIN  file watching
+    """
 
 
 @dataclass(frozen=True)
 class WatchSettings:
-    """Configuration for the BPFW watch service.
-
-    Attributes:
-        project_root: Root directory of the project being observed.
-        debounce_ms: Number of milliseconds used to batch rapid filesystem events.
-        once: Whether to run a single verification and exit.
+    """PURPOSE configuration for the BPFW watch service
+    DOMAIN  file watching
     """
 
     project_root: Path
@@ -31,15 +31,8 @@ class WatchSettings:
 
 @dataclass(frozen=True)
 class VerificationSnapshot:
-    """Compact immutable summary of a verification run.
-
-    Attributes:
-        allowed: Whether the verified project state is executable according to BPFW.
-        exit_code: Exit code returned by the verification pipeline.
-        fingerprint: Stable fingerprint for the current finding set.
-        finding_count: Number of findings returned by verification.
-        block_count: Number of blocking findings returned by verification.
-        report_text: Human-readable verification report.
+    """PURPOSE compact immutable summary of a verification run
+    DOMAIN  file watching
     """
 
     allowed: bool
@@ -51,7 +44,9 @@ class VerificationSnapshot:
 
 
 class BpfwWatchFilter:
-    """Filter filesystem events to files relevant for BPFW drift feedback."""
+    """PURPOSE filter filesystem events to files relevant for BPFW drift feedback
+    DOMAIN  file watching
+    """
 
     _IGNORED_PARTS = frozenset(
         {
@@ -70,23 +65,15 @@ class BpfwWatchFilter:
     _RELEVANT_SUFFIXES = frozenset({".py", ".yaml", ".yml", ".toml"})
 
     def __init__(self, project_root: Path) -> None:
-        """Initialize the event filter.
-
-        Args:
-            project_root: Root directory used to compute relative paths.
+        """PURPOSE set up the event filter
+        DOMAIN  file watching
         """
 
         self.project_root = project_root.resolve()
 
     def __call__(self, _change: object, path: str) -> bool:
-        """Return whether the event path should trigger BPFW feedback.
-
-        Args:
-            _change: Filesystem change enum supplied by watchfiles.
-            path: Changed filesystem path supplied by watchfiles.
-
-        Returns:
-            True when the event is relevant to BPFW, otherwise False.
+        """PURPOSE check whether the event path should trigger BPFW feedback
+        DOMAIN  file watching
         """
 
         changed_path = Path(path).resolve()
@@ -105,13 +92,13 @@ class BpfwWatchFilter:
 
 
 class WatchService:
-    """Observe project changes and provide lightweight drift feedback."""
+    """PURPOSE observe project changes and provide lightweight drift feedback
+    DOMAIN  file watching
+    """
 
     def __init__(self, settings: WatchSettings) -> None:
-        """Initialize the watch service.
-
-        Args:
-            settings: Watch configuration for this service instance.
+        """PURPOSE set up the watch service
+        DOMAIN  file watching
         """
 
         self.settings = WatchSettings(
@@ -121,11 +108,8 @@ class WatchService:
         )
 
     def run(self) -> int:
-        """Run real-time feedback or a single verification pass.
-
-        Returns:
-            Process exit code. One-shot mode mirrors verify's exit code. Continuous mode
-            returns 0 when stopped normally with Ctrl+C.
+        """PURPOSE run real-time feedback or a single verification pass
+        DOMAIN  file watching
         """
 
         initial_snapshot = build_verification_snapshot(self.settings.project_root)
@@ -171,14 +155,8 @@ class WatchService:
         changes: Iterable[tuple[object, str]],
         previous_snapshot: VerificationSnapshot,
     ) -> VerificationSnapshot:
-        """Analyze one debounced filesystem event batch.
-
-        Args:
-            changes: Debounced filesystem changes emitted by watchfiles.
-            previous_snapshot: Previous verification summary used to avoid repeated noise.
-
-        Returns:
-            The latest verification snapshot.
+        """PURPOSE analyze one debounced filesystem event batch
+        DOMAIN  file watching
         """
 
         changed_paths = _format_changed_paths(
@@ -203,13 +181,8 @@ class WatchService:
 
 
 def build_verification_snapshot(project_root: Path) -> VerificationSnapshot:
-    """Run BPFW verification and summarize the resulting drift state.
-
-    Args:
-        project_root: Root directory of the project being verified.
-
-    Returns:
-        Compact immutable summary of the verification result.
+    """PURPOSE run BPFW verification and summarize the resulting drift state
+    DOMAIN  file watching
     """
 
     report, exit_code = run_verify(project_root=project_root.resolve())
@@ -225,15 +198,8 @@ def build_verification_snapshot(project_root: Path) -> VerificationSnapshot:
 
 
 def run_watch(project_root: Path, debounce_ms: int = 800, once: bool = False) -> int:
-    """Run the BPFW watch command.
-
-    Args:
-        project_root: Root directory of the project being observed.
-        debounce_ms: Number of milliseconds used to batch rapid filesystem events.
-        once: Whether to run a single verification and exit.
-
-    Returns:
-        Process exit code for the watch command.
+    """PURPOSE run the BPFW watch command
+    DOMAIN  file watching
     """
 
     settings = WatchSettings(project_root=project_root, debounce_ms=debounce_ms, once=once)
@@ -241,13 +207,8 @@ def run_watch(project_root: Path, debounce_ms: int = 800, once: bool = False) ->
 
 
 def _fingerprint_findings(findings: Sequence[Finding]) -> str:
-    """Build a stable fingerprint for a finding sequence.
-
-    Args:
-        findings: Findings returned by BPFW verification.
-
-    Returns:
-        SHA-256 fingerprint of the normalized finding data.
+    """PURPOSE build a stable fingerprint for a finding sequence
+    DOMAIN  file watching
     """
 
     normalized_items = []
@@ -269,14 +230,8 @@ def _fingerprint_findings(findings: Sequence[Finding]) -> str:
 
 
 def _format_changed_paths(project_root: Path, changes: Iterable[tuple[object, str]]) -> list[str]:
-    """Format changed paths relative to the project root.
-
-    Args:
-        project_root: Root directory used to compute relative paths.
-        changes: Filesystem changes emitted by watchfiles.
-
-    Returns:
-        Sorted relative changed paths.
+    """PURPOSE format changed paths relative to the project root
+    DOMAIN  file watching
     """
 
     formatted_paths: set[str] = set()
@@ -293,13 +248,8 @@ def _format_changed_paths(project_root: Path, changes: Iterable[tuple[object, st
 
 
 def _render_initial_snapshot(snapshot: VerificationSnapshot) -> str:
-    """Render the first watch verification summary.
-
-    Args:
-        snapshot: Initial verification snapshot.
-
-    Returns:
-        Human-readable summary for the initial watch state.
+    """PURPOSE show the first watch verification summary
+    DOMAIN  file watching
     """
 
     state = "ALIGNED" if snapshot.allowed else "DRIFT DETECTED"
@@ -315,13 +265,8 @@ def _render_initial_snapshot(snapshot: VerificationSnapshot) -> str:
 
 
 def _render_delta_snapshot(snapshot: VerificationSnapshot) -> str:
-    """Render drift feedback after a watched change.
-
-    Args:
-        snapshot: Latest verification snapshot after a filesystem event.
-
-    Returns:
-        Human-readable feedback for the changed drift state.
+    """PURPOSE show drift feedback after a watched change
+    DOMAIN  file watching
     """
 
     if snapshot.allowed:

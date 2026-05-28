@@ -1,4 +1,6 @@
-"""Reusable protection setup and repair orchestration."""
+"""PURPOSE reusable protection setup and repair orchestration
+DOMAIN  framework core
+"""
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,7 +14,9 @@ UNPROTECTED_STATUS = "unprotected"
 
 @dataclass(frozen=True, slots=True)
 class ProtectionSetupResult:
-    """Combined result for local BPFW OS protection setup."""
+    """PURPOSE combined result for local BPFW OS protection setup
+    DOMAIN  framework core
+    """
 
     blueprint_exists: bool
     lock_state: str
@@ -21,7 +25,9 @@ class ProtectionSetupResult:
 
     @property
     def allowed(self) -> bool:
-        """Return whether init may succeed with the current protection state."""
+        """PURPOSE check whether init may succeed with the protection state
+        DOMAIN  framework core
+        """
 
         return self.blueprint_exists and (
             self.lock_state == "locked"
@@ -31,7 +37,9 @@ class ProtectionSetupResult:
 
 
 def _protection_line(lock_state: str) -> str:
-    """Return the user-facing protection line for a lock state."""
+    """PURPOSE get the user-facing protection line for a lock state
+    DOMAIN  framework core
+    """
 
     if lock_state == "locked":
         return "enabled"
@@ -47,7 +55,9 @@ def _protection_line(lock_state: str) -> str:
 
 
 def _action_for_result(result: ProtectionSetupResult) -> str:
-    """Return the init summary action that matches the actual protection result."""
+    """PURPOSE get the init summary action that matches the actual protection result
+    DOMAIN  framework core
+    """
 
     if result.lock_state == "locked":
         return "protection configured"
@@ -59,7 +69,9 @@ def _action_for_result(result: ProtectionSetupResult) -> str:
 
 
 def _reason_lines(result: ProtectionSetupResult) -> list[str]:
-    """Build reason lines for non-locked protection setup results."""
+    """PURPOSE build reason lines for non-locked protection setup results
+    DOMAIN  framework core
+    """
 
     if result.lock_state == UNPROTECTED_STATUS:
         return [
@@ -115,7 +127,9 @@ def _reason_lines(result: ProtectionSetupResult) -> list[str]:
 
 
 def format_setup_summary(result: ProtectionSetupResult, action: str | None = None) -> str:
-    """Format protection setup details with state-aware wording."""
+    """PURPOSE format protection setup details with state-aware wording
+    DOMAIN  framework core
+    """
 
     resolved_action = action if action is not None else _action_for_result(result=result)
     lines = [
@@ -140,7 +154,9 @@ def format_setup_summary(result: ProtectionSetupResult, action: str | None = Non
 
 
 def run_protection_setup(project_root: Path, allow_unprotected: bool = False) -> ProtectionSetupResult:
-    """Lock the full BPFW authority surface at OS level after a capability preflight."""
+    """PURPOSE lock the full BPFW authority surface at OS level after a capability early check
+    DOMAIN  framework core
+    """
 
     blueprint_path = project_root / CANONICAL_BLUEPRINT_FILE
     support = check_lock_support(project_root=project_root)

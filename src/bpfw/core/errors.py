@@ -1,13 +1,21 @@
-"""Framework-specific errors for BPFW MVP Catalog Mode."""
+"""PURPOSE framework-specific errors for BPFW catalog mode
+DOMAIN  framework core
+"""
 
 
 class BpfwError(RuntimeError):
-    """Base error for BPFW runtime failures."""
+    """PURPOSE base error for BPFW runtime failures
+    DOMAIN  framework core
+    """
 
 
 class BlueprintLockedError(BpfwError, PermissionError):
-    """Raised when a protected blueprint write is attempted while locked."""
+    """PURPOSE raised when a protected blueprint write is attempted while locked
+    DOMAIN  framework core
+    """
 
 
 class BlueprintMissingError(BpfwError, FileNotFoundError):
-    """Raised when an operation requires a missing blueprint file."""
+    """PURPOSE raised when an operation requires a missing blueprint file
+    DOMAIN  framework core
+    """

@@ -1,1 +1,3 @@
-"""Purpose suggestion package for inspector integration."""
+"""PURPOSE purpose suggestion package for inspector tool
+DOMAIN  purpose suggestions
+"""

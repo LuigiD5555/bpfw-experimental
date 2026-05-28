@@ -1,4 +1,6 @@
-"""Base adapter contract for optional BPFW integrations."""
+"""PURPOSE base adapter contract for BPFW tools
+DOMAIN  optional integrations
+"""
 
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -7,13 +9,17 @@ from bpfw.integrations.result import OptionalIntegrationResult
 
 
 class OptionalIntegration(ABC):
-    """Abstract adapter for a replaceable BPFW capability."""
+    """PURPOSE abstract adapter for a replaceable BPFW capability
+    DOMAIN  optional integrations
+    """
 
     name: str
 
     @abstractmethod
     def is_available(self) -> bool:
-        """Return True when the optional integration can run."""
+        """PURPOSE check whether the tool can run
+        DOMAIN  optional integrations
+        """
 
     @abstractmethod
     def run(
@@ -21,4 +27,6 @@ class OptionalIntegration(ABC):
         project_root: Path,
         command_arguments: dict[str, str] | None = None,
     ) -> OptionalIntegrationResult:
-        """Run the optional integration against a project root."""
+        """PURPOSE run the tool against a project root
+        DOMAIN  optional integrations
+        """

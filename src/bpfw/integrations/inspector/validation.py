@@ -1,4 +1,6 @@
-"""Validation helpers for the inspector integration."""
+"""PURPOSE check helpers for the inspector tool
+DOMAIN  inspector workflow
+"""
 
 from typing import Any, Dict, List
 
@@ -8,7 +10,9 @@ REQUIRED_SAVE_FIELDS = ("purpose", "name", "domain", "status")
 def validate_required_fields(
     block: Dict[str, Any],
 ) -> List[str]:
-    """Return list of missing required field names."""
+    """PURPOSE get list of missing required field names
+    DOMAIN  inspector workflow
+    """
 
     values = {
         "purpose": block.get("purpose"),

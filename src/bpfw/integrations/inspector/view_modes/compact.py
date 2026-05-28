@@ -1,4 +1,6 @@
-"""Compact inspector view mode."""
+"""PURPOSE compact inspector view mode
+DOMAIN  inspector workflow
+"""
 
 from typing import List
 
@@ -10,25 +12,35 @@ COMMAND_COLUMN_WIDTHS = (28, 22)
 
 
 class CompactInspectorViewMode(InspectorViewMode):
-    """Define compact inspector rendering and command policy."""
+    """PURPOSE define compact inspector rendering and command policy
+    DOMAIN  inspector workflow
+    """
 
     def get_name(self) -> str:
-        """Return the stable view mode name."""
+        """PURPOSE get the stable view mode name
+        DOMAIN  inspector workflow
+        """
 
         return "compact"
 
     def get_next_mode_name(self) -> str:
-        """Return the mode name activated by the toggle command."""
+        """PURPOSE get the mode name activated by the toggle command
+        DOMAIN  inspector workflow
+        """
 
         return "full"
 
     def should_render_extended_panels(self) -> bool:
-        """Return false because compact mode hides extended panels."""
+        """PURPOSE get false because compact mode hides extended panels
+        DOMAIN  inspector workflow
+        """
 
         return False
 
     def build_command_lines(self) -> List[str]:
-        """Return the compact command lines."""
+        """PURPOSE get the compact command lines
+        DOMAIN  inspector workflow
+        """
 
         return [
             _format_command_row("[h] help", "[q] quit"),
@@ -39,7 +51,9 @@ class CompactInspectorViewMode(InspectorViewMode):
 
 
 def _format_command_row(*commands: str) -> str:
-    """Format command labels into stable visual columns."""
+    """PURPOSE format command labels into stable visual columns
+    DOMAIN  inspector workflow
+    """
 
     if not commands:
         return ""

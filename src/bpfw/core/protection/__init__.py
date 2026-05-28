@@ -1,4 +1,6 @@
-"""Blueprint protection support for BPFW MVP Catalog Mode."""
+"""PURPOSE blueprint protection support for BPFW catalog mode
+DOMAIN  framework core
+"""
 
 from bpfw.core.protection.authority import (
     ProtectedResource,

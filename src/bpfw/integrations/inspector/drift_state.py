@@ -1,4 +1,6 @@
-"""Persistent drift state used by the pre-inspector Drift Gate."""
+"""PURPOSE persistent drift state used by the pre-inspector Drift Gate
+DOMAIN  inspector workflow
+"""
 
 import json
 import os
@@ -41,18 +43,8 @@ _IGNORED_DIRECTORY_NAMES: frozenset[str] = frozenset(
 
 @dataclass(slots=True)
 class DriftDecisionRecord:
-    """Persist one human Drift Gate decision.
-
-    Attributes:
-        stable_id: Stable identifier for the drift item across runs.
-        evidence_hash: Hash of the evidence used when the decision was made.
-        status: Normalized state such as resolved, ignored, or approved_for_inspector.
-        decision: Human-readable decision label.
-        decided_at: UTC timestamp when the decision was recorded.
-        reason: Optional human-readable reason.
-        issue_type: Optional inspector issue type to restore.
-        block_data: Optional inspector block payload to restore.
-        context_lines: Optional inspector context lines to restore.
+    """PURPOSE save one human Drift Gate decision
+    DOMAIN  inspector workflow
     """
 
     stable_id: str
@@ -67,13 +59,8 @@ class DriftDecisionRecord:
 
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> "DriftDecisionRecord":
-        """Create a record from persisted JSON data.
-
-        Args:
-            data: JSON dictionary.
-
-        Returns:
-            Drift decision record.
+        """PURPOSE create a record from persisted JSON data
+        DOMAIN  inspector workflow
         """
         context_lines = data.get("context_lines")
         if not isinstance(context_lines, list):
@@ -94,10 +81,8 @@ class DriftDecisionRecord:
         )
 
     def to_json(self) -> dict[str, Any]:
-        """Serialize this record to JSON-compatible data.
-
-        Returns:
-            Dictionary representation.
+        """PURPOSE convert this record to data that can be written as JSON
+        DOMAIN  inspector workflow
         """
         data: dict[str, Any] = {
             "stable_id": self.stable_id,
@@ -117,10 +102,8 @@ class DriftDecisionRecord:
         return data
 
     def to_inspect_issue(self) -> InspectIssue | None:
-        """Restore an inspector issue from a persisted approval.
-
-        Returns:
-            Inspector issue or None when the record does not contain issue data.
+        """PURPOSE restore an inspector issue from a persisted approval
+        DOMAIN  inspector workflow
         """
         if self.status != "approved_for_inspector":
             return None
@@ -136,13 +119,8 @@ class DriftDecisionRecord:
 
 @dataclass(slots=True)
 class DriftState:
-    """Persisted drift analysis and decision state.
-
-    Attributes:
-        input_signature: Cheap project input signature used to validate the cache.
-        pending_human_decisions: Number of human decisions still pending when state was saved.
-        last_analyzed_at: UTC timestamp of the last analysis.
-        decisions: Decisions keyed by stable drift id.
+    """PURPOSE persisted drift analysis and decision state
+    DOMAIN  inspector workflow
     """
 
     input_signature: str | None = None
@@ -153,13 +131,8 @@ class DriftState:
 
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> "DriftState":
-        """Create state from persisted JSON data.
-
-        Args:
-            data: JSON dictionary.
-
-        Returns:
-            Drift state.
+        """PURPOSE create state from persisted JSON data
+        DOMAIN  inspector workflow
         """
         decisions_data = data.get("decisions")
         decisions: dict[str, DriftDecisionRecord] = {}
@@ -188,10 +161,8 @@ class DriftState:
         )
 
     def to_json(self) -> dict[str, Any]:
-        """Serialize state to JSON-compatible data.
-
-        Returns:
-            Dictionary representation.
+        """PURPOSE convert state to data that can be written as JSON
+        DOMAIN  inspector workflow
         """
         return {
             "schema_version": _SCHEMA_VERSION,
@@ -210,14 +181,8 @@ class DriftState:
         reason: str | None = None,
         issue: InspectIssue | None = None,
     ) -> None:
-        """Record one Drift Gate decision.
-
-        Args:
-            item: Diff item being decided.
-            status: Decision status.
-            decision: Decision label.
-            reason: Optional human-readable reason.
-            issue: Optional inspector issue produced by the decision.
+        """PURPOSE record one Drift Gate decision
+        DOMAIN  inspector workflow
         """
         stable_id = build_drift_stable_id(item)
         evidence_hash = build_drift_evidence_hash(item)
@@ -241,13 +206,8 @@ class DriftState:
         )
 
     def current_record_for(self, item: DiffItem) -> DriftDecisionRecord | None:
-        """Return a current decision record for a diff item.
-
-        Args:
-            item: Diff item to check.
-
-        Returns:
-            Matching record when stable id and evidence hash both match.
+        """PURPOSE get a decision record for a diff item
+        DOMAIN  inspector workflow
         """
         record = self.decisions.get(build_drift_stable_id(item))
         if record is None:
@@ -257,57 +217,39 @@ class DriftState:
         return record
 
     def is_reusable_for_signature(self, input_signature: str) -> bool:
-        """Return whether this state can skip a fresh drift analysis.
-
-        Args:
-            input_signature: Current project input signature.
-
-        Returns:
-            True when the signature is unchanged and no pending human decisions remain.
+        """PURPOSE check whether this state can skip a fresh drift analysis
+        DOMAIN  inspector workflow
         """
         return self.input_signature == input_signature and self.pending_human_decisions == 0
 
     def has_reusable_pending_items(self, input_signature: str) -> bool:
-        """Return whether pending Drift Gate items can be restored.
-
-        Args:
-            input_signature: Current project input signature.
-
-        Returns:
-            True when pending items belong to the current unchanged input state.
+        """PURPOSE check whether pending Drift Gate items can be restored
+        DOMAIN  inspector workflow
         """
         return self.input_signature == input_signature and bool(self.pending_items)
 
     def has_pending_items(self) -> bool:
-        """Return whether human Drift Gate work is waiting in the snapshot.
-
-        Returns:
-            True when at least one pending item was persisted.
+        """PURPOSE check whether human Drift Gate work is waiting in the snapshot
+        DOMAIN  inspector workflow
         """
         return bool(self.pending_items)
 
     def replace_pending_items(self, pending_items: list[DiffItem]) -> None:
-        """Replace persisted pending Drift Gate items.
-
-        Args:
-            pending_items: Pending human drift items to persist.
+        """PURPOSE replace persisted pending Drift Gate items
+        DOMAIN  inspector workflow
         """
         self.pending_items = list(pending_items)
         self.pending_human_decisions = len(self.pending_items)
 
     def restored_pending_items(self) -> list[DiffItem]:
-        """Return pending Drift Gate items restored from state.
-
-        Returns:
-            Pending diff items.
+        """PURPOSE get pending Drift Gate items restored from state
+        DOMAIN  inspector workflow
         """
         return list(self.pending_items)
 
     def restored_inspector_issues(self) -> list[InspectIssue]:
-        """Return inspector issues restored from approved pending decisions.
-
-        Returns:
-            Restored inspector issues.
+        """PURPOSE get inspector issues restored from approved pending decisions
+        DOMAIN  inspector workflow
         """
         issues: list[InspectIssue] = []
         for record in self.decisions.values():
@@ -317,10 +259,8 @@ class DriftState:
         return issues
 
     def has_approved_inspector_work(self) -> bool:
-        """Return whether approved Drift Gate items still need metadata inspection.
-
-        Returns:
-            True when at least one Drift Gate decision produced an inspector issue.
+        """PURPOSE check whether approved Drift Gate items still need metadata inspection
+        DOMAIN  inspector workflow
         """
         return any(
             record.status == "approved_for_inspector"
@@ -331,22 +271,20 @@ class DriftState:
 
 
 class DriftStateRepository:
-    """Load and save persistent Drift Gate state."""
+    """PURPOSE read and save persistent Drift Gate state
+    DOMAIN  inspector workflow
+    """
 
     def __init__(self, project_root: Path) -> None:
-        """Initialize the repository.
-
-        Args:
-            project_root: Project root directory.
+        """PURPOSE set up the repository
+        DOMAIN  inspector workflow
         """
         self.project_root = project_root.resolve()
         self.state_path = self.project_root / _STATE_RELATIVE_PATH
 
     def load(self) -> DriftState:
-        """Load persisted drift state.
-
-        Returns:
-            Drift state. Missing or invalid files return empty state.
+        """PURPOSE read persisted drift state
+        DOMAIN  inspector workflow
         """
         try:
             data = json.loads(self.state_path.read_text(encoding="utf-8"))
@@ -359,10 +297,8 @@ class DriftStateRepository:
         return DriftState.from_json(data)
 
     def save(self, state: DriftState) -> None:
-        """Persist drift state.
-
-        Args:
-            state: Drift state to persist.
+        """PURPOSE save drift state
+        DOMAIN  inspector workflow
         """
         self.state_path.parent.mkdir(parents=True, exist_ok=True)
         self.state_path.write_text(
@@ -371,10 +307,8 @@ class DriftStateRepository:
         )
 
     def build_input_signature(self) -> str:
-        """Build a cheap project input signature for drift analysis cache validation.
-
-        Returns:
-            SHA-256 digest for authority and Python source file metadata.
+        """PURPOSE build a cheap project input signature for drift analysis cache check
+        DOMAIN  inspector workflow
         """
         entries: list[dict[str, Any]] = []
         for relative_root in (Path("bpfw"), Path("src"), Path("tests")):
@@ -389,13 +323,8 @@ class DriftStateRepository:
 
 
 def build_drift_stable_id(item: DiffItem) -> str:
-    """Build a stable identifier for one drift item.
-
-    Args:
-        item: Diff item.
-
-    Returns:
-        Stable string identifier.
+    """PURPOSE build a stable identifier for one drift item
+    DOMAIN  inspector workflow
     """
     parts = [item.kind.value]
     if item.blueprint_target is not None:
@@ -419,13 +348,8 @@ def build_drift_stable_id(item: DiffItem) -> str:
 
 
 def build_drift_evidence_hash(item: DiffItem) -> str:
-    """Build an evidence hash for one drift item.
-
-    Args:
-        item: Diff item.
-
-    Returns:
-        SHA-256 hash of evidence that invalidates stale decisions when changed.
+    """PURPOSE build an evidence hash for one drift item
+    DOMAIN  inspector workflow
     """
     payload = {
         "kind": item.kind.value,
@@ -460,14 +384,8 @@ def build_drift_evidence_hash(item: DiffItem) -> str:
 
 
 def _file_metadata_entries(project_root: Path, root: Path) -> list[dict[str, Any]]:
-    """Build file metadata entries under a root directory.
-
-    Args:
-        project_root: Project root directory.
-        root: Directory to walk.
-
-    Returns:
-        Sorted metadata entries.
+    """PURPOSE build file metadata entries under a root directory
+    DOMAIN  inspector workflow
     """
     entries: list[dict[str, Any]] = []
     ignored_directories = set(_IGNORED_DIRECTORY_NAMES) | {".locks"}
@@ -495,13 +413,8 @@ def _file_metadata_entries(project_root: Path, root: Path) -> list[dict[str, Any
 
 
 def _should_ignore_path(path: Path) -> bool:
-    """Return whether a path should be ignored by the drift input signature.
-
-    Args:
-        path: File path.
-
-    Returns:
-        True when the path is cache, lock, or generated noise.
+    """PURPOSE check whether a path should be ignored by the drift input signature
+    DOMAIN  inspector workflow
     """
     parts = set(path.parts)
     if parts & _IGNORED_DIRECTORY_NAMES:
@@ -510,13 +423,8 @@ def _should_ignore_path(path: Path) -> bool:
 
 
 def _is_relevant_file(path: Path) -> bool:
-    """Return whether a file affects drift analysis.
-
-    Args:
-        path: File path.
-
-    Returns:
-        True for Python source and authority/config files.
+    """PURPOSE check whether a file affects drift analysis
+    DOMAIN  inspector workflow
     """
     if path.suffix in _SOURCE_SUFFIXES:
         return True
@@ -526,13 +434,9 @@ def _is_relevant_file(path: Path) -> bool:
 
 
 def _finding_payload(item: DiffItem) -> dict[str, Any] | None:
-    """Build a serializable finding payload.
+    """PURPOSE build a saveable finding data
+        DOMAIN  inspector workflow
 
-    Args:
-        item: Diff item.
-
-    Returns:
-        Finding payload or None.
     """
     finding = item.finding
     if finding is None:
@@ -547,13 +451,9 @@ def _finding_payload(item: DiffItem) -> dict[str, Any] | None:
 
 
 def _code_target_payload(item: DiffItem) -> dict[str, Any] | None:
-    """Build a serializable code target payload.
+    """PURPOSE build a saveable code target data
+        DOMAIN  inspector workflow
 
-    Args:
-        item: Diff item.
-
-    Returns:
-        Code target payload or None.
     """
     target = item.code_target
     if target is None:
@@ -569,13 +469,9 @@ def _code_target_payload(item: DiffItem) -> dict[str, Any] | None:
 
 
 def _blueprint_target_payload(item: DiffItem) -> dict[str, Any] | None:
-    """Build a serializable blueprint target payload.
+    """PURPOSE build a saveable blueprint target data
+        DOMAIN  inspector workflow
 
-    Args:
-        item: Diff item.
-
-    Returns:
-        Blueprint target payload or None.
     """
     target = item.blueprint_target
     if target is None:
@@ -597,25 +493,15 @@ def _blueprint_target_payload(item: DiffItem) -> dict[str, Any] | None:
 
 
 def _normalize_part(value: str) -> str:
-    """Normalize one stable id segment.
-
-    Args:
-        value: Segment value.
-
-    Returns:
-        Normalized segment.
+    """PURPOSE clean one stable id segment
+    DOMAIN  inspector workflow
     """
     return value.strip().replace("\n", " ").replace(":", "_")
 
 
 def _optional_string(value: Any) -> str | None:
-    """Return a non-empty string or None.
-
-    Args:
-        value: Candidate value.
-
-    Returns:
-        Stripped string or None.
+    """PURPOSE get a non-empty string or None
+    DOMAIN  inspector workflow
     """
     if value is None:
         return None
@@ -624,13 +510,8 @@ def _optional_string(value: Any) -> str | None:
 
 
 def _safe_int(value: Any) -> int:
-    """Return a safe non-negative integer.
-
-    Args:
-        value: Candidate value.
-
-    Returns:
-        Integer value or zero.
+    """PURPOSE get a safe non-negative integer
+    DOMAIN  inspector workflow
     """
     if isinstance(value, bool):
         return 0
@@ -640,22 +521,15 @@ def _safe_int(value: Any) -> int:
 
 
 def _utc_now() -> str:
-    """Return a compact UTC timestamp.
-
-    Returns:
-        ISO-8601 timestamp.
+    """PURPOSE get a compact UTC timestamp
+    DOMAIN  inspector workflow
     """
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
 def _diff_item_to_json(item: DiffItem) -> dict[str, Any]:
-    """Serialize a diff item to JSON-compatible data.
-
-    Args:
-        item: Diff item to serialize.
-
-    Returns:
-        JSON-compatible dictionary.
+    """PURPOSE convert a diff item to data that can be written as JSON
+    DOMAIN  inspector workflow
     """
     return {
         "identifier": item.identifier,
@@ -672,13 +546,8 @@ def _diff_item_to_json(item: DiffItem) -> dict[str, Any]:
 
 
 def _diff_item_from_json(data: dict[str, Any]) -> DiffItem | None:
-    """Deserialize a diff item from JSON-compatible data.
-
-    Args:
-        data: JSON dictionary.
-
-    Returns:
-        Diff item or None when data is invalid.
+    """PURPOSE read a diff item from data that can be written as JSON
+    DOMAIN  inspector workflow
     """
     try:
         kind = DiffItemKind(str(data.get("kind")))
@@ -718,13 +587,8 @@ def _diff_item_from_json(data: dict[str, Any]) -> DiffItem | None:
 
 
 def _finding_from_json(data: Any) -> Finding | None:
-    """Deserialize a finding from JSON data.
-
-    Args:
-        data: Candidate JSON data.
-
-    Returns:
-        Finding or None.
+    """PURPOSE read a finding from JSON data
+    DOMAIN  inspector workflow
     """
     if not isinstance(data, dict):
         return None
@@ -743,13 +607,8 @@ def _finding_from_json(data: Any) -> Finding | None:
 
 
 def _code_target_from_json(data: Any) -> CodeTarget | None:
-    """Deserialize a code target from JSON data.
-
-    Args:
-        data: Candidate JSON data.
-
-    Returns:
-        Code target or None.
+    """PURPOSE read a code target from JSON data
+    DOMAIN  inspector workflow
     """
     if not isinstance(data, dict):
         return None
@@ -769,13 +628,8 @@ def _code_target_from_json(data: Any) -> CodeTarget | None:
 
 
 def _blueprint_target_from_json(data: Any) -> BlueprintTarget | None:
-    """Deserialize a blueprint target from JSON data.
-
-    Args:
-        data: Candidate JSON data.
-
-    Returns:
-        Blueprint target or None.
+    """PURPOSE read a blueprint target from JSON data
+    DOMAIN  inspector workflow
     """
     if not isinstance(data, dict):
         return None
@@ -801,13 +655,8 @@ def _blueprint_target_from_json(data: Any) -> BlueprintTarget | None:
 
 
 def _code_target_to_json(target: CodeTarget) -> dict[str, Any]:
-    """Serialize a code target.
-
-    Args:
-        target: Code target.
-
-    Returns:
-        JSON-compatible dictionary.
+    """PURPOSE convert a code target
+    DOMAIN  inspector workflow
     """
     return {
         "path": target.path,
@@ -820,13 +669,8 @@ def _code_target_to_json(target: CodeTarget) -> dict[str, Any]:
 
 
 def _blueprint_target_to_json(target: BlueprintTarget) -> dict[str, Any]:
-    """Serialize a blueprint target.
-
-    Args:
-        target: Blueprint target.
-
-    Returns:
-        JSON-compatible dictionary.
+    """PURPOSE convert a blueprint target
+    DOMAIN  inspector workflow
     """
     return {
         "block_id": target.block_id,
@@ -843,13 +687,8 @@ def _blueprint_target_to_json(target: BlueprintTarget) -> dict[str, Any]:
 
 
 def _optional_int(value: Any) -> int | None:
-    """Return an optional integer.
-
-    Args:
-        value: Candidate value.
-
-    Returns:
-        Integer or None.
+    """PURPOSE get an integer
+    DOMAIN  inspector workflow
     """
     if isinstance(value, bool):
         return None

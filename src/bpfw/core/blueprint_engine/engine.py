@@ -1,4 +1,6 @@
-"""Authority Blueprint Engine for mechanical BPFW authority mutations."""
+"""PURPOSE authority Blueprint Engine for file-change BPFW authority mutations
+DOMAIN  approved blueprint changes
+"""
 
 from pathlib import Path
 
@@ -14,19 +16,13 @@ from bpfw.core.authority.patch.engine import PatchProgressCallback
 
 
 class BlueprintEngine:
-    """Apply approved mechanical changes to files under ``bpfw/``.
-
-    This engine is intentionally mechanical. It does not detect drift and does
-    not decide whether code or blueprint should win. It only applies approved
-    requests produced by inspector, editor, planner, controlled refactors, or
-    safe mechanical update detection.
-    """
+    """PURPOSE apply approved approved file changes to files under bpfw/
+        DOMAIN  approved blueprint changes
+        """
 
     def __init__(self, project_root: Path) -> None:
-        """Initialize the engine.
-
-        Args:
-            project_root: Project root directory.
+        """PURPOSE set up the engine
+        DOMAIN  approved blueprint changes
         """
         self.project_root = project_root
         self._builder = BlueprintPlanBuilder()
@@ -34,24 +30,14 @@ class BlueprintEngine:
         self._patch_engine = AuthorityPatchEngine(project_root=project_root)
 
     def preview_change(self, request: BlueprintChangeRequest) -> BlueprintChangePreview:
-        """Preview one change request without writing.
-
-        Args:
-            request: Change request to preview.
-
-        Returns:
-            Structured preview with affected files or blocked reason.
+        """PURPOSE preview one change request without writing
+        DOMAIN  approved blueprint changes
         """
         return self.preview_changes([request])
 
     def preview_changes(self, requests: list[BlueprintChangeRequest]) -> BlueprintChangePreview:
-        """Preview multiple change requests without writing.
-
-        Args:
-            requests: Change requests to preview.
-
-        Returns:
-            Structured preview with affected files or blocked reason.
+        """PURPOSE preview multiple change requests without writing
+        DOMAIN  approved blueprint changes
         """
         blocked_reason = self._first_blocked_reason(requests)
         if blocked_reason is not None:
@@ -74,14 +60,8 @@ class BlueprintEngine:
         request: BlueprintChangeRequest,
         write_context: PatchWriteContext,
     ) -> BlueprintChangeResult:
-        """Apply one approved change request.
-
-        Args:
-            request: Change request to apply.
-            write_context: Explicit write permission context.
-
-        Returns:
-            Structured apply result.
+        """PURPOSE apply one approved change request
+        DOMAIN  approved blueprint changes
         """
         return self.apply_changes([request], write_context=write_context)
 
@@ -91,15 +71,8 @@ class BlueprintEngine:
         write_context: PatchWriteContext,
         progress_callback: PatchProgressCallback | None = None,
     ) -> BlueprintChangeResult:
-        """Apply multiple approved requests as one patch plan.
-
-        Args:
-            requests: Change requests to apply.
-            write_context: Explicit write permission context.
-            progress_callback: Optional callback notified after patch operations progress.
-
-        Returns:
-            Structured apply result.
+        """PURPOSE apply multiple approved requests as one patch plan
+        DOMAIN  approved blueprint changes
         """
         blocked_reason = self._first_blocked_reason(requests)
         if blocked_reason is not None:
@@ -119,13 +92,8 @@ class BlueprintEngine:
         )
 
     def _first_blocked_reason(self, requests: list[BlueprintChangeRequest]) -> str | None:
-        """Return the first policy violation for a request list.
-
-        Args:
-            requests: Change requests to validate.
-
-        Returns:
-            None when all requests are authorized, otherwise blocked reason.
+        """PURPOSE get the first policy violation for a request list
+        DOMAIN  approved blueprint changes
         """
         for request in requests:
             blocked_reason = self._policy.validate_request(request)

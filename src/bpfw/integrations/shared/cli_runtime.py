@@ -1,4 +1,6 @@
-"""Shared interactive runtime helpers for terminal integrations."""
+"""PURPOSE shared interactive runtime helpers for terminal tools
+DOMAIN  terminal UI
+"""
 
 from collections.abc import Callable
 
@@ -16,19 +18,25 @@ QUIT_COMMAND_ALIASES = frozenset({QUIT_COMMAND, QUIT_COMMAND_KEY, "ctrl + c", "q
 
 
 def command_label(shortcut: str, description: str) -> str:
-    """Return the standard command label for command boxes."""
+    """PURPOSE get the standard command label for command boxes
+    DOMAIN  terminal UI
+    """
 
     return f"[{shortcut}] {description}"
 
 
 def quit_command_label(description: str = "quit") -> str:
-    """Return the standard quit command label for command boxes."""
+    """PURPOSE get the standard quit command label for command boxes
+    DOMAIN  terminal UI
+    """
 
     return command_label(QUIT_COMMAND_KEY, description)
 
 
 def normalize_command(raw_value: str) -> str:
-    """Return normalized command text for dispatch."""
+    """PURPOSE get clean command text for dispatch
+    DOMAIN  terminal UI
+    """
 
     command = raw_value.strip().lower()
     if command in {QUIT_COMMAND_KEY, "ctrl + c", QUIT_COMMAND, "q"}:
@@ -37,13 +45,17 @@ def normalize_command(raw_value: str) -> str:
 
 
 def is_back_command(command: str) -> bool:
-    """Return True when command is a back navigation action."""
+    """PURPOSE check whether command is a back navigation action
+    DOMAIN  terminal UI
+    """
 
     return command in {"b", "back"}
 
 
 def is_quit_command(command: str) -> bool:
-    """Return True when command is a quit action."""
+    """PURPOSE check whether command is a quit action
+    DOMAIN  terminal UI
+    """
 
     return command in QUIT_COMMAND_ALIASES
 
@@ -57,7 +69,9 @@ def run_interactive_loop(
     handlers_by_screen: dict[str, ScreenHandler],
     should_exit: ExitChecker,
 ) -> int:
-    """Run a generic render/input/dispatch loop for CLI integrations."""
+    """PURPOSE run a generic render/input/dispatch loop for terminal command tools
+    DOMAIN  terminal UI
+    """
 
     try:
         while True:

@@ -1,4 +1,6 @@
-"""Declared-vs-discovered drift comparison for BPFW MVP Catalog Mode."""
+"""PURPOSE declared-vs-discovered drift comparison for BPFW catalog mode
+DOMAIN  blueprint checks
+"""
 
 from typing import Any, Dict, List, Set, Tuple
 
@@ -18,7 +20,9 @@ _DeclarationKey = Tuple[str, str, str]
 def _extract_declared_keys(
     blueprint_data: Dict[str, Any],
 ) -> Tuple[Set[_DeclarationKey], Dict[_DeclarationKey, Dict[str, Any]]]:
-    """Extract the set of declared block keys from blueprint data."""
+    """PURPOSE get the set of declared block keys from blueprint data
+    DOMAIN  blueprint checks
+    """
     blocks = blueprint_data.get("blocks", [])
     if not isinstance(blocks, list):
         return set(), {}
@@ -49,11 +53,8 @@ def _extract_declared_keys(
 def _extract_discovered_keys(
     discovered_units: List[DiscoveredCodeUnit],
 ) -> Tuple[Set[_DeclarationKey], Dict[_DeclarationKey, DiscoveredCodeUnit]]:
-    """Extract the set of discovered code unit keys.
-
-    Returns a tuple of:
-      - The set of all discovered keys.
-      - A mapping from each key back to its DiscoveredCodeUnit.
+    """PURPOSE get the set of discovered code unit keys
+    DOMAIN  blueprint checks
     """
     discovered_keys: Set[_DeclarationKey] = set()
     discovered_by_key: Dict[_DeclarationKey, DiscoveredCodeUnit] = {}
@@ -68,14 +69,8 @@ def _extract_discovered_keys(
 
 
 def _extract_rule_keys(blueprint_data: Dict[str, Any], section_name: str) -> Set[_DeclarationKey]:
-    """Extract path, symbol, and kind keys from an authority rule section.
-
-    Args:
-        blueprint_data: Parsed blueprint data.
-        section_name: Authority section key, such as ``ignored_code`` or ``covered_code``.
-
-    Returns:
-        Set of declaration keys covered by the authority rules.
+    """PURPOSE get path, symbol, and kind keys from an authority rule section
+    DOMAIN  blueprint checks
     """
     authority = blueprint_data.get("authority")
     if not isinstance(authority, dict):
@@ -104,7 +99,9 @@ def _find_missing_declared(
     declared_keys: Set[_DeclarationKey],
     discovered_keys: Set[_DeclarationKey],
 ) -> List[Finding]:
-    """Produce MISSING_DECLARED_CODE findings for declared keys absent from discovery."""
+    """PURPOSE produce MISSING_DECLARED_CODE findings for declared keys absent from discovery
+    DOMAIN  blueprint checks
+    """
     findings: List[Finding] = []
 
     missing_keys = declared_keys - discovered_keys
@@ -134,7 +131,9 @@ def _find_undeclared(
     declared_keys: Set[_DeclarationKey],
     discovered_by_key: Dict[_DeclarationKey, DiscoveredCodeUnit],
 ) -> List[Finding]:
-    """Produce UNDECLARED_CODE findings for discovered keys absent from declarations."""
+    """PURPOSE produce UNDECLARED_CODE findings for discovered keys absent from declarations
+    DOMAIN  blueprint checks
+    """
     findings: List[Finding] = []
 
     undeclared_keys = discovered_keys - declared_keys
@@ -166,30 +165,8 @@ def compare_declared_to_discovered(
     discovered_units: List[DiscoveredCodeUnit],
     authority_state: str,
 ) -> List[Finding]:
-    """Compare declared blocks against discovered code units.
-
-    Drift runs when the blueprint is in the ``defined`` or ``draft`` state.
-    Draft authority may still have enough code references for structural
-    path/symbol comparison, so incomplete metadata must not hide drift.
-
-    Matching uses the exact composite key ``path + symbol + kind``.
-    No rename detection, no semantic duplicate inference, no lifecycle
-    inspection, and no file scanning is performed here.
-
-    Parameters
-    ----------
-    blueprint_data:
-        Parsed YAML content of the blueprint file.
-    discovered_units:
-        Code units discovered by the AST scanner.
-    authority_state:
-        One of the ``AUTHORITY_STATE_*`` constants.
-
-    Returns
-    -------
-    list[Finding]
-        Drift findings (``MISSING_DECLARED_CODE`` and/or
-        ``UNDECLARED_CODE``).
+    """PURPOSE compare declared blocks against discovered code units
+    DOMAIN  blueprint checks
     """
     # Non-actionable blueprint states return no drift findings. Draft remains
     # actionable for structural path/symbol comparison.
