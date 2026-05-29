@@ -153,7 +153,7 @@ def _get_record_column_value(record: SearchRecord, column: str) -> str:
     """Get the string value of a record for a filter column."""
 
     column_map = {
-        "status": record.status,
+        "status": record.lifecycle,
         "purpose": record.purpose,
         "domain": record.domain,
         "name": record.name,

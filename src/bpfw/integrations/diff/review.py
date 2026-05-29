@@ -370,7 +370,7 @@ class DiffReviewService:
         block_id = str(block.get("id", ""))
         source_shard_path = None
         if authority_document is not None and block_id:
-            source_shard_path = authority_document.get_origin(block_id)
+            source_shard_path = authority_document.block_origins.get(block_id)
         return BlueprintTarget(
             block_id=block_id,
             path=_optional_string(code.get("path")),

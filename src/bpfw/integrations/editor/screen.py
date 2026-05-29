@@ -413,6 +413,13 @@ def _result_columns_for_filters(filter_display_lines: list[str]) -> tuple[str, .
 def _result_column_value(record: object, column: str) -> str:
     """Return a display value for one configured result column."""
 
+    if column == "codelines":
+        start_line = getattr(record, "start_line", None)
+        end_line = getattr(record, "end_line", None)
+        if start_line is None or end_line is None:
+            return ""
+        return f"{start_line}-{end_line}"
+
     value = getattr(record, column, "")
     if value is None:
         return ""
@@ -548,7 +555,7 @@ def _render_results_table_rows(
     print(separator)
 
     for display_index, record in enumerate(results, start=1):
-        status = truncate(record.status or "-", status_width).center(status_width)
+        status = truncate(record.lifecycle or "-", status_width).center(status_width)
         dynamic_values = [
             _format_result_cell(
                 value=_result_column_value(record, column) or "-",

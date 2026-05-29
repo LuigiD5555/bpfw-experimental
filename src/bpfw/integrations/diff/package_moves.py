@@ -22,15 +22,6 @@ class PackageMoveGroup:
     new_prefix: str
     items: tuple[DiffItem, ...]
 
-    @property
-    def affected_count(self) -> int:
-        """Return the number of declarations covered by the group.
-
-        Returns:
-            Number of moved-code items in the group.
-        """
-        return len(self.items)
-
 
 def group_package_moves(
     items: list[DiffItem],

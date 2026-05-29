@@ -22,24 +22,6 @@ class SearchRecord:
     purpose: str
     searchable_text: str
 
-    @property
-    def block_id(self) -> str:
-        """Return the canonical block identifier."""
-        return self.responsibility_id
-
-    @property
-    def status(self) -> str:
-        """Return the canonical block status."""
-        return self.lifecycle
-
-    @property
-    def codelines(self) -> str:
-        """Return the source line range for compact result tables."""
-
-        if self.start_line is None or self.end_line is None:
-            return ""
-        return f"{self.start_line}-{self.end_line}"
-
 
 def build_search_records(blueprint_data: dict[str, Any]) -> list[SearchRecord]:
     """Build searchable records from blueprint blocks."""

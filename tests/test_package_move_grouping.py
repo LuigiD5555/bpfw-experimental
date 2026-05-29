@@ -57,7 +57,7 @@ def test_group_package_moves_collapses_repeated_prefix_transform() -> None:
     assert not ungrouped
     assert groups[0].old_prefix == "src/pkg/old/"
     assert groups[0].new_prefix == "src/pkg/new/"
-    assert groups[0].affected_count == 3
+    assert len(groups[0].items) == 3
 
 
 def test_group_package_moves_keeps_singletons_ungrouped() -> None:
@@ -111,7 +111,7 @@ def test_group_package_moves_prefers_specific_preserved_package_prefixes() -> No
 
     groups, ungrouped = group_package_moves(items)
 
-    prefix_pairs = {(group.old_prefix, group.new_prefix): group.affected_count for group in groups}
+    prefix_pairs = {(group.old_prefix, group.new_prefix): len(group.items) for group in groups}
     assert prefix_pairs == {
         ("src/bpfw/authority/", "src/bpfw/core/authority/"): 3,
         ("src/bpfw/catalog/", "src/bpfw/core/catalog/"): 2,

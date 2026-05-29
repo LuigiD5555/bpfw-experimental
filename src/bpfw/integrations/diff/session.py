@@ -1531,7 +1531,7 @@ class DiffSession:
         code = item.code_target
         if code is None:
             return None
-        unit = _unit_like_from_code_target(code)
+        unit = _UnitLike(code)
         block = build_new_detected_responsibility(unit)
         block["id"] = self._unique_block_id(block)
         block["status"] = status
@@ -1620,18 +1620,6 @@ class _UnitLike:
         self.interface_inputs: list[dict[str, Any]] = []
         self.interface_output = None
         self.calls: list[dict[str, Any]] = []
-
-
-def _unit_like_from_code_target(code: CodeTarget) -> _UnitLike:
-    """Return a minimal scanner-unit adapter.
-
-    Args:
-        code: Code target.
-
-    Returns:
-        Unit-like object.
-    """
-    return _UnitLike(code)
 
 
 def _module_from_path(path_value: str) -> str:

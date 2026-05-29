@@ -758,7 +758,7 @@ class DriftGateRunner:
                 self.print_func("No previous Drift Gate decision to restore.")
                 continue
             if command == "s":
-                self.result.skipped_count += group.affected_count
+                self.result.skipped_count += len(group.items)
                 self.print_func("Decision skipped: This package move remains unresolved.")
                 return True
             if command == "1":
@@ -771,7 +771,7 @@ class DriftGateRunner:
                     if not self._review_item(
                         item=item,
                         index=item_index,
-                        total=group.affected_count,
+                        total=len(group.items),
                         snapshot=snapshot,
                     ):
                         return False
@@ -910,7 +910,7 @@ class DriftGateRunner:
                 f"  Before: {group.old_prefix}",
                 f"  After:  {group.new_prefix}",
                 "",
-                f"  Affected declarations: {group.affected_count}",
+                f"  Affected declarations: {len(group.items)}",
             ],
         )
         self.print_func("BPFW found a package move.")
@@ -918,7 +918,7 @@ class DriftGateRunner:
         self.print_func("Choose how to handle this move:")
         self.print_func("")
         self.print_func("  [1] Accept this package move")
-        self.print_func(f"      Update all {group.affected_count} declarations automatically.")
+        self.print_func(f"      Update all {len(group.items)} declarations automatically.")
         self.print_func("")
         self.print_func("  [2] Review each declaration")
         self.print_func("      Safer, but slower.")
@@ -932,9 +932,9 @@ class DriftGateRunner:
         self.print_func("  [q] Quit")
         self.print_func("")
         self.print_func("Evidence:")
-        self.print_func(f"  same relative path: {group.affected_count}")
-        self.print_func(f"  same symbol:        {group.affected_count}")
-        self.print_func(f"  same kind:          {group.affected_count}")
+        self.print_func(f"  same relative path: {len(group.items)}")
+        self.print_func(f"  same symbol:        {len(group.items)}")
+        self.print_func(f"  same kind:          {len(group.items)}")
         self.print_func("  fingerprint:        partial or unavailable")
 
     def _accept_package_move(self, group: PackageMoveGroup) -> bool:
@@ -1480,7 +1480,7 @@ class DriftGateRunner:
                 continue
             target = self._authority_target_from_block(
                 block=block,
-                shard_path=document.get_origin(block_id),
+                shard_path=document.block_origins.get(block_id),
             )
             if target is not None:
                 targets[target.block_id] = target
@@ -1541,7 +1541,7 @@ class DriftGateRunner:
             available_commands.add("3")
         if self._can_update_existing_block(item):
             available_commands.update({"4", "5"})
-        if self._can_remove_existing_block(item):
+        if self._can_update_existing_block(item):
             available_commands.add("6")
         return available_commands
 
@@ -1582,17 +1582,6 @@ class DriftGateRunner:
         """
         target = self._hydrated_blueprint_target(item.blueprint_target)
         return target is not None and target.source_shard_path is not None
-
-    def _can_remove_existing_block(self, item: DiffItem) -> bool:
-        """Return whether the old declaration can be deleted from authority.
-
-        Args:
-            item: Missing or moved-code diff item.
-
-        Returns:
-            True when the old block and its source shard are known.
-        """
-        return self._can_update_existing_block(item)
 
     def _print_unavailable_command(self, command: str, available_commands: set[str]) -> None:
         """Print a consistent message for unavailable Drift Gate commands.
@@ -2757,8 +2746,8 @@ class DriftGateRunner:
         if not self._ensure_authority_write_ready("authority change"):
             return False
         self._ensure_current_undo_has_authority_files()
-        result = self.blueprint_engine.apply_change(
-            request,
+        result = self.blueprint_engine.apply_changes(
+            [request],
             write_context=PatchWriteContext(tool_name="inspector", allow_guarded_writes=False),
         )
         if result.success:
@@ -2954,7 +2943,7 @@ def _existing_blocks(snapshot: DiffReviewSnapshot) -> list[BlueprintTarget]:
         block_id = clean_string(block.get("id"))
         if block_id is None:
             continue
-        origin = snapshot.authority_document.get_origin(block_id) if snapshot.authority_document is not None else None
+        origin = snapshot.authority_document.block_origins.get(block_id) if snapshot.authority_document is not None else None
         targets.append(
             BlueprintTarget(
                 block_id=block_id,
@@ -3037,7 +3026,7 @@ def _existing_blocks_from_session(session: InspectLoadResult) -> list[BlueprintT
         block_id = clean_string(block.get("id"))
         if block_id is None:
             continue
-        origin = session.authority_document.get_origin(block_id) if session.authority_document is not None else None
+        origin = session.authority_document.block_origins.get(block_id) if session.authority_document is not None else None
         targets.append(
             BlueprintTarget(
                 block_id=block_id,

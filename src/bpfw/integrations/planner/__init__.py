@@ -19,13 +19,6 @@ from bpfw.integrations.planner.models import (
 from bpfw.integrations.result import OptionalIntegrationResult
 
 
-def run_planner(project_root: Path) -> int:
-    """Run the planner integration."""
-
-    controller = PlannerController(project_root=project_root)
-    return controller.run()
-
-
 class PlannerIntegration(OptionalIntegration):
     """Optional integration for blueprint-first planning mode."""
 
@@ -44,13 +37,13 @@ class PlannerIntegration(OptionalIntegration):
         """Run planner against the given project root."""
 
         _ = command_arguments
-        exit_code = run_planner(project_root=project_root)
+        controller = PlannerController(project_root=project_root)
+        exit_code = controller.run()
         return OptionalIntegrationResult(message="", exit_code=exit_code)
 
 
 __all__ = [
     "PlannerIntegration",
-    "run_planner",
     "PlannerBox",
     "PlannerConnection",
     "PlannerInterface",
