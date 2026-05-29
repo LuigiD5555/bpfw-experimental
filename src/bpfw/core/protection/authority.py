@@ -144,24 +144,6 @@ def _missing_blueprint_result(operation: str, blueprint_path: Path) -> Protectio
     )
 
 
-def _lock_existing_resource(project_root: Path, resource: ProtectedResource) -> str:
-    """Lock one existing resource using the OS lock backend."""
-
-    return lock_project_file(project_root=project_root, path=resource.path)
-
-
-def _unlock_existing_resource(project_root: Path, resource: ProtectedResource) -> str:
-    """Unlock one existing resource using the OS lock backend."""
-
-    return unlock_project_file(project_root=project_root, path=resource.path)
-
-
-def _get_existing_resource_state(project_root: Path, resource: ProtectedResource) -> str:
-    """Return the OS lock state for one existing resource."""
-
-    return get_project_file_lock_state(project_root=project_root, path=resource.path)
-
-
 def lock_authority(project_root: Path) -> ProtectionResult:
     """Lock the project blueprint and BPFW internal guard files."""
 
@@ -190,7 +172,7 @@ def lock_authority(project_root: Path) -> ProtectionResult:
             warnings.append(f"Skipped missing {resource.resource_type}: {resource.path}")
             continue
 
-        lock_state = _lock_existing_resource(project_root=project_root, resource=resource)
+        lock_state = lock_project_file(project_root=project_root, path=resource.path)
         lock_states.append(lock_state)
         if lock_state in {LOCKED, DEGRADED}:
             protected_resources.append(resource)
@@ -208,7 +190,7 @@ def lock_authority(project_root: Path) -> ProtectionResult:
 
     if status in {"unsupported", "unknown"}:
         for protected_resource in reversed(protected_resources):
-            _unlock_existing_resource(project_root=project_root, resource=protected_resource)
+            unlock_project_file(project_root=project_root, path=protected_resource.path)
 
     return ProtectionResult(
         operation="lock",
@@ -248,7 +230,7 @@ def unlock_authority(project_root: Path) -> ProtectionResult:
             warnings.append(f"Skipped missing {resource.resource_type}: {resource.path}")
             continue
 
-        unlock_state = _unlock_existing_resource(project_root=project_root, resource=resource)
+        unlock_state = unlock_project_file(project_root=project_root, path=resource.path)
         unlock_states.append(unlock_state)
         if unlock_state == "unlocked":
             protected_resources.append(resource)
@@ -292,7 +274,7 @@ def get_authority_protection_status(project_root: Path) -> ProtectionResult:
             warnings.append(f"Skipped missing {resource.resource_type}: {resource.path}")
             continue
 
-        lock_state = _get_existing_resource_state(project_root=project_root, resource=resource)
+        lock_state = get_project_file_lock_state(project_root=project_root, path=resource.path)
         resource_states.append((resource, lock_state))
         if lock_state in {LOCKED, DEGRADED}:
             protected_resources.append(resource)

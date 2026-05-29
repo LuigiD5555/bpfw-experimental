@@ -174,7 +174,7 @@ class AuthorityRepository:
             if not block_id:
                 continue
 
-            current_shard = document.get_origin(block_id)
+            current_shard = document.block_origins.get(block_id)
             if current_shard is None:
                 continue
 

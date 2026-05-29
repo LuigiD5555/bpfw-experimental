@@ -123,14 +123,6 @@ class AuthorityPatchPlan:
         """
         return len(self._operations) == 0
 
-    def operation_count(self) -> int:
-        """Return the number of operations in the plan.
-
-        Returns:
-            Operation count.
-        """
-        return len(self._operations)
-
     def affected_files(self) -> set[Path]:
         """Return all project-relative paths touched by the plan.
 

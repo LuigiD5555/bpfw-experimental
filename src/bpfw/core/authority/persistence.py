@@ -129,11 +129,11 @@ class AuthorityPersistenceEngine:
             result.warnings.append("Block missing id")
             return result
 
-        origin = document.get_origin(block_id)
+        origin = document.block_origins.get(block_id)
         if origin is None:
-            authority_config = document.get_authority_config()
+            authority_config = document.index.get_authority_config()
             decision_engine = ShardDecisionEngine(authority_config)
-            origin = decision_engine.get_default_shard()
+            origin = Path(decision_engine.default_shard)
             if origin not in document.shards:
                 document.shards[origin] = AuthorityShard(path=origin, blocks=[])
                 document.index.add_include(origin)
@@ -172,9 +172,9 @@ class AuthorityPersistenceEngine:
             blocks: Logical block list from the document.
             result: Persistence result to record warnings and created shards.
         """
-        authority_config = document.get_authority_config()
+        authority_config = document.index.get_authority_config()
         decision_engine = ShardDecisionEngine(authority_config)
-        default_shard = decision_engine.get_default_shard()
+        default_shard = Path(decision_engine.default_shard)
         grouped_blocks: dict[Path, list[dict[str, Any]]] = {}
         current_block_ids: set[str] = set()
 
@@ -189,7 +189,7 @@ class AuthorityPersistenceEngine:
             if not isinstance(expected_shard, Path):
                 expected_shard = default_shard
             document.block_origins[block_id] = expected_shard
-            if expected_shard not in document.get_included_shard_paths():
+            if expected_shard not in document.index.get_includes():
                 document.index.add_include(expected_shard)
                 result.updated_includes = True
 
@@ -216,7 +216,7 @@ class AuthorityPersistenceEngine:
 
         if not grouped_blocks:
             grouped_blocks[default_shard] = []
-            if default_shard not in document.get_included_shard_paths():
+            if default_shard not in document.index.get_includes():
                 document.index.add_include(default_shard)
                 result.updated_includes = True
 
@@ -255,6 +255,6 @@ class AuthorityPersistenceEngine:
 
         document.index.data["includes"] = [
             str(shard_path)
-            for shard_path in document.get_included_shard_paths()
+            for shard_path in document.index.get_includes()
         ]
         document.index.data.pop("blocks", None)

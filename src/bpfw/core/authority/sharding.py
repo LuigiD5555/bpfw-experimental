@@ -146,7 +146,7 @@ class ShardDecisionEngine:
             return self._decide_by_domain(block)
 
         # Try to load architecture.yaml
-        project_root = document.get_project_root()
+        project_root = document.index.path.parent.parent
         architecture_path = project_root / "bpfw" / "architecture.yaml"
 
         if not architecture_path.exists():
@@ -277,10 +277,3 @@ class ShardDecisionEngine:
         except Exception:
             return False
 
-    def get_default_shard(self) -> Path:
-        """Get the default shard path.
-
-        Returns:
-            Project-relative path to the default shard.
-        """
-        return Path(self.default_shard)

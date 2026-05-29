@@ -158,11 +158,12 @@ class TestTransactionBackup:
         absolute.write_text("content", encoding="utf-8")
 
         backup = TransactionBackup(tmp_path)
+        backup_dir = tmp_path / ".bpfw" / "blueprint_engine_backup"
         backup.backup(relative)
-        assert backup.backup_dir.exists()
+        assert backup_dir.exists()
 
         backup.commit()
-        assert not backup.backup_dir.exists()
+        assert not backup_dir.exists()
 
 
 # ---------------------------------------------------------------------------
@@ -174,7 +175,7 @@ class TestAuthorityPatchPlan:
     def test_empty_plan(self) -> None:
         plan = AuthorityPatchPlan()
         assert plan.is_empty()
-        assert plan.operation_count() == 0
+        assert len(plan.operations) == 0
 
     def test_add_operation(self) -> None:
         plan = AuthorityPatchPlan()
@@ -185,7 +186,7 @@ class TestAuthorityPatchPlan:
         )
         plan.add_operation(operation)
         assert not plan.is_empty()
-        assert plan.operation_count() == 1
+        assert len(plan.operations) == 1
 
     def test_affected_files(self) -> None:
         plan = AuthorityPatchPlan()

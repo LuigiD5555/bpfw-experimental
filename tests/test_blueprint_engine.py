@@ -82,7 +82,7 @@ def test_blocks_unconfirmed_create_block(tmp_path: Path) -> None:
         },
     )
 
-    preview = engine.preview_change(request)
+    preview = engine.preview_changes([request])
 
     assert not preview.allowed
     assert preview.blocked_reason == "Blueprint Engine requires human confirmation for this change."
@@ -104,7 +104,7 @@ def test_applies_human_confirmed_create_block(tmp_path: Path) -> None:
         },
     )
 
-    result = engine.apply_change(request, _context())
+    result = engine.apply_changes([request], _context())
     shard = _read_yaml(tmp_path / "bpfw" / "blocks" / "core.yaml")
 
     assert result.success
@@ -136,7 +136,7 @@ def test_applies_safe_mechanical_code_reference_update(tmp_path: Path) -> None:
         },
     )
 
-    result = engine.apply_change(request, _context())
+    result = engine.apply_changes([request], _context())
     shard = _read_yaml(tmp_path / "bpfw" / "blocks" / "core.yaml")
     block = shard["blocks"][0]
 
@@ -170,7 +170,7 @@ def test_rejects_unsafe_mechanical_code_reference_update(tmp_path: Path) -> None
         },
     )
 
-    preview = engine.preview_change(request)
+    preview = engine.preview_changes([request])
 
     assert not preview.allowed
     assert preview.blocked_reason == "Safe mechanical update requires exact one-to-one evidence."
@@ -192,7 +192,7 @@ def test_blocks_unconfirmed_controlled_refactor_without_evidence(tmp_path: Path)
         },
     )
 
-    preview = engine.preview_change(request)
+    preview = engine.preview_changes([request])
 
     assert not preview.allowed
     assert preview.blocked_reason == "Safe mechanical update requires exact one-to-one evidence."
@@ -215,7 +215,7 @@ def test_allows_human_confirmed_controlled_refactor(tmp_path: Path) -> None:
         },
     )
 
-    result = engine.apply_change(request, _context())
+    result = engine.apply_changes([request], _context())
     shard = _read_yaml(tmp_path / "bpfw" / "blocks" / "core.yaml")
 
     assert result.success

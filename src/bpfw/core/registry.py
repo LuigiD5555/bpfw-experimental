@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 from bpfw.core.catalog.paths import CANONICAL_BLUEPRINT_FILE
+from bpfw.core.catalog import verify as catalog_verify
 from bpfw.core.pipeline import Pipeline, PipelineStep
 from bpfw.core.result import ResultStatus, StepResult
 from bpfw.core.errors import BlueprintLockedError
@@ -17,26 +18,6 @@ from bpfw.core.protection.authority import (
     unlock_authority,
 )
 from bpfw.core.protection.runtime_lease import runtime_blueprint_write_lease
-
-
-def run_verify(project_root: object, precomputed_scan_result: object | None = None, precomputed_load_result: object | None = None) -> object:
-    """Run catalog verification through a lazy import.
-
-    Args:
-        project_root: Project root directory.
-        precomputed_scan_result: Optional precomputed scan result.
-        precomputed_load_result: Optional precomputed blueprint load result.
-
-    Returns:
-        Verification report and exit code from the catalog verifier.
-    """
-    from bpfw.core.catalog.verify import run_verify as run_catalog_verify
-
-    return run_catalog_verify(
-        project_root=project_root,
-        precomputed_scan_result=precomputed_scan_result,
-        precomputed_load_result=precomputed_load_result,
-    )
 
 
 @dataclass(slots=True)
@@ -159,7 +140,7 @@ class VerifyBlueprintStep(PipelineStep):
                 context.runtime_cache["blueprint_data"] = None
 
         with profiler.measure("engine.run_verify"):
-            report, exit_code = run_verify(
+            report, exit_code = catalog_verify.run_verify(
                 project_root=context.project_root,
                 precomputed_scan_result=scan_result,
             )
@@ -269,7 +250,7 @@ class AuthorityStatusStep(PipelineStep):
         profiler = RuntimeProfiler()
 
         with profiler.measure("status.run_verify"):
-            report, _exit_code = run_verify(project_root=context.project_root)
+            report, _exit_code = catalog_verify.run_verify(project_root=context.project_root)
 
         lock_state = get_authority_protection_status(project_root=context.project_root).status
         drift_state = "drift" if report.missing_declared_count or report.undeclared_count else "clean"

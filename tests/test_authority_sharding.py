@@ -245,7 +245,7 @@ def test_repository_tracks_block_origin(project_root: Path):
     repository = AuthorityRepository(project_root=project_root)
     document = repository.load()
     
-    origin = document.get_origin("test_block_1")
+    origin = document.block_origins.get("test_block_1")
     assert origin is not None
     assert origin == Path("bpfw/blocks/core.yaml")
 
@@ -265,7 +265,7 @@ def test_repository_saves_moved_block_when_domain_changes(project_root: Path):
     
     # Reload and verify
     document = repository.load()
-    origin = document.get_origin("test_block_1")
+    origin = document.block_origins.get("test_block_1")
     # After blueprint layout, it should be in catalog.yaml
     assert origin is not None
 
@@ -318,7 +318,7 @@ def test_repository_removes_empty_shard_when_allow_empty_false(project_root: Pat
     # Verify empty shard was removed
     document = repository.load()
     # The default shard should be removed or kept as empty list
-    assert "bpfw/blocks/core.yaml" in [str(p) for p in document.get_included_shard_paths()]
+    assert "bpfw/blocks/core.yaml" in [str(p) for p in document.index.get_includes()]
 
 
 def test_duplicate_block_id_across_shards_blocks(tmp_path: Path):
@@ -430,7 +430,7 @@ def test_inspector_save_moves_block_after_domain_change(project_root: Path):
     
     # Verify block moved to new shard
     document = repository.load()
-    new_shard = document.get_origin(blocks[0]["id"])
+    new_shard = document.block_origins.get(blocks[0]["id"])
     
     # Shard should have changed (or plan exists for move)
     assert new_shard is not None
@@ -464,7 +464,7 @@ def test_planner_save_places_block_in_domain_shard(project_root: Path):
     
     # Verify block is in correct shard
     document = repository.load()
-    origin = document.get_origin("planned_block")
+    origin = document.block_origins.get("planned_block")
     assert origin is not None
     # After blueprint layout, should be in protection.yaml
 

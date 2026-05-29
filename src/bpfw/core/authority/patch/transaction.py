@@ -39,24 +39,6 @@ class TransactionBackup:
         self._backup_dir = project_root / ".bpfw" / "blueprint_engine_backup"
         self._backed_up: set[Path] = set()
 
-    @property
-    def backup_dir(self) -> Path:
-        """Return the backup directory path.
-
-        Returns:
-            Backup directory path.
-        """
-        return self._backup_dir
-
-    @property
-    def backed_up_files(self) -> set[Path]:
-        """Return backed-up project-relative files.
-
-        Returns:
-            Copy of the backed-up path set.
-        """
-        return set(self._backed_up)
-
     def backup(self, relative_path: Path) -> None:
         """Create a backup of a file if it exists.
 

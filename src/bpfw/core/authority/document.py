@@ -59,17 +59,6 @@ class AuthorityDocument:
         """
         self.blueprint_data["blocks"] = blocks
 
-    def get_origin(self, block_id: str) -> Path | None:
-        """Get the shard path for a block ID.
-
-        Args:
-            block_id: The block ID to look up.
-
-        Returns:
-            Project-relative shard path, or None if block not found.
-        """
-        return self.block_origins.get(block_id)
-
     def get_block(self, block_id: str) -> dict[str, Any] | None:
         """Get a specific block by ID.
 
@@ -93,20 +82,9 @@ class AuthorityDocument:
         Returns:
             AuthorityShard instance, or None if block not found.
         """
-        shard_path = self.get_origin(block_id)
+        shard_path = self.block_origins.get(block_id)
         if shard_path is None:
             return None
-        return self.get_shard(shard_path)
-
-    def get_shard(self, shard_path: Path) -> AuthorityShard | None:
-        """Get an authority shard by its project-relative path.
-
-        Args:
-            shard_path: Project-relative shard path.
-
-        Returns:
-            AuthorityShard instance, or None if shard is not loaded.
-        """
         return self.shards.get(shard_path)
 
     def get_blocks_from_shard(self, shard_path: Path) -> list[dict[str, Any]]:
@@ -118,55 +96,8 @@ class AuthorityDocument:
         Returns:
             List of block dictionaries from the shard.
         """
-        shard = self.get_shard(shard_path)
+        shard = self.shards.get(shard_path)
         if shard is None:
             return []
         return shard.get_blocks()
 
-    def get_block_count(self) -> int:
-        """Get the total number of blocks.
-
-        Returns:
-            Total block count.
-        """
-        return len(self.get_blocks())
-
-    def get_shard_count(self) -> int:
-        """Get the number of loaded shards.
-
-        Returns:
-            Number of shards.
-        """
-        return len(self.shards)
-
-    def get_shard_paths(self) -> list[Path]:
-        """Get all shard paths.
-
-        Returns:
-            List of project-relative shard paths.
-        """
-        return list(self.shards.keys())
-
-    def get_included_shard_paths(self) -> list[Path]:
-        """Get shard paths from the index includes.
-
-        Returns:
-            List of project-relative shard paths from includes.
-        """
-        return self.index.get_includes()
-
-    def get_project_root(self) -> Path:
-        """Get the project root directory.
-
-        Returns:
-            Project root Path.
-        """
-        return self.index.path.parent.parent
-
-    def get_authority_config(self) -> dict[str, Any]:
-        """Get the authority configuration.
-
-        Returns:
-            Dictionary containing authority configuration.
-        """
-        return self.index.get_authority_config()

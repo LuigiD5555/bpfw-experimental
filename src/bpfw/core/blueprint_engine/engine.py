@@ -27,17 +27,6 @@ class BlueprintEngine:
         self._policy = BlueprintEngineSafetyPolicy()
         self._patch_engine = AuthorityPatchEngine(project_root=project_root)
 
-    def preview_change(self, request: BlueprintChangeRequest) -> BlueprintChangePreview:
-        """Preview one change request without writing.
-
-        Args:
-            request: Change request to preview.
-
-        Returns:
-            Structured preview with affected files or blocked reason.
-        """
-        return self.preview_changes([request])
-
     def preview_changes(self, requests: list[BlueprintChangeRequest]) -> BlueprintChangePreview:
         """Preview multiple change requests without writing.
 
@@ -57,27 +46,11 @@ class BlueprintEngine:
         blocked = patch_preview.error_message or ("\n".join(patch_preview.messages) if validation_failed else None)
         return BlueprintChangePreview(
             allowed=blocked is None,
-            operation_count=plan.operation_count(),
+            operation_count=len(plan.operations),
             affected_files=tuple(sorted(plan.affected_files())),
             messages=tuple(patch_preview.messages),
             blocked_reason=blocked,
         )
-
-    def apply_change(
-        self,
-        request: BlueprintChangeRequest,
-        write_context: PatchWriteContext,
-    ) -> BlueprintChangeResult:
-        """Apply one approved change request.
-
-        Args:
-            request: Change request to apply.
-            write_context: Explicit write permission context.
-
-        Returns:
-            Structured apply result.
-        """
-        return self.apply_changes([request], write_context=write_context)
 
     def apply_changes(
         self,

@@ -90,7 +90,7 @@ def test_inspector_attempts_unlock_before_running_integration(
     class UnlockResult:
         status = "unlocked"
 
-    monkeypatch.setattr(core_registry, "run_verify", fake_verify)
+    monkeypatch.setattr(core_registry.catalog_verify, "run_verify", fake_verify)
     monkeypatch.setattr(core_registry, "get_authority_protection_status", lambda project_root: type("ProtectionStatus", (), {"status": "locked"})())
     monkeypatch.setattr(core_registry, "unlock_authority", lambda project_root: UnlockResult())
 
@@ -135,7 +135,7 @@ def test_inspector_allows_draft_incomplete_preflight_without_blocking(
     class LockState:
         status = "locked"
 
-    monkeypatch.setattr(core_registry, "run_verify", fake_verify)
+    monkeypatch.setattr(core_registry.catalog_verify, "run_verify", fake_verify)
     monkeypatch.setattr(core_registry, "get_authority_protection_status", lambda project_root: LockState())
     monkeypatch.setattr(core_registry, "unlock_authority", lambda project_root: type("UnlockResult", (), {"status": "unlocked"})())
 

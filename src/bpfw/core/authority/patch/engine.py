@@ -161,17 +161,6 @@ class AuthorityPatchEngine:
             return []
         return plan.validate(self.project_root)
 
-    def collect_affected_files(self, plan: AuthorityPatchPlan) -> set[Path]:
-        """Return all files the plan would modify.
-
-        Args:
-            plan: Plan to inspect.
-
-        Returns:
-            Set of affected project-relative paths.
-        """
-        return plan.affected_files()
-
     @contextmanager
     def _write_authorization(self, context: PatchWriteContext) -> Iterator[None]:
         """Set up blueprint write authorization for the apply.
