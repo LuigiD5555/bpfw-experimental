@@ -17,6 +17,8 @@ class SearchRecord:
     path: str
     symbol: str
     location: str
+    start_line: int | None
+    end_line: int | None
     purpose: str
     searchable_text: str
 
@@ -29,6 +31,15 @@ class SearchRecord:
     def status(self) -> str:
         """Return the canonical block status."""
         return self.lifecycle
+
+    @property
+    def codelines(self) -> str:
+        """Return the source line range for compact result tables."""
+
+        if self.start_line is None or self.end_line is None:
+            return ""
+        return f"{self.start_line}-{self.end_line}"
+
 
 def build_search_records(blueprint_data: dict[str, Any]) -> list[SearchRecord]:
     """Build searchable records from blueprint blocks."""
@@ -74,6 +85,8 @@ def _build_single_record(block: dict[str, Any]) -> SearchRecord:
         code_data = {}
     raw_path = _str_or_empty(code_data.get("path"))
     symbol = _str_or_empty(code_data.get("symbol"))
+    start_line = _int_or_none(code_data.get("start_line"))
+    end_line = _int_or_none(code_data.get("end_line"))
 
     location = _short_location(raw_path)
 
@@ -105,6 +118,8 @@ def _build_single_record(block: dict[str, Any]) -> SearchRecord:
         path=raw_path,
         symbol=symbol,
         location=location,
+        start_line=start_line,
+        end_line=end_line,
         purpose=purpose,
         searchable_text=searchable_text,
     )
@@ -134,6 +149,18 @@ def _str_or_empty(value: Any) -> str:
     if value is None:
         return ""
     return str(value).strip()
+
+
+def _int_or_none(value: Any) -> int | None:
+    """Convert a line value to int, returning None when unavailable."""
+
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
+    return None
 
 
 def _short_location(raw_path: str) -> str:

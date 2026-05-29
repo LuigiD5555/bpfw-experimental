@@ -17,6 +17,31 @@ from bpfw.integrations.shared.visual_theme import (
 
 
 DEFAULT_INPUT_PROMPT = "> "
+NORMAL_RESULT_COLUMNS = ("domain", "name", "purpose")
+FILTERED_RESULT_COLUMNS = ("name", "purpose", "location", "codelines")
+NORMAL_RESULT_WIDTH_PRIORITY = ("name", "purpose", "domain")
+FILTERED_RESULT_WIDTH_PRIORITY = ("location", "name", "purpose", "codelines")
+RESULT_COLUMN_LABELS = {
+    "domain": "DOMAIN",
+    "name": "NAME",
+    "purpose": "PURPOSE",
+    "location": "LOCATION",
+    "codelines": "CODELINES",
+}
+RESULT_COLUMN_MIN_WIDTHS = {
+    "domain": 8,
+    "name": 14,
+    "purpose": 7,
+    "location": 12,
+    "codelines": 9,
+}
+RESULT_COLUMN_MAX_WIDTHS = {
+    "domain": 40,
+    "name": 72,
+    "purpose": 52,
+    "location": 56,
+    "codelines": 14,
+}
 
 
 def get_terminal_width() -> int:
@@ -223,31 +248,24 @@ def _editor_block_width(ratio: float = 0.70) -> int:
     return max(minimum_width, min(maximum_width, preferred_width))
 
 
-def _results_block_ratio(results: list) -> float:
+def _results_block_ratio(results: list, result_columns: tuple[str, ...]) -> float:
     """Return dynamic width ratio (50%-95%) based on required table width."""
 
     if not results:
         return 0.50
 
-    max_name_length = max(len((record.name or "-")) for record in results)
-    max_domain_length = max(len((record.domain or "-")) for record in results)
-    max_purpose_length = max(len((record.purpose or "-")) for record in results)
-
     desired_idx_width = 5
     desired_lifecycle_width = 10
-    desired_domain_width = max(10, min(max_domain_length, 40))
-    desired_name_width = max(14, min(max_name_length, 72))
-    desired_purpose_width = max(8, min(max_purpose_length, 52))
+    width_priority = _result_width_priority_for_columns(result_columns)
+    desired_column_widths = _desired_result_column_widths(results, result_columns, width_priority)
 
-    # Five columns use six vertical separators in the table renderer.
+    separator_width = _result_table_separator_width(result_columns)
     required_content_width = (
         desired_idx_width
         + desired_lifecycle_width
-        + desired_domain_width
-        + desired_name_width
-        + desired_purpose_width
+        + sum(desired_column_widths)
     )
-    required_block_width = required_content_width + 6
+    required_block_width = required_content_width + separator_width
 
     min_ratio = 0.50
     max_ratio = 0.95
@@ -261,54 +279,152 @@ def _results_block_ratio(results: list) -> float:
     return max(min_ratio, min(max_ratio, required_ratio))
 
 
-def _compute_results_column_widths(results: list, total_content_width: int) -> tuple[int, int, int, int, int]:
-    """Compute IDX/LIFECYCLE/DOMAIN/NAME/PURPOSE widths with truncation priority.
+def _max_result_column_value_width(results: list, column: str) -> int:
+    """Return the longest display value width for one result column."""
 
-    When space is limited, reduce PURPOSE first, then DOMAIN, and keep NAME as complete as possible.
-    """
+    label_width = len(RESULT_COLUMN_LABELS[column])
+    value_width = max((len(_result_column_value(record, column) or "-") for record in results), default=0)
+    return max(label_width, value_width)
+
+
+def _compute_results_column_widths(
+    results: list,
+    total_content_width: int,
+    result_columns: tuple[str, ...],
+) -> tuple[int, int, list[int]]:
+    """Compute result table widths using explicit width priority."""
 
     idx_width = 5
     lifecycle_width = 10
+    width_priority = _result_width_priority_for_columns(result_columns)
 
-    max_domain_length = max((len(record.domain or "-") for record in results), default=6)
-    max_name_length = max((len(record.name or "-") for record in results), default=4)
-    max_purpose_length = max((len(record.purpose or "-") for record in results), default=7)
-
-    min_domain_width = 10
-    min_name_width = 14
-    min_purpose_width = 8
+    min_column_widths = [RESULT_COLUMN_MIN_WIDTHS[column] for column in result_columns]
 
     available_main_width = total_content_width - idx_width - lifecycle_width
-    if available_main_width <= (min_domain_width + min_name_width + min_purpose_width):
-        return idx_width, lifecycle_width, min_domain_width, min_name_width, min_purpose_width
+    if available_main_width <= sum(min_column_widths):
+        return idx_width, lifecycle_width, _shrink_widths_to_available(
+            widths=min_column_widths,
+            available_width=max(1, available_main_width),
+            result_columns=result_columns,
+            width_priority=width_priority,
+        )
 
-    desired_domain_width = max(min_domain_width, min(max_domain_length, 40))
-    desired_name_width = max(min_name_width, min(max_name_length, 72))
-    desired_purpose_width = max(min_purpose_width, min(max_purpose_length, 52))
-    requested_main_width = desired_domain_width + desired_name_width + desired_purpose_width
+    desired_column_widths = _desired_result_column_widths(results, result_columns, width_priority)
+    requested_main_width = sum(desired_column_widths)
 
     if requested_main_width <= available_main_width:
         extra_width = available_main_width - requested_main_width
-        desired_name_width += extra_width
-        return idx_width, lifecycle_width, desired_domain_width, desired_name_width, desired_purpose_width
+        priority_column_index = result_columns.index(width_priority[0])
+        desired_column_widths[priority_column_index] += extra_width
+        return idx_width, lifecycle_width, desired_column_widths
 
     overflow = requested_main_width - available_main_width
 
-    reducible_purpose = desired_purpose_width - min_purpose_width
-    reduce_purpose = min(overflow, reducible_purpose)
-    desired_purpose_width -= reduce_purpose
-    overflow -= reduce_purpose
+    for column_index in _shrink_order(result_columns, width_priority):
+        reducible_width = desired_column_widths[column_index] - min_column_widths[column_index]
+        reduction = min(overflow, reducible_width)
+        desired_column_widths[column_index] -= reduction
+        overflow -= reduction
+        if overflow <= 0:
+            break
 
-    reducible_domain = desired_domain_width - min_domain_width
-    reduce_domain = min(overflow, reducible_domain)
-    desired_domain_width -= reduce_domain
-    overflow -= reduce_domain
+    return idx_width, lifecycle_width, desired_column_widths
 
-    reducible_name = desired_name_width - min_name_width
-    reduce_name = min(overflow, reducible_name)
-    desired_name_width -= reduce_name
 
-    return idx_width, lifecycle_width, desired_domain_width, desired_name_width, desired_purpose_width
+def _desired_result_column_widths(
+    results: list,
+    result_columns: tuple[str, ...],
+    width_priority: tuple[str, ...],
+) -> list[int]:
+    """Return desired widths with priority columns kept uncapped."""
+
+    desired_widths: list[int] = []
+    priority_columns = set(width_priority[:3])
+    for column in result_columns:
+        value_width = _max_result_column_value_width(results, column)
+        if column in priority_columns:
+            desired_widths.append(max(RESULT_COLUMN_MIN_WIDTHS[column], value_width))
+            continue
+        desired_widths.append(
+            max(
+                RESULT_COLUMN_MIN_WIDTHS[column],
+                min(value_width, RESULT_COLUMN_MAX_WIDTHS[column]),
+            )
+        )
+    return desired_widths
+
+
+def _result_width_priority_for_columns(result_columns: tuple[str, ...]) -> tuple[str, ...]:
+    """Return width priority for the current result table profile."""
+
+    if result_columns == FILTERED_RESULT_COLUMNS:
+        return FILTERED_RESULT_WIDTH_PRIORITY
+    return NORMAL_RESULT_WIDTH_PRIORITY
+
+
+def _result_table_separator_width(result_columns: tuple[str, ...]) -> int:
+    """Return the total vertical separator width for the result table."""
+
+    fixed_column_count = 2
+    return fixed_column_count + len(result_columns) + 1
+
+
+def _shrink_widths_to_available(
+    widths: list[int],
+    available_width: int,
+    result_columns: tuple[str, ...],
+    width_priority: tuple[str, ...],
+) -> list[int]:
+    """Shrink column widths within available space, preserving priority columns longest."""
+
+    fitted_widths = list(widths)
+    overflow = sum(fitted_widths) - available_width
+    for column_index in _shrink_order(result_columns, width_priority):
+        if overflow <= 0:
+            break
+        reducible_width = fitted_widths[column_index] - 1
+        reduction = min(overflow, reducible_width)
+        fitted_widths[column_index] -= reduction
+        overflow -= reduction
+    return fitted_widths
+
+
+def _shrink_order(result_columns: tuple[str, ...], width_priority: tuple[str, ...]) -> list[int]:
+    """Return column indexes from least important to most important."""
+
+    priority_rank = {column: rank for rank, column in enumerate(width_priority)}
+    default_rank = len(width_priority)
+    return sorted(
+        range(len(result_columns)),
+        key=lambda column_index: priority_rank.get(result_columns[column_index], default_rank),
+        reverse=True,
+    )
+
+
+def _result_columns_for_filters(filter_display_lines: list[str]) -> tuple[str, ...]:
+    """Return result table columns for normal or filtered search state."""
+
+    has_active_filters = any(line != "none" for line in filter_display_lines)
+    if has_active_filters:
+        return FILTERED_RESULT_COLUMNS
+    return NORMAL_RESULT_COLUMNS
+
+
+def _result_column_value(record: object, column: str) -> str:
+    """Return a display value for one configured result column."""
+
+    value = getattr(record, column, "")
+    if value is None:
+        return ""
+    return str(value)
+
+
+def _format_result_cell(value: str, width: int, preserve_priority: bool) -> str:
+    """Format a table cell, avoiding ellipsis for protected priority values."""
+
+    if preserve_priority and len(value) > width:
+        return value[:width].ljust(width)
+    return truncate(value, width).ljust(width)
 
 
 def render_editor_banner(ratio: float = 0.70) -> None:
@@ -356,7 +472,8 @@ def render_results_table(
     filter_display_lines: display lines from FilterState
     """
 
-    block_ratio = _results_block_ratio(results)
+    result_columns = _result_columns_for_filters(filter_display_lines)
+    block_ratio = _results_block_ratio(results, result_columns)
     refresh_screen()
     render_editor_banner(ratio=block_ratio)
     print()
@@ -372,57 +489,58 @@ def render_results_table(
         _render_empty_commands(ratio=block_ratio)
         return
 
-    _render_results_table_rows(results, ratio=block_ratio)
-    print()
-    for display_index, record in enumerate(results, start=1):
-        if record.location:
-            print(f" [{display_index}] location: {record.location}")
+    _render_results_table_rows(results, ratio=block_ratio, result_columns=result_columns)
     print()
     _render_filter_display(filter_display_lines)
     print()
     _render_results_commands(ratio=block_ratio)
 
 
-def _render_results_table_rows(results: list, ratio: float = 0.70) -> None:
+def _render_results_table_rows(
+    results: list,
+    ratio: float = 0.70,
+    result_columns: tuple[str, ...] = NORMAL_RESULT_COLUMNS,
+) -> None:
     """Render the actual table of search results."""
 
     width = _editor_block_width(ratio=ratio)
 
-    # Five columns need six vertical separators.
-    total_content_width = max(54, width - 6)
-    idx_width, status_width, domain_width, name_width, purpose_width = _compute_results_column_widths(
+    total_content_width = max(1, width - _result_table_separator_width(result_columns))
+    idx_width, status_width, dynamic_widths = _compute_results_column_widths(
         results,
         total_content_width,
+        result_columns,
     )
+    width_priority = _result_width_priority_for_columns(result_columns)
+    protected_columns = set(width_priority[:3])
 
     # Header
     header = (
         f"\u2502{'IDX':^{idx_width}}"
         f"\u2502{'LIFECYCLE':^{status_width}}"
-        f"\u2502{'DOMAIN':^{domain_width}}"
-        f"\u2502{'NAME':^{name_width}}"
-        f"\u2502{'PURPOSE':^{purpose_width}}\u2502"
+        + "".join(
+            f"\u2502{truncate(RESULT_COLUMN_LABELS[column], column_width):^{column_width}}"
+            for column, column_width in zip(result_columns, dynamic_widths, strict=True)
+        )
+        + "\u2502"
     )
     separator = (
         f"\u251c{'\u2500' * idx_width}"
         f"\u253c{'\u2500' * status_width}"
-        f"\u253c{'\u2500' * domain_width}"
-        f"\u253c{'\u2500' * name_width}"
-        f"\u253c{'\u2500' * purpose_width}\u2524"
+        + "".join(f"\u253c{'\u2500' * column_width}" for column_width in dynamic_widths)
+        + "\u2524"
     )
     top_border = (
         f"\u250c{'\u2500' * idx_width}"
         f"\u252c{'\u2500' * status_width}"
-        f"\u252c{'\u2500' * domain_width}"
-        f"\u252c{'\u2500' * name_width}"
-        f"\u252c{'\u2500' * purpose_width}\u2510"
+        + "".join(f"\u252c{'\u2500' * column_width}" for column_width in dynamic_widths)
+        + "\u2510"
     )
     bottom_border = (
         f"\u2514{'\u2500' * idx_width}"
         f"\u2534{'\u2500' * status_width}"
-        f"\u2534{'\u2500' * domain_width}"
-        f"\u2534{'\u2500' * name_width}"
-        f"\u2534{'\u2500' * purpose_width}\u2518"
+        + "".join(f"\u2534{'\u2500' * column_width}" for column_width in dynamic_widths)
+        + "\u2518"
     )
 
     print(top_border)
@@ -431,14 +549,17 @@ def _render_results_table_rows(results: list, ratio: float = 0.70) -> None:
 
     for display_index, record in enumerate(results, start=1):
         status = truncate(record.status or "-", status_width).center(status_width)
-        domain = truncate(record.domain or "-", domain_width).center(domain_width)
-        name = truncate(record.name or "-", name_width).ljust(name_width)
-        purpose_value = record.purpose or "-"
-        if record.location:
-            purpose_value = f"{purpose_value} [{record.location}]"
-        purpose = truncate(purpose_value, purpose_width).ljust(purpose_width)
+        dynamic_values = [
+            _format_result_cell(
+                value=_result_column_value(record, column) or "-",
+                width=column_width,
+                preserve_priority=column in protected_columns,
+            )
+            for column, column_width in zip(result_columns, dynamic_widths, strict=True)
+        ]
         index_str = str(display_index).center(idx_width)
-        print(f"\u2502{index_str}\u2502{status}\u2502{domain}\u2502{name}\u2502{purpose}\u2502")
+        dynamic_cells = "".join(f"\u2502{value}" for value in dynamic_values)
+        print(f"\u2502{index_str}\u2502{status}{dynamic_cells}\u2502")
 
     print(bottom_border)
 
