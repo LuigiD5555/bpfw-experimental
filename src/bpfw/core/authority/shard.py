@@ -195,14 +195,6 @@ class AuthorityShard:
         """
         return len(self._blocks) == 0
 
-    def block_count(self) -> int:
-        """Get the number of blocks in this shard.
-
-        Returns:
-            Number of blocks.
-        """
-        return len(self._blocks)
-
     def contains_block_id(self, block_id: str) -> bool:
         """Check if this shard contains a block with the given ID.
 
