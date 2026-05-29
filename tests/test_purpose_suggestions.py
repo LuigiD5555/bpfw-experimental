@@ -87,9 +87,9 @@ def test_symbol_method_uses_class_context() -> None:
 
 
 def test_symbol_function_uses_function_name() -> None:
-    block = _responsibility(symbol="validate_blueprint_schema", path="src/bpfw/catalog/schema.py")
+    block = _responsibility(symbol="validate_authority_document", path="src/bpfw/catalog/authority.py")
     suggestions = suggest_purposes(block)
-    assert suggestions[2].text == "validate blueprint schema"
+    assert suggestions[2].text == "validate authority document"
 
 
 def test_docstring_uses_first_sentence_only() -> None:

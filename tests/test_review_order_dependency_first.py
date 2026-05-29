@@ -47,23 +47,23 @@ def test_authority_document_same_class_dependencies(tmp_path: Path) -> None:
     """Test 2: AuthorityDocument-style same-class dependencies.
     
     Expected:
-    - AuthorityDocument.get_origin before AuthorityDocument.get_shard_for_block
-    - AuthorityDocument.get_shard before AuthorityDocument.get_shard_for_block
+    - AuthorityDocument.origin_for_block before AuthorityDocument.shard_for_block
+    - AuthorityDocument.shard_by_path before AuthorityDocument.shard_for_block
     """
     source_root = tmp_path / "src"
     source_root.mkdir()
     (source_root / "document.py").write_text(
         "class AuthorityDocument:\n"
-        "    def get_shard_for_block(self, block_id):\n"
-        "        shard_path = self.get_origin(block_id)\n"
+        "    def shard_for_block(self, block_id):\n"
+        "        shard_path = self.origin_for_block(block_id)\n"
         "        if shard_path is None:\n"
         "            return None\n"
-        "        return self.get_shard(shard_path)\n"
+        "        return self.shard_by_path(shard_path)\n"
         "\n"
-        "    def get_origin(self, block_id):\n"
+        "    def origin_for_block(self, block_id):\n"
         "        return self.block_origins.get(block_id)\n"
         "\n"
-        "    def get_shard(self, shard_path):\n"
+        "    def shard_by_path(self, shard_path):\n"
         "        return self.shards.get(shard_path)\n",
         encoding="utf-8",
     )
@@ -76,16 +76,16 @@ def test_authority_document_same_class_dependencies(tmp_path: Path) -> None:
 
     ordered_symbols = [unit.symbol for unit in scan_result.discovered_units]
     
-    origin_idx = ordered_symbols.index("AuthorityDocument.get_origin")
-    shard_idx = ordered_symbols.index("AuthorityDocument.get_shard")
-    for_block_idx = ordered_symbols.index("AuthorityDocument.get_shard_for_block")
+    origin_idx = ordered_symbols.index("AuthorityDocument.origin_for_block")
+    shard_idx = ordered_symbols.index("AuthorityDocument.shard_by_path")
+    for_block_idx = ordered_symbols.index("AuthorityDocument.shard_for_block")
     
     assert origin_idx < for_block_idx, (
-        f"get_origin should come before get_shard_for_block: "
+        f"origin_for_block should come before shard_for_block: "
         f"origin={origin_idx}, for_block={for_block_idx}"
     )
     assert shard_idx < for_block_idx, (
-        f"get_shard should come before get_shard_for_block: "
+        f"shard_by_path should come before shard_for_block: "
         f"shard={shard_idx}, for_block={for_block_idx}"
     )
 

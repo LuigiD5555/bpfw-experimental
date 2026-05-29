@@ -197,7 +197,7 @@ def test_real_world_authority_repository_scenario():
     """Test the specific scenario from the user's report.
     
     AuthorityRepository.get_shard_for_block should be ordered after:
-    - AuthorityRepository.get_origin
+    - AuthorityRepository.origin_for_block
     - Any methods called on self.shards (though these are dict operations, not methods)
     """
     units = [
@@ -217,40 +217,40 @@ def test_real_world_authority_repository_scenario():
             signature="get_shard_for_block(block_id: str) -> AuthorityShard | None",
             interface_inputs=[{"name": "block_id", "type": "str"}],
             interface_output={"type": "AuthorityShard | None"},
-            calls=[{"context": "self", "name": "get_origin"}, {"context": None, "name": "get"}],
+            calls=[{"context": "self", "name": "origin_for_block"}, {"context": None, "name": "get"}],
         ),
         DiscoveredCodeUnit(
             path="authority/repository.py",
             module="bpfw.core.authority.repository",
-            symbol="AuthorityRepository.get_origin",
+            symbol="AuthorityRepository.origin_for_block",
             symbol_type="method",
-            qualified_name="bpfw.core.authority.repository.AuthorityRepository.get_origin",
+            qualified_name="bpfw.core.authority.repository.AuthorityRepository.origin_for_block",
             start_line=60,
             end_line=85,
             methods=[],
             functions=[],
             imports=[],
             decorators=[],
-            docstring="Get the origin shard path for a block ID.",
-            signature="get_origin(block_id: str) -> str | None",
+            docstring="Return the origin shard path for a block ID.",
+            signature="origin_for_block(block_id: str) -> str | None",
             interface_inputs=[{"name": "block_id", "type": "str"}],
             interface_output={"type": "str | None"},
-            calls=[{"context": "self", "name": "get_shards"}],
+            calls=[{"context": "self", "name": "shards_by_path"}],
         ),
         DiscoveredCodeUnit(
             path="authority/repository.py",
             module="bpfw.core.authority.repository",
-            symbol="AuthorityRepository.get_shards",
+            symbol="AuthorityRepository.shards_by_path",
             symbol_type="method",
-            qualified_name="bpfw.core.authority.repository.AuthorityRepository.get_shards",
+            qualified_name="bpfw.core.authority.repository.AuthorityRepository.shards_by_path",
             start_line=40,
             end_line=58,
             methods=[],
             functions=[],
             imports=[],
             decorators=[],
-            docstring="Get all authority shards.",
-            signature="get_shards() -> dict[str, AuthorityShard]",
+            docstring="Return all authority shards.",
+            signature="shards_by_path() -> dict[str, AuthorityShard]",
             interface_inputs=[],
             interface_output={"type": "dict[str, AuthorityShard]"},
             calls=[],
@@ -261,12 +261,12 @@ def test_real_world_authority_repository_scenario():
     symbols = [unit.symbol for unit in ordered]
     
     # Dependencies should come before dependents
-    get_shards_idx = symbols.index("AuthorityRepository.get_shards")
-    get_origin_idx = symbols.index("AuthorityRepository.get_origin")
+    shards_by_path_idx = symbols.index("AuthorityRepository.shards_by_path")
+    origin_for_block_idx = symbols.index("AuthorityRepository.origin_for_block")
     get_shard_for_block_idx = symbols.index("AuthorityRepository.get_shard_for_block")
     
-    # get_shards -> get_origin -> get_shard_for_block
-    assert get_shards_idx < get_origin_idx < get_shard_for_block_idx
+    # shards_by_path -> origin_for_block -> get_shard_for_block
+    assert shards_by_path_idx < origin_for_block_idx < get_shard_for_block_idx
 
 
 def test_no_circular_dependencies_cause_infinite_loop():

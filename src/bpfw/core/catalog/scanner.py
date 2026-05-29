@@ -213,10 +213,6 @@ def _extract_code_units(
             # Filter out trivial methods (getters/setters with minimal logic)
             if parent_kind == "class" and _is_trivial_method(node):
                 continue
-            # Filter out property-like methods in schema.py
-            if _is_schema_wrapper_function(node, module):
-                continue
-
             symbol_parts = parent_symbols + [node.name]
             if _should_discover_function(node=node, parent_kind=parent_kind, module=module):
                 unit = _extract_function_unit(
@@ -716,7 +712,7 @@ def _get_attribute_name(node: ast.Attribute) -> str:
 def _extract_structured_calls_from_node(
     node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
 ) -> List[Dict[str, Any]]:
-    """Extract structured call references from an Python code node. Returns a list of dicts, each with 'context' and 'name' keys. Examples: - self.get_origin() → {"context": "self", "name": "get_origin"} - shard.get_blocks() → {"context": "shard", "name": "get_blocks"} - helper() → {"context": None, "name": "helper"} - Service() → {"context": None, "name": "Service"} - self.index.get_authority_config() → {"context": None, "name": "get_authority_config"} (chained, not resolved) Args: node: Python code tree ClassDef, FunctionDef, or AsyncFunctionDef node. Returns: List of structured call dicts."""
+    """Extract structured call references from an Python code node. Returns a list of dicts, each with 'context' and 'name' keys. Examples: - self.origin_for_block() → {"context": "self", "name": "origin_for_block"} - shard.get_blocks() → {"context": "shard", "name": "get_blocks"} - helper() → {"context": None, "name": "helper"} - Service() → {"context": None, "name": "Service"} - self.index.authority_config() → {"context": None, "name": "authority_config"} (chained, not resolved) Args: node: Python code tree ClassDef, FunctionDef, or AsyncFunctionDef node. Returns: List of structured call dicts."""
     calls: List[Dict[str, Any]] = []
 
     for child in ast.walk(node):
@@ -1137,24 +1133,3 @@ def _is_decorator_nested_function(
         return "decorator" in parent_name.lower()
     return False
 
-
-def _is_schema_wrapper_function(
-    node: ast.FunctionDef | ast.AsyncFunctionDef,
-    module: str,
-) -> bool:
-    """Check if a function is a schema.py wrapper function. These are trivial getter/setter functions that just access dictionary keys and don't contain business logic. Args: node: Python code tree FunctionDef or AsyncFunctionDef node. module: Module name. Returns: True if it's a schema wrapper, False otherwise."""
-    # Only check schema.py
-    if module != "src.bpfw.core.catalog.schema":
-        return False
-    # If function body is just a return with .get() or dict access
-    if len(node.body) == 1 and isinstance(node.body[0], ast.Return):
-        return_expr = node.body[0].value
-        # Check if it's a .get() call or direct dict access
-        if isinstance(return_expr, ast.Call):
-            if isinstance(return_expr.func, ast.Attribute):
-                if return_expr.func.attr == "get":
-                    return True
-        elif isinstance(return_expr, ast.Attribute):
-            # Direct attribute access like blueprint_data.blocks
-            return True
-    return False
