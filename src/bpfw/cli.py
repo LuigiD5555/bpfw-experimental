@@ -1,17 +1,12 @@
 """Terminal commands for Blueprint Framework."""
 
 import argparse
+from collections import Counter
 import json
 from pathlib import Path
 
+from bpfw.runner import run_command_after_verify
 from bpfw.shared.text import normalize_text_command
-
-
-def run_command_after_verify(project_root: Path, command: list[str]) -> int:
-    """Run a command only after BPFW verification passes."""
-    from bpfw.runner import run_command_after_verify as run_after_verify
-
-    return run_after_verify(project_root=project_root, command=command)
 
 
 MVP_COMMANDS = (
@@ -249,30 +244,24 @@ def _print_human(payload: dict) -> None:
 
 
 def _run_drift_manager_preflight(project_root: Path, command_name: str) -> int:
-    """Run Diff Manager first when drift exists before interactive/status commands."""
+    """Print a non-blocking drift preflight summary for interactive commands."""
 
-    from bpfw.integrations.diff import run_diff
     from bpfw.integrations.diff.review import DiffReviewService
 
     snapshot = DiffReviewService(project_root=project_root).load()
     if not snapshot.items:
         return 0
 
-    finding_codes = {
-        str(finding.code)
-        for finding in snapshot.verify_report.findings
-        if getattr(finding, "severity", "") == "block"
-    }
-    incomplete_only_codes = {"INCOMPLETE_BLOCK", "INVALID_STATUS"}
-    if finding_codes and finding_codes.issubset(incomplete_only_codes):
-        print(
-            f"Drift preflight skipped before '{command_name}': "
-            "only incomplete metadata items were found."
-        )
-        return 0
+    kind_counts = Counter(item.kind.value for item in snapshot.items)
+    top_kinds = ", ".join(
+        f"{kind}={count}"
+        for kind, count in kind_counts.most_common(3)
+    )
 
-    print(f"Drift detected before '{command_name}'. Opening Diff Manager first...")
-    return run_diff(project_root=project_root)
+    print(f"Drift detected before '{command_name}': continuing with warning.")
+    print(f"Drift preflight: total={len(snapshot.items)} top={top_kinds}")
+    print("Use 'bpfw status' to inspect drift summary before resolving items in editor/inspector.")
+    return 0
 
 
 def _print_status_drift_preview(project_root: Path, show_all: bool) -> None:
@@ -537,12 +526,10 @@ def main() -> int:
     if normalized_command in {"inspector", "editor", "planner"}:
         project_root = Path(parsed_arguments.project_root).resolve()
         _synchronize_authority_layout_for_status(project_root=project_root)
-        drift_preflight_exit_code = _run_drift_manager_preflight(
+        _run_drift_manager_preflight(
             project_root=project_root,
             command_name=normalized_command,
         )
-        if drift_preflight_exit_code != 0:
-            return drift_preflight_exit_code
 
     result = engine.run(
         build_command(
