@@ -1,6 +1,4 @@
-"""PURPOSE inspector view mode registry
-DOMAIN  inspector workflow
-"""
+"""Inspector view mode registry."""
 
 from bpfw.integrations.inspector.view_modes.base import InspectorViewMode
 from bpfw.integrations.inspector.view_modes.compact import CompactInspectorViewMode
@@ -11,9 +9,7 @@ FULL_VIEW_MODE = "full"
 
 
 def resolve_inspector_view_mode(mode_name: str) -> InspectorViewMode:
-    """PURPOSE get the inspector view mode matching a stable mode name
-    DOMAIN  inspector workflow
-    """
+    """Return the inspector view mode matching a stable mode name."""
 
     normalized_mode_name = mode_name.strip().lower()
     if normalized_mode_name == FULL_VIEW_MODE:
@@ -22,9 +18,7 @@ def resolve_inspector_view_mode(mode_name: str) -> InspectorViewMode:
 
 
 def resolve_inspector_view_mode_from_flag(show_all: bool) -> InspectorViewMode:
-    """PURPOSE get the inspector view mode matching the terminal command display flag
-    DOMAIN  inspector workflow
-    """
+    """Get the inspector view mode matching the terminal display flag."""
 
     if show_all:
         return FullInspectorViewMode()

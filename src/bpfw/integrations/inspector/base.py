@@ -1,6 +1,4 @@
-"""PURPOSE shared inspector behavior for BPFW catalog completion
-DOMAIN  inspector workflow
-"""
+"""Shared inspector behavior for BPFW catalog completion."""
 import ast
 from functools import cmp_to_key
 from dataclasses import dataclass, field
@@ -36,9 +34,7 @@ ISSUE_NEW_DETECTED = "new_detected"
 
 
 def _has_sharded_authority_layout(blueprint_data: Dict[str, Any] | None) -> bool:
-    """PURPOSE check whether blueprint data declares sharded authority layout
-    DOMAIN  inspector workflow
-    """
+    """Return True when blueprint data declares sharded authority layout."""
 
     if not isinstance(blueprint_data, dict):
         return False
@@ -50,9 +46,7 @@ def _has_sharded_authority_layout(blueprint_data: Dict[str, Any] | None) -> bool
 
 @dataclass(slots=True)
 class InspectIssue:
-    """PURPOSE one block-level item to review in inspector
-    DOMAIN  inspector workflow
-    """
+    """One block-level item to review in inspector."""
 
     issue_type: str
     block: Dict[str, Any]
@@ -62,9 +56,7 @@ class InspectIssue:
 
 @dataclass(slots=True)
 class InspectLoadResult:
-    """PURPOSE loaded inspect state or a blocking message
-    DOMAIN  inspector workflow
-    """
+    """Loaded inspect state or a blocking message."""
 
     project_root: Path
     blueprint_path: Path | None
@@ -86,9 +78,7 @@ class InspectLoadResult:
 
     @property
     def blocked(self) -> bool:
-        """PURPOSE check whether inspect cannot continue
-        DOMAIN  inspector workflow
-        """
+        """Return True when inspect cannot continue."""
 
         return self.exit_code != 0
 
@@ -98,8 +88,15 @@ def load_inspect_session(
     precomputed_scan_result: ScanResult | None = None,
     precomputed_verify_report: "VerificationReport | None" = None,
 ) -> InspectLoadResult:
-    """PURPOSE read blueprint data and return the inspect work set
-    DOMAIN  inspector workflow
+    """Load blueprint data and return the inspect work set.
+
+    Args:
+        project_root: Root directory of the project.
+        precomputed_scan_result: Optional scan result from engine to reuse.
+        precomputed_verify_report: Optional verify report from engine to reuse.
+
+    Returns:
+        InspectLoadResult with loaded session data.
     """
 
     from bpfw.core.authority import AuthorityRepository
@@ -230,8 +227,17 @@ def load_inspect_session(
 
 
 def load_metadata_inspect_session(project_root: Path) -> InspectLoadResult:
-    """PURPOSE read inspector metadata work without scanning or running verify
-    DOMAIN  inspector workflow
+    """Load inspector metadata work without scanning or running verify.
+
+    The fast path first tries a persisted Inspector work cache. When authority
+    files have not changed, this avoids reparsing all shards and rebuilding the
+    same incomplete-metadata queue on every Inspector startup.
+
+    Args:
+        project_root: Root directory of the project.
+
+    Returns:
+        InspectLoadResult containing metadata-only inspector issues.
     """
     from bpfw.core.authority import AuthorityRepository
     from bpfw.integrations.inspector.work_cache import (
@@ -327,9 +333,7 @@ def load_metadata_inspect_session(project_root: Path) -> InspectLoadResult:
 
 
 def _responsibility_key(block: Dict[str, Any]) -> tuple[str, str, str] | None:
-    """PURPOSE get the path, symbol, and kind key for a block
-    DOMAIN  inspector workflow
-    """
+    """Return the path, symbol, and kind key for a block."""
 
     location = block.get("code", {})
     if not isinstance(location, dict):
@@ -348,8 +352,19 @@ def split_issues_by_source_availability(
     project_root: Path,
     issues: list[InspectIssue],
 ) -> tuple[list[InspectIssue], list[InspectIssue]]:
-    """PURPOSE split inspector issues by whether their source file can be inspected
-    DOMAIN  inspector workflow
+    """Split inspector issues by whether their source file can be inspected.
+
+    Metadata inspection is not allowed to handle structural drift. If a block
+    points to a file that no longer exists, the item must go back through Drift
+    Gate where the user can choose a package move, removal, legacy state, or a
+    different structural decision.
+
+    Args:
+        project_root: Project root directory.
+        issues: Candidate inspector issues.
+
+    Returns:
+        A tuple containing inspectable issues and structurally stale issues.
     """
 
     inspectable_issues: list[InspectIssue] = []
@@ -363,8 +378,15 @@ def split_issues_by_source_availability(
 
 
 def has_uninspectable_source_issues(project_root: Path, issues: list[InspectIssue]) -> bool:
-    """PURPOSE check whether any inspector issue points to unavailable source code
-    DOMAIN  inspector workflow
+    """Return whether any inspector issue points to unavailable source code.
+
+    Args:
+        project_root: Project root directory.
+        issues: Inspector issues to validate.
+
+    Returns:
+        True when at least one issue cannot be resolved to an existing source
+        file and therefore must be handled by Drift Gate.
     """
 
     return any(
@@ -374,8 +396,14 @@ def has_uninspectable_source_issues(project_root: Path, issues: list[InspectIssu
 
 
 def _issue_source_is_available(project_root: Path, issue: InspectIssue) -> bool:
-    """PURPOSE check whether an issue can be shown in Inspector
-    DOMAIN  inspector workflow
+    """Return whether an issue can be shown safely in Inspector.
+
+    Args:
+        project_root: Project root directory.
+        issue: Inspector issue to validate.
+
+    Returns:
+        True when the referenced source file exists.
     """
 
     code_data = issue.block.get("code")
@@ -389,8 +417,18 @@ def _issue_source_is_available(project_root: Path, issue: InspectIssue) -> bool:
 
 
 def sort_inspect_issues_hierarchically(issues: list[InspectIssue]) -> list[InspectIssue]:
-    """PURPOSE get inspector issues in contained-to-container order
-    DOMAIN  inspector workflow
+    """Return inspector issues in contained-to-container order.
+
+    The Inspector should review child responsibilities before the parent that
+    summarizes them. This preserves source order for unrelated blocks while
+    forcing a parent such as ``AuthorityDocument`` to appear after children
+    such as ``AuthorityDocument.get_blocks``.
+
+    Args:
+        issues: Inspector issues to order.
+
+    Returns:
+        Ordered inspector issues.
     """
 
     indexed_issues = list(enumerate(issues))
@@ -421,8 +459,13 @@ def sort_inspect_issues_hierarchically(issues: list[InspectIssue]) -> list[Inspe
 
 
 def _issue_sort_data(issue: InspectIssue) -> tuple[str, str, int, int]:
-    """PURPOSE get sortable code data for one inspector issue
-    DOMAIN  inspector workflow
+    """Return sortable code data for one inspector issue.
+
+    Args:
+        issue: Inspector issue.
+
+    Returns:
+        Path, symbol, start line, and symbol depth.
     """
 
     code_data = issue.block.get("code")
@@ -438,8 +481,14 @@ def _issue_sort_data(issue: InspectIssue) -> tuple[str, str, int, int]:
 
 
 def _is_parent_symbol(parent_symbol: str, child_symbol: str) -> bool:
-    """PURPOSE check whether parent_symbol is a direct or indirect parent
-    DOMAIN  inspector workflow
+    """Return whether ``parent_symbol`` is a direct or indirect parent.
+
+    Args:
+        parent_symbol: Possible parent symbol.
+        child_symbol: Possible child symbol.
+
+    Returns:
+        True when child is nested below parent.
     """
 
     if not parent_symbol or not child_symbol:
@@ -448,17 +497,13 @@ def _is_parent_symbol(parent_symbol: str, child_symbol: str) -> bool:
 
 
 def _discovered_key(unit: DiscoveredCodeUnit) -> tuple[str, str, str]:
-    """PURPOSE get the path, symbol, and kind key for discovered code
-    DOMAIN  inspector workflow
-    """
+    """Return the path, symbol, and kind key for discovered code."""
 
     return unit.path, unit.symbol, unit.symbol_type
 
 
 def build_new_detected_responsibility(unit: DiscoveredCodeUnit) -> Dict[str, Any]:
-    """PURPOSE build a pending block from one newly detected code unit
-    DOMAIN  inspector workflow
-    """
+    """Build a pending block from one newly detected code unit."""
 
     block = {
         "id": to_snake_case(unit.symbol),
@@ -520,9 +565,7 @@ def build_inspect_issues(
     incomplete: List[Dict[str, Any]],
     scan_result: ScanResult,
 ) -> list[InspectIssue]:
-    """PURPOSE build ordered inspect issues from incomplete and newly detected code
-    DOMAIN  inspector workflow
-    """
+    """Build ordered inspect issues from incomplete and newly detected code."""
 
     issues = sort_inspect_issues_hierarchically(
         [InspectIssue(issue_type=ISSUE_DRAFT, block=block) for block in incomplete]
@@ -548,9 +591,7 @@ def build_inspect_issues(
 def get_incomplete_blocks(
     blueprint_data: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
-    """PURPOSE get blocks that are missing required human fields
-    DOMAIN  inspector workflow
-    """
+    """Return blocks that are missing required human fields."""
 
     blocks = blueprint_data.get("blocks", [])
     if not isinstance(blocks, list):
@@ -575,9 +616,7 @@ def get_incomplete_blocks(
 
 
 def clean_string(value: Any) -> str | None:
-    """PURPOSE get a stripped string or None for blank values
-    DOMAIN  inspector workflow
-    """
+    """Return a stripped string or None for blank values."""
 
     if value is None:
         return None
@@ -586,17 +625,13 @@ def clean_string(value: Any) -> str | None:
 
 
 def display_value(value: Any) -> str:
-    """PURPOSE show blank values consistently
-    DOMAIN  inspector workflow
-    """
+    """Render blank values consistently."""
 
     return clean_string(value) or "-"
 
 
 def suggest_domain(block: Dict[str, Any]) -> str | None:
-    """PURPOSE suggest the first stable non-placeholder domain for one block
-    DOMAIN  inspector workflow
-    """
+    """Suggest the first stable non-placeholder domain for one block."""
 
     from bpfw.integrations.inspector.suggestions.domain.engine import suggest_domains as catalog_suggest_domains
 
@@ -612,9 +647,7 @@ def suggest_domain(block: Dict[str, Any]) -> str | None:
 
 
 def collect_existing_purposes(blueprint_data: Dict[str, Any]) -> tuple[str, ...]:
-    """PURPOSE collect declared purposes from blueprint blocks
-    DOMAIN  inspector workflow
-    """
+    """Collect existing declared purposes from blueprint blocks."""
 
     blocks = blueprint_data.get("blocks", [])
     if not isinstance(blocks, list):
@@ -630,17 +663,13 @@ def collect_existing_purposes(blueprint_data: Dict[str, Any]) -> tuple[str, ...]
 
 
 def suggest_lifecycle(_responsibility: Dict[str, Any]) -> str:
-    """PURPOSE suggest the default status for catalog mode
-    DOMAIN  inspector workflow
-    """
+    """Suggest the default status for catalog mode."""
 
     return "active"
 
 
 def apply_suggestions(block: Dict[str, Any]) -> None:
-    """PURPOSE apply stable suggestions before rendering one block
-    DOMAIN  inspector workflow
-    """
+    """Apply stable suggestions before rendering one block."""
 
     if clean_string(block.get("domain")) is None:
         domain = suggest_domain(block)
@@ -651,9 +680,7 @@ def apply_suggestions(block: Dict[str, Any]) -> None:
 
 
 def backfill_detected_docstring_from_source(project_root: Path, block: Dict[str, Any]) -> None:
-    """PURPOSE populate detected docstring from source when blueprint metadata lacks it
-    DOMAIN  inspector workflow
-    """
+    """Populate detected docstring from source when blueprint metadata lacks it."""
 
     detected = block.get("detected")
     if not isinstance(detected, dict):
@@ -699,8 +726,16 @@ def build_code_lines(
     block: Dict[str, Any],
     project_blocks: list[dict[str, Any]] | None = None,
 ) -> list[str]:
-    """PURPOSE build numbered source lines for the block code location
-    DOMAIN  inspector workflow
+    """Build numbered source lines for the block code location.
+
+    Args:
+        project_root: Project root containing the source file.
+        block: Inspector block being rendered.
+        project_blocks: Current authority blocks used for purpose-based child folding.
+
+    Returns:
+        Numbered source preview lines. Parent blocks use a hierarchical folded
+        preview when direct children are present.
     """
 
     folded_preview = _HierarchicalCodePreviewRenderer(
@@ -718,7 +753,7 @@ def build_code_lines(
     relative_path = clean_string(location.get("path"))
     start_line = location.get("start_line")
     end_line = location.get("end_line")
-    if relative_path is None or not isinstance(start_line, int) or not isinstance(end_line, int):
+    if relative_path is None:
         return ["  -  No source location detected."]
 
     source_path = project_root / relative_path
@@ -726,6 +761,15 @@ def build_code_lines(
         return [f"  -  Source file not found: {relative_path}"]
 
     source_text = source_path.read_text(encoding="utf-8")
+    resolved_location = resolve_current_block_location(project_root=project_root, block=block)
+    using_fallback = False
+    if resolved_location is not None:
+        start_line, end_line = resolved_location
+    elif not isinstance(start_line, int) or not isinstance(end_line, int):
+        return ["  -  No source location detected."]
+    else:
+        using_fallback = True
+
     source_lines = source_text.splitlines()
     snippet_start_line = _resolve_snippet_start_line(
         source_text=source_text,
@@ -742,10 +786,115 @@ def build_code_lines(
     )
     selected_lines = source_lines[max(displayed_start_line - 1, 0):displayed_end_line]
     line_number_width = max(len(str(displayed_end_line)), 3)
-    return [
+    rendered_lines = [
         f"{line_number:>{line_number_width}}  {line}"
         for line_number, line in enumerate(selected_lines, start=displayed_start_line)
     ]
+    if using_fallback:
+        rendered_lines.insert(0, "  -  Location drift: using stored lines because symbol location was not resolved.")
+    elif _has_location_drift(block=block, resolved_start_line=start_line, resolved_end_line=end_line):
+        stored_start_line = location.get("start_line")
+        stored_end_line = location.get("end_line")
+        rendered_lines.insert(
+            0,
+            (
+                "  -  Location drift: "
+                f"stored {stored_start_line}-{stored_end_line}, "
+                f"source {start_line}-{end_line} (using source)."
+            ),
+        )
+    return rendered_lines
+
+
+def resolve_current_block_location(project_root: Path, block: Dict[str, Any]) -> tuple[int, int] | None:
+    """Resolve the current source location for a block symbol using AST.
+
+    Args:
+        project_root: Project root containing source files.
+        block: Inspector block with code metadata.
+
+    Returns:
+        Current (start_line, end_line) tuple, or None when location cannot be resolved.
+    """
+    location = block.get("code", {})
+    if not isinstance(location, dict):
+        return None
+    relative_path = clean_string(location.get("path"))
+    symbol = clean_string(location.get("symbol"))
+    symbol_type = clean_string(location.get("kind"))
+    if relative_path is None or symbol is None or symbol_type is None:
+        return None
+
+    source_path = project_root / relative_path
+    if not source_path.exists():
+        return None
+    try:
+        source_text = source_path.read_text(encoding="utf-8")
+        module_ast = ast.parse(source_text)
+    except (OSError, SyntaxError):
+        return None
+
+    target_name = symbol.split(".")[-1]
+    node_line = location.get("start_line")
+    matching_node = _find_matching_symbol_node(
+        module_ast=module_ast,
+        symbol_type=symbol_type,
+        target_name=target_name,
+        node_line=node_line if isinstance(node_line, int) else None,
+    )
+    if matching_node is None:
+        return None
+
+    decorators = getattr(matching_node, "decorator_list", None)
+    if decorators:
+        start_line = min(decorator.lineno for decorator in decorators)
+    else:
+        resolved_start_line = getattr(matching_node, "lineno", None)
+        if not isinstance(resolved_start_line, int):
+            return None
+        start_line = resolved_start_line
+
+    resolved_end_line = getattr(matching_node, "end_lineno", None)
+    if not isinstance(resolved_end_line, int):
+        resolved_end_line = start_line
+    return start_line, resolved_end_line
+
+
+def sync_block_code_location(project_root: Path, block: Dict[str, Any]) -> bool:
+    """Sync block code line range with current AST location when possible.
+
+    Args:
+        project_root: Project root containing source files.
+        block: Inspector block with code metadata.
+
+    Returns:
+        True when code line fields changed, otherwise False.
+    """
+    location = block.get("code", {})
+    if not isinstance(location, dict):
+        return False
+    resolved_location = resolve_current_block_location(project_root=project_root, block=block)
+    if resolved_location is None:
+        return False
+    resolved_start_line, resolved_end_line = resolved_location
+    current_start_line = location.get("start_line")
+    current_end_line = location.get("end_line")
+    if current_start_line == resolved_start_line and current_end_line == resolved_end_line:
+        return False
+    location["start_line"] = resolved_start_line
+    location["end_line"] = resolved_end_line
+    return True
+
+
+def _has_location_drift(block: Dict[str, Any], resolved_start_line: int, resolved_end_line: int) -> bool:
+    """Return whether resolved source lines differ from stored lines."""
+    location = block.get("code", {})
+    if not isinstance(location, dict):
+        return False
+    return (
+        location.get("start_line") != resolved_start_line
+        or location.get("end_line") != resolved_end_line
+    )
 
 
 def _resolve_snippet_start_line(
@@ -753,9 +902,7 @@ def _resolve_snippet_start_line(
     location: dict[str, Any],
     fallback_start_line: int,
 ) -> int:
-    """PURPOSE get decorator-aware block start line when source node can be resolved
-    DOMAIN  inspector workflow
-    """
+    """Return decorator-aware block start line when source node can be resolved."""
 
     symbol = clean_string(location.get("symbol"))
     symbol_type = clean_string(location.get("kind"))
@@ -794,9 +941,7 @@ def _find_matching_symbol_node(
     target_name: str,
     node_line: int | None,
 ) -> ast.AST | None:
-    """PURPOSE find class/function node matching the located symbol
-    DOMAIN  inspector workflow
-    """
+    """Find class/function node matching the located symbol."""
 
     normalized_type = symbol_type.lower()
     function_nodes: tuple[type[ast.AST], ...]
@@ -835,9 +980,7 @@ def _find_matching_symbol_node(
 
 
 def _find_display_start_line(source_lines: list[str], start_line: int) -> int:
-    """PURPOSE include contiguous blank lines before the block
-    DOMAIN  inspector workflow
-    """
+    """Include contiguous blank lines before the block."""
 
     displayed_start_line = max(start_line, 1)
     while displayed_start_line > 1:
@@ -852,9 +995,7 @@ def _find_display_end_line(
     source_lines: list[str],
     end_line: int,
 ) -> int:
-    """PURPOSE include contiguous blank lines after the block
-    DOMAIN  inspector workflow
-    """
+    """Include contiguous blank lines after the block."""
 
     displayed_end_line = min(end_line, len(source_lines))
     while displayed_end_line < len(source_lines):
@@ -866,9 +1007,7 @@ def _find_display_end_line(
 
 
 def build_authority_lines(block: Dict[str, Any]) -> list[str]:
-    """PURPOSE build authority field lines for display
-    DOMAIN  inspector workflow
-    """
+    """Build authority field lines for display."""
 
     return [
         f"  id              {display_value(block.get('id'))}",
@@ -881,9 +1020,7 @@ def build_authority_lines(block: Dict[str, Any]) -> list[str]:
 
 
 def build_suggestion_lines(block: Dict[str, Any]) -> list[str]:
-    """PURPOSE build stable suggestion lines for display
-    DOMAIN  inspector workflow
-    """
+    """Build stable suggestion lines for display."""
 
     return [
         f"  domain     {display_value(suggest_domain(block))}",
@@ -892,9 +1029,7 @@ def build_suggestion_lines(block: Dict[str, Any]) -> list[str]:
 
 
 def build_nested_snippet_lines(block: Dict[str, Any]) -> list[str]:
-    """PURPOSE build direct nested block lines for display
-    DOMAIN  inspector workflow
-    """
+    """Build direct nested block lines for display."""
 
     detected = block.get("detected")
     if not isinstance(detected, dict):
@@ -914,9 +1049,7 @@ def build_nested_snippet_lines(block: Dict[str, Any]) -> list[str]:
 
 
 def build_hierarchy_lines(block: Dict[str, Any]) -> list[str]:
-    """PURPOSE build contained-to-container hierarchy lines for inspector display
-    DOMAIN  inspector workflow
-    """
+    """Build contained-to-container hierarchy lines for inspector display."""
 
     location = block.get("code", {})
     if not isinstance(location, dict):
@@ -955,9 +1088,7 @@ def build_hierarchy_lines(block: Dict[str, Any]) -> list[str]:
 
 
 def apply_automatic_authority_fields(blueprint_data: Dict[str, Any]) -> None:
-    """PURPOSE derive authority fields that do not require interactive review
-    DOMAIN  inspector workflow
-    """
+    """Derive authority fields that do not require interactive review."""
 
     blocks = blueprint_data.get("blocks", [])
     if not isinstance(blocks, list):
@@ -999,8 +1130,12 @@ def save_blueprint(
     blueprint_data: Dict[str, Any],
     authority_document: Any | None = None,
 ) -> None:
-    """PURPOSE save blueprint data to authority using the appropriate method
-    DOMAIN  inspector workflow
+    """Save blueprint data to authority using the appropriate method.
+
+    Args:
+        blueprint_path: Path to the blueprint index file.
+        blueprint_data: Unified blueprint data with blocks.
+        authority_document: Optional AuthorityDocument from load_inspect_session.
     """
 
     apply_automatic_authority_fields(blueprint_data)

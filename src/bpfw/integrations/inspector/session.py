@@ -1,6 +1,4 @@
-"""PURPOSE interactive session runner for the inspector tool
-DOMAIN  inspector workflow
-"""
+"""Interactive session runner for the inspector integration."""
 
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -54,20 +52,32 @@ PrintFunc = Callable[[str], None]
 
 @dataclass(slots=True)
 class CachedDriftPreflight:
-    """PURPOSE precomputed drift state inputs for inspector startup
-    DOMAIN  inspector workflow
+    """Precomputed drift state inputs for inspector startup.
+
+    Attributes:
+        repository: Drift state repository.
+        state: Persisted drift state.
+        input_signature: Current project input signature, or the persisted
+            signature when pending work is restored before filesystem validation.
+        trusted_pending_snapshot: Whether pending work was loaded directly from
+            the persisted snapshot to avoid recomputing drift inputs before UI.
     """
 
     repository: DriftStateRepository
     state: DriftState
     input_signature: str
     trusted_pending_snapshot: bool = False
+    has_new_changes: bool = False
 
 
 @dataclass(slots=True)
 class RestoredIssueFilterResult:
-    """PURPOSE filtered inspector issues restored from persisted Drift Gate decisions
-    DOMAIN  inspector workflow
+    """Filtered inspector issues restored from persisted Drift Gate decisions.
+
+    Attributes:
+        issues: Issues that are still valid metadata work.
+        stale_count: Number of restored approvals that no longer point to an
+            inspectable source file.
     """
 
     issues: list[InspectIssue]
@@ -81,9 +91,7 @@ def run_text_inspector(
     print_func: PrintFunc = print,
     show_all: bool = False,
 ) -> int:
-    """PURPOSE run the direct inspector UI
-    DOMAIN  inspector workflow
-    """
+    """Run the direct inspector UI."""
 
     with _profiler.measure("inspector.open_ui_total"):
         preflight = _load_drift_preflight(project_root=project_root)
@@ -196,7 +204,19 @@ def run_text_inspector(
                         return session.exit_code
                     rebuild_metadata_issues_after_authority_changes(session)
 
+        for line in _build_preflight_change_lines(preflight):
+            if line not in session.pre_inspection_context_lines:
+                session.pre_inspection_context_lines.append(line)
+
         merge_drift_gate_into_session(session=session, result=drift_gate_result)
+        approved_queue_count = len(drift_gate_result.inspector_issues)
+        existing_incomplete_count = max(len(session.issues) - approved_queue_count, 0)
+        session.pre_inspection_context_lines.append(
+            "Metadata queue: "
+            f"{existing_incomplete_count} existing incomplete blocks + "
+            f"{approved_queue_count} approved drift items = {len(session.issues)} total."
+        )
+        session.pre_inspection_context_lines = list(dict.fromkeys(session.pre_inspection_context_lines))
 
         inspectable_issues, stale_issues = split_issues_by_source_availability(
             project_root=session.project_root,
@@ -232,8 +252,21 @@ def run_text_inspector(
 
 
 def _should_block_on_stale_metadata_queue(drift_gate_result: DriftGateResult) -> bool:
-    """PURPOSE check whether stale metadata issues should block Inspector startup
-    DOMAIN  inspector workflow
+    """Return whether stale metadata issues should block Inspector startup.
+
+    Stale source references are structural drift when they are found while
+    resuming metadata work from cache. However, after a fresh Drift Gate pass or
+    after authority changes have just been applied, stale metadata issues are
+    obsolete cached work. Blocking at that point prevents Inspector from opening
+    even though Drift Gate already had the chance to resolve the structural
+    drift.
+
+    Args:
+        drift_gate_result: Result produced by the current Drift Gate run.
+
+    Returns:
+        True when Inspector should stop and force Drift Gate, otherwise False so
+        the stale metadata items can be discarded.
     """
 
     return (
@@ -244,33 +277,58 @@ def _should_block_on_stale_metadata_queue(drift_gate_result: DriftGateResult) ->
     )
 
 
+def _build_preflight_change_lines(preflight: CachedDriftPreflight) -> list[str]:
+    """Build short preflight lines describing hash-based drift deltas."""
+    changed_count = len(preflight.state.changed_paths)
+    added_count = len(preflight.state.added_paths)
+    removed_count = len(preflight.state.removed_paths)
+    total_count = changed_count + added_count + removed_count
+    if total_count == 0:
+        return ["Hash detection: no new in-scope file changes."]
+    return [
+        (
+            "Hash detection: "
+            f"{total_count} in-scope changes "
+            f"(changed={changed_count}, added={added_count}, removed={removed_count})."
+        )
+    ]
+
+
 def _load_drift_preflight(project_root: Path) -> CachedDriftPreflight:
-    """PURPOSE read drift state and compute only the signature required for this run
-    DOMAIN  inspector workflow
-    """
+    """Load drift state and detect file changes before reusing any cache."""
     with _profiler.measure("inspector.preflight.total"):
         repository = DriftStateRepository(project_root)
         with _profiler.measure("inspector.preflight.load_drift_state"):
             state = repository.load()
-        if state.has_pending_items() and state.input_signature is not None:
-            return CachedDriftPreflight(
-                repository=repository,
-                state=state,
-                input_signature=state.input_signature,
-                trusted_pending_snapshot=True,
-            )
+        with _profiler.measure("inspector.preflight.file_fingerprints"):
+            current_fingerprints = repository.build_file_fingerprints()
+        changed_paths, added_paths, removed_paths = repository.detect_changes(
+            previous_fingerprints=state.file_fingerprints,
+            current_fingerprints=current_fingerprints,
+        )
+        has_new_changes = bool(changed_paths or added_paths or removed_paths)
+        state.file_fingerprints = current_fingerprints
+        state.changed_paths = changed_paths
+        state.added_paths = added_paths
+        state.removed_paths = removed_paths
         with _profiler.measure("inspector.preflight.input_signature"):
             input_signature = repository.build_input_signature()
-        return CachedDriftPreflight(repository=repository, state=state, input_signature=input_signature)
+        return CachedDriftPreflight(
+            repository=repository,
+            state=state,
+            input_signature=input_signature,
+            trusted_pending_snapshot=False,
+            has_new_changes=has_new_changes,
+        )
 
 
 def _try_load_cached_pending_preflight(
     project_root: Path,
     preflight: CachedDriftPreflight,
 ) -> tuple[InspectLoadResult, list[DiffItem]] | None:
-    """PURPOSE read pending Drift Gate items without full scan/verify when inputs are unchanged
-    DOMAIN  inspector workflow
-    """
+    """Load pending Drift Gate items without full scan/verify when inputs are unchanged."""
+    if preflight.has_new_changes or not preflight.state.has_file_fingerprints():
+        return None
     if preflight.trusted_pending_snapshot:
         if not preflight.state.has_pending_items():
             return None
@@ -281,8 +339,17 @@ def _try_load_cached_pending_preflight(
 
 
 def _build_minimal_pending_drift_session(project_root: Path) -> InspectLoadResult:
-    """PURPOSE build a minimal session for cached Drift Gate rendering
-    DOMAIN  inspector workflow
+    """Build a minimal session for cached Drift Gate rendering.
+
+    This avoids loading authority, scanning code, or running verify before a
+    cached pending Drift Gate item is shown. Metadata is loaded only after the
+    Drift Gate completes and inspection is actually needed.
+
+    Args:
+        project_root: Project root directory.
+
+    Returns:
+        Minimal inspector load result suitable for cached Drift Gate review.
     """
     resolved_root = project_root.resolve()
     return InspectLoadResult(
@@ -299,11 +366,11 @@ def _try_load_cached_preflight(
     project_root: Path,
     preflight: CachedDriftPreflight | None = None,
 ) -> tuple[InspectLoadResult, DriftGateResult] | None:
-    """PURPOSE read metadata session when drift state can resume inspector work
-    DOMAIN  inspector workflow
-    """
+    """Load metadata-only session when drift state can resume inspector work."""
     if preflight is None:
         preflight = _load_drift_preflight(project_root=project_root)
+    if preflight.has_new_changes or not preflight.state.has_file_fingerprints():
+        return None
 
     approved_resume = _try_load_approved_metadata_resume(
         project_root=project_root,
@@ -337,9 +404,7 @@ def _try_load_approved_metadata_resume(
     project_root: Path,
     preflight: CachedDriftPreflight,
 ) -> tuple[InspectLoadResult, DriftGateResult] | None:
-    """PURPOSE resume approved Drift Gate items before running full drift again
-    DOMAIN  inspector workflow
-    """
+    """Resume approved Drift Gate items before running full drift again."""
     if not preflight.state.has_approved_inspector_work():
         return None
 
@@ -373,8 +438,15 @@ def _filter_restored_inspector_issues(
     state: DriftState,
     session: InspectLoadResult,
 ) -> RestoredIssueFilterResult:
-    """PURPOSE get restored inspector issues that still need user metadata
-    DOMAIN  inspector workflow
+    """Return restored inspector issues that still need user metadata.
+
+    Args:
+        state: Persisted Drift Gate state.
+        session: Current metadata-only inspector session.
+
+    Returns:
+        Filter result containing valid metadata issues and the number of stale
+        restored approvals discarded from the resume queue.
     """
     current_blocks = session.blueprint_data.get("blocks", [])
     if not isinstance(current_blocks, list):
@@ -423,8 +495,13 @@ def _filter_restored_inspector_issues(
 
 
 def _block_key(block: dict) -> tuple[str, str, str] | None:
-    """PURPOSE get the path, symbol, kind key for a blueprint block
-    DOMAIN  inspector workflow
+    """Return the path, symbol, kind key for a blueprint block.
+
+    Args:
+        block: Blueprint block data.
+
+    Returns:
+        Stable code key, or None when unavailable.
     """
     code_data = block.get("code")
     if not isinstance(code_data, dict):
@@ -438,8 +515,13 @@ def _block_key(block: dict) -> tuple[str, str, str] | None:
 
 
 def _block_has_required_metadata(block: dict) -> bool:
-    """PURPOSE check whether a block has all required human metadata
-    DOMAIN  inspector workflow
+    """Return whether a block has all required human metadata.
+
+    Args:
+        block: Blueprint block data.
+
+    Returns:
+        True when Inspector does not need to show the block again.
     """
     for field_name in REQUIRED_HUMAN_FIELDS:
         if _clean_string(block.get(field_name)) is None:
@@ -448,8 +530,13 @@ def _block_has_required_metadata(block: dict) -> bool:
 
 
 def _clean_string(value: object) -> str | None:
-    """PURPOSE get a stripped string or None for blank values
-    DOMAIN  inspector workflow
+    """Return a stripped string or None for blank values.
+
+    Args:
+        value: Raw value.
+
+    Returns:
+        Clean string or None.
     """
     if value is None:
         return None
@@ -458,8 +545,12 @@ def _clean_string(value: object) -> str | None:
 
 
 def _render_no_inspector_work(session: InspectLoadResult, drift_gate_result, print_func: PrintFunc) -> None:  # noqa: ANN001
-    """PURPOSE show the final no-work inspector message
-    DOMAIN  inspector workflow
+    """Render the final no-work inspector message.
+
+    Args:
+        session: Loaded inspector session.
+        drift_gate_result: Result from Drift Gate.
+        print_func: Function used to print output.
     """
     print_func("BPFW Inspector")
     if drift_gate_result.safe_mechanical_updates:
@@ -485,9 +576,7 @@ def run_text_inspector_session(
     print_func: PrintFunc = print,
     show_all: bool = False,
 ) -> int:
-    """PURPOSE run text inspector against an already loaded session
-    DOMAIN  inspector workflow
-    """
+    """Run text inspector against an already loaded session."""
 
     total = len(session.issues)
     input_reader = InspectorInputReader(input_func)

@@ -1,3 +1,1 @@
-"""PURPOSE inspector suggestion packages
-DOMAIN  inspector workflow
-"""
+"""Inspector suggestion packages."""

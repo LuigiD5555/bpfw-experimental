@@ -1,6 +1,4 @@
-"""PURPOSE screen rendering for the inspector tool
-DOMAIN  inspector workflow
-"""
+"""Screen rendering for the inspector integration."""
 
 from collections.abc import Callable
 from pathlib import Path
@@ -60,9 +58,7 @@ def render_inspector_screen(
     pre_inspection_context_lines: list[str] | None = None,
     project_blocks: list[dict[str, Any]] | None = None,
 ) -> None:
-    """PURPOSE show the direct inspector screen
-    DOMAIN  inspector workflow
-    """
+    """Show the direct inspector screen."""
 
     refresh_screen()
     print_func("")
@@ -221,9 +217,7 @@ def render_inspector_screen(
 
 
 def _build_header(title: str, meta: str, width: int) -> List[str]:
-    """PURPOSE build the inspector title header
-    DOMAIN  inspector workflow
-    """
+    """Build the inspector title header."""
 
     if not meta.strip():
         return render_header(title=title, width=width, theme=DEFAULT_THEME, centered=True)
@@ -240,9 +234,7 @@ def _build_observation_panel_lines(
     content_width: int,
     max_lines: int = 3,
 ) -> list[str]:
-    """PURPOSE build compact observation lines with empty state and truncation
-    DOMAIN  inspector workflow
-    """
+    """Build compact observation lines with empty state and truncation."""
 
     observation_value = clean_string(block.get("notes"))
     if observation_value is None:
@@ -272,9 +264,7 @@ def _build_interface_panel_lines(
     content_width: int,
     max_lines: int = 6,
 ) -> list[str]:
-    """PURPOSE build short input/output lines when no values exist
-    DOMAIN  inspector workflow
-    """
+    """Build compact interface lines with empty state."""
 
     interface = block.get("interface")
     if not isinstance(interface, dict):
@@ -337,9 +327,7 @@ def _build_interface_panel_lines(
 
 
 def _compose_left_right_line(left: str, right: str, width: int) -> str:
-    """PURPOSE compose one line with left and right text within fixed width
-    DOMAIN  inspector workflow
-    """
+    """Compose one line with left and right text within fixed width."""
 
     if width <= 0:
         return ""
@@ -367,9 +355,7 @@ def _compute_layout_width(
     command_lines: list[str],
     pre_inspection_context_lines: list[str] | None = None,
 ) -> int:
-    """PURPOSE calculate one global inner width for all panels
-    DOMAIN  inspector workflow
-    """
+    """Compute one global inner width for all panels."""
 
     header_required = display_width("BPFW Inspector") + 1 + display_width(header_meta)
     code_required = measure_lines(code_lines)

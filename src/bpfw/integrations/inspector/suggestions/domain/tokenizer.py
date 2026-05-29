@@ -1,13 +1,16 @@
-"""PURPOSE domain-specific tokenization helpers
-DOMAIN  domain suggestions
-"""
+"""Domain-specific tokenization helpers."""
 
 import re
 
 
 def tokenize_identifier(text: str) -> list[str]:
-    """PURPOSE split identifier text into clean terms into words
-    DOMAIN  domain suggestions
+    """Tokenize identifier text into normalized terms.
+
+    Args:
+        text: Raw identifier text.
+
+    Returns:
+        Ordered lowercased token list.
     """
 
     if not isinstance(text, str):

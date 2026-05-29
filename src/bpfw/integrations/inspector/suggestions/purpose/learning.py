@@ -1,6 +1,4 @@
-"""PURPOSE purpose-specific incremental learning storage
-DOMAIN  purpose suggestions
-"""
+"""Purpose-specific incremental learning storage."""
 
 from datetime import datetime, timezone
 import json
@@ -31,9 +29,7 @@ IGNORED_TOKENS = frozenset(
 
 
 def learning_enabled() -> bool:
-    """PURPOSE check whether purpose learning is enabled
-    DOMAIN  purpose suggestions
-    """
+    """Return whether purpose learning is enabled."""
 
     if os.environ.get("PYTEST_CURRENT_TEST"):
         return False
@@ -41,9 +37,7 @@ def learning_enabled() -> bool:
 
 
 def record_purpose_phrase(text: str, increment: int = 1) -> None:
-    """PURPOSE record one accepted purpose phrase
-    DOMAIN  purpose suggestions
-    """
+    """Record one accepted purpose phrase."""
 
     normalized = _normalize_phrase(text)
     if not normalized or not learning_enabled():
@@ -52,9 +46,7 @@ def record_purpose_phrase(text: str, increment: int = 1) -> None:
 
 
 def get_learned_purposes() -> list[str]:
-    """PURPOSE get learned purpose phrases in stable storage order
-    DOMAIN  purpose suggestions
-    """
+    """Return learned purpose phrases in stable storage order."""
 
     if not learning_enabled():
         return []
@@ -66,10 +58,7 @@ def get_learned_purposes() -> list[str]:
 
 
 def _read_learning_data() -> dict[str, Any]:
-    """PURPOSE read purpose learning data from disk
-        DOMAIN  purpose suggestions
-
-    """
+    """Read purpose learning data from disk."""
 
     try:
         raw = LEARNING_PATH.read_text(encoding="utf-8")
@@ -85,10 +74,7 @@ def _read_learning_data() -> dict[str, Any]:
 
 
 def _write_learning_data(payload: dict[str, Any]) -> None:
-    """PURPOSE write purpose learning data to disk safely
-        DOMAIN  purpose suggestions
-
-    """
+    """Write purpose learning data to disk atomically."""
 
     LEARNING_ROOT.mkdir(parents=True, exist_ok=True)
     temp_path = LEARNING_PATH.with_suffix(".tmp")
@@ -97,9 +83,7 @@ def _write_learning_data(payload: dict[str, Any]) -> None:
 
 
 def _update_counter(section: str, key: str, increment: int) -> None:
-    """PURPOSE update one named counter bucket
-    DOMAIN  purpose suggestions
-    """
+    """Update one named counter bucket."""
 
     payload = _read_learning_data()
     bucket = payload.get(section)
@@ -115,9 +99,7 @@ def _update_counter(section: str, key: str, increment: int) -> None:
 
 
 def _trim_bucket(bucket: dict[str, Any], limit: int) -> None:
-    """PURPOSE keep only top-N entries by count
-    DOMAIN  purpose suggestions
-    """
+    """Keep only top-N entries by count."""
 
     if len(bucket) <= limit:
         return
@@ -128,10 +110,7 @@ def _trim_bucket(bucket: dict[str, Any], limit: int) -> None:
 
 
 def _empty_learning_data() -> dict[str, Any]:
-    """PURPOSE get an empty purpose learning data
-        DOMAIN  purpose suggestions
-
-    """
+    """Get an empty purpose learning data."""
 
     return {
         "version": LEARNING_VERSION,
@@ -141,9 +120,7 @@ def _empty_learning_data() -> dict[str, Any]:
 
 
 def _to_int(value: Any) -> int:
-    """PURPOSE convert a value to int
-    DOMAIN  purpose suggestions
-    """
+    """Convert a value to int safely."""
 
     try:
         return int(value)
@@ -152,9 +129,7 @@ def _to_int(value: Any) -> int:
 
 
 def _normalize_phrase(text: str) -> str:
-    """PURPOSE clean purpose phrase text for storage
-    DOMAIN  purpose suggestions
-    """
+    """Normalize purpose phrase text for storage."""
 
     normalized = " ".join(str(text).strip().lower().split())
     tokens = [token for token in normalized.split() if len(token) >= MIN_TOKEN_LENGTH]

@@ -1,6 +1,4 @@
-"""PURPOSE inspector tool for BPFW catalog completion
-DOMAIN  inspector workflow
-"""
+"""Inspector integration for BPFW catalog completion."""
 
 import sys
 from pathlib import Path
@@ -11,17 +9,13 @@ from bpfw.integrations.result import OptionalIntegrationResult
 
 
 def can_use_interactive_terminal() -> bool:
-    """PURPOSE check whether standard streams support interactive inspector input
-    DOMAIN  inspector workflow
-    """
+    """Return True when standard streams support interactive inspector input."""
 
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
 def run_inspector(project_root: Path, show_all: bool = False) -> int:
-    """PURPOSE run the direct inspector tool
-    DOMAIN  inspector workflow
-    """
+    """Run the direct inspector integration."""
 
     if not can_use_interactive_terminal():
         print(
@@ -38,16 +32,12 @@ def run_inspector(project_root: Path, show_all: bool = False) -> int:
 
 
 class InspectorIntegration(OptionalIntegration):
-    """PURPOSE optional tool that completes authority data for code
-    DOMAIN  inspector workflow
-    """
+    """Optional integration that completes authority data for existing code."""
 
     name = "inspector"
 
     def is_available(self) -> bool:
-        """PURPOSE check whether the inspector tool can run
-        DOMAIN  inspector workflow
-        """
+        """Return True when the inspector integration can run."""
 
         return True
 
@@ -56,9 +46,7 @@ class InspectorIntegration(OptionalIntegration):
         project_root: Path,
         command_arguments: dict[str, str] | None = None,
     ) -> OptionalIntegrationResult:
-        """PURPOSE run inspector against the given project root
-        DOMAIN  inspector workflow
-        """
+        """Run inspector against the given project root."""
 
         arguments = command_arguments or {}
         show_all = arguments.get("view") == "all"

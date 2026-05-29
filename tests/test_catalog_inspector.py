@@ -10,6 +10,7 @@ from bpfw.integrations.inspector.base import (
     build_code_lines,
     get_incomplete_blocks,
     load_inspect_session,
+    sync_block_code_location,
 )
 from bpfw.integrations.inspector.commands import InspectorAction, apply_inspector_command
 from bpfw.integrations.inspector.screen import render_inspector_screen
@@ -483,6 +484,94 @@ def test_code_preview_includes_declaration_when_stored_start_line_points_to_docs
     assert "Return the curated top-level BPFW help text." in rendered
 
 
+def test_code_preview_uses_ast_location_when_stored_lines_are_stale(tmp_path: Path) -> None:
+    source_path = tmp_path / "src" / "bpfw"
+    source_path.mkdir(parents=True)
+    (source_path / "cli.py").write_text(
+        "def build_parser() -> int:\n"
+        "    return 1\n"
+        "\n"
+        "\n"
+        "def resolve_cli_command() -> int:\n"
+        "    return 2\n",
+        encoding="utf-8",
+    )
+    block = _responsibility(
+        responsibility_id="build_parser",
+        purpose=None,
+        status="active",
+        path="src/bpfw/cli.py",
+        symbol="build_parser",
+    )
+    block["code"]["kind"] = "function"
+    block["code"]["start_line"] = 5
+    block["code"]["end_line"] = 6
+
+    rendered = "\n".join(build_code_lines(project_root=tmp_path, block=block))
+
+    assert "Location drift: stored 5-6, source 1-2 (using source)." in rendered
+    assert "def build_parser() -> int:" in rendered
+    assert "def resolve_cli_command() -> int:" not in rendered
+
+
+def test_code_preview_uses_stored_lines_with_warning_when_symbol_cannot_be_resolved(tmp_path: Path) -> None:
+    source_path = tmp_path / "src" / "bpfw"
+    source_path.mkdir(parents=True)
+    (source_path / "cli.py").write_text(
+        "def build_parser() -> int:\n"
+        "    return 1\n"
+        "\n"
+        "\n"
+        "def resolve_cli_command() -> int:\n"
+        "    return 2\n",
+        encoding="utf-8",
+    )
+    block = _responsibility(
+        responsibility_id="missing_symbol",
+        purpose=None,
+        status="active",
+        path="src/bpfw/cli.py",
+        symbol="missing_symbol",
+    )
+    block["code"]["kind"] = "function"
+    block["code"]["start_line"] = 1
+    block["code"]["end_line"] = 2
+
+    rendered = "\n".join(build_code_lines(project_root=tmp_path, block=block))
+
+    assert "Location drift: using stored lines because symbol location was not resolved." in rendered
+    assert "def build_parser() -> int:" in rendered
+
+
+def test_sync_block_code_location_updates_stale_start_and_end_lines(tmp_path: Path) -> None:
+    source_path = tmp_path / "src" / "bpfw"
+    source_path.mkdir(parents=True)
+    (source_path / "cli.py").write_text(
+        "def build_parser() -> int:\n"
+        "    return 1\n"
+        "\n"
+        "def resolve_cli_command() -> int:\n"
+        "    return 2\n",
+        encoding="utf-8",
+    )
+    block = _responsibility(
+        responsibility_id="build_parser",
+        purpose=None,
+        status="active",
+        path="src/bpfw/cli.py",
+        symbol="build_parser",
+    )
+    block["code"]["kind"] = "function"
+    block["code"]["start_line"] = 4
+    block["code"]["end_line"] = 5
+
+    changed = sync_block_code_location(project_root=tmp_path, block=block)
+
+    assert changed
+    assert block["code"]["start_line"] == 1
+    assert block["code"]["end_line"] == 2
+
+
 def test_code_preview_does_not_cross_into_next_top_level_snippet(tmp_path: Path) -> None:
     source_path = tmp_path / "src" / "bpfw" / "catalog"
     source_path.mkdir(parents=True)
@@ -735,6 +824,49 @@ def test_text_inspector_save_next_persists_partial_fields(tmp_path: Path) -> Non
     assert exit_code == 0
     assert "maintain partial example" in saved
     assert not any("Missing required fields" in line for line in output)
+
+
+def test_text_inspector_save_next_syncs_stale_code_lines(tmp_path: Path) -> None:
+    source_path = tmp_path / "src" / "bpfw" / "catalog"
+    source_path.mkdir(parents=True)
+    (source_path / "example.py").write_text(
+        "def helper() -> None:\n"
+        "    return None\n"
+        "\n"
+        "class ExampleService:\n"
+        "    pass\n",
+        encoding="utf-8",
+    )
+    blueprint_path = tmp_path / "bpfw" / "blueprint.yaml"
+    blueprint_path.parent.mkdir(parents=True)
+    blueprint_path.write_text(
+        "version: 1\n"
+        "blocks:\n"
+        "  - id: example\n"
+        "    name: ExampleService\n"
+        "    domain: catalog\n"
+        "    status: active\n"
+        "    purpose: maintain partial example\n"
+        "    code:\n"
+        "      path: src/bpfw/catalog/example.py\n"
+        "      symbol: ExampleService\n"
+        "      kind: class\n"
+        "      start_line: 1\n"
+        "      end_line: 2\n",
+        encoding="utf-8",
+    )
+    session = load_inspect_session(project_root=tmp_path)
+
+    exit_code = run_text_inspector_session(
+        session=session,
+        input_func=lambda _prompt: "",
+        print_func=lambda _line: None,
+    )
+
+    saved = blueprint_path.read_text(encoding="utf-8")
+    assert exit_code == 0
+    assert "start_line: 4" in saved
+    assert "end_line: 5" in saved
 
 
 def test_text_inspector_unknown_command_stays_on_current_item(tmp_path: Path) -> None:

@@ -1,6 +1,4 @@
-"""PURPOSE full inspector view mode
-DOMAIN  inspector workflow
-"""
+"""Full inspector view mode."""
 
 from typing import List
 
@@ -18,35 +16,25 @@ COMMAND_COLUMN_WIDTHS = (28, 22)
 
 
 class FullInspectorViewMode(InspectorViewMode):
-    """PURPOSE define full inspector rendering and command policy
-    DOMAIN  inspector workflow
-    """
+    """Define full inspector rendering and command policy."""
 
     def get_name(self) -> str:
-        """PURPOSE get the stable view mode name
-        DOMAIN  inspector workflow
-        """
+        """Return the stable view mode name."""
 
         return "full"
 
     def get_next_mode_name(self) -> str:
-        """PURPOSE get the mode name activated by the toggle command
-        DOMAIN  inspector workflow
-        """
+        """Return the mode name activated by the toggle command."""
 
         return "compact"
 
     def should_render_extended_panels(self) -> bool:
-        """PURPOSE get true because full mode renders extended panels
-        DOMAIN  inspector workflow
-        """
+        """Check because full mode shows extended panels."""
 
         return True
 
     def build_command_lines(self) -> List[str]:
-        """PURPOSE get the full command lines
-        DOMAIN  inspector workflow
-        """
+        """Return the full command lines."""
 
         return [
             _format_command_row(f"[{'|'.join(PURPOSE_SUGGESTION_KEYS)}] purpose", f"[{CUSTOM_PURPOSE_KEY}] custom purpose"),
@@ -60,9 +48,7 @@ class FullInspectorViewMode(InspectorViewMode):
 
 
 def _format_command_row(*commands: str) -> str:
-    """PURPOSE format command labels into stable visual columns
-    DOMAIN  inspector workflow
-    """
+    """Format command labels into stable visual columns."""
 
     if not commands:
         return ""

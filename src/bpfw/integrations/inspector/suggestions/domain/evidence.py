@@ -1,6 +1,4 @@
-"""PURPOSE domain-specific evidence extraction
-DOMAIN  domain suggestions
-"""
+"""Domain-specific evidence extraction."""
 
 from typing import Any
 
@@ -9,9 +7,7 @@ from bpfw.integrations.inspector.suggestions.domain.tokenizer import tokenize_id
 
 
 def collect_domain_evidence(block: dict[str, Any]) -> DomainEvidence:
-    """PURPOSE collect stable domain evidence for one block
-    DOMAIN  domain suggestions
-    """
+    """Collect stable domain evidence for one block."""
 
     location = block.get("code", {})
     path = ""
@@ -52,8 +48,14 @@ def collect_domain_evidence(block: dict[str, Any]) -> DomainEvidence:
 
 
 def resolve_origin_key(path: str, module: str) -> str:
-    """PURPOSE find the code origin key used by domain history
-    DOMAIN  domain suggestions
+    """Resolve the code origin key used by domain history.
+
+    Args:
+        path: Normalized source path string.
+        module: Python module path string.
+
+    Returns:
+        Stable origin key for historical domain lookup.
     """
 
     normalized_module = ".".join(part for part in module.split(".") if part).strip()
@@ -67,9 +69,7 @@ def resolve_origin_key(path: str, module: str) -> str:
 
 
 def _tokenize_text(text: str) -> tuple[str, ...]:
-    """PURPOSE split free text into lowercase alphanumeric terms into words
-    DOMAIN  domain suggestions
-    """
+    """Tokenize free text into lowercase alphanumeric terms."""
 
     import re
 

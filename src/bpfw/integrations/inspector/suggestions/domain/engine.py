@@ -1,6 +1,4 @@
-"""PURPOSE inspector domain suggestions with behavior and origin evidence
-DOMAIN  domain suggestions
-"""
+"""Inspector domain suggestions with behavior and origin evidence."""
 
 from typing import Any
 
@@ -23,8 +21,22 @@ def suggest_domains(
     block: dict[str, Any],
     project_blocks: list[dict[str, Any]] | None = None,
 ) -> list[str]:
-    """PURPOSE suggest domains using fixed evidence slots
-    DOMAIN  domain suggestions
+    """Suggest domains using fixed evidence slots.
+
+    The slot order is fixed:
+    [d1] behavior_based_match_1
+    [d2] behavior_based_match_2
+    [d3] behavior_based_match_3
+    [d4] symbol_based
+    [d5] previous_domain_for_origin
+    [y] custom_domain
+
+    Args:
+        block: Block dictionary from scanner.
+        project_blocks: Optional list of all blocks for origin history lookup.
+
+    Returns:
+        List of domain strings in fixed slot order.
     """
 
     evidence = collect_domain_evidence(block)
@@ -55,9 +67,7 @@ def suggest_domains(
 
 
 def _compose_symbol_based_domain(evidence: DomainEvidence) -> str | None:
-    """PURPOSE compose domain from symbol name tokens (slot r)
-    DOMAIN  domain suggestions
-    """
+    """Compose domain from symbol name tokens (slot r)."""
 
     symbol_tokens = []
     for token in evidence.symbol_tokens:
@@ -76,8 +86,15 @@ def _compose_previous_origin_domain(
     evidence: DomainEvidence,
     project_blocks: list[dict[str, Any]],
 ) -> str | None:
-    """PURPOSE get the last accepted domain used by another block from the same origin
-    DOMAIN  domain suggestions
+    """Return the last accepted domain used by another block from the same origin.
+
+    Args:
+        block: Current block.
+        evidence: Current block domain evidence.
+        project_blocks: Project blocks for in-memory history lookup.
+
+    Returns:
+        Last matching domain or ``None``.
     """
 
     if not evidence.origin_key:
@@ -100,8 +117,13 @@ def _compose_previous_origin_domain(
 
 
 def _resolve_block_identity(block: dict[str, Any]) -> tuple[str, str, str]:
-    """PURPOSE get a stable identity for excluding the block from history
-    DOMAIN  domain suggestions
+    """Return a stable identity for excluding the current block from history.
+
+    Args:
+        block: Block dictionary.
+
+    Returns:
+        Tuple ``(id, path, symbol)``.
     """
 
     code = block.get("code", {})
@@ -116,8 +138,13 @@ def _resolve_block_identity(block: dict[str, Any]) -> tuple[str, str, str]:
 
 
 def resolve_domain_origin_key(block: dict[str, Any]) -> str:
-    """PURPOSE find the code origin key used by domain history
-    DOMAIN  domain suggestions
+    """Resolve the code origin key used by domain history.
+
+    Args:
+        block: Block dictionary.
+
+    Returns:
+        Origin key string.
     """
 
     evidence = collect_domain_evidence(block)
@@ -125,8 +152,13 @@ def resolve_domain_origin_key(block: dict[str, Any]) -> str:
 
 
 def _is_domain_token(token: str) -> bool:
-    """PURPOSE check whether a token is acceptable as a domain candidate
-    DOMAIN  domain suggestions
+    """Return whether a token is acceptable as a domain candidate.
+
+    Args:
+        token: Raw token text.
+
+    Returns:
+        True when token can be used as a domain candidate.
     """
 
     normalized = token.strip().lower()
@@ -142,8 +174,13 @@ def _is_domain_token(token: str) -> bool:
 
 
 def _is_valid_suggestion_value(value: Any) -> bool:
-    """PURPOSE check whether a suggestion value should be accepted as a domain
-    DOMAIN  domain suggestions
+    """Return whether a suggestion value should be accepted as a domain.
+
+    Args:
+        value: Candidate value.
+
+    Returns:
+        True when value is a non-placeholder domain string.
     """
 
     if not isinstance(value, str):
@@ -157,8 +194,13 @@ def _is_valid_suggestion_value(value: Any) -> bool:
 
 
 def _get_domain_value(block: dict[str, Any]) -> str | None:
-    """PURPOSE get domain value from one block
-    DOMAIN  domain suggestions
+    """Extract domain value from one block.
+
+    Args:
+        block: Block dictionary.
+
+    Returns:
+        Domain string or ``None``.
     """
 
     value = block.get("domain")
@@ -168,8 +210,13 @@ def _get_domain_value(block: dict[str, Any]) -> str | None:
 
 
 def _normalize_domain_suggestion_output(value: str | None) -> str:
-    """PURPOSE clean domain suggestions to display-safe output
-    DOMAIN  domain suggestions
+    """Normalize domain suggestions to display-safe output.
+
+    Args:
+        value: Raw suggestion value.
+
+    Returns:
+        Normalized suggestion or ``-`` placeholder.
     """
 
     if not value:

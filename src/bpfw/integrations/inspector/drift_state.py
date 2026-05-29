@@ -1,6 +1,4 @@
-"""PURPOSE persistent drift state used by the pre-inspector Drift Gate
-DOMAIN  inspector workflow
-"""
+"""Persistent drift state used by the pre-inspector Drift Gate."""
 
 import json
 import os
@@ -22,7 +20,7 @@ from bpfw.integrations.diff.models import (
 from bpfw.integrations.inspector.base import InspectIssue
 from bpfw.reports.finding import Finding
 
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
 _STATE_RELATIVE_PATH = Path(".bpfw") / "cache" / "drift_state.json"
 _SOURCE_SUFFIXES: frozenset[str] = frozenset({".py"})
 _AUTHORITY_SUFFIXES: frozenset[str] = frozenset({".yaml", ".yml", ".toml"})
@@ -43,9 +41,7 @@ _IGNORED_DIRECTORY_NAMES: frozenset[str] = frozenset(
 
 @dataclass(slots=True)
 class DriftDecisionRecord:
-    """PURPOSE save one human Drift Gate decision
-    DOMAIN  inspector workflow
-    """
+    """Save one human Drift Gate decision."""
 
     stable_id: str
     evidence_hash: str
@@ -59,8 +55,13 @@ class DriftDecisionRecord:
 
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> "DriftDecisionRecord":
-        """PURPOSE create a record from persisted JSON data
-        DOMAIN  inspector workflow
+        """Create a record from persisted JSON data.
+
+        Args:
+            data: JSON dictionary.
+
+        Returns:
+            Drift decision record.
         """
         context_lines = data.get("context_lines")
         if not isinstance(context_lines, list):
@@ -81,8 +82,10 @@ class DriftDecisionRecord:
         )
 
     def to_json(self) -> dict[str, Any]:
-        """PURPOSE convert this record to data that can be written as JSON
-        DOMAIN  inspector workflow
+        """Serialize this record to JSON-compatible data.
+
+        Returns:
+            Dictionary representation.
         """
         data: dict[str, Any] = {
             "stable_id": self.stable_id,
@@ -102,8 +105,10 @@ class DriftDecisionRecord:
         return data
 
     def to_inspect_issue(self) -> InspectIssue | None:
-        """PURPOSE restore an inspector issue from a persisted approval
-        DOMAIN  inspector workflow
+        """Restore an inspector issue from a persisted approval.
+
+        Returns:
+            Inspector issue or None when the record does not contain issue data.
         """
         if self.status != "approved_for_inspector":
             return None
@@ -119,8 +124,13 @@ class DriftDecisionRecord:
 
 @dataclass(slots=True)
 class DriftState:
-    """PURPOSE persisted drift analysis and decision state
-    DOMAIN  inspector workflow
+    """Persisted drift analysis and decision state.
+
+    Attributes:
+        input_signature: Cheap project input signature used to validate the cache.
+        pending_human_decisions: Number of human decisions still pending when state was saved.
+        last_analyzed_at: UTC timestamp of the last analysis.
+        decisions: Decisions keyed by stable drift id.
     """
 
     input_signature: str | None = None
@@ -128,11 +138,20 @@ class DriftState:
     last_analyzed_at: str | None = None
     decisions: dict[str, DriftDecisionRecord] = field(default_factory=dict)
     pending_items: list[DiffItem] = field(default_factory=list)
+    file_fingerprints: dict[str, str] = field(default_factory=dict)
+    changed_paths: list[str] = field(default_factory=list)
+    added_paths: list[str] = field(default_factory=list)
+    removed_paths: list[str] = field(default_factory=list)
 
     @classmethod
     def from_json(cls, data: dict[str, Any]) -> "DriftState":
-        """PURPOSE create state from persisted JSON data
-        DOMAIN  inspector workflow
+        """Create state from persisted JSON data.
+
+        Args:
+            data: JSON dictionary.
+
+        Returns:
+            Drift state.
         """
         decisions_data = data.get("decisions")
         decisions: dict[str, DriftDecisionRecord] = {}
@@ -158,11 +177,17 @@ class DriftState:
             last_analyzed_at=_optional_string(data.get("last_analyzed_at")),
             decisions=decisions,
             pending_items=pending_items,
+            file_fingerprints=_string_map(data.get("file_fingerprints")),
+            changed_paths=_string_list(data.get("changed_paths")),
+            added_paths=_string_list(data.get("added_paths")),
+            removed_paths=_string_list(data.get("removed_paths")),
         )
 
     def to_json(self) -> dict[str, Any]:
-        """PURPOSE convert state to data that can be written as JSON
-        DOMAIN  inspector workflow
+        """Serialize state to JSON-compatible data.
+
+        Returns:
+            Dictionary representation.
         """
         return {
             "schema_version": _SCHEMA_VERSION,
@@ -171,6 +196,10 @@ class DriftState:
             "last_analyzed_at": self.last_analyzed_at,
             "decisions": [record.to_json() for record in self.decisions.values()],
             "pending_items": [_diff_item_to_json(item) for item in self.pending_items],
+            "file_fingerprints": dict(self.file_fingerprints),
+            "changed_paths": list(self.changed_paths),
+            "added_paths": list(self.added_paths),
+            "removed_paths": list(self.removed_paths),
         }
 
     def record_decision(
@@ -181,8 +210,14 @@ class DriftState:
         reason: str | None = None,
         issue: InspectIssue | None = None,
     ) -> None:
-        """PURPOSE record one Drift Gate decision
-        DOMAIN  inspector workflow
+        """Record one Drift Gate decision.
+
+        Args:
+            item: Diff item being decided.
+            status: Decision status.
+            decision: Decision label.
+            reason: Optional human-readable reason.
+            issue: Optional inspector issue produced by the decision.
         """
         stable_id = build_drift_stable_id(item)
         evidence_hash = build_drift_evidence_hash(item)
@@ -206,8 +241,13 @@ class DriftState:
         )
 
     def current_record_for(self, item: DiffItem) -> DriftDecisionRecord | None:
-        """PURPOSE get a decision record for a diff item
-        DOMAIN  inspector workflow
+        """Return a current decision record for a diff item.
+
+        Args:
+            item: Diff item to check.
+
+        Returns:
+            Matching record when stable id and evidence hash both match.
         """
         record = self.decisions.get(build_drift_stable_id(item))
         if record is None:
@@ -217,39 +257,61 @@ class DriftState:
         return record
 
     def is_reusable_for_signature(self, input_signature: str) -> bool:
-        """PURPOSE check whether this state can skip a fresh drift analysis
-        DOMAIN  inspector workflow
+        """Return whether this state can skip a fresh drift analysis.
+
+        Args:
+            input_signature: Current project input signature.
+
+        Returns:
+            True when the signature is unchanged and no pending human decisions remain.
         """
         return self.input_signature == input_signature and self.pending_human_decisions == 0
 
+    def has_file_fingerprints(self) -> bool:
+        """Return whether this state has file-level hashes for strict delta detection."""
+        return bool(self.file_fingerprints)
+
     def has_reusable_pending_items(self, input_signature: str) -> bool:
-        """PURPOSE check whether pending Drift Gate items can be restored
-        DOMAIN  inspector workflow
+        """Return whether pending Drift Gate items can be restored.
+
+        Args:
+            input_signature: Current project input signature.
+
+        Returns:
+            True when pending items belong to the current unchanged input state.
         """
         return self.input_signature == input_signature and bool(self.pending_items)
 
     def has_pending_items(self) -> bool:
-        """PURPOSE check whether human Drift Gate work is waiting in the snapshot
-        DOMAIN  inspector workflow
+        """Return whether human Drift Gate work is waiting in the snapshot.
+
+        Returns:
+            True when at least one pending item was persisted.
         """
         return bool(self.pending_items)
 
     def replace_pending_items(self, pending_items: list[DiffItem]) -> None:
-        """PURPOSE replace persisted pending Drift Gate items
-        DOMAIN  inspector workflow
+        """Replace persisted pending Drift Gate items.
+
+        Args:
+            pending_items: Pending human drift items to persist.
         """
         self.pending_items = list(pending_items)
         self.pending_human_decisions = len(self.pending_items)
 
     def restored_pending_items(self) -> list[DiffItem]:
-        """PURPOSE get pending Drift Gate items restored from state
-        DOMAIN  inspector workflow
+        """Return pending Drift Gate items restored from state.
+
+        Returns:
+            Pending diff items.
         """
         return list(self.pending_items)
 
     def restored_inspector_issues(self) -> list[InspectIssue]:
-        """PURPOSE get inspector issues restored from approved pending decisions
-        DOMAIN  inspector workflow
+        """Return inspector issues restored from approved pending decisions.
+
+        Returns:
+            Restored inspector issues.
         """
         issues: list[InspectIssue] = []
         for record in self.decisions.values():
@@ -259,8 +321,10 @@ class DriftState:
         return issues
 
     def has_approved_inspector_work(self) -> bool:
-        """PURPOSE check whether approved Drift Gate items still need metadata inspection
-        DOMAIN  inspector workflow
+        """Return whether approved Drift Gate items still need metadata inspection.
+
+        Returns:
+            True when at least one Drift Gate decision produced an inspector issue.
         """
         return any(
             record.status == "approved_for_inspector"
@@ -271,20 +335,22 @@ class DriftState:
 
 
 class DriftStateRepository:
-    """PURPOSE read and save persistent Drift Gate state
-    DOMAIN  inspector workflow
-    """
+    """Load and save persistent Drift Gate state."""
 
     def __init__(self, project_root: Path) -> None:
-        """PURPOSE set up the repository
-        DOMAIN  inspector workflow
+        """Initialize the repository.
+
+        Args:
+            project_root: Project root directory.
         """
         self.project_root = project_root.resolve()
         self.state_path = self.project_root / _STATE_RELATIVE_PATH
 
     def load(self) -> DriftState:
-        """PURPOSE read persisted drift state
-        DOMAIN  inspector workflow
+        """Load persisted drift state.
+
+        Returns:
+            Drift state. Missing or invalid files return empty state.
         """
         try:
             data = json.loads(self.state_path.read_text(encoding="utf-8"))
@@ -292,13 +358,16 @@ class DriftStateRepository:
             return DriftState()
         if not isinstance(data, dict):
             return DriftState()
-        if data.get("schema_version") != _SCHEMA_VERSION:
+        schema_version = data.get("schema_version")
+        if schema_version not in {1, _SCHEMA_VERSION}:
             return DriftState()
         return DriftState.from_json(data)
 
     def save(self, state: DriftState) -> None:
-        """PURPOSE save drift state
-        DOMAIN  inspector workflow
+        """Persist drift state.
+
+        Args:
+            state: Drift state to persist.
         """
         self.state_path.parent.mkdir(parents=True, exist_ok=True)
         self.state_path.write_text(
@@ -307,11 +376,13 @@ class DriftStateRepository:
         )
 
     def build_input_signature(self) -> str:
-        """PURPOSE build a cheap project input signature for drift analysis cache check
-        DOMAIN  inspector workflow
+        """Build a cheap project input signature for drift analysis cache validation.
+
+        Returns:
+            SHA-256 digest for authority and Python source file metadata.
         """
         entries: list[dict[str, Any]] = []
-        for relative_root in (Path("bpfw"), Path("src"), Path("tests")):
+        for relative_root in _signature_roots(self.project_root):
             absolute_root = self.project_root / relative_root
             if not absolute_root.exists():
                 continue
@@ -321,10 +392,42 @@ class DriftStateRepository:
             payload = json.dumps(entries, sort_keys=True, separators=(",", ":"))
             return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
+    def build_file_fingerprints(self) -> dict[str, str]:
+        """Build a path -> sha256(content) map for strict drift delta detection."""
+        fingerprints: dict[str, str] = {}
+        for relative_root in _signature_roots(self.project_root):
+            absolute_root = self.project_root / relative_root
+            if not absolute_root.exists():
+                continue
+            with _profiler.measure(f"drift_state.fingerprints.walk.{relative_root.as_posix()}"):
+                fingerprints.update(_file_hash_entries(self.project_root, absolute_root))
+        return dict(sorted(fingerprints.items()))
+
+    def detect_changes(
+        self,
+        previous_fingerprints: dict[str, str],
+        current_fingerprints: dict[str, str],
+    ) -> tuple[list[str], list[str], list[str]]:
+        """Return changed, added and removed paths between fingerprint snapshots."""
+        previous_paths = set(previous_fingerprints)
+        current_paths = set(current_fingerprints)
+        added_paths = sorted(current_paths - previous_paths)
+        removed_paths = sorted(previous_paths - current_paths)
+        common_paths = previous_paths & current_paths
+        changed_paths = sorted(
+            path for path in common_paths if previous_fingerprints.get(path) != current_fingerprints.get(path)
+        )
+        return changed_paths, added_paths, removed_paths
+
 
 def build_drift_stable_id(item: DiffItem) -> str:
-    """PURPOSE build a stable identifier for one drift item
-    DOMAIN  inspector workflow
+    """Build a stable identifier for one drift item.
+
+    Args:
+        item: Diff item.
+
+    Returns:
+        Stable string identifier.
     """
     parts = [item.kind.value]
     if item.blueprint_target is not None:
@@ -348,8 +451,13 @@ def build_drift_stable_id(item: DiffItem) -> str:
 
 
 def build_drift_evidence_hash(item: DiffItem) -> str:
-    """PURPOSE build an evidence hash for one drift item
-    DOMAIN  inspector workflow
+    """Build an evidence hash for one drift item.
+
+    Args:
+        item: Diff item.
+
+    Returns:
+        SHA-256 hash of evidence that invalidates stale decisions when changed.
     """
     payload = {
         "kind": item.kind.value,
@@ -384,8 +492,14 @@ def build_drift_evidence_hash(item: DiffItem) -> str:
 
 
 def _file_metadata_entries(project_root: Path, root: Path) -> list[dict[str, Any]]:
-    """PURPOSE build file metadata entries under a root directory
-    DOMAIN  inspector workflow
+    """Build file metadata entries under a root directory.
+
+    Args:
+        project_root: Project root directory.
+        root: Directory to walk.
+
+    Returns:
+        Sorted metadata entries.
     """
     entries: list[dict[str, Any]] = []
     ignored_directories = set(_IGNORED_DIRECTORY_NAMES) | {".locks"}
@@ -412,9 +526,46 @@ def _file_metadata_entries(project_root: Path, root: Path) -> list[dict[str, Any
     return entries
 
 
+def _file_hash_entries(project_root: Path, root: Path) -> dict[str, str]:
+    """Build content hash entries under a root directory."""
+    entries: dict[str, str] = {}
+    ignored_directories = set(_IGNORED_DIRECTORY_NAMES) | {".locks", "cache"}
+    for current_root, directory_names, file_names in os.walk(root):
+        directory_names[:] = [name for name in directory_names if name not in ignored_directories]
+        for file_name in file_names:
+            path = Path(current_root) / file_name
+            if _should_ignore_path(path):
+                continue
+            if not _is_relevant_file(path):
+                continue
+            relative_path = path.relative_to(project_root).as_posix()
+            digest = _hash_file_contents(path)
+            if digest is None:
+                continue
+            entries[relative_path] = digest
+    return entries
+
+
+def _hash_file_contents(path: Path) -> str | None:
+    """Hash file contents using sha256."""
+    hasher = hashlib.sha256()
+    try:
+        with path.open("rb") as file_handle:
+            for chunk in iter(lambda: file_handle.read(1024 * 1024), b""):
+                hasher.update(chunk)
+    except OSError:
+        return None
+    return hasher.hexdigest()
+
+
 def _should_ignore_path(path: Path) -> bool:
-    """PURPOSE check whether a path should be ignored by the drift input signature
-    DOMAIN  inspector workflow
+    """Return whether a path should be ignored by the drift input signature.
+
+    Args:
+        path: File path.
+
+    Returns:
+        True when the path is cache, lock, or generated noise.
     """
     parts = set(path.parts)
     if parts & _IGNORED_DIRECTORY_NAMES:
@@ -423,8 +574,13 @@ def _should_ignore_path(path: Path) -> bool:
 
 
 def _is_relevant_file(path: Path) -> bool:
-    """PURPOSE check whether a file affects drift analysis
-    DOMAIN  inspector workflow
+    """Return whether a file affects drift analysis.
+
+    Args:
+        path: File path.
+
+    Returns:
+        True for Python source and authority/config files.
     """
     if path.suffix in _SOURCE_SUFFIXES:
         return True
@@ -433,11 +589,53 @@ def _is_relevant_file(path: Path) -> bool:
     return False
 
 
-def _finding_payload(item: DiffItem) -> dict[str, Any] | None:
-    """PURPOSE build a saveable finding data
-        DOMAIN  inspector workflow
+def _signature_roots(project_root: Path) -> tuple[Path, ...]:
+    """Return deterministic roots used by drift signatures and fingerprints."""
+    roots: list[Path] = []
+    source_roots = _load_source_roots(project_root)
+    for source_root in source_roots:
+        roots.append(Path(source_root))
+    if (project_root / "bpfw").exists():
+        roots.append(Path("bpfw"))
+    # preserve stable order and remove duplicates
+    ordered: list[Path] = []
+    seen: set[str] = set()
+    for root in roots:
+        key = root.as_posix()
+        if key in seen:
+            continue
+        seen.add(key)
+        ordered.append(root)
+    return tuple(ordered)
 
-    """
+
+def _load_source_roots(project_root: Path) -> tuple[str, ...]:
+    """Read source roots from blueprint config, fallback to src."""
+    default_roots = ("src",)
+    blueprint_path = project_root / "bpfw" / "blueprint.yaml"
+    if not blueprint_path.exists():
+        return default_roots
+    try:
+        import yaml
+    except Exception:
+        return default_roots
+    try:
+        payload = yaml.safe_load(blueprint_path.read_text(encoding="utf-8"))
+    except Exception:
+        return default_roots
+    if not isinstance(payload, dict):
+        return default_roots
+    raw_roots = payload.get("source_roots")
+    if not isinstance(raw_roots, list):
+        return default_roots
+    cleaned_roots = [str(item).strip() for item in raw_roots if str(item).strip()]
+    if not cleaned_roots:
+        return default_roots
+    return tuple(cleaned_roots)
+
+
+def _finding_payload(item: DiffItem) -> dict[str, Any] | None:
+    """Build a serializable finding data."""
     finding = item.finding
     if finding is None:
         return None
@@ -451,10 +649,7 @@ def _finding_payload(item: DiffItem) -> dict[str, Any] | None:
 
 
 def _code_target_payload(item: DiffItem) -> dict[str, Any] | None:
-    """PURPOSE build a saveable code target data
-        DOMAIN  inspector workflow
-
-    """
+    """Build a serializable code target data."""
     target = item.code_target
     if target is None:
         return None
@@ -469,10 +664,7 @@ def _code_target_payload(item: DiffItem) -> dict[str, Any] | None:
 
 
 def _blueprint_target_payload(item: DiffItem) -> dict[str, Any] | None:
-    """PURPOSE build a saveable blueprint target data
-        DOMAIN  inspector workflow
-
-    """
+    """Build a serializable blueprint target data."""
     target = item.blueprint_target
     if target is None:
         return None
@@ -493,15 +685,25 @@ def _blueprint_target_payload(item: DiffItem) -> dict[str, Any] | None:
 
 
 def _normalize_part(value: str) -> str:
-    """PURPOSE clean one stable id segment
-    DOMAIN  inspector workflow
+    """Normalize one stable id segment.
+
+    Args:
+        value: Segment value.
+
+    Returns:
+        Normalized segment.
     """
     return value.strip().replace("\n", " ").replace(":", "_")
 
 
 def _optional_string(value: Any) -> str | None:
-    """PURPOSE get a non-empty string or None
-    DOMAIN  inspector workflow
+    """Return a non-empty string or None.
+
+    Args:
+        value: Candidate value.
+
+    Returns:
+        Stripped string or None.
     """
     if value is None:
         return None
@@ -509,9 +711,40 @@ def _optional_string(value: Any) -> str | None:
     return text or None
 
 
+def _string_map(value: Any) -> dict[str, str]:
+    """Return a safe string map."""
+    if not isinstance(value, dict):
+        return {}
+    result: dict[str, str] = {}
+    for key, item in value.items():
+        key_text = _optional_string(key)
+        value_text = _optional_string(item)
+        if key_text is None or value_text is None:
+            continue
+        result[key_text] = value_text
+    return result
+
+
+def _string_list(value: Any) -> list[str]:
+    """Return a safe string list."""
+    if not isinstance(value, list):
+        return []
+    result: list[str] = []
+    for item in value:
+        text = _optional_string(item)
+        if text is not None:
+            result.append(text)
+    return result
+
+
 def _safe_int(value: Any) -> int:
-    """PURPOSE get a safe non-negative integer
-    DOMAIN  inspector workflow
+    """Return a safe non-negative integer.
+
+    Args:
+        value: Candidate value.
+
+    Returns:
+        Integer value or zero.
     """
     if isinstance(value, bool):
         return 0
@@ -521,16 +754,16 @@ def _safe_int(value: Any) -> int:
 
 
 def _utc_now() -> str:
-    """PURPOSE get a compact UTC timestamp
-    DOMAIN  inspector workflow
+    """Return a compact UTC timestamp.
+
+    Returns:
+        ISO-8601 timestamp.
     """
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
 def _diff_item_to_json(item: DiffItem) -> dict[str, Any]:
-    """PURPOSE convert a diff item to data that can be written as JSON
-    DOMAIN  inspector workflow
-    """
+    """Convert a diff item to saved JSON data."""
     return {
         "identifier": item.identifier,
         "kind": item.kind.value,
@@ -546,9 +779,7 @@ def _diff_item_to_json(item: DiffItem) -> dict[str, Any]:
 
 
 def _diff_item_from_json(data: dict[str, Any]) -> DiffItem | None:
-    """PURPOSE read a diff item from data that can be written as JSON
-    DOMAIN  inspector workflow
-    """
+    """Deconvert a diff item from data saved as JSON."""
     try:
         kind = DiffItemKind(str(data.get("kind")))
         action_level = DiffActionLevel(str(data.get("action_level")))
@@ -587,9 +818,7 @@ def _diff_item_from_json(data: dict[str, Any]) -> DiffItem | None:
 
 
 def _finding_from_json(data: Any) -> Finding | None:
-    """PURPOSE read a finding from JSON data
-    DOMAIN  inspector workflow
-    """
+    """Deconvert a finding from JSON data."""
     if not isinstance(data, dict):
         return None
     evidence = data.get("evidence")
@@ -607,9 +836,7 @@ def _finding_from_json(data: Any) -> Finding | None:
 
 
 def _code_target_from_json(data: Any) -> CodeTarget | None:
-    """PURPOSE read a code target from JSON data
-    DOMAIN  inspector workflow
-    """
+    """Deconvert a code target from JSON data."""
     if not isinstance(data, dict):
         return None
     path = _optional_string(data.get("path"))
@@ -628,9 +855,7 @@ def _code_target_from_json(data: Any) -> CodeTarget | None:
 
 
 def _blueprint_target_from_json(data: Any) -> BlueprintTarget | None:
-    """PURPOSE read a blueprint target from JSON data
-    DOMAIN  inspector workflow
-    """
+    """Deconvert a blueprint target from JSON data."""
     if not isinstance(data, dict):
         return None
     block_id = _optional_string(data.get("block_id"))
@@ -655,8 +880,13 @@ def _blueprint_target_from_json(data: Any) -> BlueprintTarget | None:
 
 
 def _code_target_to_json(target: CodeTarget) -> dict[str, Any]:
-    """PURPOSE convert a code target
-    DOMAIN  inspector workflow
+    """Serialize a code target.
+
+    Args:
+        target: Code target.
+
+    Returns:
+        JSON-compatible dictionary.
     """
     return {
         "path": target.path,
@@ -669,8 +899,13 @@ def _code_target_to_json(target: CodeTarget) -> dict[str, Any]:
 
 
 def _blueprint_target_to_json(target: BlueprintTarget) -> dict[str, Any]:
-    """PURPOSE convert a blueprint target
-    DOMAIN  inspector workflow
+    """Serialize a blueprint target.
+
+    Args:
+        target: Blueprint target.
+
+    Returns:
+        JSON-compatible dictionary.
     """
     return {
         "block_id": target.block_id,
@@ -687,8 +922,13 @@ def _blueprint_target_to_json(target: BlueprintTarget) -> dict[str, Any]:
 
 
 def _optional_int(value: Any) -> int | None:
-    """PURPOSE get an integer
-    DOMAIN  inspector workflow
+    """Return an optional integer.
+
+    Args:
+        value: Candidate value.
+
+    Returns:
+        Integer or None.
     """
     if isinstance(value, bool):
         return None

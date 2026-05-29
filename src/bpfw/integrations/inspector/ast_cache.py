@@ -1,29 +1,18 @@
-"""PURPOSE in-memory Python code tree cache for inspector sessions
-DOMAIN  inspector workflow
-"""
+"""In-memory Python code tree cache for inspector sessions."""
 
 import ast
 from pathlib import Path
 
 
 class InspectorAstCache:
-    """PURPOSE cache parsed Python code trees during a single inspector session
-        DOMAIN  inspector workflow
-
-    """
+    """Cache parsed Python code trees during a single inspector session."""
 
     def __init__(self) -> None:
-        """PURPOSE set up an empty Python code tree cache
-                DOMAIN  inspector workflow
-
-        """
+        """Initialize an empty Python code tree cache."""
         self._modules_by_path: dict[Path, ast.Module] = {}
 
     def get_module(self, source_path: Path) -> ast.Module:
-        """PURPOSE get the parsed Python code tree for a source path
-                DOMAIN  inspector workflow
-
-        """
+        """Get the parsed Python code tree for a source path."""
         normalized_path = source_path.resolve()
         cached_module = self._modules_by_path.get(normalized_path)
         if cached_module is not None:
@@ -35,8 +24,5 @@ class InspectorAstCache:
         return parsed_module
 
     def clear(self) -> None:
-        """PURPOSE clear all cached Python code trees
-                DOMAIN  inspector workflow
-
-        """
+        """Clear all cached Python code trees."""
         self._modules_by_path.clear()

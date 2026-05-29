@@ -1,15 +1,11 @@
-"""PURPOSE data models for purpose suggestion system
-DOMAIN  purpose suggestions
-"""
+"""Data models for purpose suggestion system."""
 
 from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True)
 class PurposeSuggestion:
-    """PURPOSE store information about one stable natural-language purpose suggestion
-    DOMAIN  purpose suggestions
-    """
+    """Represent one stable natural-language purpose suggestion."""
 
     text: str
     source: str

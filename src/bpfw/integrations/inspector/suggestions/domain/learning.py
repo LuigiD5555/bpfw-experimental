@@ -1,6 +1,4 @@
-"""PURPOSE domain-specific incremental learning storage
-DOMAIN  domain suggestions
-"""
+"""Domain-specific incremental learning storage."""
 
 from datetime import datetime, timezone
 import json
@@ -31,8 +29,10 @@ IGNORED_TOKENS = frozenset(
 
 
 def learning_enabled() -> bool:
-    """PURPOSE check whether domain learning is enabled
-    DOMAIN  domain suggestions
+    """Return whether domain learning is enabled.
+
+    Returns:
+        True when learning storage is enabled for the current process.
     """
 
     if os.environ.get("PYTEST_CURRENT_TEST"):
@@ -41,8 +41,13 @@ def learning_enabled() -> bool:
 
 
 def get_last_domain_for_origin(origin_key: str) -> str:
-    """PURPOSE get the last accepted domain recorded for one code origin
-    DOMAIN  domain suggestions
+    """Return the last accepted domain recorded for one code origin.
+
+    Args:
+        origin_key: Raw origin key from domain evidence.
+
+    Returns:
+        Normalized learned domain for that origin, or an empty string.
     """
 
     normalized_origin = _normalize_origin(origin_key)
@@ -57,8 +62,11 @@ def get_last_domain_for_origin(origin_key: str) -> str:
 
 
 def record_domain_for_origin(origin_key: str, domain: str) -> None:
-    """PURPOSE record the last accepted domain for one code origin
-    DOMAIN  domain suggestions
+    """Record the last accepted domain for one code origin.
+
+    Args:
+        origin_key: Raw origin key from domain evidence.
+        domain: Accepted domain value.
     """
 
     normalized_origin = _normalize_origin(origin_key)
@@ -77,8 +85,11 @@ def record_domain_for_origin(origin_key: str, domain: str) -> None:
 
 
 def record_domain_value(text: str, increment: int = 1) -> None:
-    """PURPOSE record one accepted domain value
-    DOMAIN  domain suggestions
+    """Record one accepted domain value.
+
+    Args:
+        text: Accepted domain value.
+        increment: Counter increment amount.
     """
 
     normalized = _normalize_domain(text)
@@ -88,10 +99,7 @@ def record_domain_value(text: str, increment: int = 1) -> None:
 
 
 def _read_learning_data() -> dict[str, Any]:
-    """PURPOSE read domain learning data from disk
-        DOMAIN  domain suggestions
-
-    """
+    """Read domain learning data from disk."""
 
     try:
         raw = LEARNING_PATH.read_text(encoding="utf-8")
@@ -107,10 +115,7 @@ def _read_learning_data() -> dict[str, Any]:
 
 
 def _write_learning_data(payload: dict[str, Any]) -> None:
-    """PURPOSE write domain learning data to disk safely
-        DOMAIN  domain suggestions
-
-    """
+    """Write domain learning data to disk atomically."""
 
     LEARNING_ROOT.mkdir(parents=True, exist_ok=True)
     temp_path = LEARNING_PATH.with_suffix(".tmp")
@@ -119,8 +124,12 @@ def _write_learning_data(payload: dict[str, Any]) -> None:
 
 
 def _update_counter(section: str, key: str, increment: int) -> None:
-    """PURPOSE update one named counter bucket
-    DOMAIN  domain suggestions
+    """Update one named counter bucket.
+
+    Args:
+        section: Bucket section name.
+        key: Counter key.
+        increment: Counter increment amount.
     """
 
     payload = _read_learning_data()
@@ -137,8 +146,11 @@ def _update_counter(section: str, key: str, increment: int) -> None:
 
 
 def _trim_bucket(bucket: dict[str, Any], limit: int) -> None:
-    """PURPOSE keep only top-N entries by count
-    DOMAIN  domain suggestions
+    """Keep only top-N entries by count.
+
+    Args:
+        bucket: Mutable bucket dictionary.
+        limit: Maximum entry count.
     """
 
     if len(bucket) <= limit:
@@ -150,10 +162,7 @@ def _trim_bucket(bucket: dict[str, Any], limit: int) -> None:
 
 
 def _empty_learning_data() -> dict[str, Any]:
-    """PURPOSE get an empty domain learning data
-        DOMAIN  domain suggestions
-
-    """
+    """Get an empty domain learning data."""
 
     return {
         "version": LEARNING_VERSION,
@@ -164,8 +173,13 @@ def _empty_learning_data() -> dict[str, Any]:
 
 
 def _to_int(value: Any) -> int:
-    """PURPOSE convert a value to int
-    DOMAIN  domain suggestions
+    """Convert a value to int safely.
+
+    Args:
+        value: Input value.
+
+    Returns:
+        Converted integer or zero when conversion fails.
     """
 
     try:
@@ -177,8 +191,13 @@ def _to_int(value: Any) -> int:
 
 
 def _normalize_domain(text: str) -> str:
-    """PURPOSE clean domain text for storage
-    DOMAIN  domain suggestions
+    """Normalize domain text for storage.
+
+    Args:
+        text: Raw domain text.
+
+    Returns:
+        Normalized domain token or empty string.
     """
 
     normalized = str(text).strip().lower().replace("-", "_")
@@ -192,8 +211,13 @@ def _normalize_domain(text: str) -> str:
 
 
 def _normalize_origin(text: str) -> str:
-    """PURPOSE clean a code origin key for storage
-    DOMAIN  domain suggestions
+    """Normalize a code origin key for storage.
+
+    Args:
+        text: Raw origin key.
+
+    Returns:
+        Normalized origin key.
     """
 
     normalized = str(text).strip().lower().replace("\\", "/")

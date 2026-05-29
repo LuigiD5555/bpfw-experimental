@@ -1,36 +1,24 @@
-"""PURPOSE inspector view mode abstractions
-DOMAIN  inspector workflow
-"""
+"""Inspector view mode abstractions."""
 
 from abc import ABC, abstractmethod
 from typing import List
 
 
 class InspectorViewMode(ABC):
-    """PURPOSE define mode-specific inspector rendering and command policy
-    DOMAIN  inspector workflow
-    """
+    """Define mode-specific inspector rendering and command policy."""
 
     @abstractmethod
     def get_name(self) -> str:
-        """PURPOSE get the stable view mode name
-        DOMAIN  inspector workflow
-        """
+        """Return the stable view mode name."""
 
     @abstractmethod
     def get_next_mode_name(self) -> str:
-        """PURPOSE get the mode name activated by the toggle command
-        DOMAIN  inspector workflow
-        """
+        """Return the mode name activated by the toggle command."""
 
     @abstractmethod
     def should_render_extended_panels(self) -> bool:
-        """PURPOSE check whether extended inspector panels should be rendered
-        DOMAIN  inspector workflow
-        """
+        """Return whether extended inspector panels should be rendered."""
 
     @abstractmethod
     def build_command_lines(self) -> List[str]:
-        """PURPOSE get the command lines displayed by this view mode
-        DOMAIN  inspector workflow
-        """
+        """Return the command lines displayed by this view mode."""
