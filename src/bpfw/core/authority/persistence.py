@@ -1,8 +1,7 @@
 """Low-level authority document persistence for BPFW.
 
-This module persists the current in-memory authority document exactly as it is.
-It does not compute shard layout drift, does not move blocks automatically, and
-is not a replacement for Blueprint Engine approved patch operations.
+This module persists the in-memory authority document and synchronizes shard
+layout mechanically based on the configured shard strategy.
 """
 
 from dataclasses import dataclass, field
@@ -44,7 +43,7 @@ class AuthorityPersistenceResult:
 
 
 class AuthorityPersistenceEngine:
-    """Save authority documents without layout synchronization."""
+    """Save authority documents with mechanical shard layout synchronization."""
 
     def __init__(self, project_root: Path) -> None:
         """Initialize the persistence engine.
@@ -166,12 +165,7 @@ class AuthorityPersistenceEngine:
         blocks: list[dict[str, Any]],
         result: AuthorityPersistenceResult,
     ) -> None:
-        """Rebuild loaded shard contents using current origins only.
-
-        Existing blocks remain in their current shards even if metadata would now
-        imply a different shard. New blocks without an origin are placed in the
-        configured default shard. This preserves drift for later Blueprint Engine
-        review instead of silently correcting it.
+        """Rebuild shard contents from current block metadata and strategy.
 
         Args:
             document: Authority document to update.
@@ -181,32 +175,57 @@ class AuthorityPersistenceEngine:
         authority_config = document.get_authority_config()
         decision_engine = ShardDecisionEngine(authority_config)
         default_shard = decision_engine.get_default_shard()
-        grouped_blocks: dict[Path, list[dict[str, Any]]] = {
-            shard_path: [] for shard_path in document.shards
-        }
+        grouped_blocks: dict[Path, list[dict[str, Any]]] = {}
+        current_block_ids: set[str] = set()
 
         for block in blocks:
             block_id = block.get("id")
             if not isinstance(block_id, str) or not block_id.strip():
                 result.warnings.append("Block missing id, skipping")
                 continue
+            current_block_ids.add(block_id)
 
-            origin = document.get_origin(block_id)
-            if origin is None:
-                origin = decision_engine.decide_shard_for_block(block, document)
-                if not isinstance(origin, Path):
-                    origin = default_shard
-                document.block_origins[block_id] = origin
-                if origin not in document.get_included_shard_paths():
-                    document.index.add_include(origin)
-                    result.updated_includes = True
+            expected_shard = decision_engine.decide_shard_for_block(block, document)
+            if not isinstance(expected_shard, Path):
+                expected_shard = default_shard
+            document.block_origins[block_id] = expected_shard
+            if expected_shard not in document.get_included_shard_paths():
+                document.index.add_include(expected_shard)
+                result.updated_includes = True
 
-            grouped_blocks.setdefault(origin, []).append(block)
+            grouped_blocks.setdefault(expected_shard, []).append(block)
+
+        stale_block_ids = [block_id for block_id in document.block_origins if block_id not in current_block_ids]
+        for block_id in stale_block_ids:
+            document.block_origins.pop(block_id, None)
+
+        removed_shard_paths: list[Path] = []
+        for shard_path in list(document.shards.keys()):
+            if shard_path in grouped_blocks:
+                continue
+            absolute_path = self.project_root / shard_path
+            if absolute_path.exists():
+                try:
+                    absolute_path.unlink()
+                    removed_shard_paths.append(shard_path)
+                except OSError as error:
+                    result.warnings.append(f"Failed to delete shard '{shard_path}': {error}")
+            document.shards.pop(shard_path, None)
+            document.index.remove_include(shard_path)
+            result.updated_includes = True
+
+        if not grouped_blocks:
+            grouped_blocks[default_shard] = []
+            if default_shard not in document.get_included_shard_paths():
+                document.index.add_include(default_shard)
+                result.updated_includes = True
 
         for shard_path, shard_blocks in grouped_blocks.items():
             if shard_path not in document.shards:
                 document.shards[shard_path] = AuthorityShard(path=shard_path, blocks=[])
             document.shards[shard_path].set_blocks(shard_blocks)
+
+        result.removed_shards.extend(removed_shard_paths)
 
     def _collect_blocks_from_shards(self, document: AuthorityDocument) -> list[dict[str, Any]]:
         """Collect blocks from all loaded shards.

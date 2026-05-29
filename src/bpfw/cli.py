@@ -248,6 +248,93 @@ def _print_human(payload: dict) -> None:
     print(payload.get("status", "").upper())
 
 
+def _run_drift_manager_preflight(project_root: Path, command_name: str) -> int:
+    """Run Diff Manager first when drift exists before interactive/status commands."""
+
+    from bpfw.integrations.diff import run_diff
+    from bpfw.integrations.diff.review import DiffReviewService
+
+    snapshot = DiffReviewService(project_root=project_root).load()
+    if not snapshot.items:
+        return 0
+
+    finding_codes = {
+        str(finding.code)
+        for finding in snapshot.verify_report.findings
+        if getattr(finding, "severity", "") == "block"
+    }
+    incomplete_only_codes = {"INCOMPLETE_BLOCK", "INVALID_STATUS"}
+    if finding_codes and finding_codes.issubset(incomplete_only_codes):
+        print(
+            f"Drift preflight skipped before '{command_name}': "
+            "only incomplete metadata items were found."
+        )
+        return 0
+
+    print(f"Drift detected before '{command_name}'. Opening Diff Manager first...")
+    return run_diff(project_root=project_root)
+
+
+def _print_status_drift_preview(project_root: Path, show_all: bool) -> None:
+    """Print drift findings preview for status without blocking execution."""
+
+    from bpfw.integrations.diff.review import DiffReviewService
+
+    snapshot = DiffReviewService(project_root=project_root).load()
+    if not snapshot.items:
+        print("Drift preview: no drift items found.")
+        return
+
+    print(f"Drift preview: {len(snapshot.items)} item(s) detected.")
+    max_items = len(snapshot.items) if show_all else 8
+    for item in snapshot.items[:max_items]:
+        print(f"  - [{item.kind.value}] {item.reason}")
+    remaining = len(snapshot.items) - max_items
+    if remaining > 0:
+        print(f"  - ... {remaining} more drift item(s)")
+
+
+def _synchronize_authority_layout_for_status(project_root: Path) -> None:
+    """Synchronize authority shards mechanically before rendering status."""
+
+    from bpfw.core.authority import AuthorityRepository
+    from bpfw.core.catalog.access_control import (
+        authorize_blueprint_writes_for_tool,
+        authorize_temporary_blueprint_unlock_for_tool,
+    )
+    from bpfw.core.errors import BlueprintLockedError
+
+    try:
+        repository = AuthorityRepository(project_root=project_root)
+        document = repository.load()
+    except FileNotFoundError:
+        return
+    except Exception as error:
+        print(f"Shard sync skipped: could not load authority ({error}).")
+        return
+
+    try:
+        with authorize_blueprint_writes_for_tool("status"):
+            with authorize_temporary_blueprint_unlock_for_tool("status"):
+                save_result = repository.save(document)
+    except BlueprintLockedError as error:
+        print(f"Shard sync skipped: {error}")
+        return
+    except Exception as error:
+        print(f"Shard sync skipped: {error}")
+        return
+
+    if not save_result.created_shards and not save_result.removed_shards:
+        print("Shard sync: no layout changes.")
+        return
+
+    print(
+        "Shard sync:"
+        f" created={len(save_result.created_shards)}"
+        f" removed={len(save_result.removed_shards)}"
+    )
+
+
 def main() -> int:
     """Run the BPFW terminal command."""
 
@@ -337,6 +424,11 @@ def main() -> int:
         from bpfw.reports.status_report import run_status
 
         project_root = Path(parsed_arguments.project_root).resolve()
+        _synchronize_authority_layout_for_status(project_root=project_root)
+        _print_status_drift_preview(
+            project_root=project_root,
+            show_all=parsed_arguments.inspector_all,
+        )
         output, exit_code = run_status(project_root=project_root)
         print(output)
         return exit_code
@@ -441,6 +533,16 @@ def main() -> int:
 
     if normalized_command == "inspector" and parsed_arguments.inspector_all:
         command_arguments["view"] = "all"
+
+    if normalized_command in {"inspector", "editor", "planner"}:
+        project_root = Path(parsed_arguments.project_root).resolve()
+        _synchronize_authority_layout_for_status(project_root=project_root)
+        drift_preflight_exit_code = _run_drift_manager_preflight(
+            project_root=project_root,
+            command_name=normalized_command,
+        )
+        if drift_preflight_exit_code != 0:
+            return drift_preflight_exit_code
 
     result = engine.run(
         build_command(
