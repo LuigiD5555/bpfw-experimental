@@ -1,0 +1,3943 @@
+blocks:
+- id: src_bpfw_integrations_inspector___init___can_use_interactive_terminal
+  purpose: check terminal capability
+  name: can_use_interactive_terminal
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/__init__.py
+    module: src.bpfw.integrations.inspector.__init__
+    symbol: can_use_interactive_terminal
+    kind: function
+    start_line: 11
+    end_line: 14
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.__init__.can_use_interactive_terminal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: bool
+      description: null
+- id: src_bpfw_integrations_inspector___init___run_inspector
+  purpose: run inspector workflow
+  name: run_inspector
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/__init__.py
+    module: src.bpfw.integrations.inspector.__init__
+    symbol: run_inspector
+    kind: function
+    start_line: 17
+    end_line: 31
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.__init__.run_inspector
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    - name: show_all
+      type: bool
+      default: false
+      required: false
+      description: null
+    output:
+      type: int
+      description: null
+- id: src_bpfw_integrations_inspector___init___inspector_integration
+  purpose: define inspector integration
+  name: InspectorIntegration
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/__init__.py
+    module: src.bpfw.integrations.inspector.__init__
+    symbol: InspectorIntegration
+    kind: class
+    start_line: 34
+    end_line: 54
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.__init__.InspectorIntegration
+    kind: class
+    methods:
+    - src.bpfw.integrations.inspector.__init__.InspectorIntegration.is_available
+    - src.bpfw.integrations.inspector.__init__.InspectorIntegration.run
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: src_bpfw_integrations_inspector___init___inspector_integration_is_available
+  purpose: handle is available
+  name: InspectorIntegration.is_available
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/__init__.py
+    module: src.bpfw.integrations.inspector.__init__
+    symbol: InspectorIntegration.is_available
+    kind: method
+    start_line: 39
+    end_line: 42
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.__init__.InspectorIntegration.is_available
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: bool
+      description: null
+- id: src_bpfw_integrations_inspector___init___inspector_integration_run
+  purpose: run component
+  name: InspectorIntegration.run
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/__init__.py
+    module: src.bpfw.integrations.inspector.__init__
+    symbol: InspectorIntegration.run
+    kind: method
+    start_line: 44
+    end_line: 54
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.__init__.InspectorIntegration.run
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    - name: command_arguments
+      type: dict[str, str] | None
+      default: null
+      required: false
+      description: null
+    output:
+      type: OptionalIntegrationResult
+      description: null
+- id: src_bpfw_integrations_inspector_ast_cache_inspector_ast_cache
+  purpose: define inspector ast cache
+  name: InspectorAstCache
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/ast_cache.py
+    module: src.bpfw.integrations.inspector.ast_cache
+    symbol: InspectorAstCache
+    kind: class
+    start_line: 7
+    end_line: 39
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.ast_cache.InspectorAstCache
+    kind: class
+    methods:
+    - src.bpfw.integrations.inspector.ast_cache.InspectorAstCache.get_module
+    - src.bpfw.integrations.inspector.ast_cache.InspectorAstCache.clear
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_ast_cache_inspector_ast_cache_get_module
+  purpose: handle ast cache get module
+  name: InspectorAstCache.get_module
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/ast_cache.py
+    module: src.bpfw.integrations.inspector.ast_cache
+    symbol: InspectorAstCache.get_module
+    kind: method
+    start_line: 14
+    end_line: 35
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.ast_cache.InspectorAstCache.get_module
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: source_path
+      type: Path
+      default: null
+      required: true
+      description: null
+    output:
+      type: ast.Module
+      description: null
+- id: src_bpfw_integrations_inspector_ast_cache_inspector_ast_cache_clear
+  purpose: clear ast cache
+  name: InspectorAstCache.clear
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/ast_cache.py
+    module: src.bpfw.integrations.inspector.ast_cache
+    symbol: InspectorAstCache.clear
+    kind: method
+    start_line: 37
+    end_line: 39
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.ast_cache.InspectorAstCache.clear
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_base_inspect_load_result
+  purpose: define inspect load result
+  name: InspectLoadResult
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: InspectLoadResult
+    kind: class
+    start_line: 53
+    end_line: 74
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.InspectLoadResult
+    kind: class
+    methods:
+    - src.bpfw.integrations.inspector.base.InspectLoadResult.blocked
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: src_bpfw_integrations_inspector_base_inspect_load_result_blocked
+  purpose: check blocked state
+  name: InspectLoadResult.blocked
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: InspectLoadResult.blocked
+    kind: method
+    start_line: 71
+    end_line: 74
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.InspectLoadResult.blocked
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: bool
+      description: null
+- id: src_bpfw_integrations_inspector_base_load_inspect_session
+  purpose: load inspect
+  name: load_inspect_session
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: load_inspect_session
+    kind: function
+    start_line: 77
+    end_line: 207
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.load_inspect_session
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    - name: precomputed_scan_result
+      type: ScanResult | None
+      default: null
+      required: false
+      description: null
+    - name: precomputed_verify_report
+      type: '''VerificationReport | None'''
+      default: null
+      required: false
+      description: null
+    output:
+      type: InspectLoadResult
+      description: null
+- id: src_bpfw_integrations_inspector_base_build_new_detected_responsibility
+  purpose: build new detected responsibility
+  name: build_new_detected_responsibility
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: build_new_detected_responsibility
+    kind: function
+    start_line: 231
+    end_line: 284
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.build_new_detected_responsibility
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: unit
+      type: DiscoveredCodeUnit
+      default: null
+      required: true
+      description: null
+    output:
+      type: Dict[str, Any]
+      description: null
+- id: src_bpfw_integrations_inspector_base_build_inspect_issues
+  purpose: build inspect issues
+  name: build_inspect_issues
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: build_inspect_issues
+    kind: function
+    start_line: 287
+    end_line: 322
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.build_inspect_issues
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: blueprint_data
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    - name: incomplete
+      type: List[Dict[str, Any]]
+      default: null
+      required: true
+      description: null
+    - name: scan_result
+      type: ScanResult
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[InspectIssue]
+      description: null
+- id: src_bpfw_integrations_inspector_base_get_incomplete_blocks
+  purpose: get incomplete blocks
+  name: get_incomplete_blocks
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: get_incomplete_blocks
+    kind: function
+    start_line: 325
+    end_line: 349
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.get_incomplete_blocks
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: blueprint_data
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: List[Dict[str, Any]]
+      description: null
+- id: src_bpfw_integrations_inspector_base_clean_string
+  purpose: handle string
+  name: clean_string
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: clean_string
+    kind: function
+    start_line: 352
+    end_line: 358
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.clean_string
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: value
+      type: Any
+      default: null
+      required: true
+      description: null
+    output:
+      type: str | None
+      description: null
+- id: src_bpfw_integrations_inspector_base_display_value
+  purpose: handle value
+  name: display_value
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: display_value
+    kind: function
+    start_line: 361
+    end_line: 364
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.display_value
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: value
+      type: Any
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_inspector_base_suggest_domain
+  purpose: suggest domain
+  name: suggest_domain
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: suggest_domain
+    kind: function
+    start_line: 367
+    end_line: 387
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.suggest_domain
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: str | None
+      description: null
+- id: src_bpfw_integrations_inspector_base_collect_existing_purposes
+  purpose: collect existing purposes
+  name: collect_existing_purposes
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: collect_existing_purposes
+    kind: function
+    start_line: 390
+    end_line: 403
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.collect_existing_purposes
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: blueprint_data
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: tuple[str, ...]
+      description: null
+- id: src_bpfw_integrations_inspector_base_suggest_lifecycle
+  purpose: suggest lifecycle
+  name: suggest_lifecycle
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: suggest_lifecycle
+    kind: function
+    start_line: 406
+    end_line: 409
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.suggest_lifecycle
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: _responsibility
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_inspector_base_apply_suggestions
+  purpose: apply suggestions
+  name: apply_suggestions
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: apply_suggestions
+    kind: function
+    start_line: 412
+    end_line: 420
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.apply_suggestions
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_base_backfill_detected_docstring_from_source
+  purpose: handle detected docstring from source
+  name: backfill_detected_docstring_from_source
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: backfill_detected_docstring_from_source
+    kind: function
+    start_line: 423
+    end_line: 462
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.backfill_detected_docstring_from_source
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    - name: block
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_base_build_code_lines
+  purpose: build code lines
+  name: build_code_lines
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: build_code_lines
+    kind: function
+    start_line: 465
+    end_line: 505
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.build_code_lines
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    - name: block
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: src_bpfw_integrations_inspector_base_build_authority_lines
+  purpose: build authority lines
+  name: build_authority_lines
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: build_authority_lines
+    kind: function
+    start_line: 613
+    end_line: 623
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.build_authority_lines
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: src_bpfw_integrations_inspector_base_build_suggestion_lines
+  purpose: build suggestion lines
+  name: build_suggestion_lines
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: build_suggestion_lines
+    kind: function
+    start_line: 626
+    end_line: 632
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.build_suggestion_lines
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: src_bpfw_integrations_inspector_base_build_nested_snippet_lines
+  purpose: build nested snippet lines
+  name: build_nested_snippet_lines
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: build_nested_snippet_lines
+    kind: function
+    start_line: 635
+    end_line: 652
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.build_nested_snippet_lines
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: src_bpfw_integrations_inspector_base_build_hierarchy_lines
+  purpose: build hierarchy lines
+  name: build_hierarchy_lines
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: build_hierarchy_lines
+    kind: function
+    start_line: 655
+    end_line: 691
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.build_hierarchy_lines
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: src_bpfw_integrations_inspector_base_apply_automatic_authority_fields
+  purpose: apply automatic authority fields
+  name: apply_automatic_authority_fields
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: apply_automatic_authority_fields
+    kind: function
+    start_line: 694
+    end_line: 729
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.apply_automatic_authority_fields
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: blueprint_data
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_base_save_blueprint
+  purpose: save blueprint
+  name: save_blueprint
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/base.py
+    module: src.bpfw.integrations.inspector.base
+    symbol: save_blueprint
+    kind: function
+    start_line: 732
+    end_line: 765
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.base.save_blueprint
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: blueprint_path
+      type: Path
+      default: null
+      required: true
+      description: null
+    - name: blueprint_data
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    - name: authority_document
+      type: Any | None
+      default: null
+      required: false
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_commands_apply_inspector_command
+  purpose: apply command
+  name: apply_inspector_command
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/commands.py
+    module: src.bpfw.integrations.inspector.commands
+    symbol: apply_inspector_command
+    kind: function
+    start_line: 37
+    end_line: 141
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.commands.apply_inspector_command
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: command
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: issue
+      type: InspectIssue
+      default: null
+      required: true
+      description: null
+    - name: purpose_suggestions
+      type: List[PurposeSuggestion]
+      default: null
+      required: true
+      description: null
+    - name: domain_suggestions
+      type: List[str]
+      default: null
+      required: true
+      description: null
+    - name: input_func
+      type: InputFunc
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_inspector_commands_run_interface_edit_submode
+  purpose: run interface edit submode
+  name: run_interface_edit_submode
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/commands.py
+    module: src.bpfw.integrations.inspector.commands
+    symbol: run_interface_edit_submode
+    kind: function
+    start_line: 144
+    end_line: 330
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.commands.run_interface_edit_submode
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    - name: input_func
+      type: InputFunc
+      default: null
+      required: true
+      description: null
+    - name: print_func
+      type: Callable[[str], None]
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_controller_inspector_controller
+  purpose: define inspector controller
+  name: InspectorController
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/controller.py
+    module: src.bpfw.integrations.inspector.controller
+    symbol: InspectorController
+    kind: class
+    start_line: 33
+    end_line: 151
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.controller.InspectorController
+    kind: class
+    methods:
+    - src.bpfw.integrations.inspector.controller.InspectorController.handle_action
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: session
+      type: InspectLoadResult
+      default: null
+      required: true
+      description: null
+    - name: input_reader
+      type: InspectorInputReader
+      default: null
+      required: true
+      description: null
+    - name: print_func
+      type: null
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_controller_inspector_controller_handle_action
+  purpose: handle handle action
+  name: InspectorController.handle_action
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/controller.py
+    module: src.bpfw.integrations.inspector.controller
+    symbol: InspectorController.handle_action
+    kind: method
+    start_line: 54
+    end_line: 102
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.controller.InspectorController.handle_action
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: action
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: state
+      type: InspectorViewState
+      default: null
+      required: true
+      description: null
+    - name: issue
+      type: InspectIssue
+      default: null
+      required: true
+      description: null
+    - name: purpose_suggestions
+      type: List[PurposeSuggestion]
+      default: null
+      required: true
+      description: null
+    - name: domain_suggestions
+      type: List[str]
+      default: null
+      required: true
+      description: null
+    - name: view_mode
+      type: InspectorViewMode
+      default: null
+      required: true
+      description: null
+    output:
+      type: InspectorControllerResult
+      description: null
+- id: src_bpfw_integrations_inspector_controller_save_issue
+  purpose: save issue
+  name: save_issue
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/controller.py
+    module: src.bpfw.integrations.inspector.controller
+    symbol: save_issue
+    kind: function
+    start_line: 154
+    end_line: 174
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.controller.save_issue
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: session
+      type: InspectLoadResult
+      default: null
+      required: true
+      description: null
+    - name: issue
+      type: InspectIssue
+      default: null
+      required: true
+      description: null
+    output:
+      type: bool
+      description: null
+- id: src_bpfw_integrations_inspector_controller_record_learning_feedback
+  purpose: record learning feedback
+  name: record_learning_feedback
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/controller.py
+    module: src.bpfw.integrations.inspector.controller
+    symbol: record_learning_feedback
+    kind: function
+    start_line: 177
+    end_line: 200
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.controller.record_learning_feedback
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: issue
+      type: InspectIssue
+      default: null
+      required: true
+      description: null
+    - name: purpose_suggestions
+      type: List[PurposeSuggestion]
+      default: null
+      required: true
+      description: null
+    - name: domain_suggestions
+      type: List[str]
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_controller_render_missing_fields_notification
+  purpose: render missing fields notification
+  name: render_missing_fields_notification
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/controller.py
+    module: src.bpfw.integrations.inspector.controller
+    symbol: render_missing_fields_notification
+    kind: function
+    start_line: 203
+    end_line: 213
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.controller.render_missing_fields_notification
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: missing_fields
+      type: list[str]
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: src_bpfw_integrations_inspector_controller_render_unknown_command_notification
+  purpose: render unknown command notification
+  name: render_unknown_command_notification
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/controller.py
+    module: src.bpfw.integrations.inspector.controller
+    symbol: render_unknown_command_notification
+    kind: function
+    start_line: 216
+    end_line: 228
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.controller.render_unknown_command_notification
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: list[str]
+      description: null
+- id: src_bpfw_integrations_inspector_controller_render_help_block
+  purpose: render help block
+  name: render_help_block
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/controller.py
+    module: src.bpfw.integrations.inspector.controller
+    symbol: render_help_block
+    kind: function
+    start_line: 231
+    end_line: 316
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.controller.render_help_block
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: view_mode
+      type: InspectorViewMode
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: src_bpfw_integrations_inspector_controller_compute_help_width
+  purpose: handle help width
+  name: compute_help_width
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/controller.py
+    module: src.bpfw.integrations.inspector.controller
+    symbol: compute_help_width
+    kind: function
+    start_line: 319
+    end_line: 334
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.controller.compute_help_width
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: int
+      description: null
+- id: src_bpfw_integrations_inspector_controller_compute_notification_width
+  purpose: handle notification width
+  name: compute_notification_width
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/controller.py
+    module: src.bpfw.integrations.inspector.controller
+    symbol: compute_notification_width
+    kind: function
+    start_line: 337
+    end_line: 344
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.controller.compute_notification_width
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: int
+      description: null
+- id: src_bpfw_integrations_inspector_input_adapter_inspector_input_reader
+  purpose: define inspector input reader
+  name: InspectorInputReader
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/input_adapter.py
+    module: src.bpfw.integrations.inspector.input_adapter
+    symbol: InspectorInputReader
+    kind: class
+    start_line: 10
+    end_line: 69
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.input_adapter.InspectorInputReader
+    kind: class
+    methods:
+    - src.bpfw.integrations.inspector.input_adapter.InspectorInputReader.read
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: input_func
+      type: InputFunc
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_input_adapter_inspector_input_reader_read
+  purpose: read input reader
+  name: InspectorInputReader.read
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/input_adapter.py
+    module: src.bpfw.integrations.inspector.input_adapter
+    symbol: InspectorInputReader.read
+    kind: method
+    start_line: 28
+    end_line: 44
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.input_adapter.InspectorInputReader.read
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: prompt
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_inspector_screen_render_inspector_screen
+  purpose: render screen
+  name: render_inspector_screen
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/screen.py
+    module: src.bpfw.integrations.inspector.screen
+    symbol: render_inspector_screen
+    kind: function
+    start_line: 40
+    end_line: 207
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.screen.render_inspector_screen
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    - name: issue_type
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: block
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    - name: index
+      type: int
+      default: null
+      required: true
+      description: null
+    - name: total
+      type: int
+      default: null
+      required: true
+      description: null
+    - name: purpose_suggestions
+      type: List[PurposeSuggestion]
+      default: null
+      required: true
+      description: null
+    - name: domain_suggestions
+      type: List[str]
+      default: null
+      required: true
+      description: null
+    - name: header_title
+      type: str
+      default: DEFAULT_INSPECTOR_HEADER_TITLE
+      required: false
+      description: null
+    - name: print_func
+      type: PrintFunc
+      default: print
+      required: false
+      description: null
+    - name: show_all
+      type: bool
+      default: false
+      required: false
+      description: null
+    - name: view_mode
+      type: InspectorViewMode | None
+      default: null
+      required: false
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_session_run_text_inspector
+  purpose: run text
+  name: run_text_inspector
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/session.py
+    module: src.bpfw.integrations.inspector.session
+    symbol: run_text_inspector
+    kind: function
+    start_line: 37
+    end_line: 78
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.session.run_text_inspector
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    - name: header_title
+      type: str
+      default: DEFAULT_INSPECTOR_HEADER_TITLE
+      required: false
+      description: null
+    - name: input_func
+      type: InputFunc
+      default: input
+      required: false
+      description: null
+    - name: print_func
+      type: PrintFunc
+      default: print
+      required: false
+      description: null
+    - name: show_all
+      type: bool
+      default: false
+      required: false
+      description: null
+    output:
+      type: int
+      description: null
+- id: src_bpfw_integrations_inspector_session_run_text_inspector_session
+  purpose: run text
+  name: run_text_inspector_session
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/session.py
+    module: src.bpfw.integrations.inspector.session
+    symbol: run_text_inspector_session
+    kind: function
+    start_line: 81
+    end_line: 169
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.session.run_text_inspector_session
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: session
+      type: InspectLoadResult
+      default: null
+      required: true
+      description: null
+    - name: header_title
+      type: str
+      default: DEFAULT_INSPECTOR_HEADER_TITLE
+      required: false
+      description: null
+    - name: input_func
+      type: InputFunc
+      default: input
+      required: false
+      description: null
+    - name: print_func
+      type: PrintFunc
+      default: print
+      required: false
+      description: null
+    - name: show_all
+      type: bool
+      default: false
+      required: false
+      description: null
+    output:
+      type: int
+      description: null
+- id: src_bpfw_integrations_inspector_state_inspector_view_state
+  purpose: define inspector view state
+  name: InspectorViewState
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/state.py
+    module: src.bpfw.integrations.inspector.state
+    symbol: InspectorViewState
+    kind: class
+    start_line: 10
+    end_line: 42
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.state.InspectorViewState
+    kind: class
+    methods:
+    - src.bpfw.integrations.inspector.state.InspectorViewState.from_show_all
+    - src.bpfw.integrations.inspector.state.InspectorViewState.advance
+    - src.bpfw.integrations.inspector.state.InspectorViewState.move_back
+    - src.bpfw.integrations.inspector.state.InspectorViewState.stop
+    - src.bpfw.integrations.inspector.state.InspectorViewState.toggle_mode
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: src_bpfw_integrations_inspector_state_inspector_view_state_from_show_all
+  purpose: handle from show all
+  name: InspectorViewState.from_show_all
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/state.py
+    module: src.bpfw.integrations.inspector.state
+    symbol: InspectorViewState.from_show_all
+    kind: method
+    start_line: 18
+    end_line: 22
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.state.InspectorViewState.from_show_all
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: show_all
+      type: bool
+      default: null
+      required: true
+      description: null
+    output:
+      type: '''InspectorViewState'''
+      description: null
+- id: src_bpfw_integrations_inspector_state_inspector_view_state_advance
+  purpose: advance component
+  name: InspectorViewState.advance
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/state.py
+    module: src.bpfw.integrations.inspector.state
+    symbol: InspectorViewState.advance
+    kind: method
+    start_line: 24
+    end_line: 27
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.state.InspectorViewState.advance
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_state_inspector_view_state_move_back
+  purpose: handle move back
+  name: InspectorViewState.move_back
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/state.py
+    module: src.bpfw.integrations.inspector.state
+    symbol: InspectorViewState.move_back
+    kind: method
+    start_line: 29
+    end_line: 32
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.state.InspectorViewState.move_back
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_state_inspector_view_state_stop
+  purpose: stop component
+  name: InspectorViewState.stop
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/state.py
+    module: src.bpfw.integrations.inspector.state
+    symbol: InspectorViewState.stop
+    kind: method
+    start_line: 34
+    end_line: 37
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.state.InspectorViewState.stop
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_state_inspector_view_state_toggle_mode
+  purpose: handle toggle
+  name: InspectorViewState.toggle_mode
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/state.py
+    module: src.bpfw.integrations.inspector.state
+    symbol: InspectorViewState.toggle_mode
+    kind: method
+    start_line: 39
+    end_line: 42
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.state.InspectorViewState.toggle_mode
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: current_view_mode
+      type: InspectorViewMode
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_domain_domain_behavior_behavior_fingerprint
+  purpose: define behavior fingerprint
+  name: BehaviorFingerprint
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/domain/domain_behavior.py
+    module: src.bpfw.integrations.inspector.suggestions.domain.domain_behavior
+    symbol: BehaviorFingerprint
+    kind: class
+    start_line: 70
+    end_line: 117
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.domain.domain_behavior.BehaviorFingerprint
+    kind: class
+    methods:
+    - src.bpfw.integrations.inspector.suggestions.domain.domain_behavior.BehaviorFingerprint.add_tokens
+    - src.bpfw.integrations.inspector.suggestions.domain.domain_behavior.BehaviorFingerprint.merged_token_weights
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_domain_domain_behavior_behavior_fingerprint_add_tokens
+  purpose: handle fingerprint add tokens
+  name: BehaviorFingerprint.add_tokens
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/domain/domain_behavior.py
+    module: src.bpfw.integrations.inspector.suggestions.domain.domain_behavior
+    symbol: BehaviorFingerprint.add_tokens
+    kind: method
+    start_line: 86
+    end_line: 108
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.domain.domain_behavior.BehaviorFingerprint.add_tokens
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: source
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: tokens
+      type: list[str]
+      default: null
+      required: true
+      description: null
+    - name: weight
+      type: float
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_domain_domain_behavior_behavior_fingerprint_merged_token_weights
+  purpose: handle fingerprint merged token weights
+  name: BehaviorFingerprint.merged_token_weights
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/domain/domain_behavior.py
+    module: src.bpfw.integrations.inspector.suggestions.domain.domain_behavior
+    symbol: BehaviorFingerprint.merged_token_weights
+    kind: method
+    start_line: 110
+    end_line: 117
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.domain.domain_behavior.BehaviorFingerprint.merged_token_weights
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: dict[str, float]
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_domain_domain_behavior_domain_behavior_profile
+  purpose: define domain behavior profile
+  name: DomainBehaviorProfile
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/domain/domain_behavior.py
+    module: src.bpfw.integrations.inspector.suggestions.domain.domain_behavior
+    symbol: DomainBehaviorProfile
+    kind: class
+    start_line: 120
+    end_line: 153
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.domain.domain_behavior.DomainBehaviorProfile
+    kind: class
+    methods:
+    - src.bpfw.integrations.inspector.suggestions.domain.domain_behavior.DomainBehaviorProfile.absorb
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: domain
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_domain_domain_behavior_domain_behavior_profile_absorb
+  purpose: merge domain behavior profile
+  name: DomainBehaviorProfile.absorb
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/domain/domain_behavior.py
+    module: src.bpfw.integrations.inspector.suggestions.domain.domain_behavior
+    symbol: DomainBehaviorProfile.absorb
+    kind: method
+    start_line: 140
+    end_line: 153
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.domain.domain_behavior.DomainBehaviorProfile.absorb
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: fingerprint
+      type: BehaviorFingerprint
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_domain_domain_behavior_suggest_behavior_domains
+  purpose: suggest behavior domains
+  name: suggest_behavior_domains
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/domain/domain_behavior.py
+    module: src.bpfw.integrations.inspector.suggestions.domain.domain_behavior
+    symbol: suggest_behavior_domains
+    kind: function
+    start_line: 156
+    end_line: 182
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.domain.domain_behavior.suggest_behavior_domains
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: dict[str, Any]
+      default: null
+      required: true
+      description: null
+    - name: project_blocks
+      type: list[dict[str, Any]]
+      default: null
+      required: true
+      description: null
+    - name: current_identity
+      type: tuple[str, str, str]
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_domain_domain_behavior_extract_behavior_fingerprint
+  purpose: extract behavior fingerprint
+  name: extract_behavior_fingerprint
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/domain/domain_behavior.py
+    module: src.bpfw.integrations.inspector.suggestions.domain.domain_behavior
+    symbol: extract_behavior_fingerprint
+    kind: function
+    start_line: 185
+    end_line: 216
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.domain.domain_behavior.extract_behavior_fingerprint
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: dict[str, Any]
+      default: null
+      required: true
+      description: null
+    - name: for_profile
+      type: bool
+      default: null
+      required: true
+      description: null
+    output:
+      type: BehaviorFingerprint
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_domain_domain_behavior_extract_docstring_behavior_terms
+  purpose: extract docstring behavior terms
+  name: extract_docstring_behavior_terms
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/domain/domain_behavior.py
+    module: src.bpfw.integrations.inspector.suggestions.domain.domain_behavior
+    symbol: extract_docstring_behavior_terms
+    kind: function
+    start_line: 219
+    end_line: 238
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.domain.domain_behavior.extract_docstring_behavior_terms
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: docstring
+      type: Any
+      default: null
+      required: true
+      description: null
+    output:
+      type: tuple[list[str], list[str], list[str]]
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_domain_engine_suggest_domains
+  purpose: suggest domains
+  name: suggest_domains
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/domain/engine.py
+    module: src.bpfw.integrations.inspector.suggestions.domain.engine
+    symbol: suggest_domains
+    kind: function
+    start_line: 20
+    end_line: 66
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.domain.engine.suggest_domains
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: dict[str, Any]
+      default: null
+      required: true
+      description: null
+    - name: project_blocks
+      type: list[dict[str, Any]] | None
+      default: null
+      required: false
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_domain_engine_resolve_domain_origin_key
+  purpose: resolve domain origin key
+  name: resolve_domain_origin_key
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/domain/engine.py
+    module: src.bpfw.integrations.inspector.suggestions.domain.engine
+    symbol: resolve_domain_origin_key
+    kind: function
+    start_line: 147
+    end_line: 158
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.domain.engine.resolve_domain_origin_key
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_domain_evidence_collect_domain_evidence
+  purpose: collect domain evidence
+  name: collect_domain_evidence
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/domain/evidence.py
+    module: src.bpfw.integrations.inspector.suggestions.domain.evidence
+    symbol: collect_domain_evidence
+    kind: function
+    start_line: 9
+    end_line: 54
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.domain.evidence.collect_domain_evidence
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: DomainEvidence
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_domain_evidence_resolve_origin_key
+  purpose: resolve origin key
+  name: resolve_origin_key
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/domain/evidence.py
+    module: src.bpfw.integrations.inspector.suggestions.domain.evidence
+    symbol: resolve_origin_key
+    kind: function
+    start_line: 57
+    end_line: 75
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.domain.evidence.resolve_origin_key
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: path
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: module
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_domain_learning_learning_enabled
+  purpose: handle enabled
+  name: learning_enabled
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/domain/learning.py
+    module: src.bpfw.integrations.inspector.suggestions.domain.learning
+    symbol: learning_enabled
+    kind: function
+    start_line: 31
+    end_line: 40
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.domain.learning.learning_enabled
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: bool
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_domain_learning_get_last_domain_for_origin
+  purpose: get last domain for origin
+  name: get_last_domain_for_origin
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/domain/learning.py
+    module: src.bpfw.integrations.inspector.suggestions.domain.learning
+    symbol: get_last_domain_for_origin
+    kind: function
+    start_line: 43
+    end_line: 61
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.domain.learning.get_last_domain_for_origin
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: origin_key
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_domain_learning_record_domain_for_origin
+  purpose: record domain for origin
+  name: record_domain_for_origin
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/domain/learning.py
+    module: src.bpfw.integrations.inspector.suggestions.domain.learning
+    symbol: record_domain_for_origin
+    kind: function
+    start_line: 64
+    end_line: 84
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.domain.learning.record_domain_for_origin
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: origin_key
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: domain
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_domain_learning_record_domain_value
+  purpose: record domain value
+  name: record_domain_value
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/domain/learning.py
+    module: src.bpfw.integrations.inspector.suggestions.domain.learning
+    symbol: record_domain_value
+    kind: function
+    start_line: 87
+    end_line: 98
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.domain.learning.record_domain_value
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: text
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: increment
+      type: int
+      default: 1
+      required: false
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_domain_tokenizer_tokenize_identifier
+  purpose: handle identifier
+  name: tokenize_identifier
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/domain/tokenizer.py
+    module: src.bpfw.integrations.inspector.suggestions.domain.tokenizer
+    symbol: tokenize_identifier
+    kind: function
+    start_line: 6
+    end_line: 18
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.domain.tokenizer.tokenize_identifier
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: text
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_purpose_engine_compact_purpose_text
+  purpose: handle purpose text
+  name: compact_purpose_text
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/purpose/engine.py
+    module: src.bpfw.integrations.inspector.suggestions.purpose.engine
+    symbol: compact_purpose_text
+    kind: function
+    start_line: 114
+    end_line: 117
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.purpose.engine.compact_purpose_text
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: text
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_purpose_engine_suggest_purposes
+  purpose: suggest purposes
+  name: suggest_purposes
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/purpose/engine.py
+    module: src.bpfw.integrations.inspector.suggestions.purpose.engine
+    symbol: suggest_purposes
+    kind: function
+    start_line: 120
+    end_line: 144
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.purpose.engine.suggest_purposes
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: dict[str, Any]
+      default: null
+      required: true
+      description: null
+    - name: project_blocks
+      type: Iterable[dict[str, Any]] | None
+      default: null
+      required: false
+      description: null
+    - name: existing_purposes
+      type: Iterable[str] | None
+      default: null
+      required: false
+      description: null
+    - name: vocabulary
+      type: Any
+      default: null
+      required: false
+      description: null
+    output:
+      type: list[PurposeSuggestion]
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_purpose_engine_extract_primary_action
+  purpose: extract primary action
+  name: extract_primary_action
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/purpose/engine.py
+    module: src.bpfw.integrations.inspector.suggestions.purpose.engine
+    symbol: extract_primary_action
+    kind: function
+    start_line: 270
+    end_line: 284
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.purpose.engine.extract_primary_action
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block_input
+      type: BlockPurposeInput
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_purpose_engine_extract_symbol_object
+  purpose: extract symbol object
+  name: extract_symbol_object
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/purpose/engine.py
+    module: src.bpfw.integrations.inspector.suggestions.purpose.engine
+    symbol: extract_symbol_object
+    kind: function
+    start_line: 301
+    end_line: 320
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.purpose.engine.extract_symbol_object
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block_input
+      type: BlockPurposeInput
+      default: null
+      required: true
+      description: null
+    - name: action
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_purpose_engine_extract_docstring_facts
+  purpose: extract docstring facts
+  name: extract_docstring_facts
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/purpose/engine.py
+    module: src.bpfw.integrations.inspector.suggestions.purpose.engine
+    symbol: extract_docstring_facts
+    kind: function
+    start_line: 335
+    end_line: 359
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.purpose.engine.extract_docstring_facts
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block_input
+      type: BlockPurposeInput
+      default: null
+      required: true
+      description: null
+    output:
+      type: PurposeFacts
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_purpose_engine_extract_purpose_facts
+  purpose: extract purpose facts
+  name: extract_purpose_facts
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/purpose/engine.py
+    module: src.bpfw.integrations.inspector.suggestions.purpose.engine
+    symbol: extract_purpose_facts
+    kind: function
+    start_line: 362
+    end_line: 391
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.purpose.engine.extract_purpose_facts
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: tuple[PurposeFacts, PurposeFacts, PurposeFacts]
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_purpose_engine_suggest_existing_purpose
+  purpose: suggest existing purpose
+  name: suggest_existing_purpose
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/purpose/engine.py
+    module: src.bpfw.integrations.inspector.suggestions.purpose.engine
+    symbol: suggest_existing_purpose
+    kind: function
+    start_line: 479
+    end_line: 519
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.purpose.engine.suggest_existing_purpose
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: current_facts
+      type: PurposeFacts
+      default: null
+      required: true
+      description: null
+    - name: existing_purposes
+      type: Iterable[str]
+      default: null
+      required: true
+      description: null
+    output:
+      type: PurposeSuggestion
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_purpose_engine_suggest_learned_purpose
+  purpose: suggest learned purpose
+  name: suggest_learned_purpose
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/purpose/engine.py
+    module: src.bpfw.integrations.inspector.suggestions.purpose.engine
+    symbol: suggest_learned_purpose
+    kind: function
+    start_line: 522
+    end_line: 558
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.purpose.engine.suggest_learned_purpose
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: current_facts
+      type: PurposeFacts
+      default: null
+      required: true
+      description: null
+    - name: learned_purposes
+      type: Iterable[str]
+      default: null
+      required: true
+      description: null
+    output:
+      type: PurposeSuggestion
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_purpose_engine_suggest_symbol_purpose
+  purpose: suggest symbol purpose
+  name: suggest_symbol_purpose
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/purpose/engine.py
+    module: src.bpfw.integrations.inspector.suggestions.purpose.engine
+    symbol: suggest_symbol_purpose
+    kind: function
+    start_line: 561
+    end_line: 570
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.purpose.engine.suggest_symbol_purpose
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: current_facts
+      type: PurposeFacts
+      default: null
+      required: true
+      description: null
+    output:
+      type: PurposeSuggestion
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_purpose_engine_suggest_docstring_purpose
+  purpose: suggest docstring purpose
+  name: suggest_docstring_purpose
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/purpose/engine.py
+    module: src.bpfw.integrations.inspector.suggestions.purpose.engine
+    symbol: suggest_docstring_purpose
+    kind: function
+    start_line: 573
+    end_line: 587
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.purpose.engine.suggest_docstring_purpose
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: docstring_facts
+      type: PurposeFacts
+      default: null
+      required: true
+      description: null
+    output:
+      type: PurposeSuggestion
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_purpose_engine_suggest_fallback_purpose
+  purpose: suggest fallback purpose
+  name: suggest_fallback_purpose
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/purpose/engine.py
+    module: src.bpfw.integrations.inspector.suggestions.purpose.engine
+    symbol: suggest_fallback_purpose
+    kind: function
+    start_line: 590
+    end_line: 610
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.purpose.engine.suggest_fallback_purpose
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: current_facts
+      type: PurposeFacts
+      default: null
+      required: true
+      description: null
+    - name: symbol_facts
+      type: PurposeFacts
+      default: null
+      required: true
+      description: null
+    - name: docstring_facts
+      type: PurposeFacts
+      default: null
+      required: true
+      description: null
+    output:
+      type: PurposeSuggestion
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_purpose_engine_deduplicate_suggestions
+  purpose: handle suggestions
+  name: deduplicate_suggestions
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/purpose/engine.py
+    module: src.bpfw.integrations.inspector.suggestions.purpose.engine
+    symbol: deduplicate_suggestions
+    kind: function
+    start_line: 613
+    end_line: 641
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.purpose.engine.deduplicate_suggestions
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: suggestions
+      type: list[PurposeSuggestion]
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[PurposeSuggestion]
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_purpose_engine_ensure_fixed_purpose_slots
+  purpose: handle fixed purpose slots
+  name: ensure_fixed_purpose_slots
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/purpose/engine.py
+    module: src.bpfw.integrations.inspector.suggestions.purpose.engine
+    symbol: ensure_fixed_purpose_slots
+    kind: function
+    start_line: 644
+    end_line: 670
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.purpose.engine.ensure_fixed_purpose_slots
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: automatic_suggestions
+      type: list[PurposeSuggestion]
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[PurposeSuggestion]
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_purpose_learning_learning_enabled
+  purpose: handle enabled
+  name: learning_enabled
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/purpose/learning.py
+    module: src.bpfw.integrations.inspector.suggestions.purpose.learning
+    symbol: learning_enabled
+    kind: function
+    start_line: 31
+    end_line: 36
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.purpose.learning.learning_enabled
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: bool
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_purpose_learning_record_purpose_phrase
+  purpose: record purpose phrase
+  name: record_purpose_phrase
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/purpose/learning.py
+    module: src.bpfw.integrations.inspector.suggestions.purpose.learning
+    symbol: record_purpose_phrase
+    kind: function
+    start_line: 39
+    end_line: 45
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.purpose.learning.record_purpose_phrase
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: text
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: increment
+      type: int
+      default: 1
+      required: false
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_inspector_suggestions_purpose_learning_get_learned_purposes
+  purpose: get learned purposes
+  name: get_learned_purposes
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/suggestions/purpose/learning.py
+    module: src.bpfw.integrations.inspector.suggestions.purpose.learning
+    symbol: get_learned_purposes
+    kind: function
+    start_line: 48
+    end_line: 57
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.suggestions.purpose.learning.get_learned_purposes
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: list[str]
+      description: null
+- id: src_bpfw_integrations_inspector_target_run_inspector_target
+  purpose: run target
+  name: run_inspector_target
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/target.py
+    module: src.bpfw.integrations.inspector.target
+    symbol: run_inspector_target
+    kind: function
+    start_line: 15
+    end_line: 77
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.target.run_inspector_target
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    - name: block_id
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: header_title
+      type: str
+      default: DEFAULT_INSPECTOR_TITLE
+      required: false
+      description: null
+    - name: input_func
+      type: InputFunc
+      default: input
+      required: false
+      description: null
+    - name: print_func
+      type: PrintFunc
+      default: print
+      required: false
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_inspector_validation_validate_required_fields
+  purpose: validate required fields
+  name: validate_required_fields
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/validation.py
+    module: src.bpfw.integrations.inspector.validation
+    symbol: validate_required_fields
+    kind: function
+    start_line: 8
+    end_line: 28
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.validation.validate_required_fields
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: List[str]
+      description: null
+- id: src_bpfw_integrations_inspector_view_modes___init___resolve_inspector_view_mode
+  purpose: resolve inspector workflow
+  name: resolve_inspector_view_mode
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/__init__.py
+    module: src.bpfw.integrations.inspector.view_modes.__init__
+    symbol: resolve_inspector_view_mode
+    kind: function
+    start_line: 11
+    end_line: 17
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.__init__.resolve_inspector_view_mode
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: mode_name
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: InspectorViewMode
+      description: null
+- id: src_bpfw_integrations_inspector_view_modes___init___resolve_inspector_view_mode_from_flag
+  purpose: resolve from flag
+  name: resolve_inspector_view_mode_from_flag
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/__init__.py
+    module: src.bpfw.integrations.inspector.view_modes.__init__
+    symbol: resolve_inspector_view_mode_from_flag
+    kind: function
+    start_line: 20
+    end_line: 25
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.__init__.resolve_inspector_view_mode_from_flag
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: show_all
+      type: bool
+      default: null
+      required: true
+      description: null
+    output:
+      type: InspectorViewMode
+      description: null
+- id: src_bpfw_integrations_inspector_view_modes_compact_compact_inspector_view_mode
+  purpose: define compact inspector view mode
+  name: CompactInspectorViewMode
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/compact.py
+    module: src.bpfw.integrations.inspector.view_modes.compact
+    symbol: CompactInspectorViewMode
+    kind: class
+    start_line: 13
+    end_line: 39
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.compact.CompactInspectorViewMode
+    kind: class
+    methods:
+    - src.bpfw.integrations.inspector.view_modes.compact.CompactInspectorViewMode.get_name
+    - src.bpfw.integrations.inspector.view_modes.compact.CompactInspectorViewMode.get_next_mode_name
+    - src.bpfw.integrations.inspector.view_modes.compact.CompactInspectorViewMode.should_render_extended_panels
+    - src.bpfw.integrations.inspector.view_modes.compact.CompactInspectorViewMode.build_command_lines
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: src_bpfw_integrations_inspector_view_modes_compact_compact_inspector_view_mode_get_name
+  purpose: handle get name
+  name: CompactInspectorViewMode.get_name
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/compact.py
+    module: src.bpfw.integrations.inspector.view_modes.compact
+    symbol: CompactInspectorViewMode.get_name
+    kind: method
+    start_line: 16
+    end_line: 19
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.compact.CompactInspectorViewMode.get_name
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_inspector_view_modes_compact_compact_inspector_view_mode_get_next_mode_name
+  purpose: handle get next name
+  name: CompactInspectorViewMode.get_next_mode_name
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/compact.py
+    module: src.bpfw.integrations.inspector.view_modes.compact
+    symbol: CompactInspectorViewMode.get_next_mode_name
+    kind: method
+    start_line: 21
+    end_line: 24
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.compact.CompactInspectorViewMode.get_next_mode_name
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_inspector_view_modes_compact_compact_inspector_view_mode_should_render_extended_panels
+  purpose: handle should render extended panels
+  name: CompactInspectorViewMode.should_render_extended_panels
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/compact.py
+    module: src.bpfw.integrations.inspector.view_modes.compact
+    symbol: CompactInspectorViewMode.should_render_extended_panels
+    kind: method
+    start_line: 26
+    end_line: 29
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.compact.CompactInspectorViewMode.should_render_extended_panels
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: bool
+      description: null
+- id: src_bpfw_integrations_inspector_view_modes_compact_compact_inspector_view_mode_build_command_lines
+  purpose: handle build command lines
+  name: CompactInspectorViewMode.build_command_lines
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/compact.py
+    module: src.bpfw.integrations.inspector.view_modes.compact
+    symbol: CompactInspectorViewMode.build_command_lines
+    kind: method
+    start_line: 31
+    end_line: 39
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.compact.CompactInspectorViewMode.build_command_lines
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: List[str]
+      description: null
+- id: src_bpfw_integrations_inspector_view_modes_full_full_inspector_view_mode
+  purpose: define full inspector view mode
+  name: FullInspectorViewMode
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/full.py
+    module: src.bpfw.integrations.inspector.view_modes.full
+    symbol: FullInspectorViewMode
+    kind: class
+    start_line: 14
+    end_line: 43
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.full.FullInspectorViewMode
+    kind: class
+    methods:
+    - src.bpfw.integrations.inspector.view_modes.full.FullInspectorViewMode.get_name
+    - src.bpfw.integrations.inspector.view_modes.full.FullInspectorViewMode.get_next_mode_name
+    - src.bpfw.integrations.inspector.view_modes.full.FullInspectorViewMode.should_render_extended_panels
+    - src.bpfw.integrations.inspector.view_modes.full.FullInspectorViewMode.build_command_lines
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: src_bpfw_integrations_inspector_view_modes_full_full_inspector_view_mode_get_name
+  purpose: handle get name
+  name: FullInspectorViewMode.get_name
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/full.py
+    module: src.bpfw.integrations.inspector.view_modes.full
+    symbol: FullInspectorViewMode.get_name
+    kind: method
+    start_line: 17
+    end_line: 20
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.full.FullInspectorViewMode.get_name
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_inspector_view_modes_full_full_inspector_view_mode_get_next_mode_name
+  purpose: handle get next name
+  name: FullInspectorViewMode.get_next_mode_name
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/full.py
+    module: src.bpfw.integrations.inspector.view_modes.full
+    symbol: FullInspectorViewMode.get_next_mode_name
+    kind: method
+    start_line: 22
+    end_line: 25
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.full.FullInspectorViewMode.get_next_mode_name
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_inspector_view_modes_full_full_inspector_view_mode_should_render_extended_panels
+  purpose: handle should render extended panels
+  name: FullInspectorViewMode.should_render_extended_panels
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/full.py
+    module: src.bpfw.integrations.inspector.view_modes.full
+    symbol: FullInspectorViewMode.should_render_extended_panels
+    kind: method
+    start_line: 27
+    end_line: 30
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.full.FullInspectorViewMode.should_render_extended_panels
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: bool
+      description: null
+- id: src_bpfw_integrations_inspector_view_modes_full_full_inspector_view_mode_build_command_lines
+  purpose: handle build command lines
+  name: FullInspectorViewMode.build_command_lines
+  domain: inspector engine
+  status: null
+  code:
+    path: src/bpfw/integrations/inspector/view_modes/full.py
+    module: src.bpfw.integrations.inspector.view_modes.full
+    symbol: FullInspectorViewMode.build_command_lines
+    kind: method
+    start_line: 32
+    end_line: 43
+  detected:
+    qualified_name: src.bpfw.integrations.inspector.view_modes.full.FullInspectorViewMode.build_command_lines
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: List[str]
+      description: null

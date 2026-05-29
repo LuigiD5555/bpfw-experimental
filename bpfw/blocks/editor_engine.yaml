@@ -1,0 +1,1381 @@
+blocks:
+- id: src_bpfw_integrations_editor___init___can_use_interactive_terminal
+  purpose: check terminal capability
+  name: can_use_interactive_terminal
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/__init__.py
+    module: src.bpfw.integrations.editor.__init__
+    symbol: can_use_interactive_terminal
+    kind: function
+    start_line: 10
+    end_line: 13
+  detected:
+    qualified_name: src.bpfw.integrations.editor.__init__.can_use_interactive_terminal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: bool
+      description: null
+- id: src_bpfw_integrations_editor___init___run_interactive_editor
+  purpose: run interactive
+  name: run_interactive_editor
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/__init__.py
+    module: src.bpfw.integrations.editor.__init__
+    symbol: run_interactive_editor
+    kind: function
+    start_line: 16
+    end_line: 29
+  detected:
+    qualified_name: src.bpfw.integrations.editor.__init__.run_interactive_editor
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    output:
+      type: int
+      description: null
+- id: src_bpfw_integrations_editor___init___run_editor
+  purpose: run editor workflow
+  name: run_editor
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/__init__.py
+    module: src.bpfw.integrations.editor.__init__
+    symbol: run_editor
+    kind: function
+    start_line: 32
+    end_line: 53
+  detected:
+    qualified_name: src.bpfw.integrations.editor.__init__.run_editor
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    output:
+      type: int
+      description: null
+- id: src_bpfw_integrations_editor___init___editor_integration
+  purpose: define editor integration
+  name: EditorIntegration
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/__init__.py
+    module: src.bpfw.integrations.editor.__init__
+    symbol: EditorIntegration
+    kind: class
+    start_line: 56
+    end_line: 83
+  detected:
+    qualified_name: src.bpfw.integrations.editor.__init__.EditorIntegration
+    kind: class
+    methods:
+    - src.bpfw.integrations.editor.__init__.EditorIntegration.is_available
+    - src.bpfw.integrations.editor.__init__.EditorIntegration.run
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: src_bpfw_integrations_editor___init___editor_integration_is_available
+  purpose: handle is available
+  name: EditorIntegration.is_available
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/__init__.py
+    module: src.bpfw.integrations.editor.__init__
+    symbol: EditorIntegration.is_available
+    kind: method
+    start_line: 61
+    end_line: 64
+  detected:
+    qualified_name: src.bpfw.integrations.editor.__init__.EditorIntegration.is_available
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: bool
+      description: null
+- id: src_bpfw_integrations_editor___init___editor_integration_run
+  purpose: run component
+  name: EditorIntegration.run
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/__init__.py
+    module: src.bpfw.integrations.editor.__init__
+    symbol: EditorIntegration.run
+    kind: method
+    start_line: 66
+    end_line: 83
+  detected:
+    qualified_name: src.bpfw.integrations.editor.__init__.EditorIntegration.run
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    - name: command_arguments
+      type: dict[str, str] | None
+      default: null
+      required: false
+      description: null
+    output:
+      type: OptionalIntegrationResult
+      description: null
+- id: src_bpfw_integrations_editor_filters_active_filter
+  purpose: define active filter
+  name: ActiveFilter
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/filters.py
+    module: src.bpfw.integrations.editor.filters
+    symbol: ActiveFilter
+    kind: class
+    start_line: 11
+    end_line: 20
+  detected:
+    qualified_name: src.bpfw.integrations.editor.filters.ActiveFilter
+    kind: class
+    methods:
+    - src.bpfw.integrations.editor.filters.ActiveFilter.display
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: src_bpfw_integrations_editor_filters_active_filter_display
+  purpose: format active filter
+  name: ActiveFilter.display
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/filters.py
+    module: src.bpfw.integrations.editor.filters
+    symbol: ActiveFilter.display
+    kind: method
+    start_line: 17
+    end_line: 20
+  detected:
+    qualified_name: src.bpfw.integrations.editor.filters.ActiveFilter.display
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_editor_filters_filter_state
+  purpose: define filter state
+  name: FilterState
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/filters.py
+    module: src.bpfw.integrations.editor.filters
+    symbol: FilterState
+    kind: class
+    start_line: 24
+    end_line: 55
+  detected:
+    qualified_name: src.bpfw.integrations.editor.filters.FilterState
+    kind: class
+    methods:
+    - src.bpfw.integrations.editor.filters.FilterState.add
+    - src.bpfw.integrations.editor.filters.FilterState.clear
+    - src.bpfw.integrations.editor.filters.FilterState.is_empty
+    - src.bpfw.integrations.editor.filters.FilterState.display_lines
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: src_bpfw_integrations_editor_filters_filter_state_add
+  purpose: add filter
+  name: FilterState.add
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/filters.py
+    module: src.bpfw.integrations.editor.filters
+    symbol: FilterState.add
+    kind: method
+    start_line: 29
+    end_line: 38
+  detected:
+    qualified_name: src.bpfw.integrations.editor.filters.FilterState.add
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: column
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: value
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_editor_filters_filter_state_clear
+  purpose: clear filter
+  name: FilterState.clear
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/filters.py
+    module: src.bpfw.integrations.editor.filters
+    symbol: FilterState.clear
+    kind: method
+    start_line: 40
+    end_line: 43
+  detected:
+    qualified_name: src.bpfw.integrations.editor.filters.FilterState.clear
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_editor_filters_filter_state_is_empty
+  purpose: handle is empty
+  name: FilterState.is_empty
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/filters.py
+    module: src.bpfw.integrations.editor.filters
+    symbol: FilterState.is_empty
+    kind: method
+    start_line: 45
+    end_line: 48
+  detected:
+    qualified_name: src.bpfw.integrations.editor.filters.FilterState.is_empty
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: bool
+      description: null
+- id: src_bpfw_integrations_editor_filters_filter_state_display_lines
+  purpose: handle display lines
+  name: FilterState.display_lines
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/filters.py
+    module: src.bpfw.integrations.editor.filters
+    symbol: FilterState.display_lines
+    kind: method
+    start_line: 50
+    end_line: 55
+  detected:
+    qualified_name: src.bpfw.integrations.editor.filters.FilterState.display_lines
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: list[str]
+      description: null
+- id: src_bpfw_integrations_editor_filters_parse_filter_input
+  purpose: parse filter input
+  name: parse_filter_input
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/filters.py
+    module: src.bpfw.integrations.editor.filters
+    symbol: parse_filter_input
+    kind: function
+    start_line: 58
+    end_line: 110
+  detected:
+    qualified_name: src.bpfw.integrations.editor.filters.parse_filter_input
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: raw_input
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: tuple[str, str] | str
+      description: null
+- id: src_bpfw_integrations_editor_filters_apply_filters
+  purpose: apply filters
+  name: apply_filters
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/filters.py
+    module: src.bpfw.integrations.editor.filters
+    symbol: apply_filters
+    kind: function
+    start_line: 113
+    end_line: 123
+  detected:
+    qualified_name: src.bpfw.integrations.editor.filters.apply_filters
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: records
+      type: list[SearchRecord]
+      default: null
+      required: true
+      description: null
+    - name: filter_state
+      type: FilterState
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[SearchRecord]
+      description: null
+- id: src_bpfw_integrations_editor_screen_get_terminal_width
+  purpose: get terminal width
+  name: get_terminal_width
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/screen.py
+    module: src.bpfw.integrations.editor.screen
+    symbol: get_terminal_width
+    kind: function
+    start_line: 22
+    end_line: 28
+  detected:
+    qualified_name: src.bpfw.integrations.editor.screen.get_terminal_width
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: int
+      description: null
+- id: src_bpfw_integrations_editor_screen_get_terminal_height
+  purpose: get terminal height
+  name: get_terminal_height
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/screen.py
+    module: src.bpfw.integrations.editor.screen
+    symbol: get_terminal_height
+    kind: function
+    start_line: 31
+    end_line: 37
+  detected:
+    qualified_name: src.bpfw.integrations.editor.screen.get_terminal_height
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: int
+      description: null
+- id: src_bpfw_integrations_editor_screen_read_input
+  purpose: read input
+  name: read_input
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/screen.py
+    module: src.bpfw.integrations.editor.screen
+    symbol: read_input
+    kind: function
+    start_line: 46
+    end_line: 53
+  detected:
+    qualified_name: src.bpfw.integrations.editor.screen.read_input
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: prompt
+      type: str
+      default: DEFAULT_INPUT_PROMPT
+      required: false
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_editor_screen_read_line
+  purpose: read line
+  name: read_line
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/screen.py
+    module: src.bpfw.integrations.editor.screen
+    symbol: read_line
+    kind: function
+    start_line: 56
+    end_line: 63
+  detected:
+    qualified_name: src.bpfw.integrations.editor.screen.read_line
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: prompt
+      type: str
+      default: DEFAULT_INPUT_PROMPT
+      required: false
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_editor_screen_wait_for_enter
+  purpose: wait for enter
+  name: wait_for_enter
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/screen.py
+    module: src.bpfw.integrations.editor.screen
+    symbol: wait_for_enter
+    kind: function
+    start_line: 66
+    end_line: 73
+  detected:
+    qualified_name: src.bpfw.integrations.editor.screen.wait_for_enter
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_editor_screen_paginate_items
+  purpose: paginate items
+  name: paginate_items
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/screen.py
+    module: src.bpfw.integrations.editor.screen
+    symbol: paginate_items
+    kind: function
+    start_line: 76
+    end_line: 90
+  detected:
+    qualified_name: src.bpfw.integrations.editor.screen.paginate_items
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: items
+      type: list
+      default: null
+      required: true
+      description: null
+    - name: page
+      type: int
+      default: null
+      required: true
+      description: null
+    - name: page_size
+      type: int
+      default: 20
+      required: false
+      description: null
+    output:
+      type: tuple[list, int, int, int]
+      description: null
+- id: src_bpfw_integrations_editor_screen_format_paging_footer
+  purpose: format paging footer
+  name: format_paging_footer
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/screen.py
+    module: src.bpfw.integrations.editor.screen
+    symbol: format_paging_footer
+    kind: function
+    start_line: 93
+    end_line: 98
+  detected:
+    qualified_name: src.bpfw.integrations.editor.screen.format_paging_footer
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: start
+      type: int
+      default: null
+      required: true
+      description: null
+    - name: end
+      type: int
+      default: null
+      required: true
+      description: null
+    - name: total
+      type: int
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_editor_screen_truncate
+  purpose: truncate editor workflow
+  name: truncate
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/screen.py
+    module: src.bpfw.integrations.editor.screen
+    symbol: truncate
+    kind: function
+    start_line: 101
+    end_line: 108
+  detected:
+    qualified_name: src.bpfw.integrations.editor.screen.truncate
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: text
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: max_width
+      type: int
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_editor_screen_read_multiline
+  purpose: read multiline
+  name: read_multiline
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/screen.py
+    module: src.bpfw.integrations.editor.screen
+    symbol: read_multiline
+    kind: function
+    start_line: 111
+    end_line: 128
+  detected:
+    qualified_name: src.bpfw.integrations.editor.screen.read_multiline
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: list[str]
+      description: null
+- id: src_bpfw_integrations_editor_screen_read_key
+  purpose: read key
+  name: read_key
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/screen.py
+    module: src.bpfw.integrations.editor.screen
+    symbol: read_key
+    kind: function
+    start_line: 131
+    end_line: 206
+  detected:
+    qualified_name: src.bpfw.integrations.editor.screen.read_key
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_editor_screen_render_editor_banner
+  purpose: render banner
+  name: render_editor_banner
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/screen.py
+    module: src.bpfw.integrations.editor.screen
+    symbol: render_editor_banner
+    kind: function
+    start_line: 314
+    end_line: 319
+  detected:
+    qualified_name: src.bpfw.integrations.editor.screen.render_editor_banner
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: ratio
+      type: float
+      default: 0.7
+      required: false
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_editor_screen_render_search_screen
+  purpose: render search screen
+  name: render_search_screen
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/screen.py
+    module: src.bpfw.integrations.editor.screen
+    symbol: render_search_screen
+    kind: function
+    start_line: 322
+    end_line: 345
+  detected:
+    qualified_name: src.bpfw.integrations.editor.screen.render_search_screen
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_editor_screen_render_results_table
+  purpose: render results table
+  name: render_results_table
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/screen.py
+    module: src.bpfw.integrations.editor.screen
+    symbol: render_results_table
+    kind: function
+    start_line: 348
+    end_line: 379
+  detected:
+    qualified_name: src.bpfw.integrations.editor.screen.render_results_table
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: results
+      type: list
+      default: null
+      required: true
+      description: null
+    - name: query
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: filter_display_lines
+      type: list[str]
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_editor_screen_render_filter_screen
+  purpose: render filter screen
+  name: render_filter_screen
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/screen.py
+    module: src.bpfw.integrations.editor.screen
+    symbol: render_filter_screen
+    kind: function
+    start_line: 477
+    end_line: 499
+  detected:
+    qualified_name: src.bpfw.integrations.editor.screen.render_filter_screen
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_editor_screen_render_invalid_selection
+  purpose: render invalid selection
+  name: render_invalid_selection
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/screen.py
+    module: src.bpfw.integrations.editor.screen
+    symbol: render_invalid_selection
+    kind: function
+    start_line: 528
+    end_line: 540
+  detected:
+    qualified_name: src.bpfw.integrations.editor.screen.render_invalid_selection
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_editor_screen_render_filter_error
+  purpose: render filter error
+  name: render_filter_error
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/screen.py
+    module: src.bpfw.integrations.editor.screen
+    symbol: render_filter_error
+    kind: function
+    start_line: 543
+    end_line: 547
+  detected:
+    qualified_name: src.bpfw.integrations.editor.screen.render_filter_error
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: message
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_editor_screen_render_editor_help_screen
+  purpose: render help screen
+  name: render_editor_help_screen
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/screen.py
+    module: src.bpfw.integrations.editor.screen
+    symbol: render_editor_help_screen
+    kind: function
+    start_line: 550
+    end_line: 610
+  detected:
+    qualified_name: src.bpfw.integrations.editor.screen.render_editor_help_screen
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_editor_search_build_search_records
+  purpose: build search records
+  name: build_search_records
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/search.py
+    module: src.bpfw.integrations.editor.search
+    symbol: build_search_records
+    kind: function
+    start_line: 33
+    end_line: 48
+  detected:
+    qualified_name: src.bpfw.integrations.editor.search.build_search_records
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: blueprint_data
+      type: dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[SearchRecord]
+      description: null
+- id: src_bpfw_integrations_editor_search_build_search_records_from_document
+  purpose: build search records from document
+  name: build_search_records_from_document
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/search.py
+    module: src.bpfw.integrations.editor.search
+    symbol: build_search_records_from_document
+    kind: function
+    start_line: 51
+    end_line: 60
+  detected:
+    qualified_name: src.bpfw.integrations.editor.search.build_search_records_from_document
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: document
+      type: BlueprintDocument
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[SearchRecord]
+      description: null
+- id: src_bpfw_integrations_editor_search_search_records
+  purpose: handle records
+  name: search_records
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/search.py
+    module: src.bpfw.integrations.editor.search
+    symbol: search_records
+    kind: function
+    start_line: 113
+    end_line: 128
+  detected:
+    qualified_name: src.bpfw.integrations.editor.search.search_records
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: records
+      type: list[SearchRecord]
+      default: null
+      required: true
+      description: null
+    - name: query
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[SearchRecord]
+      description: null
+- id: src_bpfw_integrations_editor_session_editor_session
+  purpose: define editor session
+  name: EditorSession
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/session.py
+    module: src.bpfw.integrations.editor.session
+    symbol: EditorSession
+    kind: class
+    start_line: 30
+    end_line: 258
+  detected:
+    qualified_name: src.bpfw.integrations.editor.session.EditorSession
+    kind: class
+    methods:
+    - src.bpfw.integrations.editor.session.EditorSession.run
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_editor_session_editor_session_run
+  purpose: run component
+  name: EditorSession.run
+  domain: editor engine
+  status: null
+  code:
+    path: src/bpfw/integrations/editor/session.py
+    module: src.bpfw.integrations.editor.session
+    symbol: EditorSession.run
+    kind: method
+    start_line: 36
+    end_line: 75
+  detected:
+    qualified_name: src.bpfw.integrations.editor.session.EditorSession.run
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: int
+      description: null

@@ -1,0 +1,42 @@
+blocks:
+- id: src_bpfw_authority_document_authority_document_replace_blocks
+  purpose: replace all blocks in blueprint
+  name: AuthorityDocument.replace_blocks
+  domain: blueprint engine
+  status: active
+  code:
+    path: src/bpfw/core/authority/document.py
+    module: src.bpfw.authority.document
+    symbol: AuthorityDocument.replace_blocks
+    kind: method
+    start_line: 54
+    end_line: 60
+  detected:
+    qualified_name: src.bpfw.authority.document.AuthorityDocument.replace_blocks
+    kind: method
+    methods: []
+    functions: []
+    docstring: "Replace all blocks in the unified blueprint data.\n\nArgs:\n    blocks:
+      New list of block dictionaries."
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: replace_all_blocks_in_blueprint
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: blocks
+      type: list[dict[str, Any]]
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null

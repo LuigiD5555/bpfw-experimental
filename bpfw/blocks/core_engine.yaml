@@ -1,28 +1,26 @@
 blocks:
-- id: run_command_after_verify
-  purpose: execute command after verification
-  name: run_command_after_verify
+- id: src_bpfw_authority_document_authority_document_get_blocks
+  purpose: get all blocks from blueprint
+  name: AuthorityDocument.get_blocks
   domain: core engine
   status: active
   code:
-    path: src/bpfw/cli.py
-    symbol: run_command_after_verify
-    kind: function
-    start_line: 10
-    end_line: 22
+    path: src/bpfw/core/authority/document.py
+    module: src.bpfw.authority.document
+    symbol: AuthorityDocument.get_blocks
+    kind: method
+    start_line: 43
+    end_line: 52
   detected:
-    qualified_name: src.bpfw.cli.run_command_after_verify
-    kind: function
+    qualified_name: src.bpfw.authority.document.AuthorityDocument.get_blocks
+    kind: method
     methods: []
     functions: []
-    docstring: "Run a command after verification through a lazy import.\n\nArgs:\n
-      \   project_root: Project root directory.\n    command: Subprocess command to
-      run after verification passes.\n\nReturns:\n    Subprocess or verification exit
-      code."
+    docstring: "Get all blocks from the unified blueprint data.\n\nReturns:\n    List of block dictionaries."
   entrypoints: []
   connections: []
   uniqueness:
-    group: execute_command_after_verification
+    group: get_all_blocks_from_blueprint
     allow_multiple_non_active: true
     forbid_active_duplicates: true
     suspected_duplicates: []
@@ -31,3 +29,2399 @@ blocks:
     replaced_by: null
     reason: null
   notes: null
+  interface:
+    output:
+      type: list[dict[str, Any]]
+      description: null
+- id: src_bpfw_authority_document_authority_document_get_block
+  purpose: return block content by block_id
+  name: AuthorityDocument.get_block
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/core/authority/document.py
+    module: src.bpfw.authority.document
+    symbol: AuthorityDocument.get_block
+    kind: method
+    start_line: 73
+    end_line: 85
+  detected:
+    qualified_name: src.bpfw.authority.document.AuthorityDocument.get_block
+    kind: method
+    methods: []
+    functions: []
+    docstring: "Get a specific block by ID.\n\nArgs:\n    block_id: The block ID to look up.\n\nReturns:\n    Block dictionary, or None if not found."
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: return_block_content_by_block_id
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: block_id
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: dict[str, Any] | None
+      description: null
+- id: src_bpfw_core_context_build_project_context
+  purpose: build project context
+  name: build_project_context
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/core/context.py
+    module: src.bpfw.core.context
+    symbol: build_project_context
+    kind: function
+    start_line: 28
+    end_line: 35
+  detected:
+    qualified_name: src.bpfw.core.context.build_project_context
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    - name: command_arguments
+      type: dict[str, str] | None
+      default: null
+      required: false
+      description: null
+    output:
+      type: ProjectContext
+      description: null
+- id: src_bpfw_core_profiling_runtime_profiler
+  purpose: profile runtime spans
+  name: RuntimeProfiler
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/core/profiling.py
+    module: src.bpfw.core.profiling
+    symbol: RuntimeProfiler
+    kind: class
+    start_line: 10
+    end_line: 39
+  detected:
+    qualified_name: src.bpfw.core.profiling.RuntimeProfiler
+    kind: class
+    methods:
+    - src.bpfw.core.profiling.RuntimeProfiler.measure
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: None
+      description: null
+- id: src_bpfw_core_profiling_runtime_profiler_measure
+  purpose: measure runtime span
+  name: RuntimeProfiler.measure
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/core/profiling.py
+    module: src.bpfw.core.profiling
+    symbol: RuntimeProfiler.measure
+    kind: method
+    start_line: 18
+    end_line: 39
+  detected:
+    qualified_name: src.bpfw.core.profiling.RuntimeProfiler.measure
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: label
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: Iterator[None]
+      description: null
+- id: src_bpfw_core_registry_init_project_step
+  purpose: initialize project step
+  name: InitProjectStep
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/core/registry.py
+    module: src.bpfw.core.registry
+    symbol: InitProjectStep
+    kind: class
+    start_line: 25
+    end_line: 49
+  detected:
+    qualified_name: src.bpfw.core.registry.InitProjectStep
+    kind: class
+    methods:
+    - src.bpfw.core.registry.InitProjectStep.run
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: src_bpfw_core_registry_init_project_step_run
+  purpose: initialize project
+  name: InitProjectStep.run
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/core/registry.py
+    module: src.bpfw.core.registry
+    symbol: InitProjectStep.run
+    kind: method
+    start_line: 30
+    end_line: 49
+  detected:
+    qualified_name: src.bpfw.core.registry.InitProjectStep.run
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: context
+      type: null
+      default: null
+      required: true
+      description: null
+    output:
+      type: StepResult
+      description: null
+- id: src_bpfw_core_registry_integration_step
+  purpose: run integration step
+  name: IntegrationStep
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/core/registry.py
+    module: src.bpfw.core.registry
+    symbol: IntegrationStep
+    kind: class
+    start_line: 53
+    end_line: 106
+  detected:
+    qualified_name: src.bpfw.core.registry.IntegrationStep
+    kind: class
+    methods:
+    - src.bpfw.core.registry.IntegrationStep.run
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: src_bpfw_core_registry_integration_step_run
+  purpose: run integration command
+  name: IntegrationStep.run
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/core/registry.py
+    module: src.bpfw.core.registry
+    symbol: IntegrationStep.run
+    kind: method
+    start_line: 60
+    end_line: 106
+  detected:
+    qualified_name: src.bpfw.core.registry.IntegrationStep.run
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: context
+      type: null
+      default: null
+      required: true
+      description: null
+    output:
+      type: StepResult
+      description: null
+- id: src_bpfw_core_registry_verify_blueprint_step
+  purpose: verify blueprint step
+  name: VerifyBlueprintStep
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/core/registry.py
+    module: src.bpfw.core.registry
+    symbol: VerifyBlueprintStep
+    kind: class
+    start_line: 110
+    end_line: 178
+  detected:
+    qualified_name: src.bpfw.core.registry.VerifyBlueprintStep
+    kind: class
+    methods:
+    - src.bpfw.core.registry.VerifyBlueprintStep.run
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: src_bpfw_core_registry_verify_blueprint_step_run
+  purpose: verify blueprint
+  name: VerifyBlueprintStep.run
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/core/registry.py
+    module: src.bpfw.core.registry
+    symbol: VerifyBlueprintStep.run
+    kind: method
+    start_line: 115
+    end_line: 178
+  detected:
+    qualified_name: src.bpfw.core.registry.VerifyBlueprintStep.run
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: context
+      type: null
+      default: null
+      required: true
+      description: null
+    output:
+      type: StepResult
+      description: null
+- id: src_bpfw_core_registry_authority_lock_step
+  purpose: lock authority step
+  name: AuthorityLockStep
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/core/registry.py
+    module: src.bpfw.core.registry
+    symbol: AuthorityLockStep
+    kind: class
+    start_line: 182
+    end_line: 213
+  detected:
+    qualified_name: src.bpfw.core.registry.AuthorityLockStep
+    kind: class
+    methods:
+    - src.bpfw.core.registry.AuthorityLockStep.run
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: src_bpfw_core_registry_authority_lock_step_run
+  purpose: lock authority files
+  name: AuthorityLockStep.run
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/core/registry.py
+    module: src.bpfw.core.registry
+    symbol: AuthorityLockStep.run
+    kind: method
+    start_line: 187
+    end_line: 213
+  detected:
+    qualified_name: src.bpfw.core.registry.AuthorityLockStep.run
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: context
+      type: null
+      default: null
+      required: true
+      description: null
+    output:
+      type: StepResult
+      description: null
+- id: src_bpfw_core_registry_authority_unlock_step
+  purpose: unlock authority step
+  name: AuthorityUnlockStep
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/core/registry.py
+    module: src.bpfw.core.registry
+    symbol: AuthorityUnlockStep
+    kind: class
+    start_line: 217
+    end_line: 237
+  detected:
+    qualified_name: src.bpfw.core.registry.AuthorityUnlockStep
+    kind: class
+    methods:
+    - src.bpfw.core.registry.AuthorityUnlockStep.run
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: src_bpfw_core_registry_authority_unlock_step_run
+  purpose: unlock authority files
+  name: AuthorityUnlockStep.run
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/core/registry.py
+    module: src.bpfw.core.registry
+    symbol: AuthorityUnlockStep.run
+    kind: method
+    start_line: 222
+    end_line: 237
+  detected:
+    qualified_name: src.bpfw.core.registry.AuthorityUnlockStep.run
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: context
+      type: null
+      default: null
+      required: true
+      description: null
+    output:
+      type: StepResult
+      description: null
+- id: src_bpfw_core_registry_authority_status_step
+  purpose: authority status step
+  name: AuthorityStatusStep
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/core/registry.py
+    module: src.bpfw.core.registry
+    symbol: AuthorityStatusStep
+    kind: class
+    start_line: 241
+    end_line: 270
+  detected:
+    qualified_name: src.bpfw.core.registry.AuthorityStatusStep
+    kind: class
+    methods:
+    - src.bpfw.core.registry.AuthorityStatusStep.run
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: src_bpfw_core_registry_authority_status_step_run
+  purpose: report authority status
+  name: AuthorityStatusStep.run
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/core/registry.py
+    module: src.bpfw.core.registry
+    symbol: AuthorityStatusStep.run
+    kind: method
+    start_line: 246
+    end_line: 270
+  detected:
+    qualified_name: src.bpfw.core.registry.AuthorityStatusStep.run
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: context
+      type: null
+      default: null
+      required: true
+      description: null
+    output:
+      type: StepResult
+      description: null
+- id: src_bpfw_core_registry_build_default_registry
+  purpose: build command registry
+  name: build_default_registry
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/core/registry.py
+    module: src.bpfw.core.registry
+    symbol: build_default_registry
+    kind: function
+    start_line: 273
+    end_line: 315
+  detected:
+    qualified_name: src.bpfw.core.registry.build_default_registry
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: integration_registry
+      type: IntegrationRegistry | None
+      default: null
+      required: false
+      description: null
+    output:
+      type: dict[str, Pipeline]
+      description: null
+- id: src_bpfw_core_result_aggregate_status
+  purpose: aggregate result status
+  name: aggregate_status
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/core/result.py
+    module: src.bpfw.core.result
+    symbol: aggregate_status
+    kind: function
+    start_line: 48
+    end_line: 53
+  detected:
+    qualified_name: src.bpfw.core.result.aggregate_status
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: step_results
+      type: list[StepResult]
+      default: null
+      required: true
+      description: null
+    output:
+      type: ResultStatus
+      description: null
+- code:
+    end_line: 20
+    kind: function
+    module: src.bpfw.core.yaml_io
+    path: src/bpfw/core/yaml_io.py
+    start_line: 11
+    symbol: load_yaml_text
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Load YAML text using the fastest available safe loader.\n\nArgs:\n    text: YAML source text.\n\nReturns:\n    Parsed YAML data."
+    functions: []
+    imports:
+    - typing.Any
+    - yaml
+    kind: function
+    methods: []
+    normalized_body_hash: bc538b71a198cee7f271964410771082da77a7cfab478efbc5e3333d71d7d44c
+    qualified_name: src.bpfw.core.yaml_io.load_yaml_text
+    signature: load_yaml_text(text) -> Any
+  domain: core engine
+  entrypoints: []
+  id: load_yaml_text
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: text
+      required: true
+      type: str
+    output:
+      description: null
+      type: Any
+  name: load_yaml_text
+  notes: null
+  purpose: load YAML text
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 39
+    kind: function
+    module: src.bpfw.core.yaml_io
+    path: src/bpfw/core/yaml_io.py
+    start_line: 23
+    symbol: dump_yaml_data
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Dump YAML data using the fastest available safe dumper.\n\nArgs:\n    data: YAML-compatible data.\n    sort_keys: Whether mapping keys should be sorted.\n    allow_unicode: Whether Unicode characters should be emitted directly.\n\nReturns:\n    Rendered YAML text."
+    functions: []
+    imports:
+    - typing.Any
+    - yaml
+    kind: function
+    methods: []
+    normalized_body_hash: b886b53a1a23e95a6c4a8ed36f3e4e514f16423d0964f98f5f6711ee53e808a9
+    qualified_name: src.bpfw.core.yaml_io.dump_yaml_data
+    signature: dump_yaml_data(data, sort_keys, allow_unicode) -> str
+  domain: core engine
+  entrypoints: []
+  id: dump_yaml_data
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: data
+      required: true
+      type: Any
+    - default: false
+      description: null
+      name: sort_keys
+      required: false
+      type: bool
+    - default: true
+      description: null
+      name: allow_unicode
+      required: false
+      type: bool
+    output:
+      description: null
+      type: str
+  name: dump_yaml_data
+  notes: null
+  purpose: dump YAML data
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- id: src_bpfw_integrations_shared_cli_runtime_command_label
+  purpose: render command aliases
+  name: command_label
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/cli_runtime.py
+    module: src.bpfw.integrations.shared.cli_runtime
+    symbol: command_label
+    kind: function
+    start_line: 18
+    end_line: 21
+  detected:
+    qualified_name: src.bpfw.integrations.shared.cli_runtime.command_label
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: shortcut
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: description
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_shared_cli_runtime_quit_command_label
+  purpose: render quit aliases
+  name: quit_command_label
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/cli_runtime.py
+    module: src.bpfw.integrations.shared.cli_runtime
+    symbol: quit_command_label
+    kind: function
+    start_line: 24
+    end_line: 27
+  detected:
+    qualified_name: src.bpfw.integrations.shared.cli_runtime.quit_command_label
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: description
+      type: str
+      default: quit
+      required: false
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_shared_cli_runtime_normalize_command
+  purpose: normalize command input
+  name: normalize_command
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/cli_runtime.py
+    module: src.bpfw.integrations.shared.cli_runtime
+    symbol: normalize_command
+    kind: function
+    start_line: 30
+    end_line: 36
+  detected:
+    qualified_name: src.bpfw.integrations.shared.cli_runtime.normalize_command
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: raw_value
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_shared_cli_runtime_is_back_command
+  purpose: detect back command
+  name: is_back_command
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/cli_runtime.py
+    module: src.bpfw.integrations.shared.cli_runtime
+    symbol: is_back_command
+    kind: function
+    start_line: 39
+    end_line: 42
+  detected:
+    qualified_name: src.bpfw.integrations.shared.cli_runtime.is_back_command
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: command
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: bool
+      description: null
+- id: src_bpfw_integrations_shared_cli_runtime_is_quit_command
+  purpose: detect quit command
+  name: is_quit_command
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/cli_runtime.py
+    module: src.bpfw.integrations.shared.cli_runtime
+    symbol: is_quit_command
+    kind: function
+    start_line: 45
+    end_line: 48
+  detected:
+    qualified_name: src.bpfw.integrations.shared.cli_runtime.is_quit_command
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: command
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: bool
+      description: null
+- id: src_bpfw_integrations_shared_cli_runtime_run_interactive_loop
+  purpose: run command loop
+  name: run_interactive_loop
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/cli_runtime.py
+    module: src.bpfw.integrations.shared.cli_runtime
+    symbol: run_interactive_loop
+    kind: function
+    start_line: 51
+    end_line: 77
+  detected:
+    qualified_name: src.bpfw.integrations.shared.cli_runtime.run_interactive_loop
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: render_step
+      type: RenderStep
+      default: null
+      required: true
+      description: null
+    - name: read_command
+      type: CommandReader
+      default: null
+      required: true
+      description: null
+    - name: get_screen
+      type: ScreenGetter
+      default: null
+      required: true
+      description: null
+    - name: resolve_prompt
+      type: PromptResolver
+      default: null
+      required: true
+      description: null
+    - name: handlers_by_screen
+      type: dict[str, ScreenHandler]
+      default: null
+      required: true
+      description: null
+    - name: should_exit
+      type: ExitChecker
+      default: null
+      required: true
+      description: null
+    output:
+      type: int
+      description: null
+- id: src_bpfw_integrations_shared_render_text_center_text
+  purpose: center text
+  name: center_text
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/render_text.py
+    module: src.bpfw.integrations.shared.render_text
+    symbol: center_text
+    kind: function
+    start_line: 6
+    end_line: 15
+  detected:
+    qualified_name: src.bpfw.integrations.shared.render_text.center_text
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: text
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: width
+      type: int
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_shared_runtime_context_set_integration_runtime_cache
+  purpose: set runtime cache
+  name: set_integration_runtime_cache
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/runtime_context.py
+    module: src.bpfw.integrations.shared.runtime_context
+    symbol: set_integration_runtime_cache
+    kind: function
+    start_line: 9
+    end_line: 16
+  detected:
+    qualified_name: src.bpfw.integrations.shared.runtime_context.set_integration_runtime_cache
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: cache
+      type: dict[str, object]
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_shared_runtime_context_get_integration_runtime_cache
+  purpose: get runtime cache
+  name: get_integration_runtime_cache
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/runtime_context.py
+    module: src.bpfw.integrations.shared.runtime_context
+    symbol: get_integration_runtime_cache
+    kind: function
+    start_line: 19
+    end_line: 25
+  detected:
+    qualified_name: src.bpfw.integrations.shared.runtime_context.get_integration_runtime_cache
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: dict[str, Any]
+      description: null
+- id: src_bpfw_integrations_shared_runtime_context_clear_integration_runtime_cache
+  purpose: clear runtime cache
+  name: clear_integration_runtime_cache
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/runtime_context.py
+    module: src.bpfw.integrations.shared.runtime_context
+    symbol: clear_integration_runtime_cache
+    kind: function
+    start_line: 28
+    end_line: 31
+  detected:
+    qualified_name: src.bpfw.integrations.shared.runtime_context.clear_integration_runtime_cache
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_shared_screen_control_refresh_screen
+  purpose: refresh terminal screen
+  name: refresh_screen
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/screen_control.py
+    module: src.bpfw.integrations.shared.screen_control
+    symbol: refresh_screen
+    kind: function
+    start_line: 6
+    end_line: 13
+  detected:
+    qualified_name: src.bpfw.integrations.shared.screen_control.refresh_screen
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_shared_visual_boxes_render_box
+  purpose: render box
+  name: render_box
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/visual_boxes.py
+    module: src.bpfw.integrations.shared.visual_boxes
+    symbol: render_box
+    kind: function
+    start_line: 26
+    end_line: 32
+  detected:
+    qualified_name: src.bpfw.integrations.shared.visual_boxes.render_box
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: title
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: lines
+      type: list[str]
+      default: null
+      required: true
+      description: null
+    - name: width
+      type: int
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: src_bpfw_integrations_shared_visual_boxes_render_two_column_box
+  purpose: render two-column box
+  name: render_two_column_box
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/visual_boxes.py
+    module: src.bpfw.integrations.shared.visual_boxes
+    symbol: render_two_column_box
+    kind: function
+    start_line: 35
+    end_line: 65
+  detected:
+    qualified_name: src.bpfw.integrations.shared.visual_boxes.render_two_column_box
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: left_title
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: left_lines
+      type: List[str]
+      default: null
+      required: true
+      description: null
+    - name: right_title
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: right_lines
+      type: List[str]
+      default: null
+      required: true
+      description: null
+    - name: total_width
+      type: int
+      default: null
+      required: true
+      description: null
+    - name: preferred_left_ratio
+      type: float
+      default: 0.5
+      required: false
+      description: null
+    output:
+      type: List[str]
+      description: null
+- id: src_bpfw_integrations_shared_visual_boxes_render_split_box
+  purpose: render split box
+  name: render_split_box
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/visual_boxes.py
+    module: src.bpfw.integrations.shared.visual_boxes
+    symbol: render_split_box
+    kind: function
+    start_line: 68
+    end_line: 101
+  detected:
+    qualified_name: src.bpfw.integrations.shared.visual_boxes.render_split_box
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: left_title
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: left_lines
+      type: list[str]
+      default: null
+      required: true
+      description: null
+    - name: right_title
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: right_lines
+      type: list[str]
+      default: null
+      required: true
+      description: null
+    - name: total_width
+      type: int
+      default: null
+      required: true
+      description: null
+    - name: left_border_fill
+      type: str
+      default: ═
+      required: false
+      description: null
+    - name: right_border_fill
+      type: str
+      default: ─
+      required: false
+      description: null
+    - name: preferred_left_ratio
+      type: float
+      default: 0.5
+      required: false
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: src_bpfw_integrations_shared_visual_layout_resolve_uniform_width
+  purpose: resolve layout width
+  name: resolve_uniform_width
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/visual_layout.py
+    module: src.bpfw.integrations.shared.visual_layout
+    symbol: resolve_uniform_width
+    kind: function
+    start_line: 27
+    end_line: 50
+  detected:
+    qualified_name: src.bpfw.integrations.shared.visual_layout.resolve_uniform_width
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: terminal_width
+      type: int
+      default: null
+      required: true
+      description: null
+    - name: panels
+      type: Sequence[tuple[str, Sequence[str]] | VisualPanel]
+      default: null
+      required: true
+      description: null
+    - name: theme
+      type: ThemeConfig
+      default: DEFAULT_THEME
+      required: false
+      description: null
+    output:
+      type: int
+      description: null
+- id: src_bpfw_integrations_shared_visual_layout_render_visual_screen
+  purpose: render visual screen
+  name: render_visual_screen
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/visual_layout.py
+    module: src.bpfw.integrations.shared.visual_layout
+    symbol: render_visual_screen
+    kind: function
+    start_line: 53
+    end_line: 74
+  detected:
+    qualified_name: src.bpfw.integrations.shared.visual_layout.render_visual_screen
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: panels
+      type: Sequence[VisualPanel]
+      default: null
+      required: true
+      description: null
+    - name: terminal_width
+      type: int
+      default: null
+      required: true
+      description: null
+    - name: theme
+      type: ThemeConfig
+      default: DEFAULT_THEME
+      required: false
+      description: null
+    - name: spacing
+      type: int
+      default: 1
+      required: false
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: src_bpfw_integrations_shared_visual_layout_limited_items
+  purpose: limit visible items
+  name: limited_items
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/visual_layout.py
+    module: src.bpfw.integrations.shared.visual_layout
+    symbol: limited_items
+    kind: function
+    start_line: 77
+    end_line: 83
+  detected:
+    qualified_name: src.bpfw.integrations.shared.visual_layout.limited_items
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: items
+      type: Sequence[Item]
+      default: null
+      required: true
+      description: null
+    - name: max_items
+      type: int
+      default: null
+      required: true
+      description: null
+    output:
+      type: tuple[Sequence[Item], int]
+      description: null
+- id: src_bpfw_integrations_shared_visual_layout_append_hidden_count
+  purpose: append hidden count
+  name: append_hidden_count
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/visual_layout.py
+    module: src.bpfw.integrations.shared.visual_layout
+    symbol: append_hidden_count
+    kind: function
+    start_line: 86
+    end_line: 90
+  detected:
+    qualified_name: src.bpfw.integrations.shared.visual_layout.append_hidden_count
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: lines
+      type: list[str]
+      default: null
+      required: true
+      description: null
+    - name: hidden_count
+      type: int
+      default: null
+      required: true
+      description: null
+    - name: noun
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_shared_visual_notifications_render_notification_block
+  purpose: render notification
+  name: render_notification_block
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/visual_notifications.py
+    module: src.bpfw.integrations.shared.visual_notifications
+    symbol: render_notification_block
+    kind: function
+    start_line: 7
+    end_line: 17
+  detected:
+    qualified_name: src.bpfw.integrations.shared.visual_notifications.render_notification_block
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: title
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: lines
+      type: list[str]
+      default: null
+      required: true
+      description: null
+    - name: width
+      type: int
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: src_bpfw_integrations_shared_visual_theme_compute_panel_width
+  purpose: compute panel width
+  name: compute_panel_width
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/visual_theme.py
+    module: src.bpfw.integrations.shared.visual_theme
+    symbol: compute_panel_width
+    kind: function
+    start_line: 25
+    end_line: 38
+  detected:
+    qualified_name: src.bpfw.integrations.shared.visual_theme.compute_panel_width
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: content_lines
+      type: Sequence[str]
+      default: null
+      required: true
+      description: null
+    - name: title
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: terminal_width
+      type: int
+      default: null
+      required: true
+      description: null
+    - name: theme
+      type: ThemeConfig
+      default: DEFAULT_THEME
+      required: false
+      description: null
+    output:
+      type: int
+      description: null
+- id: src_bpfw_integrations_shared_visual_theme_render_header
+  purpose: render header
+  name: render_header
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/visual_theme.py
+    module: src.bpfw.integrations.shared.visual_theme
+    symbol: render_header
+    kind: function
+    start_line: 41
+    end_line: 57
+  detected:
+    qualified_name: src.bpfw.integrations.shared.visual_theme.render_header
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: title
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: width
+      type: int
+      default: null
+      required: true
+      description: null
+    - name: theme
+      type: ThemeConfig
+      default: DEFAULT_THEME
+      required: false
+      description: null
+    - name: centered
+      type: bool
+      default: true
+      required: false
+      description: null
+    output:
+      type: List[str]
+      description: null
+- id: src_bpfw_integrations_shared_visual_theme_render_panel
+  purpose: render panel
+  name: render_panel
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/visual_theme.py
+    module: src.bpfw.integrations.shared.visual_theme
+    symbol: render_panel
+    kind: function
+    start_line: 60
+    end_line: 75
+  detected:
+    qualified_name: src.bpfw.integrations.shared.visual_theme.render_panel
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: title
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: lines
+      type: Sequence[str]
+      default: null
+      required: true
+      description: null
+    - name: width
+      type: int
+      default: null
+      required: true
+      description: null
+    - name: theme
+      type: ThemeConfig
+      default: DEFAULT_THEME
+      required: false
+      description: null
+    - name: centered_title
+      type: bool
+      default: true
+      required: false
+      description: null
+    output:
+      type: List[str]
+      description: null
+- id: src_bpfw_integrations_shared_visual_theme_render_commands_box
+  purpose: render command box
+  name: render_commands_box
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/visual_theme.py
+    module: src.bpfw.integrations.shared.visual_theme
+    symbol: render_commands_box
+    kind: function
+    start_line: 78
+    end_line: 99
+  detected:
+    qualified_name: src.bpfw.integrations.shared.visual_theme.render_commands_box
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: lines
+      type: Sequence[str]
+      default: null
+      required: true
+      description: null
+    - name: width
+      type: int
+      default: null
+      required: true
+      description: null
+    - name: theme
+      type: ThemeConfig
+      default: DEFAULT_THEME
+      required: false
+      description: null
+    - name: wrap_mode
+      type: str
+      default: safe_wrap
+      required: false
+      description: null
+    output:
+      type: List[str]
+      description: null
+- id: src_bpfw_integrations_shared_visual_theme_render_stacked_sections
+  purpose: render stacked sections
+  name: render_stacked_sections
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/visual_theme.py
+    module: src.bpfw.integrations.shared.visual_theme
+    symbol: render_stacked_sections
+    kind: function
+    start_line: 102
+    end_line: 110
+  detected:
+    qualified_name: src.bpfw.integrations.shared.visual_theme.render_stacked_sections
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: sections
+      type: Sequence[Sequence[str]]
+      default: null
+      required: true
+      description: null
+    - name: spacing
+      type: int
+      default: 1
+      required: false
+      description: null
+    output:
+      type: List[str]
+      description: null
+- id: src_bpfw_integrations_shared_visual_width_display_width
+  purpose: measure display width
+  name: display_width
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/visual_width.py
+    module: src.bpfw.integrations.shared.visual_width
+    symbol: display_width
+    kind: function
+    start_line: 8
+    end_line: 16
+  detected:
+    qualified_name: src.bpfw.integrations.shared.visual_width.display_width
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: text
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: int
+      description: null
+- id: src_bpfw_integrations_shared_visual_width_fit_text
+  purpose: fit text width
+  name: fit_text
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/visual_width.py
+    module: src.bpfw.integrations.shared.visual_width
+    symbol: fit_text
+    kind: function
+    start_line: 19
+    end_line: 40
+  detected:
+    qualified_name: src.bpfw.integrations.shared.visual_width.fit_text
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: text
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: width
+      type: int
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_shared_visual_width_pad_text
+  purpose: pad text width
+  name: pad_text
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/visual_width.py
+    module: src.bpfw.integrations.shared.visual_width
+    symbol: pad_text
+    kind: function
+    start_line: 43
+    end_line: 47
+  detected:
+    qualified_name: src.bpfw.integrations.shared.visual_width.pad_text
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: text
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: width
+      type: int
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_shared_visual_width_measure_lines
+  purpose: measure line widths
+  name: measure_lines
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/integrations/shared/visual_width.py
+    module: src.bpfw.integrations.shared.visual_width
+    symbol: measure_lines
+    kind: function
+    start_line: 50
+    end_line: 55
+  detected:
+    qualified_name: src.bpfw.integrations.shared.visual_width.measure_lines
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: lines
+      type: list[str]
+      default: null
+      required: true
+      description: null
+    output:
+      type: int
+      description: null
+- id: src_bpfw_runner_run_command_after_verify
+  purpose: run command after verification
+  name: run_command_after_verify
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/runner.py
+    module: src.bpfw.runner
+    symbol: run_command_after_verify
+    kind: function
+    start_line: 9
+    end_line: 29
+  detected:
+    qualified_name: src.bpfw.runner.run_command_after_verify
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    - name: command
+      type: list[str]
+      default: null
+      required: true
+      description: null
+    output:
+      type: int
+      description: null
+- id: src_bpfw_shared_text_to_snake_case
+  purpose: convert to snake case
+  name: to_snake_case
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/shared/text.py
+    module: src.bpfw.shared.text
+    symbol: to_snake_case
+    kind: function
+    start_line: 4
+    end_line: 25
+  detected:
+    qualified_name: src.bpfw.shared.text.to_snake_case
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: value
+      type: object
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_shared_text_normalize_text_command
+  purpose: normalize text command
+  name: normalize_text_command
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/shared/text.py
+    module: src.bpfw.shared.text
+    symbol: normalize_text_command
+    kind: function
+    start_line: 28
+    end_line: 31
+  detected:
+    qualified_name: src.bpfw.shared.text.normalize_text_command
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: raw_value
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_watch_bpfw_watch_filter
+  purpose: filter watch events
+  name: BpfwWatchFilter
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/watch.py
+    module: src.bpfw.watch
+    symbol: BpfwWatchFilter
+    kind: class
+    start_line: 53
+    end_line: 104
+  detected:
+    qualified_name: src.bpfw.watch.BpfwWatchFilter
+    kind: class
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_watch_watch_service
+  purpose: watch verification service
+  name: WatchService
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/watch.py
+    module: src.bpfw.watch
+    symbol: WatchService
+    kind: class
+    start_line: 107
+    end_line: 202
+  detected:
+    qualified_name: src.bpfw.watch.WatchService
+    kind: class
+    methods:
+    - src.bpfw.watch.WatchService.run
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: settings
+      type: WatchSettings
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_watch_watch_service_run
+  purpose: run watch verification
+  name: WatchService.run
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/watch.py
+    module: src.bpfw.watch
+    symbol: WatchService.run
+    kind: method
+    start_line: 123
+    end_line: 167
+  detected:
+    qualified_name: src.bpfw.watch.WatchService.run
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: int
+      description: null
+- id: src_bpfw_watch_build_verification_snapshot
+  purpose: build verification snapshot
+  name: build_verification_snapshot
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/watch.py
+    module: src.bpfw.watch
+    symbol: build_verification_snapshot
+    kind: function
+    start_line: 205
+    end_line: 224
+  detected:
+    qualified_name: src.bpfw.watch.build_verification_snapshot
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    output:
+      type: VerificationSnapshot
+      description: null
+- id: src_bpfw_watch_run_watch
+  purpose: run watch mode
+  name: run_watch
+  domain: core engine
+  status: active
+  code:
+    path: src/bpfw/watch.py
+    module: src.bpfw.watch
+    symbol: run_watch
+    kind: function
+    start_line: 227
+    end_line: 240
+  detected:
+    qualified_name: src.bpfw.watch.run_watch
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    - name: debounce_ms
+      type: int
+      default: 800
+      required: false
+      description: null
+    - name: once
+      type: bool
+      default: false
+      required: false
+      description: null
+    output:
+      type: int
+      description: null

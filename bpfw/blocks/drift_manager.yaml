@@ -1,0 +1,2607 @@
+blocks:
+- id: src_bpfw_catalog_drift_compare_declared_to_discovered
+  purpose: compare declared and discovered code
+  name: compare_declared_to_discovered
+  domain: drift manager
+  status: null
+  code:
+    path: src/bpfw/core/catalog/drift.py
+    module: src.bpfw.catalog.drift
+    symbol: compare_declared_to_discovered
+    kind: function
+    start_line: 129
+    end_line: 175
+  detected:
+    qualified_name: src.bpfw.catalog.drift.compare_declared_to_discovered
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: blueprint_data
+      type: Dict[str, Any]
+      default: null
+      required: true
+      description: null
+    - name: discovered_units
+      type: List[DiscoveredCodeUnit]
+      default: null
+      required: true
+      description: null
+    - name: authority_state
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: List[Finding]
+      description: null
+- code:
+    end_line: 154
+    kind: class
+    module: src.bpfw.integrations.inspector.drift_gate
+    path: src/bpfw/integrations/inspector/drift_gate.py
+    start_line: 90
+    symbol: DriftGateResult
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators:
+    - dataclass
+    docstring: Result produced by a Drift Gate pass.
+    functions: []
+    imports:
+    - collections.abc.Callable
+    - copy
+    - re
+    - shutil
+    - dataclasses.dataclass
+    - dataclasses.field
+    - pathlib.Path
+    - textwrap.wrap
+    - typing.Any
+    - bpfw.core.authority.patch.PatchWriteContext
+    - bpfw.core.blueprint_engine.BlueprintChangeKind
+    - bpfw.core.blueprint_engine.BlueprintChangeRequest
+    - bpfw.core.blueprint_engine.BlueprintChangeSource
+    - bpfw.core.blueprint_engine.BlueprintEngine
+    - bpfw.core.blueprint_engine.MechanicalChangeEvidence
+    - bpfw.core.catalog.models.DiscoveredCodeUnit
+    - bpfw.core.protection.authority.get_authority_protection_status
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.package_moves.PackageMoveGroup
+    - bpfw.integrations.diff.package_moves.group_package_moves
+    - bpfw.integrations.diff.review.DiffReviewService
+    - bpfw.integrations.diff.review.DiffReviewSnapshot
+    - bpfw.integrations.inspector.base.ISSUE_NEW_DETECTED
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.integrations.inspector.base.InspectLoadResult
+    - bpfw.integrations.inspector.base.build_new_detected_responsibility
+    - bpfw.integrations.inspector.base.clean_string
+    - bpfw.integrations.inspector.base.get_incomplete_blocks
+    - bpfw.integrations.inspector.base.sort_inspect_issues_hierarchically
+    - bpfw.integrations.inspector.drift_state.DriftDecisionRecord
+    - bpfw.integrations.inspector.drift_state.DriftState
+    - bpfw.integrations.inspector.drift_state.DriftStateRepository
+    - bpfw.integrations.shared.cli_runtime.is_quit_command
+    - bpfw.integrations.shared.cli_runtime.normalize_command
+    - bpfw.shared.text.to_snake_case
+    - datetime.datetime
+    - datetime.timezone
+    - bpfw.core.authority.AuthorityIndex
+    - bpfw.core.authority.AuthorityShard
+    - bpfw.core.authority.errors.AuthorityError
+    kind: class
+    methods:
+    - src.bpfw.integrations.inspector.drift_gate.DriftGateResult.changed_project_state
+    - src.bpfw.integrations.inspector.drift_gate.DriftGateResult.build_context_lines
+    normalized_body_hash: f77dd039e3878627ddba22b1d37396e6a00e5a5a7f1dcecc1205d214ada2a83c
+    qualified_name: src.bpfw.integrations.inspector.drift_gate.DriftGateResult
+    signature: null
+  domain: drift manager
+  entrypoints: []
+  id: drift_gate_result
+  name: DriftGateResult
+  notes: null
+  purpose: define drift gate result
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 113
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_gate
+    path: src/bpfw/integrations/inspector/drift_gate.py
+    start_line: 107
+    symbol: DriftGateResult.changed_project_state
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Return whether authority files were changed and should be reloaded.\n\nReturns:\n
+      \   True when a post-gate reload is useful."
+    functions: []
+    imports:
+    - collections.abc.Callable
+    - copy
+    - re
+    - shutil
+    - dataclasses.dataclass
+    - dataclasses.field
+    - pathlib.Path
+    - textwrap.wrap
+    - typing.Any
+    - bpfw.core.authority.patch.PatchWriteContext
+    - bpfw.core.blueprint_engine.BlueprintChangeKind
+    - bpfw.core.blueprint_engine.BlueprintChangeRequest
+    - bpfw.core.blueprint_engine.BlueprintChangeSource
+    - bpfw.core.blueprint_engine.BlueprintEngine
+    - bpfw.core.blueprint_engine.MechanicalChangeEvidence
+    - bpfw.core.catalog.models.DiscoveredCodeUnit
+    - bpfw.core.protection.authority.get_authority_protection_status
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.package_moves.PackageMoveGroup
+    - bpfw.integrations.diff.package_moves.group_package_moves
+    - bpfw.integrations.diff.review.DiffReviewService
+    - bpfw.integrations.diff.review.DiffReviewSnapshot
+    - bpfw.integrations.inspector.base.ISSUE_NEW_DETECTED
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.integrations.inspector.base.InspectLoadResult
+    - bpfw.integrations.inspector.base.build_new_detected_responsibility
+    - bpfw.integrations.inspector.base.clean_string
+    - bpfw.integrations.inspector.base.get_incomplete_blocks
+    - bpfw.integrations.inspector.base.sort_inspect_issues_hierarchically
+    - bpfw.integrations.inspector.drift_state.DriftDecisionRecord
+    - bpfw.integrations.inspector.drift_state.DriftState
+    - bpfw.integrations.inspector.drift_state.DriftStateRepository
+    - bpfw.integrations.shared.cli_runtime.is_quit_command
+    - bpfw.integrations.shared.cli_runtime.normalize_command
+    - bpfw.shared.text.to_snake_case
+    - datetime.datetime
+    - datetime.timezone
+    - bpfw.core.authority.AuthorityIndex
+    - bpfw.core.authority.AuthorityShard
+    - bpfw.core.authority.errors.AuthorityError
+    kind: method
+    methods: []
+    normalized_body_hash: b5da222ed4a43d378a0e7ac7d6f2ecc98ac98f7ea99a001483d5aa608ec31c38
+    qualified_name: src.bpfw.integrations.inspector.drift_gate.DriftGateResult.changed_project_state
+    signature: changed_project_state(self) -> bool
+  domain: drift manager
+  entrypoints: []
+  id: drift_gate_result_changed_project_state
+  interface:
+    output:
+      description: null
+      type: bool
+  name: DriftGateResult.changed_project_state
+  notes: null
+  purpose: drift gate result changed project state
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 154
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_gate
+    path: src/bpfw/integrations/inspector/drift_gate.py
+    start_line: 115
+    symbol: DriftGateResult.build_context_lines
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Build inspector context lines for decisions made before metadata editing.\n\nReturns:\n
+      \   Lines suitable for the inspector pre-inspection context panel."
+    functions: []
+    imports:
+    - collections.abc.Callable
+    - copy
+    - re
+    - shutil
+    - dataclasses.dataclass
+    - dataclasses.field
+    - pathlib.Path
+    - textwrap.wrap
+    - typing.Any
+    - bpfw.core.authority.patch.PatchWriteContext
+    - bpfw.core.blueprint_engine.BlueprintChangeKind
+    - bpfw.core.blueprint_engine.BlueprintChangeRequest
+    - bpfw.core.blueprint_engine.BlueprintChangeSource
+    - bpfw.core.blueprint_engine.BlueprintEngine
+    - bpfw.core.blueprint_engine.MechanicalChangeEvidence
+    - bpfw.core.catalog.models.DiscoveredCodeUnit
+    - bpfw.core.protection.authority.get_authority_protection_status
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.package_moves.PackageMoveGroup
+    - bpfw.integrations.diff.package_moves.group_package_moves
+    - bpfw.integrations.diff.review.DiffReviewService
+    - bpfw.integrations.diff.review.DiffReviewSnapshot
+    - bpfw.integrations.inspector.base.ISSUE_NEW_DETECTED
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.integrations.inspector.base.InspectLoadResult
+    - bpfw.integrations.inspector.base.build_new_detected_responsibility
+    - bpfw.integrations.inspector.base.clean_string
+    - bpfw.integrations.inspector.base.get_incomplete_blocks
+    - bpfw.integrations.inspector.base.sort_inspect_issues_hierarchically
+    - bpfw.integrations.inspector.drift_state.DriftDecisionRecord
+    - bpfw.integrations.inspector.drift_state.DriftState
+    - bpfw.integrations.inspector.drift_state.DriftStateRepository
+    - bpfw.integrations.shared.cli_runtime.is_quit_command
+    - bpfw.integrations.shared.cli_runtime.normalize_command
+    - bpfw.shared.text.to_snake_case
+    - datetime.datetime
+    - datetime.timezone
+    - bpfw.core.authority.AuthorityIndex
+    - bpfw.core.authority.AuthorityShard
+    - bpfw.core.authority.errors.AuthorityError
+    kind: method
+    methods: []
+    normalized_body_hash: e081ecdfb71a079fefe1f9c630bf062b7641e6e91eb390a528266eca6777bbe2
+    qualified_name: src.bpfw.integrations.inspector.drift_gate.DriftGateResult.build_context_lines
+    signature: build_context_lines(self) -> list[str]
+  domain: drift manager
+  entrypoints: []
+  id: drift_gate_result_build_context_lines
+  interface:
+    output:
+      description: null
+      type: list[str]
+  name: DriftGateResult.build_context_lines
+  notes: null
+  purpose: drift gate result build context lines
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 2790
+    kind: class
+    module: src.bpfw.integrations.inspector.drift_gate
+    path: src/bpfw/integrations/inspector/drift_gate.py
+    start_line: 157
+    symbol: DriftGateRunner
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: true
+      opens_network: true
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: Run safe auto-sync and human drift decisions before metadata inspection.
+    functions: []
+    imports:
+    - collections.abc.Callable
+    - copy
+    - re
+    - shutil
+    - dataclasses.dataclass
+    - dataclasses.field
+    - pathlib.Path
+    - textwrap.wrap
+    - typing.Any
+    - bpfw.core.authority.patch.PatchWriteContext
+    - bpfw.core.blueprint_engine.BlueprintChangeKind
+    - bpfw.core.blueprint_engine.BlueprintChangeRequest
+    - bpfw.core.blueprint_engine.BlueprintChangeSource
+    - bpfw.core.blueprint_engine.BlueprintEngine
+    - bpfw.core.blueprint_engine.MechanicalChangeEvidence
+    - bpfw.core.catalog.models.DiscoveredCodeUnit
+    - bpfw.core.protection.authority.get_authority_protection_status
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.package_moves.PackageMoveGroup
+    - bpfw.integrations.diff.package_moves.group_package_moves
+    - bpfw.integrations.diff.review.DiffReviewService
+    - bpfw.integrations.diff.review.DiffReviewSnapshot
+    - bpfw.integrations.inspector.base.ISSUE_NEW_DETECTED
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.integrations.inspector.base.InspectLoadResult
+    - bpfw.integrations.inspector.base.build_new_detected_responsibility
+    - bpfw.integrations.inspector.base.clean_string
+    - bpfw.integrations.inspector.base.get_incomplete_blocks
+    - bpfw.integrations.inspector.base.sort_inspect_issues_hierarchically
+    - bpfw.integrations.inspector.drift_state.DriftDecisionRecord
+    - bpfw.integrations.inspector.drift_state.DriftState
+    - bpfw.integrations.inspector.drift_state.DriftStateRepository
+    - bpfw.integrations.shared.cli_runtime.is_quit_command
+    - bpfw.integrations.shared.cli_runtime.normalize_command
+    - bpfw.shared.text.to_snake_case
+    - datetime.datetime
+    - datetime.timezone
+    - bpfw.core.authority.AuthorityIndex
+    - bpfw.core.authority.AuthorityShard
+    - bpfw.core.authority.errors.AuthorityError
+    kind: class
+    methods:
+    - src.bpfw.integrations.inspector.drift_gate.DriftGateRunner.run
+    - src.bpfw.integrations.inspector.drift_gate.DriftGateRunner.save_current_pending_on_interrupt
+    normalized_body_hash: a5ae74a54f2a653b0bc6056b877d2f5aa95d78f405cf8e7421611a1b8397de2e
+    qualified_name: src.bpfw.integrations.inspector.drift_gate.DriftGateRunner
+    signature: null
+  domain: drift manager
+  entrypoints: []
+  id: drift_gate_runner
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: session
+      required: true
+      type: InspectLoadResult
+    - default: null
+      description: null
+      name: input_func
+      required: true
+      type: InputFunc
+    - default: null
+      description: null
+      name: print_func
+      required: true
+      type: PrintFunc
+    - default: null
+      description: null
+      name: cached_human_items
+      required: false
+      type: list[DiffItem] | None
+    - default: null
+      description: null
+      name: drift_state
+      required: false
+      type: DriftState | None
+    - default: null
+      description: null
+      name: input_signature
+      required: false
+      type: str | None
+    output:
+      description: null
+      type: None
+  name: DriftGateRunner
+  notes: null
+  purpose: define drift gate runner
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 239
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_gate
+    path: src/bpfw/integrations/inspector/drift_gate.py
+    start_line: 216
+    symbol: DriftGateRunner.run
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Run auto-sync and Drift Gate decisions.\n\nReturns:\n    Drift gate
+      result."
+    functions: []
+    imports:
+    - collections.abc.Callable
+    - copy
+    - re
+    - shutil
+    - dataclasses.dataclass
+    - dataclasses.field
+    - pathlib.Path
+    - textwrap.wrap
+    - typing.Any
+    - bpfw.core.authority.patch.PatchWriteContext
+    - bpfw.core.blueprint_engine.BlueprintChangeKind
+    - bpfw.core.blueprint_engine.BlueprintChangeRequest
+    - bpfw.core.blueprint_engine.BlueprintChangeSource
+    - bpfw.core.blueprint_engine.BlueprintEngine
+    - bpfw.core.blueprint_engine.MechanicalChangeEvidence
+    - bpfw.core.catalog.models.DiscoveredCodeUnit
+    - bpfw.core.protection.authority.get_authority_protection_status
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.package_moves.PackageMoveGroup
+    - bpfw.integrations.diff.package_moves.group_package_moves
+    - bpfw.integrations.diff.review.DiffReviewService
+    - bpfw.integrations.diff.review.DiffReviewSnapshot
+    - bpfw.integrations.inspector.base.ISSUE_NEW_DETECTED
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.integrations.inspector.base.InspectLoadResult
+    - bpfw.integrations.inspector.base.build_new_detected_responsibility
+    - bpfw.integrations.inspector.base.clean_string
+    - bpfw.integrations.inspector.base.get_incomplete_blocks
+    - bpfw.integrations.inspector.base.sort_inspect_issues_hierarchically
+    - bpfw.integrations.inspector.drift_state.DriftDecisionRecord
+    - bpfw.integrations.inspector.drift_state.DriftState
+    - bpfw.integrations.inspector.drift_state.DriftStateRepository
+    - bpfw.integrations.shared.cli_runtime.is_quit_command
+    - bpfw.integrations.shared.cli_runtime.normalize_command
+    - bpfw.shared.text.to_snake_case
+    - datetime.datetime
+    - datetime.timezone
+    - bpfw.core.authority.AuthorityIndex
+    - bpfw.core.authority.AuthorityShard
+    - bpfw.core.authority.errors.AuthorityError
+    kind: method
+    methods: []
+    normalized_body_hash: f7c5b5ddad3ceaa10f96f5284661e76713d5d54331e3ea109722cddf5c96b932
+    qualified_name: src.bpfw.integrations.inspector.drift_gate.DriftGateRunner.run
+    signature: run(self) -> DriftGateResult
+  domain: drift manager
+  entrypoints: []
+  id: drift_gate_runner_run
+  interface:
+    output:
+      description: null
+      type: DriftGateResult
+  name: DriftGateRunner.run
+  notes: null
+  purpose: run gate
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 730
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_gate
+    path: src/bpfw/integrations/inspector/drift_gate.py
+    start_line: 727
+    symbol: DriftGateRunner.save_current_pending_on_interrupt
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: Persist current pending Drift Gate state after interruption.
+    functions: []
+    imports:
+    - collections.abc.Callable
+    - copy
+    - re
+    - shutil
+    - dataclasses.dataclass
+    - dataclasses.field
+    - pathlib.Path
+    - textwrap.wrap
+    - typing.Any
+    - bpfw.core.authority.patch.PatchWriteContext
+    - bpfw.core.blueprint_engine.BlueprintChangeKind
+    - bpfw.core.blueprint_engine.BlueprintChangeRequest
+    - bpfw.core.blueprint_engine.BlueprintChangeSource
+    - bpfw.core.blueprint_engine.BlueprintEngine
+    - bpfw.core.blueprint_engine.MechanicalChangeEvidence
+    - bpfw.core.catalog.models.DiscoveredCodeUnit
+    - bpfw.core.protection.authority.get_authority_protection_status
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.package_moves.PackageMoveGroup
+    - bpfw.integrations.diff.package_moves.group_package_moves
+    - bpfw.integrations.diff.review.DiffReviewService
+    - bpfw.integrations.diff.review.DiffReviewSnapshot
+    - bpfw.integrations.inspector.base.ISSUE_NEW_DETECTED
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.integrations.inspector.base.InspectLoadResult
+    - bpfw.integrations.inspector.base.build_new_detected_responsibility
+    - bpfw.integrations.inspector.base.clean_string
+    - bpfw.integrations.inspector.base.get_incomplete_blocks
+    - bpfw.integrations.inspector.base.sort_inspect_issues_hierarchically
+    - bpfw.integrations.inspector.drift_state.DriftDecisionRecord
+    - bpfw.integrations.inspector.drift_state.DriftState
+    - bpfw.integrations.inspector.drift_state.DriftStateRepository
+    - bpfw.integrations.shared.cli_runtime.is_quit_command
+    - bpfw.integrations.shared.cli_runtime.normalize_command
+    - bpfw.shared.text.to_snake_case
+    - datetime.datetime
+    - datetime.timezone
+    - bpfw.core.authority.AuthorityIndex
+    - bpfw.core.authority.AuthorityShard
+    - bpfw.core.authority.errors.AuthorityError
+    kind: method
+    methods: []
+    normalized_body_hash: 5abe3bde98f6e03e5579db82a5aadf647bc3fd43c3e10dde560d40c364270f31
+    qualified_name: src.bpfw.integrations.inspector.drift_gate.DriftGateRunner.save_current_pending_on_interrupt
+    signature: save_current_pending_on_interrupt(self) -> None
+  domain: drift manager
+  entrypoints: []
+  id: drift_gate_runner_save_current_pending_on_interrupt
+  interface:
+    output:
+      description: null
+      type: None
+  name: DriftGateRunner.save_current_pending_on_interrupt
+  notes: null
+  purpose: drift gate runner save current pending on interrupt
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 2826
+    kind: function
+    module: src.bpfw.integrations.inspector.drift_gate
+    path: src/bpfw/integrations/inspector/drift_gate.py
+    start_line: 2793
+    symbol: run_drift_gate
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Run Drift Gate for an inspector session.\n\nArgs:\n    session: Loaded
+      inspector session.\n    input_func: Function used to read user input.\n    print_func:
+      Function used to print terminal output.\n    cached_human_items: Optional cached
+      pending human decisions.\n    drift_state: Optional preloaded drift state.\n
+      \   input_signature: Optional precomputed input signature.\n\nReturns:\n    Drift
+      Gate result."
+    functions: []
+    imports:
+    - collections.abc.Callable
+    - copy
+    - re
+    - shutil
+    - dataclasses.dataclass
+    - dataclasses.field
+    - pathlib.Path
+    - textwrap.wrap
+    - typing.Any
+    - bpfw.core.authority.patch.PatchWriteContext
+    - bpfw.core.blueprint_engine.BlueprintChangeKind
+    - bpfw.core.blueprint_engine.BlueprintChangeRequest
+    - bpfw.core.blueprint_engine.BlueprintChangeSource
+    - bpfw.core.blueprint_engine.BlueprintEngine
+    - bpfw.core.blueprint_engine.MechanicalChangeEvidence
+    - bpfw.core.catalog.models.DiscoveredCodeUnit
+    - bpfw.core.protection.authority.get_authority_protection_status
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.package_moves.PackageMoveGroup
+    - bpfw.integrations.diff.package_moves.group_package_moves
+    - bpfw.integrations.diff.review.DiffReviewService
+    - bpfw.integrations.diff.review.DiffReviewSnapshot
+    - bpfw.integrations.inspector.base.ISSUE_NEW_DETECTED
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.integrations.inspector.base.InspectLoadResult
+    - bpfw.integrations.inspector.base.build_new_detected_responsibility
+    - bpfw.integrations.inspector.base.clean_string
+    - bpfw.integrations.inspector.base.get_incomplete_blocks
+    - bpfw.integrations.inspector.base.sort_inspect_issues_hierarchically
+    - bpfw.integrations.inspector.drift_state.DriftDecisionRecord
+    - bpfw.integrations.inspector.drift_state.DriftState
+    - bpfw.integrations.inspector.drift_state.DriftStateRepository
+    - bpfw.integrations.shared.cli_runtime.is_quit_command
+    - bpfw.integrations.shared.cli_runtime.normalize_command
+    - bpfw.shared.text.to_snake_case
+    - datetime.datetime
+    - datetime.timezone
+    - bpfw.core.authority.AuthorityIndex
+    - bpfw.core.authority.AuthorityShard
+    - bpfw.core.authority.errors.AuthorityError
+    kind: function
+    methods: []
+    normalized_body_hash: 8023436b6c4441f642ff11a1deb0c2baf70bfd4145e5b600ba304c2d0b77c63b
+    qualified_name: src.bpfw.integrations.inspector.drift_gate.run_drift_gate
+    signature: run_drift_gate(session, input_func, print_func, cached_human_items,
+      drift_state, input_signature) -> DriftGateResult
+  domain: drift manager
+  entrypoints: []
+  id: run_drift_gate
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: session
+      required: true
+      type: InspectLoadResult
+    - default: null
+      description: null
+      name: input_func
+      required: true
+      type: InputFunc
+    - default: null
+      description: null
+      name: print_func
+      required: true
+      type: PrintFunc
+    - default: null
+      description: null
+      name: cached_human_items
+      required: false
+      type: list[DiffItem] | None
+    - default: null
+      description: null
+      name: drift_state
+      required: false
+      type: DriftState | None
+    - default: null
+      description: null
+      name: input_signature
+      required: false
+      type: str | None
+    output:
+      description: null
+      type: DriftGateResult
+  name: run_drift_gate
+  notes: null
+  purpose: run drift workflow
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 2863
+    kind: function
+    module: src.bpfw.integrations.inspector.drift_gate
+    path: src/bpfw/integrations/inspector/drift_gate.py
+    start_line: 2829
+    symbol: merge_drift_gate_into_session
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Merge Drift Gate output into a loaded inspector session.\n\nArgs:\n
+      \   session: Inspector session to update.\n    result: Drift Gate result."
+    functions: []
+    imports:
+    - collections.abc.Callable
+    - copy
+    - re
+    - shutil
+    - dataclasses.dataclass
+    - dataclasses.field
+    - pathlib.Path
+    - textwrap.wrap
+    - typing.Any
+    - bpfw.core.authority.patch.PatchWriteContext
+    - bpfw.core.blueprint_engine.BlueprintChangeKind
+    - bpfw.core.blueprint_engine.BlueprintChangeRequest
+    - bpfw.core.blueprint_engine.BlueprintChangeSource
+    - bpfw.core.blueprint_engine.BlueprintEngine
+    - bpfw.core.blueprint_engine.MechanicalChangeEvidence
+    - bpfw.core.catalog.models.DiscoveredCodeUnit
+    - bpfw.core.protection.authority.get_authority_protection_status
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.package_moves.PackageMoveGroup
+    - bpfw.integrations.diff.package_moves.group_package_moves
+    - bpfw.integrations.diff.review.DiffReviewService
+    - bpfw.integrations.diff.review.DiffReviewSnapshot
+    - bpfw.integrations.inspector.base.ISSUE_NEW_DETECTED
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.integrations.inspector.base.InspectLoadResult
+    - bpfw.integrations.inspector.base.build_new_detected_responsibility
+    - bpfw.integrations.inspector.base.clean_string
+    - bpfw.integrations.inspector.base.get_incomplete_blocks
+    - bpfw.integrations.inspector.base.sort_inspect_issues_hierarchically
+    - bpfw.integrations.inspector.drift_state.DriftDecisionRecord
+    - bpfw.integrations.inspector.drift_state.DriftState
+    - bpfw.integrations.inspector.drift_state.DriftStateRepository
+    - bpfw.integrations.shared.cli_runtime.is_quit_command
+    - bpfw.integrations.shared.cli_runtime.normalize_command
+    - bpfw.shared.text.to_snake_case
+    - datetime.datetime
+    - datetime.timezone
+    - bpfw.core.authority.AuthorityIndex
+    - bpfw.core.authority.AuthorityShard
+    - bpfw.core.authority.errors.AuthorityError
+    kind: function
+    methods: []
+    normalized_body_hash: 56eaddd8fc00e77eb5274104f54e13efd0eb123887b2cb700a2e851392ccde81
+    qualified_name: src.bpfw.integrations.inspector.drift_gate.merge_drift_gate_into_session
+    signature: merge_drift_gate_into_session(session, result) -> None
+  domain: drift manager
+  entrypoints: []
+  id: merge_drift_gate_into_session
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: session
+      required: true
+      type: InspectLoadResult
+    - default: null
+      description: null
+      name: result
+      required: true
+      type: DriftGateResult
+    output:
+      description: null
+      type: None
+  name: merge_drift_gate_into_session
+  notes: null
+  purpose: merge drift results into session
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 2895
+    kind: function
+    module: src.bpfw.integrations.inspector.drift_gate
+    path: src/bpfw/integrations/inspector/drift_gate.py
+    start_line: 2886
+    symbol: rebuild_metadata_issues_after_authority_changes
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Remove stale new-detected issues and keep metadata-only issues.\n\nArgs:\n
+      \   session: Inspector session to normalize."
+    functions: []
+    imports:
+    - collections.abc.Callable
+    - copy
+    - re
+    - shutil
+    - dataclasses.dataclass
+    - dataclasses.field
+    - pathlib.Path
+    - textwrap.wrap
+    - typing.Any
+    - bpfw.core.authority.patch.PatchWriteContext
+    - bpfw.core.blueprint_engine.BlueprintChangeKind
+    - bpfw.core.blueprint_engine.BlueprintChangeRequest
+    - bpfw.core.blueprint_engine.BlueprintChangeSource
+    - bpfw.core.blueprint_engine.BlueprintEngine
+    - bpfw.core.blueprint_engine.MechanicalChangeEvidence
+    - bpfw.core.catalog.models.DiscoveredCodeUnit
+    - bpfw.core.protection.authority.get_authority_protection_status
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.package_moves.PackageMoveGroup
+    - bpfw.integrations.diff.package_moves.group_package_moves
+    - bpfw.integrations.diff.review.DiffReviewService
+    - bpfw.integrations.diff.review.DiffReviewSnapshot
+    - bpfw.integrations.inspector.base.ISSUE_NEW_DETECTED
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.integrations.inspector.base.InspectLoadResult
+    - bpfw.integrations.inspector.base.build_new_detected_responsibility
+    - bpfw.integrations.inspector.base.clean_string
+    - bpfw.integrations.inspector.base.get_incomplete_blocks
+    - bpfw.integrations.inspector.base.sort_inspect_issues_hierarchically
+    - bpfw.integrations.inspector.drift_state.DriftDecisionRecord
+    - bpfw.integrations.inspector.drift_state.DriftState
+    - bpfw.integrations.inspector.drift_state.DriftStateRepository
+    - bpfw.integrations.shared.cli_runtime.is_quit_command
+    - bpfw.integrations.shared.cli_runtime.normalize_command
+    - bpfw.shared.text.to_snake_case
+    - datetime.datetime
+    - datetime.timezone
+    - bpfw.core.authority.AuthorityIndex
+    - bpfw.core.authority.AuthorityShard
+    - bpfw.core.authority.errors.AuthorityError
+    kind: function
+    methods: []
+    normalized_body_hash: 921555c51f9e8fa2221b45ca113f106b5a09906e66a78932d8c557a0d7df7097
+    qualified_name: src.bpfw.integrations.inspector.drift_gate.rebuild_metadata_issues_after_authority_changes
+    signature: rebuild_metadata_issues_after_authority_changes(session) -> None
+  domain: drift manager
+  entrypoints: []
+  id: rebuild_metadata_issues_after_authority_changes
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: session
+      required: true
+      type: InspectLoadResult
+    output:
+      description: null
+      type: None
+  name: rebuild_metadata_issues_after_authority_changes
+  notes: null
+  purpose: rebuild metadata issues after drift changes
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 122
+    kind: class
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 43
+    symbol: DriftDecisionRecord
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators:
+    - dataclass
+    docstring: Save one human Drift Gate decision.
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: class
+    methods:
+    - src.bpfw.integrations.inspector.drift_state.DriftDecisionRecord.from_json
+    - src.bpfw.integrations.inspector.drift_state.DriftDecisionRecord.to_json
+    - src.bpfw.integrations.inspector.drift_state.DriftDecisionRecord.to_inspect_issue
+    normalized_body_hash: 1d566c24a5d9b9bbdb35c1ae0fc7aae7464a4ba7075557e3977a860b71497cc7
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftDecisionRecord
+    signature: null
+  domain: drift manager
+  entrypoints: []
+  id: drift_decision_record
+  name: DriftDecisionRecord
+  notes: null
+  purpose: define drift decision record
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 82
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 57
+    symbol: DriftDecisionRecord.from_json
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators:
+    - classmethod
+    docstring: "Create a record from persisted JSON data.\n\nArgs:\n    data: JSON
+      dictionary.\n\nReturns:\n    Drift decision record."
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: method
+    methods: []
+    normalized_body_hash: 83df65d86c29565ba5389cb96b9647d1e18e53531f14031ca138bf46daf0d04d
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftDecisionRecord.from_json
+    signature: from_json(cls, data) -> 'DriftDecisionRecord'
+  domain: drift manager
+  entrypoints: []
+  id: drift_decision_record_from_json
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: data
+      required: true
+      type: dict[str, Any]
+    output:
+      description: null
+      type: '''DriftDecisionRecord'''
+  name: DriftDecisionRecord.from_json
+  notes: null
+  purpose: drift decision record from json
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 105
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 84
+    symbol: DriftDecisionRecord.to_json
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Serialize this record to JSON-compatible data.\n\nReturns:\n    Dictionary
+      representation."
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: method
+    methods: []
+    normalized_body_hash: 0f97215359c887fe7dbf7b3315e7061d54133a5f1cc3c65a44e8c55028b79ee8
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftDecisionRecord.to_json
+    signature: to_json(self) -> dict[str, Any]
+  domain: drift manager
+  entrypoints: []
+  id: drift_decision_record_to_json
+  interface:
+    output:
+      description: null
+      type: dict[str, Any]
+  name: DriftDecisionRecord.to_json
+  notes: null
+  purpose: drift decision record to json
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 122
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 107
+    symbol: DriftDecisionRecord.to_inspect_issue
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Restore an inspector issue from a persisted approval.\n\nReturns:\n
+      \   Inspector issue or None when the record does not contain issue data."
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: method
+    methods: []
+    normalized_body_hash: c42c40877e3f2984f895013fd90a8c51af495d2e8690279eaaba299a87898fb4
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftDecisionRecord.to_inspect_issue
+    signature: to_inspect_issue(self) -> InspectIssue | None
+  domain: drift manager
+  entrypoints: []
+  id: drift_decision_record_to_inspect_issue
+  interface:
+    output:
+      description: null
+      type: InspectIssue | None
+  name: DriftDecisionRecord.to_inspect_issue
+  notes: null
+  purpose: drift decision record to inspect issue
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 334
+    kind: class
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 126
+    symbol: DriftState
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators:
+    - dataclass
+    docstring: "Persisted drift analysis and decision state.\n\nAttributes:\n    input_signature:
+      Cheap project input signature used to validate the cache.\n    pending_human_decisions:
+      Number of human decisions still pending when state was saved.\n    last_analyzed_at:
+      UTC timestamp of the last analysis.\n    decisions: Decisions keyed by stable
+      drift id."
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: class
+    methods:
+    - src.bpfw.integrations.inspector.drift_state.DriftState.from_json
+    - src.bpfw.integrations.inspector.drift_state.DriftState.to_json
+    - src.bpfw.integrations.inspector.drift_state.DriftState.record_decision
+    - src.bpfw.integrations.inspector.drift_state.DriftState.current_record_for
+    - src.bpfw.integrations.inspector.drift_state.DriftState.is_reusable_for_signature
+    - src.bpfw.integrations.inspector.drift_state.DriftState.has_file_fingerprints
+    - src.bpfw.integrations.inspector.drift_state.DriftState.has_reusable_pending_items
+    - src.bpfw.integrations.inspector.drift_state.DriftState.has_pending_items
+    - src.bpfw.integrations.inspector.drift_state.DriftState.replace_pending_items
+    - src.bpfw.integrations.inspector.drift_state.DriftState.restored_pending_items
+    - src.bpfw.integrations.inspector.drift_state.DriftState.restored_inspector_issues
+    - src.bpfw.integrations.inspector.drift_state.DriftState.has_approved_inspector_work
+    normalized_body_hash: 9955e2bada0fa2db6342c1c151e9b9e0926ebbc71c64fe4a13dfa1ebf8f3d705
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftState
+    signature: null
+  domain: drift manager
+  entrypoints: []
+  id: drift_state
+  name: DriftState
+  notes: null
+  purpose: define drift state
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 184
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 147
+    symbol: DriftState.from_json
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators:
+    - classmethod
+    docstring: "Create state from persisted JSON data.\n\nArgs:\n    data: JSON dictionary.\n\nReturns:\n
+      \   Drift state."
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: method
+    methods: []
+    normalized_body_hash: a2280d2e7c94e1f741db8d400ce644f6871e909116338ae870ed2545a87bca3e
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftState.from_json
+    signature: from_json(cls, data) -> 'DriftState'
+  domain: drift manager
+  entrypoints: []
+  id: drift_state_from_json
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: data
+      required: true
+      type: dict[str, Any]
+    output:
+      description: null
+      type: '''DriftState'''
+  name: DriftState.from_json
+  notes: null
+  purpose: drift state from json
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 203
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 186
+    symbol: DriftState.to_json
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Serialize state to JSON-compatible data.\n\nReturns:\n    Dictionary
+      representation."
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: method
+    methods: []
+    normalized_body_hash: baa9001faacf30e971ae0782a623e32024a93532492625d2a4d4dcf28d18b7f6
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftState.to_json
+    signature: to_json(self) -> dict[str, Any]
+  domain: drift manager
+  entrypoints: []
+  id: drift_state_to_json
+  interface:
+    output:
+      description: null
+      type: dict[str, Any]
+  name: DriftState.to_json
+  notes: null
+  purpose: drift state to json
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 241
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 205
+    symbol: DriftState.record_decision
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Record one Drift Gate decision.\n\nArgs:\n    item: Diff item being
+      decided.\n    status: Decision status.\n    decision: Decision label.\n    reason:
+      Optional human-readable reason.\n    issue: Optional inspector issue produced
+      by the decision."
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: method
+    methods: []
+    normalized_body_hash: 14ac604ee28553e3c2b117df244bd0ec8989239e6762517127d67a4eb93322ea
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftState.record_decision
+    signature: record_decision(self, item, status, decision, reason, issue) -> None
+  domain: drift manager
+  entrypoints: []
+  id: drift_state_record_decision
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: item
+      required: true
+      type: DiffItem
+    - default: null
+      description: null
+      name: status
+      required: true
+      type: str
+    - default: null
+      description: null
+      name: decision
+      required: true
+      type: str
+    - default: null
+      description: null
+      name: reason
+      required: false
+      type: str | None
+    - default: null
+      description: null
+      name: issue
+      required: false
+      type: InspectIssue | None
+    output:
+      description: null
+      type: None
+  name: DriftState.record_decision
+  notes: null
+  purpose: drift state record decision
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 257
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 243
+    symbol: DriftState.current_record_for
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Return a current decision record for a diff item.\n\nArgs:\n    item:
+      Diff item to check.\n\nReturns:\n    Matching record when stable id and evidence
+      hash both match."
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: method
+    methods: []
+    normalized_body_hash: 1259dc3fcc35e45513be245d7b149224f04221565868fad513bf5b89ee30072a
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftState.current_record_for
+    signature: current_record_for(self, item) -> DriftDecisionRecord | None
+  domain: drift manager
+  entrypoints: []
+  id: drift_state_current_record_for
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: item
+      required: true
+      type: DiffItem
+    output:
+      description: null
+      type: DriftDecisionRecord | None
+  name: DriftState.current_record_for
+  notes: null
+  purpose: drift state current record for
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 268
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 259
+    symbol: DriftState.is_reusable_for_signature
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Return whether this state can skip a fresh drift analysis.\n\nArgs:\n
+      \   input_signature: Current project input signature.\n\nReturns:\n    True
+      when the signature is unchanged and no pending human decisions remain."
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: method
+    methods: []
+    normalized_body_hash: 4114251a68f22a5f750d2a2afa483006aad43dcbf3c403cba068d3fabf41ca15
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftState.is_reusable_for_signature
+    signature: is_reusable_for_signature(self, input_signature) -> bool
+  domain: drift manager
+  entrypoints: []
+  id: drift_state_is_reusable_for_signature
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: input_signature
+      required: true
+      type: str
+    output:
+      description: null
+      type: bool
+  name: DriftState.is_reusable_for_signature
+  notes: null
+  purpose: drift state is reusable for signature
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 272
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 270
+    symbol: DriftState.has_file_fingerprints
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: Return whether this state has file-level hashes for strict delta detection.
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: method
+    methods: []
+    normalized_body_hash: 634c6677b34451cae1c10b99d237188e0efa3040acbb571e9d4f1a798548de0f
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftState.has_file_fingerprints
+    signature: has_file_fingerprints(self) -> bool
+  domain: drift manager
+  entrypoints: []
+  id: drift_state_has_file_fingerprints
+  interface:
+    output:
+      description: null
+      type: bool
+  name: DriftState.has_file_fingerprints
+  notes: null
+  purpose: drift state has file fingerprints
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 283
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 274
+    symbol: DriftState.has_reusable_pending_items
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Return whether pending Drift Gate items can be restored.\n\nArgs:\n
+      \   input_signature: Current project input signature.\n\nReturns:\n    True
+      when pending items belong to the current unchanged input state."
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: method
+    methods: []
+    normalized_body_hash: 12f51cdf61111ffcbff208857f871b3dd159c069731d74648fdc0dd731e040fa
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftState.has_reusable_pending_items
+    signature: has_reusable_pending_items(self, input_signature) -> bool
+  domain: drift manager
+  entrypoints: []
+  id: drift_state_has_reusable_pending_items
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: input_signature
+      required: true
+      type: str
+    output:
+      description: null
+      type: bool
+  name: DriftState.has_reusable_pending_items
+  notes: null
+  purpose: drift state has reusable pending items
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 291
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 285
+    symbol: DriftState.has_pending_items
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Return whether human Drift Gate work is waiting in the snapshot.\n\nReturns:\n
+      \   True when at least one pending item was persisted."
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: method
+    methods: []
+    normalized_body_hash: 1aad4270dfd0fbc173f0e80de01a59b961028a990a5d72dd9ffa36002d4c71d0
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftState.has_pending_items
+    signature: has_pending_items(self) -> bool
+  domain: drift manager
+  entrypoints: []
+  id: drift_state_has_pending_items
+  interface:
+    output:
+      description: null
+      type: bool
+  name: DriftState.has_pending_items
+  notes: null
+  purpose: drift state has pending items
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 300
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 293
+    symbol: DriftState.replace_pending_items
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Replace persisted pending Drift Gate items.\n\nArgs:\n    pending_items:
+      Pending human drift items to persist."
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: method
+    methods: []
+    normalized_body_hash: 5e8eb57f11d9feafec63920e06406f077f46d54f2bfb90039ac4b547c34d6776
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftState.replace_pending_items
+    signature: replace_pending_items(self, pending_items) -> None
+  domain: drift manager
+  entrypoints: []
+  id: drift_state_replace_pending_items
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: pending_items
+      required: true
+      type: list[DiffItem]
+    output:
+      description: null
+      type: None
+  name: DriftState.replace_pending_items
+  notes: null
+  purpose: drift state replace pending items
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 308
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 302
+    symbol: DriftState.restored_pending_items
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Return pending Drift Gate items restored from state.\n\nReturns:\n
+      \   Pending diff items."
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: method
+    methods: []
+    normalized_body_hash: 9c43f34fc4e3b474c1c4102e6fee5b79cd58916808b72d9ad1dae3ffd0868ecd
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftState.restored_pending_items
+    signature: restored_pending_items(self) -> list[DiffItem]
+  domain: drift manager
+  entrypoints: []
+  id: drift_state_restored_pending_items
+  interface:
+    output:
+      description: null
+      type: list[DiffItem]
+  name: DriftState.restored_pending_items
+  notes: null
+  purpose: drift state restored pending items
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 321
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 310
+    symbol: DriftState.restored_inspector_issues
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Return inspector issues restored from approved pending decisions.\n\nReturns:\n
+      \   Restored inspector issues."
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: method
+    methods: []
+    normalized_body_hash: 720954e6f367f9a34fbab93ce666d5d0c858a28f696ba901da6e59d3167bd91f
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftState.restored_inspector_issues
+    signature: restored_inspector_issues(self) -> list[InspectIssue]
+  domain: drift manager
+  entrypoints: []
+  id: drift_state_restored_inspector_issues
+  interface:
+    output:
+      description: null
+      type: list[InspectIssue]
+  name: DriftState.restored_inspector_issues
+  notes: null
+  purpose: drift state restored inspector issues
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 334
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 323
+    symbol: DriftState.has_approved_inspector_work
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Return whether approved Drift Gate items still need metadata inspection.\n\nReturns:\n
+      \   True when at least one Drift Gate decision produced an inspector issue."
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: method
+    methods: []
+    normalized_body_hash: 6f3eb6967aa4766810e2fa13303a5bafcdc819cf57031994acd071c9e254f9d1
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftState.has_approved_inspector_work
+    signature: has_approved_inspector_work(self) -> bool
+  domain: drift manager
+  entrypoints: []
+  id: drift_state_has_approved_inspector_work
+  interface:
+    output:
+      description: null
+      type: bool
+  name: DriftState.has_approved_inspector_work
+  notes: null
+  purpose: drift state has approved inspector work
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 420
+    kind: class
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 337
+    symbol: DriftStateRepository
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: Load and save persistent Drift Gate state.
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: class
+    methods:
+    - src.bpfw.integrations.inspector.drift_state.DriftStateRepository.load
+    - src.bpfw.integrations.inspector.drift_state.DriftStateRepository.save
+    - src.bpfw.integrations.inspector.drift_state.DriftStateRepository.build_input_signature
+    - src.bpfw.integrations.inspector.drift_state.DriftStateRepository.build_file_fingerprints
+    - src.bpfw.integrations.inspector.drift_state.DriftStateRepository.detect_changes
+    normalized_body_hash: d91e2968cee53cd3ca0825ee392a27cfa6b0d6c5464ae5ec7c0ba025a34815d2
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftStateRepository
+    signature: null
+  domain: drift manager
+  entrypoints: []
+  id: drift_state_repository
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: project_root
+      required: true
+      type: Path
+    output:
+      description: null
+      type: None
+  name: DriftStateRepository
+  notes: null
+  purpose: define drift state repository
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 364
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 349
+    symbol: DriftStateRepository.load
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Load persisted drift state.\n\nReturns:\n    Drift state. Missing
+      or invalid files return empty state."
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: method
+    methods: []
+    normalized_body_hash: 699d34f95fef3ad6e457ae75311a1470b61a55730b11b970805ff0c7a0ace686
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftStateRepository.load
+    signature: load(self) -> DriftState
+  domain: drift manager
+  entrypoints: []
+  id: drift_state_repository_load
+  interface:
+    output:
+      description: null
+      type: DriftState
+  name: DriftStateRepository.load
+  notes: null
+  purpose: load drift data
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 376
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 366
+    symbol: DriftStateRepository.save
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Persist drift state.\n\nArgs:\n    state: Drift state to persist."
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: method
+    methods: []
+    normalized_body_hash: 79f0dd98db1bd500604a2514c0dcd53ca4e2b7f13c2059c01d265294919117d1
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftStateRepository.save
+    signature: save(self, state) -> None
+  domain: drift manager
+  entrypoints: []
+  id: drift_state_repository_save
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: state
+      required: true
+      type: DriftState
+    output:
+      description: null
+      type: None
+  name: DriftStateRepository.save
+  notes: null
+  purpose: save drift data
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 393
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 378
+    symbol: DriftStateRepository.build_input_signature
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Build a cheap project input signature for drift analysis cache validation.\n\nReturns:\n
+      \   SHA-256 digest for authority and Python source file metadata."
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: method
+    methods: []
+    normalized_body_hash: 050cb94d1c280cf3b17960526f866238dabaad04f04e5b69c33355c8855819ce
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftStateRepository.build_input_signature
+    signature: build_input_signature(self) -> str
+  domain: drift manager
+  entrypoints: []
+  id: drift_state_repository_build_input_signature
+  interface:
+    output:
+      description: null
+      type: str
+  name: DriftStateRepository.build_input_signature
+  notes: null
+  purpose: drift state repository build input signature
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 404
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 395
+    symbol: DriftStateRepository.build_file_fingerprints
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: Build a path -> sha256(content) map for strict drift delta detection.
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: method
+    methods: []
+    normalized_body_hash: 943651875de675ed1155c74fac7b3d0aa3002e1e01ec2e40666258511727b3d1
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftStateRepository.build_file_fingerprints
+    signature: build_file_fingerprints(self) -> dict[str, str]
+  domain: drift manager
+  entrypoints: []
+  id: drift_state_repository_build_file_fingerprints
+  interface:
+    output:
+      description: null
+      type: dict[str, str]
+  name: DriftStateRepository.build_file_fingerprints
+  notes: null
+  purpose: drift state repository build file fingerprints
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 420
+    kind: method
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 406
+    symbol: DriftStateRepository.detect_changes
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: Return changed, added and removed paths between fingerprint snapshots.
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: method
+    methods: []
+    normalized_body_hash: e70899ede77f04bf60170d626e965d7ce9051591f04896b17ce4fb4e0d35f45d
+    qualified_name: src.bpfw.integrations.inspector.drift_state.DriftStateRepository.detect_changes
+    signature: detect_changes(self, previous_fingerprints, current_fingerprints) ->
+      tuple[list[str], list[str], list[str]]
+  domain: drift manager
+  entrypoints: []
+  id: drift_state_repository_detect_changes
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: previous_fingerprints
+      required: true
+      type: dict[str, str]
+    - default: null
+      description: null
+      name: current_fingerprints
+      required: true
+      type: dict[str, str]
+    output:
+      description: null
+      type: tuple[list[str], list[str], list[str]]
+  name: DriftStateRepository.detect_changes
+  notes: null
+  purpose: drift state repository detect changes
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 450
+    kind: function
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 423
+    symbol: build_drift_stable_id
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Build a stable identifier for one drift item.\n\nArgs:\n    item:
+      Diff item.\n\nReturns:\n    Stable string identifier."
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: function
+    methods: []
+    normalized_body_hash: db1658c51b30d70646741236becb940736b01f5d4e5934a838e2de964da0a9cd
+    qualified_name: src.bpfw.integrations.inspector.drift_state.build_drift_stable_id
+    signature: build_drift_stable_id(item) -> str
+  domain: drift manager
+  entrypoints: []
+  id: build_drift_stable_id
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: item
+      required: true
+      type: DiffItem
+    output:
+      description: null
+      type: str
+  name: build_drift_stable_id
+  notes: null
+  purpose: build stable drift decision id
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 491
+    kind: function
+    module: src.bpfw.integrations.inspector.drift_state
+    path: src/bpfw/integrations/inspector/drift_state.py
+    start_line: 453
+    symbol: build_drift_evidence_hash
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Build an evidence hash for one drift item.\n\nArgs:\n    item: Diff
+      item.\n\nReturns:\n    SHA-256 hash of evidence that invalidates stale decisions
+      when changed."
+    functions: []
+    imports:
+    - json
+    - os
+    - hashlib
+    - dataclasses.dataclass
+    - dataclasses.field
+    - datetime.datetime
+    - datetime.timezone
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.profiling.RuntimeProfiler
+    - bpfw.integrations.diff.models.BlueprintTarget
+    - bpfw.integrations.diff.models.CodeTarget
+    - bpfw.integrations.diff.models.DiffActionLevel
+    - bpfw.integrations.diff.models.DiffItem
+    - bpfw.integrations.diff.models.DiffItemKind
+    - bpfw.integrations.diff.models.DiffRisk
+    - bpfw.integrations.inspector.base.InspectIssue
+    - bpfw.reports.finding.Finding
+    - yaml
+    kind: function
+    methods: []
+    normalized_body_hash: 264934f803e4011b90775f047e731fb56b7699d8f49c342d8c471701a1f68972
+    qualified_name: src.bpfw.integrations.inspector.drift_state.build_drift_evidence_hash
+    signature: build_drift_evidence_hash(item) -> str
+  domain: drift manager
+  entrypoints: []
+  id: build_drift_evidence_hash
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: item
+      required: true
+      type: DiffItem
+    output:
+      description: null
+      type: str
+  name: build_drift_evidence_hash
+  notes: null
+  purpose: build drift evidence invalidation hash
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []

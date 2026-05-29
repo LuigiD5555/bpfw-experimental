@@ -40,3 +40,10 @@ authority:
 includes:
 - bpfw/blocks/core.yaml
 - bpfw/blocks/core_engine.yaml
+- bpfw/blocks/sync_engine.yaml
+- bpfw/blocks/drift_manager.yaml
+- bpfw/blocks/editor_engine.yaml
+- bpfw/blocks/inspector_engine.yaml
+- bpfw/blocks/planner_engine.yaml
+- bpfw/blocks/blueprint_engine.yaml
+- bpfw/blocks/cli_engine.yaml

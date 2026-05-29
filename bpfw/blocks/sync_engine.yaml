@@ -1,0 +1,798 @@
+blocks:
+- id: src_bpfw_authority_index_authority_index
+  purpose: manage root authority index data
+  name: AuthorityIndex
+  domain: sync engine
+  status: null
+  code:
+    path: src/bpfw/core/authority/index.py
+    module: src.bpfw.authority.index
+    symbol: AuthorityIndex
+    kind: class
+    start_line: 10
+    end_line: 226
+  detected:
+    qualified_name: src.bpfw.authority.index.AuthorityIndex
+    kind: class
+    methods:
+    - src.bpfw.authority.index.AuthorityIndex.load
+    - src.bpfw.authority.index.AuthorityIndex.save
+    - src.bpfw.authority.index.AuthorityIndex.get_includes
+    - src.bpfw.authority.index.AuthorityIndex.add_include
+    - src.bpfw.authority.index.AuthorityIndex.remove_include
+    - src.bpfw.authority.index.AuthorityIndex.get_authority_config
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: path
+      type: Path
+      default: null
+      required: true
+      description: null
+    - name: data
+      type: dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_authority_index_authority_index_load
+  purpose: load authority index from yaml
+  name: AuthorityIndex.load
+  domain: sync engine
+  status: null
+  code:
+    path: src/bpfw/core/authority/index.py
+    module: src.bpfw.authority.index
+    symbol: AuthorityIndex.load
+    kind: method
+    start_line: 103
+    end_line: 148
+  detected:
+    qualified_name: src.bpfw.authority.index.AuthorityIndex.load
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    output:
+      type: '''AuthorityIndex'''
+      description: null
+- id: src_bpfw_authority_index_authority_index_save
+  purpose: save authority index to yaml
+  name: AuthorityIndex.save
+  domain: sync engine
+  status: null
+  code:
+    path: src/bpfw/core/authority/index.py
+    module: src.bpfw.authority.index
+    symbol: AuthorityIndex.save
+    kind: method
+    start_line: 150
+    end_line: 181
+  detected:
+    qualified_name: src.bpfw.authority.index.AuthorityIndex.save
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_authority_index_authority_index_get_includes
+  purpose: list included shard paths
+  name: AuthorityIndex.get_includes
+  domain: sync engine
+  status: null
+  code:
+    path: src/bpfw/core/authority/index.py
+    module: src.bpfw.authority.index
+    symbol: AuthorityIndex.get_includes
+    kind: method
+    start_line: 183
+    end_line: 190
+  detected:
+    qualified_name: src.bpfw.authority.index.AuthorityIndex.get_includes
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: list[Path]
+      description: null
+- id: src_bpfw_authority_index_authority_index_add_include
+  purpose: add shard include to index
+  name: AuthorityIndex.add_include
+  domain: sync engine
+  status: null
+  code:
+    path: src/bpfw/core/authority/index.py
+    module: src.bpfw.authority.index
+    symbol: AuthorityIndex.add_include
+    kind: method
+    start_line: 192
+    end_line: 202
+  detected:
+    qualified_name: src.bpfw.authority.index.AuthorityIndex.add_include
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: shard_path
+      type: Path
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_authority_index_authority_index_remove_include
+  purpose: remove shard include from index
+  name: AuthorityIndex.remove_include
+  domain: sync engine
+  status: null
+  code:
+    path: src/bpfw/core/authority/index.py
+    module: src.bpfw.authority.index
+    symbol: AuthorityIndex.remove_include
+    kind: method
+    start_line: 204
+    end_line: 214
+  detected:
+    qualified_name: src.bpfw.authority.index.AuthorityIndex.remove_include
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: shard_path
+      type: Path
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- code:
+    end_line: 217
+    kind: method
+    module: src.bpfw.core.authority.index
+    path: src/bpfw/core/authority/index.py
+    start_line: 207
+    symbol: AuthorityIndex.get_authority_config
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Get the authority configuration.\n\nReturns:\n    Dictionary containing authority configuration."
+    functions: []
+    imports:
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.catalog.access_control.ensure_blueprint_can_be_written
+    - bpfw.core.authority.errors.InvalidAuthorityIndexError
+    - bpfw.core.yaml_io.dump_yaml_data
+    - bpfw.core.yaml_io.load_yaml_text
+    kind: method
+    methods: []
+    normalized_body_hash: 0811b1907efbe5913b700992aa4ea1b9823c3b3bbb34fdb34fcda905df9205c8
+    qualified_name: src.bpfw.core.authority.index.AuthorityIndex.get_authority_config
+    signature: get_authority_config(self) -> dict[str, Any]
+  domain: sync engine
+  entrypoints: []
+  id: authority_index_get_authority_config
+  interface:
+    output:
+      description: null
+      type: dict[str, Any]
+  name: AuthorityIndex.get_authority_config
+  notes: null
+  purpose: get authority sync configuration
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- id: src_bpfw_authority_persistence_authority_persistence_engine
+  purpose: persist authority with shard sync
+  name: AuthorityPersistenceEngine
+  domain: sync engine
+  status: null
+  code:
+    path: src/bpfw/core/authority/persistence.py
+    module: src.bpfw.authority.persistence
+    symbol: AuthorityPersistenceEngine
+    kind: class
+    start_line: 49
+    end_line: 307
+  detected:
+    qualified_name: src.bpfw.authority.persistence.AuthorityPersistenceEngine
+    kind: class
+    methods:
+    - src.bpfw.authority.persistence.AuthorityPersistenceEngine.save_document
+    - src.bpfw.authority.persistence.AuthorityPersistenceEngine.save_block
+    - src.bpfw.authority.persistence.AuthorityPersistenceEngine.build_block_placement_change
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_authority_persistence_authority_persistence_engine_save_document
+  purpose: save full authority document
+  name: AuthorityPersistenceEngine.save_document
+  domain: sync engine
+  status: null
+  code:
+    path: src/bpfw/core/authority/persistence.py
+    module: src.bpfw.authority.persistence
+    symbol: AuthorityPersistenceEngine.save_document
+    kind: method
+    start_line: 65
+    end_line: 115
+  detected:
+    qualified_name: src.bpfw.authority.persistence.AuthorityPersistenceEngine.save_document
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: document
+      type: AuthorityDocument
+      default: null
+      required: true
+      description: null
+    output:
+      type: AuthorityPersistenceResult
+      description: null
+- id: src_bpfw_authority_persistence_authority_persistence_engine_save_block
+  purpose: save one block and resync shards
+  name: AuthorityPersistenceEngine.save_block
+  domain: sync engine
+  status: null
+  code:
+    path: src/bpfw/core/authority/persistence.py
+    module: src.bpfw.authority.persistence
+    symbol: AuthorityPersistenceEngine.save_block
+    kind: method
+    start_line: 117
+    end_line: 169
+  detected:
+    qualified_name: src.bpfw.authority.persistence.AuthorityPersistenceEngine.save_block
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: document
+      type: AuthorityDocument
+      default: null
+      required: true
+      description: null
+    - name: block
+      type: dict[str, Any]
+      default: null
+      required: true
+      description: null
+    output:
+      type: AuthorityPersistenceResult
+      description: null
+- id: src_bpfw_authority_repository_authority_repository
+  purpose: orchestrate authority load save validate
+  name: AuthorityRepository
+  domain: sync engine
+  status: null
+  code:
+    path: src/bpfw/core/authority/repository.py
+    module: src.bpfw.authority.repository
+    symbol: AuthorityRepository
+    kind: class
+    start_line: 14
+    end_line: 305
+  detected:
+    qualified_name: src.bpfw.authority.repository.AuthorityRepository
+    kind: class
+    methods:
+    - src.bpfw.authority.repository.AuthorityRepository.load
+    - src.bpfw.authority.repository.AuthorityRepository.save
+    - src.bpfw.authority.repository.AuthorityRepository.validate
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- code:
+    end_line: 127
+    kind: method
+    module: src.bpfw.core.authority.repository
+    path: src/bpfw/core/authority/repository.py
+    start_line: 34
+    symbol: AuthorityRepository.load
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Load the authority document from the project.\n\nReturns:\n    Loaded AuthorityDocument.\n\nRaises:\n    InvalidAuthorityIndexError: If the index is invalid.\n    InvalidAuthorityShardError: If any shard is invalid.\n    MissingShardError: If a referenced shard is missing.\n    DuplicateBlockIdError: If duplicate block IDs are found."
+    functions: []
+    imports:
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.authority.document.AuthorityDocument
+    - bpfw.core.authority.index.AuthorityIndex
+    - bpfw.core.authority.persistence.AuthorityPersistenceEngine
+    - bpfw.core.authority.persistence.AuthorityPersistenceResult
+    - bpfw.core.authority.shard.AuthorityShard
+    - bpfw.reports.finding.Finding
+    - bpfw.reports.finding.FINDING_SEVERITY_BLOCK
+    - bpfw.core.authority.errors.DuplicateBlockIdError
+    kind: method
+    methods: []
+    normalized_body_hash: 6d1f26dea43a0f861ef0e168a444a5f119ec19a49f4ca663ae5950f8010d27e9
+    qualified_name: src.bpfw.core.authority.repository.AuthorityRepository.load
+    signature: load(self) -> AuthorityDocument
+  domain: sync engine
+  entrypoints: []
+  id: authority_repository_load
+  interface:
+    output:
+      description: null
+      type: AuthorityDocument
+  name: AuthorityRepository.load
+  notes: null
+  purpose: load full authority from yaml shards
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 138
+    kind: method
+    module: src.bpfw.core.authority.repository
+    path: src/bpfw/core/authority/repository.py
+    start_line: 129
+    symbol: AuthorityRepository.save
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Save the authority document to shards.\n\nArgs:\n    document: The authority document to save."
+    functions: []
+    imports:
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.authority.document.AuthorityDocument
+    - bpfw.core.authority.index.AuthorityIndex
+    - bpfw.core.authority.persistence.AuthorityPersistenceEngine
+    - bpfw.core.authority.persistence.AuthorityPersistenceResult
+    - bpfw.core.authority.shard.AuthorityShard
+    - bpfw.reports.finding.Finding
+    - bpfw.reports.finding.FINDING_SEVERITY_BLOCK
+    - bpfw.core.authority.errors.DuplicateBlockIdError
+    kind: method
+    methods: []
+    normalized_body_hash: 996d37e089c1eb13d1603ca858e35691139b0262255ca92844dad9588bd3dd25
+    qualified_name: src.bpfw.core.authority.repository.AuthorityRepository.save
+    signature: save(self, document) -> AuthorityPersistenceResult
+  domain: sync engine
+  entrypoints: []
+  id: authority_repository_save
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: document
+      required: true
+      type: AuthorityDocument
+    output:
+      description: null
+      type: AuthorityPersistenceResult
+  name: AuthorityRepository.save
+  notes: null
+  purpose: save authority through sync engine
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 157
+    kind: method
+    module: src.bpfw.core.authority.repository
+    path: src/bpfw/core/authority/repository.py
+    start_line: 140
+    symbol: AuthorityRepository.validate
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Validate the authority document for issues.\n\nArgs:\n    document: The authority document to validate.\n\nReturns:\n    List of findings."
+    functions: []
+    imports:
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.authority.document.AuthorityDocument
+    - bpfw.core.authority.index.AuthorityIndex
+    - bpfw.core.authority.persistence.AuthorityPersistenceEngine
+    - bpfw.core.authority.persistence.AuthorityPersistenceResult
+    - bpfw.core.authority.shard.AuthorityShard
+    - bpfw.reports.finding.Finding
+    - bpfw.reports.finding.FINDING_SEVERITY_BLOCK
+    - bpfw.core.authority.errors.DuplicateBlockIdError
+    kind: method
+    methods: []
+    normalized_body_hash: d0627748d9035ea2cffef2f2cbb911a4fc6dbee7be4c22f9b437a60b8f7f037d
+    qualified_name: src.bpfw.core.authority.repository.AuthorityRepository.validate
+    signature: validate(self, document) -> list[Finding]
+  domain: sync engine
+  entrypoints: []
+  id: authority_repository_validate
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: document
+      required: true
+      type: AuthorityDocument
+    output:
+      description: null
+      type: list[Finding]
+  name: AuthorityRepository.validate
+  notes: null
+  purpose: validate authority consistency rules
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- id: src_bpfw_authority_shard_authority_shard
+  purpose: represent shard yaml content
+  name: AuthorityShard
+  domain: sync engine
+  status: null
+  code:
+    path: src/bpfw/core/authority/shard.py
+    module: src.bpfw.authority.shard
+    symbol: AuthorityShard
+    kind: class
+    start_line: 19
+    end_line: 280
+  detected:
+    qualified_name: src.bpfw.authority.shard.AuthorityShard
+    kind: class
+    methods:
+    - src.bpfw.authority.shard.AuthorityShard.load
+    - src.bpfw.authority.shard.AuthorityShard.save
+    - src.bpfw.authority.shard.AuthorityShard.set_blocks
+    - src.bpfw.authority.shard.AuthorityShard.get_blocks
+    - src.bpfw.authority.shard.AuthorityShard.is_empty
+    - src.bpfw.authority.shard.AuthorityShard.contains_block_id
+    - src.bpfw.authority.shard.AuthorityShard.remove_block
+    - src.bpfw.authority.shard.AuthorityShard.add_block
+    - src.bpfw.authority.shard.AuthorityShard.sort_blocks
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: path
+      type: Path
+      default: null
+      required: true
+      description: null
+    - name: blocks
+      type: list[dict[str, Any]]
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- code:
+    end_line: 139
+    kind: method
+    module: src.bpfw.core.authority.shard
+    path: src/bpfw/core/authority/shard.py
+    start_line: 73
+    symbol: AuthorityShard.load
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators:
+    - classmethod
+    docstring: "Load a shard file from the project root.\n\nArgs:\n    project_root: The project root directory.\n    shard_path: Project-relative path to the shard file.\n\nReturns:\n    Loaded AuthorityShard instance.\n\nRaises:\n    InvalidAuthorityShardError: If the shard cannot be loaded or is invalid.\n    FileNotFoundError: If the shard file does not exist."
+    functions: []
+    imports:
+    - dataclasses.dataclass
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.authority.errors.InvalidAuthorityShardError
+    - bpfw.core.catalog.access_control.ensure_blueprint_can_be_written
+    - bpfw.core.yaml_io.dump_yaml_data
+    - bpfw.core.yaml_io.load_yaml_text
+    kind: method
+    methods: []
+    normalized_body_hash: 5d1afdb5711ced24ec033b76c2231d5c6f3b025bc1f6ca9492925f3c3996eabf
+    qualified_name: src.bpfw.core.authority.shard.AuthorityShard.load
+    signature: load(cls, project_root, shard_path) -> 'AuthorityShard'
+  domain: sync engine
+  entrypoints: []
+  id: authority_shard_load
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: project_root
+      required: true
+      type: Path
+    - default: null
+      description: null
+      name: shard_path
+      required: true
+      type: Path
+    output:
+      description: null
+      type: '''AuthorityShard'''
+  name: AuthorityShard.load
+  notes: null
+  purpose: load shard from yaml file
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []
+- code:
+    end_line: 171
+    kind: method
+    module: src.bpfw.core.authority.shard
+    path: src/bpfw/core/authority/shard.py
+    start_line: 141
+    symbol: AuthorityShard.save
+  connections: []
+  detected:
+    dangerous_capabilities:
+      deletes_files: false
+      opens_network: false
+      uses_subprocess: false
+      writes_files: false
+    decorators: []
+    docstring: "Save the shard file to the project root.\n\nArgs:\n    project_root: The project root directory.\n\nRaises:\n    InvalidAuthorityShardError: If the shard is invalid or cannot be saved."
+    functions: []
+    imports:
+    - dataclasses.dataclass
+    - pathlib.Path
+    - typing.Any
+    - bpfw.core.authority.errors.InvalidAuthorityShardError
+    - bpfw.core.catalog.access_control.ensure_blueprint_can_be_written
+    - bpfw.core.yaml_io.dump_yaml_data
+    - bpfw.core.yaml_io.load_yaml_text
+    kind: method
+    methods: []
+    normalized_body_hash: c4df933b7e9426723e67c4b2d84cd4fd6cca55403a7d7a5f81ccf65acd0fbb04
+    qualified_name: src.bpfw.core.authority.shard.AuthorityShard.save
+    signature: save(self, project_root) -> None
+  domain: sync engine
+  entrypoints: []
+  id: authority_shard_save
+  interface:
+    inputs:
+    - default: null
+      description: null
+      name: project_root
+      required: true
+      type: Path
+    output:
+      description: null
+      type: None
+  name: AuthorityShard.save
+  notes: null
+  purpose: save shard to yaml file
+  replacement:
+    reason: null
+    replaced_by: null
+    replaces: null
+  status: active
+  uniqueness:
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    group: null
+    suspected_duplicates: []

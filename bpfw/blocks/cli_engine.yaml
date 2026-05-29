@@ -1,0 +1,214 @@
+blocks:
+- id: src_bpfw_cli_bpfw_argument_parser
+  purpose: show bpfw help messages in the terminal
+  name: BpfwArgumentParser
+  domain: cli engine
+  status: active
+  code:
+    path: src/bpfw/cli.py
+    module: src.bpfw.cli
+    symbol: BpfwArgumentParser
+    kind: class
+    start_line: 76
+    end_line: 87
+  detected:
+    qualified_name: src.bpfw.cli.BpfwArgumentParser
+    kind: class
+    methods:
+    - src.bpfw.cli.BpfwArgumentParser.format_help
+    - src.bpfw.cli.BpfwArgumentParser.format_usage
+    functions: []
+    docstring: Argument parser that renders the curated BPFW command help.
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: show_bpfw_help_messages_in_the_terminal
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: src_bpfw_cli_bpfw_argument_parser_format_help
+  purpose: show the full bpfw help screen
+  name: BpfwArgumentParser.format_help
+  domain: cli engine
+  status: active
+  code:
+    path: src/bpfw/cli.py
+    module: src.bpfw.cli
+    symbol: BpfwArgumentParser.format_help
+    kind: method
+    start_line: 79
+    end_line: 82
+  detected:
+    qualified_name: src.bpfw.cli.BpfwArgumentParser.format_help
+    kind: method
+    methods: []
+    functions: []
+    docstring: Return the curated top-level BPFW help text.
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: return_curated_top_level_help_text
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: str
+      description: null
+- id: src_bpfw_cli_bpfw_argument_parser_format_usage
+  purpose: show the short command format when input is wrong
+  name: BpfwArgumentParser.format_usage
+  domain: cli engine
+  status: active
+  code:
+    path: src/bpfw/cli.py
+    module: src.bpfw.cli
+    symbol: BpfwArgumentParser.format_usage
+    kind: method
+    start_line: 84
+    end_line: 87
+  detected:
+    qualified_name: src.bpfw.cli.BpfwArgumentParser.format_usage
+    kind: method
+    methods: []
+    functions: []
+    docstring: Return concise command usage for parser errors.
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: return_concise_command_usage_to_parser_errors
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: str
+      description: null
+- id: src_bpfw_cli_build_parser
+  purpose: create command reader for terminal commands
+  name: build_parser
+  domain: cli engine
+  status: active
+  code:
+    path: src/bpfw/cli.py
+    module: src.bpfw.cli
+    symbol: build_parser
+    kind: function
+    start_line: 91
+    end_line: 110
+  detected:
+    qualified_name: src.bpfw.cli.build_parser
+    kind: function
+    methods: []
+    functions: []
+    docstring: Build the command reader for BPFW terminal commands.
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: create_command_reader_for_terminal_commands
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: argparse.ArgumentParser
+      description: null
+- id: src_bpfw_cli_resolve_cli_command
+  purpose: choose the command selected by user
+  name: resolve_cli_command
+  domain: cli engine
+  status: active
+  code:
+    path: src/bpfw/cli.py
+    module: src.bpfw.cli
+    symbol: resolve_cli_command
+    kind: function
+    start_line: 114
+    end_line: 164
+  detected:
+    qualified_name: src.bpfw.cli.resolve_cli_command
+    kind: function
+    methods: []
+    functions: []
+    docstring: Choose the engine command for the words typed by the user.
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: choose_the_command_selected_by_user
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: command
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: subcommand
+      type: str | None
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_cli_main
+  purpose: run terminal command
+  name: main
+  domain: cli engine
+  status: active
+  code:
+    path: src/bpfw/cli.py
+    module: src.bpfw.cli
+    symbol: main
+    kind: function
+    start_line: 251
+    end_line: 459
+  detected:
+    qualified_name: src.bpfw.cli.main
+    kind: function
+    methods: []
+    functions: []
+    docstring: Run the BPFW terminal command.
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: run_terminal_command
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: int
+      description: null

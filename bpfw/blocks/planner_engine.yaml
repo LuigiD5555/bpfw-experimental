@@ -1,0 +1,2406 @@
+blocks:
+- id: src_bpfw_integrations_planner___init___planner_integration
+  purpose: define planner integration
+  name: PlannerIntegration
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/__init__.py
+    module: src.bpfw.integrations.planner.__init__
+    symbol: PlannerIntegration
+    kind: class
+    start_line: 29
+    end_line: 48
+  detected:
+    qualified_name: src.bpfw.integrations.planner.__init__.PlannerIntegration
+    kind: class
+    methods:
+    - src.bpfw.integrations.planner.__init__.PlannerIntegration.is_available
+    - src.bpfw.integrations.planner.__init__.PlannerIntegration.run
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: src_bpfw_integrations_planner___init___planner_integration_is_available
+  purpose: handle is available
+  name: PlannerIntegration.is_available
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/__init__.py
+    module: src.bpfw.integrations.planner.__init__
+    symbol: PlannerIntegration.is_available
+    kind: method
+    start_line: 34
+    end_line: 37
+  detected:
+    qualified_name: src.bpfw.integrations.planner.__init__.PlannerIntegration.is_available
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: bool
+      description: null
+- id: src_bpfw_integrations_planner___init___planner_integration_run
+  purpose: run component
+  name: PlannerIntegration.run
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/__init__.py
+    module: src.bpfw.integrations.planner.__init__
+    symbol: PlannerIntegration.run
+    kind: method
+    start_line: 39
+    end_line: 48
+  detected:
+    qualified_name: src.bpfw.integrations.planner.__init__.PlannerIntegration.run
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    - name: command_arguments
+      type: dict[str, str] | None
+      default: null
+      required: false
+      description: null
+    output:
+      type: OptionalIntegrationResult
+      description: null
+- id: src_bpfw_integrations_planner_connection_detection_detect_connections
+  purpose: detect connections
+  name: detect_connections
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/connection_detection.py
+    module: src.bpfw.integrations.planner.connection_detection
+    symbol: detect_connections
+    kind: function
+    start_line: 30
+    end_line: 102
+  detected:
+    qualified_name: src.bpfw.integrations.planner.connection_detection.detect_connections
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: boxes
+      type: List[PlannerBox]
+      default: null
+      required: true
+      description: null
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    - name: source_roots
+      type: List[str]
+      default: null
+      required: true
+      description: null
+    - name: ignored_paths
+      type: List[str]
+      default: null
+      required: true
+      description: null
+    output:
+      type: List[InferredConnection]
+      description: null
+- id: src_bpfw_integrations_planner_connection_merge_merge_connections
+  purpose: merge connections
+  name: merge_connections
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/connection_merge.py
+    module: src.bpfw.integrations.planner.connection_merge
+    symbol: merge_connections
+    kind: function
+    start_line: 9
+    end_line: 56
+  detected:
+    qualified_name: src.bpfw.integrations.planner.connection_merge.merge_connections
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: blueprint_connections
+      type: List[PlannerConnection]
+      default: null
+      required: true
+      description: null
+    - name: inferred_connections
+      type: List[InferredConnection]
+      default: null
+      required: true
+      description: null
+    output:
+      type: List[PlannerConnection]
+      description: null
+- id: src_bpfw_integrations_planner_controller_planner_controller
+  purpose: define planner controller
+  name: PlannerController
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/controller.py
+    module: src.bpfw.integrations.planner.controller
+    symbol: PlannerController
+    kind: class
+    start_line: 28
+    end_line: 1224
+  detected:
+    qualified_name: src.bpfw.integrations.planner.controller.PlannerController
+    kind: class
+    methods:
+    - src.bpfw.integrations.planner.controller.PlannerController.run
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_controller_planner_controller_run
+  purpose: run component
+  name: PlannerController.run
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/controller.py
+    module: src.bpfw.integrations.planner.controller
+    symbol: PlannerController.run
+    kind: method
+    start_line: 66
+    end_line: 110
+  detected:
+    qualified_name: src.bpfw.integrations.planner.controller.PlannerController.run
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: int
+      description: null
+- id: src_bpfw_integrations_planner_modals_add_box_modal
+  purpose: add box
+  name: AddBoxModal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/modals.py
+    module: src.bpfw.integrations.planner.modals
+    symbol: AddBoxModal
+    kind: class
+    start_line: 21
+    end_line: 116
+  detected:
+    qualified_name: src.bpfw.integrations.planner.modals.AddBoxModal
+    kind: class
+    methods:
+    - src.bpfw.integrations.planner.modals.AddBoxModal.collect
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_modals_add_box_modal_collect
+  purpose: collect add box
+  name: AddBoxModal.collect
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/modals.py
+    module: src.bpfw.integrations.planner.modals
+    symbol: AddBoxModal.collect
+    kind: method
+    start_line: 28
+    end_line: 70
+  detected:
+    qualified_name: src.bpfw.integrations.planner.modals.AddBoxModal.collect
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: Optional[AddBoxInput]
+      description: null
+- id: src_bpfw_integrations_planner_modals_connection_modal
+  purpose: define connection modal
+  name: ConnectionModal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/modals.py
+    module: src.bpfw.integrations.planner.modals
+    symbol: ConnectionModal
+    kind: class
+    start_line: 119
+    end_line: 288
+  detected:
+    qualified_name: src.bpfw.integrations.planner.modals.ConnectionModal
+    kind: class
+    methods:
+    - src.bpfw.integrations.planner.modals.ConnectionModal.collect
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: boxes
+      type: list
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_modals_connection_modal_collect
+  purpose: collect connection
+  name: ConnectionModal.collect
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/modals.py
+    module: src.bpfw.integrations.planner.modals
+    symbol: ConnectionModal.collect
+    kind: method
+    start_line: 141
+    end_line: 177
+  detected:
+    qualified_name: src.bpfw.integrations.planner.modals.ConnectionModal.collect
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: Optional[ConnectionInput]
+      description: null
+- id: src_bpfw_integrations_planner_models_planner_box
+  purpose: define planner box
+  name: PlannerBox
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/models.py
+    module: src.bpfw.integrations.planner.models
+    symbol: PlannerBox
+    kind: class
+    start_line: 87
+    end_line: 135
+  detected:
+    qualified_name: src.bpfw.integrations.planner.models.PlannerBox
+    kind: class
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: src_bpfw_integrations_planner_renderer_render_planner
+  purpose: render planner workflow
+  name: render_planner
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_planner
+    kind: function
+    start_line: 38
+    end_line: 125
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_planner
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_welcome
+  purpose: render welcome
+  name: render_welcome
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_welcome
+    kind: function
+    start_line: 132
+    end_line: 199
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_welcome
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_workspace
+  purpose: render workspace
+  name: render_workspace
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_workspace
+    kind: function
+    start_line: 206
+    end_line: 259
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_workspace
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_pieces_panel_internal
+  purpose: render pieces panel internal
+  name: render_pieces_panel_internal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_pieces_panel_internal
+    kind: function
+    start_line: 262
+    end_line: 344
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_pieces_panel_internal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: boxes
+      type: List[PlannerBox]
+      default: null
+      required: true
+      description: null
+    - name: selected_id
+      type: Optional[str]
+      default: null
+      required: true
+      description: null
+    - name: filter_text
+      type: str
+      default: ''
+      required: false
+      description: null
+    - name: filter_mode
+      type: bool
+      default: false
+      required: false
+      description: null
+    output:
+      type: List[str]
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_assembly_panel_internal
+  purpose: render assembly panel internal
+  name: render_assembly_panel_internal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_assembly_panel_internal
+    kind: function
+    start_line: 347
+    end_line: 413
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_assembly_panel_internal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: selected_box
+      type: Optional[PlannerBox]
+      default: null
+      required: true
+      description: null
+    - name: incoming
+      type: List[tuple]
+      default: null
+      required: true
+      description: null
+    - name: outgoing
+      type: List[tuple]
+      default: null
+      required: true
+      description: null
+    output:
+      type: List[str]
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_details_panel_internal
+  purpose: render details panel internal
+  name: render_details_panel_internal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_details_panel_internal
+    kind: function
+    start_line: 416
+    end_line: 461
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_details_panel_internal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: selected_box
+      type: Optional[PlannerBox]
+      default: null
+      required: true
+      description: null
+    output:
+      type: List[str]
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_add_block_modal
+  purpose: render add block
+  name: render_add_block_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_add_block_modal
+    kind: function
+    start_line: 468
+    end_line: 498
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_add_block_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_connect_target_modal
+  purpose: render connect target
+  name: render_connect_target_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_connect_target_modal
+    kind: function
+    start_line: 501
+    end_line: 521
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_connect_target_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_connect_meaning_modal
+  purpose: render connect meaning
+  name: render_connect_meaning_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_connect_meaning_modal
+    kind: function
+    start_line: 524
+    end_line: 550
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_connect_meaning_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_connect_feedback_modal
+  purpose: render connect feedback
+  name: render_connect_feedback_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_connect_feedback_modal
+    kind: function
+    start_line: 553
+    end_line: 584
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_connect_feedback_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_edit_block_modal
+  purpose: render edit block
+  name: render_edit_block_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_edit_block_modal
+    kind: function
+    start_line: 587
+    end_line: 612
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_edit_block_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_edit_inputs_modal
+  purpose: render edit inputs
+  name: render_edit_inputs_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_edit_inputs_modal
+    kind: function
+    start_line: 615
+    end_line: 680
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_edit_inputs_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_edit_input_modal
+  purpose: render edit input
+  name: render_edit_input_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_edit_input_modal
+    kind: function
+    start_line: 683
+    end_line: 705
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_edit_input_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_edit_output_modal
+  purpose: render edit output
+  name: render_edit_output_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_edit_output_modal
+    kind: function
+    start_line: 708
+    end_line: 743
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_edit_output_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_project_settings_modal
+  purpose: render project settings
+  name: render_project_settings_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_project_settings_modal
+    kind: function
+    start_line: 746
+    end_line: 780
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_project_settings_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_review_modal
+  purpose: render review
+  name: render_review_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_review_modal
+    kind: function
+    start_line: 783
+    end_line: 822
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_review_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_yaml_preview_modal
+  purpose: render yaml preview
+  name: render_yaml_preview_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_yaml_preview_modal
+    kind: function
+    start_line: 825
+    end_line: 880
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_yaml_preview_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_saved_modal
+  purpose: render saved
+  name: render_saved_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_saved_modal
+    kind: function
+    start_line: 883
+    end_line: 908
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_saved_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_graph_overview
+  purpose: render graph overview
+  name: render_graph_overview
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_graph_overview
+    kind: function
+    start_line: 911
+    end_line: 936
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_graph_overview
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_disconnect_modal
+  purpose: render disconnect
+  name: render_disconnect_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_disconnect_modal
+    kind: function
+    start_line: 939
+    end_line: 998
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_disconnect_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_delete_block_modal
+  purpose: render delete block
+  name: render_delete_block_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_delete_block_modal
+    kind: function
+    start_line: 1001
+    end_line: 1054
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_delete_block_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_unsaved_changes_modal
+  purpose: render unsaved changes
+  name: render_unsaved_changes_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_unsaved_changes_modal
+    kind: function
+    start_line: 1057
+    end_line: 1094
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_unsaved_changes_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_removed_connection_modal
+  purpose: render removed connection
+  name: render_removed_connection_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_removed_connection_modal
+    kind: function
+    start_line: 1097
+    end_line: 1114
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_removed_connection_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_broken_connections_modal
+  purpose: render broken connections
+  name: render_broken_connections_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_broken_connections_modal
+    kind: function
+    start_line: 1117
+    end_line: 1151
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_broken_connections_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_no_blocks_to_connect_modal
+  purpose: render no blocks to connect
+  name: render_no_blocks_to_connect_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_no_blocks_to_connect_modal
+    kind: function
+    start_line: 1154
+    end_line: 1179
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_no_blocks_to_connect_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_duplicate_connection_modal
+  purpose: render duplicate connection
+  name: render_duplicate_connection_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_duplicate_connection_modal
+    kind: function
+    start_line: 1182
+    end_line: 1212
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_duplicate_connection_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    - name: existing_conn
+      type: PlannerConnection
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_self_connection_modal
+  purpose: render self connection
+  name: render_self_connection_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_self_connection_modal
+    kind: function
+    start_line: 1215
+    end_line: 1235
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_self_connection_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_cannot_save_empty_modal
+  purpose: render cannot save empty
+  name: render_cannot_save_empty_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_cannot_save_empty_modal
+    kind: function
+    start_line: 1238
+    end_line: 1259
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_cannot_save_empty_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_duplicate_name_modal
+  purpose: render duplicate name
+  name: render_duplicate_name_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_duplicate_name_modal
+    kind: function
+    start_line: 1262
+    end_line: 1292
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_duplicate_name_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    - name: existing_box
+      type: PlannerBox
+      default: null
+      required: true
+      description: null
+    - name: suggested_names
+      type: List[str]
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_active_purpose_conflict_modal
+  purpose: render active purpose conflict
+  name: render_active_purpose_conflict_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_active_purpose_conflict_modal
+    kind: function
+    start_line: 1295
+    end_line: 1331
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_active_purpose_conflict_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    - name: existing_box
+      type: PlannerBox
+      default: null
+      required: true
+      description: null
+    - name: new_purpose
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_path_already_used_modal
+  purpose: render path already used
+  name: render_path_already_used_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_path_already_used_modal
+    kind: function
+    start_line: 1334
+    end_line: 1368
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_path_already_used_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    - name: path
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: existing_box
+      type: PlannerBox
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_domain_changed_modal
+  purpose: render domain changed
+  name: render_domain_changed_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_domain_changed_modal
+    kind: function
+    start_line: 1371
+    end_line: 1402
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_domain_changed_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    - name: old_domain
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: new_domain
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: current_path
+      type: str
+      default: null
+      required: true
+      description: null
+    - name: suggested_path
+      type: str
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_no_connections_warning_modal
+  purpose: render no connections warning
+  name: render_no_connections_warning_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_no_connections_warning_modal
+    kind: function
+    start_line: 1405
+    end_line: 1431
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_no_connections_warning_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_experimental_to_active_warning_modal
+  purpose: render experimental to active warning
+  name: render_experimental_to_active_warning_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_experimental_to_active_warning_modal
+    kind: function
+    start_line: 1434
+    end_line: 1464
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_experimental_to_active_warning_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    - name: experimental_box
+      type: PlannerBox
+      default: null
+      required: true
+      description: null
+    - name: active_box
+      type: PlannerBox
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_blueprint_locked_modal
+  purpose: render blueprint locked
+  name: render_blueprint_locked_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_blueprint_locked_modal
+    kind: function
+    start_line: 1467
+    end_line: 1488
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_blueprint_locked_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_renderer_render_invalid_blueprint_modal
+  purpose: render invalid blueprint
+  name: render_invalid_blueprint_modal
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/renderer.py
+    module: src.bpfw.integrations.planner.renderer
+    symbol: render_invalid_blueprint_modal
+    kind: function
+    start_line: 1491
+    end_line: 1513
+  detected:
+    qualified_name: src.bpfw.integrations.planner.renderer.render_invalid_blueprint_modal
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: state
+      type: PlannerState
+      default: null
+      required: true
+      description: null
+    output:
+      type: None
+      description: null
+- id: src_bpfw_integrations_planner_utils_generate_box_id
+  purpose: generate box id
+  name: generate_box_id
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/utils.py
+    module: src.bpfw.integrations.planner.utils
+    symbol: generate_box_id
+    kind: function
+    start_line: 8
+    end_line: 27
+  detected:
+    qualified_name: src.bpfw.integrations.planner.utils.generate_box_id
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: domain
+      type: object
+      default: null
+      required: true
+      description: null
+    - name: name
+      type: object
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_planner_utils_generate_box_path
+  purpose: generate box path
+  name: generate_box_path
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/utils.py
+    module: src.bpfw.integrations.planner.utils
+    symbol: generate_box_path
+    kind: function
+    start_line: 30
+    end_line: 44
+  detected:
+    qualified_name: src.bpfw.integrations.planner.utils.generate_box_path
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: source_root
+      type: object
+      default: null
+      required: true
+      description: null
+    - name: domain
+      type: object
+      default: null
+      required: true
+      description: null
+    - name: name
+      type: object
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_planner_utils_generate_box_symbol
+  purpose: generate box symbol
+  name: generate_box_symbol
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/utils.py
+    module: src.bpfw.integrations.planner.utils
+    symbol: generate_box_symbol
+    kind: function
+    start_line: 47
+    end_line: 59
+  detected:
+    qualified_name: src.bpfw.integrations.planner.utils.generate_box_symbol
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: name
+      type: object
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_planner_utils_generate_module_from_path
+  purpose: generate module from path
+  name: generate_module_from_path
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/utils.py
+    module: src.bpfw.integrations.planner.utils
+    symbol: generate_module_from_path
+    kind: function
+    start_line: 62
+    end_line: 75
+  detected:
+    qualified_name: src.bpfw.integrations.planner.utils.generate_module_from_path
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: path
+      type: object
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_planner_utils_generate_qualified_name
+  purpose: generate qualified name
+  name: generate_qualified_name
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/utils.py
+    module: src.bpfw.integrations.planner.utils
+    symbol: generate_qualified_name
+    kind: function
+    start_line: 78
+    end_line: 92
+  detected:
+    qualified_name: src.bpfw.integrations.planner.utils.generate_qualified_name
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: module
+      type: object
+      default: null
+      required: true
+      description: null
+    - name: symbol
+      type: object
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_planner_utils_normalize_purpose_for_duplicate_group
+  purpose: normalize purpose for duplicate group
+  name: normalize_purpose_for_duplicate_group
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/utils.py
+    module: src.bpfw.integrations.planner.utils
+    symbol: normalize_purpose_for_duplicate_group
+    kind: function
+    start_line: 95
+    end_line: 107
+  detected:
+    qualified_name: src.bpfw.integrations.planner.utils.normalize_purpose_for_duplicate_group
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: purpose
+      type: object
+      default: null
+      required: true
+      description: null
+    output:
+      type: str
+      description: null
+- id: src_bpfw_integrations_planner_utils_detect_existing_source_roots
+  purpose: detect existing source roots
+  name: detect_existing_source_roots
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/utils.py
+    module: src.bpfw.integrations.planner.utils
+    symbol: detect_existing_source_roots
+    kind: function
+    start_line: 110
+    end_line: 126
+  detected:
+    qualified_name: src.bpfw.integrations.planner.utils.detect_existing_source_roots
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    output:
+      type: list[str]
+      description: null
+- id: src_bpfw_integrations_planner_utils_get_project_defaults
+  purpose: get project defaults
+  name: get_project_defaults
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/utils.py
+    module: src.bpfw.integrations.planner.utils
+    symbol: get_project_defaults
+    kind: function
+    start_line: 129
+    end_line: 143
+  detected:
+    qualified_name: src.bpfw.integrations.planner.utils.get_project_defaults
+    kind: function
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    inputs:
+    - name: project_root
+      type: Path
+      default: null
+      required: true
+      description: null
+    output:
+      type: dict[str, object]
+      description: null
+- id: src_bpfw_integrations_planner_validator_plan_validation_result
+  purpose: define plan validation result
+  name: PlanValidationResult
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/validator.py
+    module: src.bpfw.integrations.planner.validator
+    symbol: PlanValidationResult
+    kind: class
+    start_line: 19
+    end_line: 51
+  detected:
+    qualified_name: src.bpfw.integrations.planner.validator.PlanValidationResult
+    kind: class
+    methods:
+    - src.bpfw.integrations.planner.validator.PlanValidationResult.has_errors
+    - src.bpfw.integrations.planner.validator.PlanValidationResult.has_warnings
+    - src.bpfw.integrations.planner.validator.PlanValidationResult.summary
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+- id: src_bpfw_integrations_planner_validator_plan_validation_result_has_errors
+  purpose: handle validation result has errors
+  name: PlanValidationResult.has_errors
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/validator.py
+    module: src.bpfw.integrations.planner.validator
+    symbol: PlanValidationResult.has_errors
+    kind: method
+    start_line: 27
+    end_line: 29
+  detected:
+    qualified_name: src.bpfw.integrations.planner.validator.PlanValidationResult.has_errors
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: bool
+      description: null
+- id: src_bpfw_integrations_planner_validator_plan_validation_result_has_warnings
+  purpose: handle validation result has warnings
+  name: PlanValidationResult.has_warnings
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/validator.py
+    module: src.bpfw.integrations.planner.validator
+    symbol: PlanValidationResult.has_warnings
+    kind: method
+    start_line: 32
+    end_line: 34
+  detected:
+    qualified_name: src.bpfw.integrations.planner.validator.PlanValidationResult.has_warnings
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: bool
+      description: null
+- id: src_bpfw_integrations_planner_validator_plan_validation_result_summary
+  purpose: summarize plan validation result
+  name: PlanValidationResult.summary
+  domain: planner engine
+  status: null
+  code:
+    path: src/bpfw/integrations/planner/validator.py
+    module: src.bpfw.integrations.planner.validator
+    symbol: PlanValidationResult.summary
+    kind: method
+    start_line: 37
+    end_line: 51
+  detected:
+    qualified_name: src.bpfw.integrations.planner.validator.PlanValidationResult.summary
+    kind: method
+    methods: []
+    functions: []
+  entrypoints: []
+  connections: []
+  uniqueness:
+    group: null
+    allow_multiple_non_active: true
+    forbid_active_duplicates: true
+    suspected_duplicates: []
+  replacement:
+    replaces: null
+    replaced_by: null
+    reason: null
+  notes: null
+  interface:
+    output:
+      type: str
+      description: null
