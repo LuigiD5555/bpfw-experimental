@@ -1,6 +1,4 @@
-"""PURPOSE incremental scan cache for inspector/editor workflows
-DOMAIN  blueprint checks
-"""
+"""Incremental scan cache for inspector/editor workflows."""
 
 import json
 from pathlib import Path
@@ -16,20 +14,22 @@ _CACHE_RELATIVE_PATH = Path(".bpfw") / "cache" / "scan_index.json"
 
 
 class ScanCacheRepository:
-    """PURPOSE read and save an incremental source scan cache
-    DOMAIN  blueprint checks
-    """
+    """Load and save an incremental source scan cache."""
 
     def __init__(self, project_root: Path) -> None:
-        """PURPOSE set up the repository
-        DOMAIN  blueprint checks
+        """Initialize the repository.
+
+        Args:
+            project_root: Project root directory.
         """
         self.project_root = project_root.resolve()
         self.cache_path = self.project_root / _CACHE_RELATIVE_PATH
 
     def load(self) -> dict[str, Any]:
-        """PURPOSE read cached scan data
-        DOMAIN  blueprint checks
+        """Load cached scan data.
+
+        Returns:
+            Cache dictionary or an empty cache when missing/invalid.
         """
         try:
             data = json.loads(self.cache_path.read_text(encoding="utf-8"))
@@ -43,8 +43,10 @@ class ScanCacheRepository:
         return data
 
     def save(self, cache_data: dict[str, Any]) -> None:
-        """PURPOSE save scan cache data
-        DOMAIN  blueprint checks
+        """Save scan cache data.
+
+        Args:
+            cache_data: Cache dictionary to persist.
         """
         self.cache_path.parent.mkdir(parents=True, exist_ok=True)
         self.cache_path.write_text(
@@ -58,8 +60,15 @@ def cached_scan_python_project(
     source_roots: list[str],
     ignored_paths: list[str],
 ) -> ScanResult:
-    """PURPOSE scan Python project using per-file cached results
-    DOMAIN  blueprint checks
+    """Scan Python project using per-file cached results.
+
+    Args:
+        project_root: Project root directory.
+        source_roots: Source roots relative to project root.
+        ignored_paths: Path components to ignore.
+
+    Returns:
+        Scan result built from cached and freshly scanned files.
     """
     resolved_root = project_root.resolve()
     repository = ScanCacheRepository(resolved_root)
@@ -110,24 +119,29 @@ def cached_scan_python_project(
 
 
 def _empty_cache() -> dict[str, Any]:
-    """PURPOSE get an empty cache object
-    DOMAIN  blueprint checks
+    """Return an empty cache object.
+
+    Returns:
+        Empty cache dictionary.
     """
     return {"schema_version": _SCHEMA_VERSION, "entries": {}}
 
 
 def _file_metadata(path: Path) -> dict[str, int]:
-    """PURPOSE get lightweight file metadata
-    DOMAIN  blueprint checks
+    """Return lightweight file metadata.
+
+    Args:
+        path: File path.
+
+    Returns:
+        Metadata dictionary.
     """
     stat_result = path.stat()
     return {"size": stat_result.st_size, "mtime_ns": stat_result.st_mtime_ns}
 
 
 def _entry_matches(entry: Any, metadata: dict[str, int]) -> bool:
-    """PURPOSE check whether a cache entry matches metadata
-    DOMAIN  blueprint checks
-    """
+    """Check whether a cache entry matches current metadata."""
     if not isinstance(entry, dict):
         return False
     if entry.get("size") != metadata.get("size"):
@@ -138,8 +152,13 @@ def _entry_matches(entry: Any, metadata: dict[str, int]) -> bool:
 
 
 def _unit_to_json(unit: DiscoveredCodeUnit) -> dict[str, Any]:
-    """PURPOSE convert one discovered code unit to saved data
-    DOMAIN  blueprint checks
+    """Serialize one discovered code unit.
+
+    Args:
+        unit: Discovered code unit.
+
+    Returns:
+        JSON-compatible dictionary.
     """
     return {
         "path": unit.path,
@@ -164,8 +183,13 @@ def _unit_to_json(unit: DiscoveredCodeUnit) -> dict[str, Any]:
 
 
 def _unit_from_json(data: dict[str, Any]) -> DiscoveredCodeUnit:
-    """PURPOSE restore one discovered code unit from JSON data
-    DOMAIN  blueprint checks
+    """Restore one discovered code unit from JSON data.
+
+    Args:
+        data: JSON dictionary.
+
+    Returns:
+        Discovered code unit.
     """
     return DiscoveredCodeUnit(
         path=str(data.get("path", "")),
@@ -192,9 +216,7 @@ def _unit_from_json(data: dict[str, Any]) -> DiscoveredCodeUnit:
 
 
 def _finding_to_json(finding: Finding) -> dict[str, Any]:
-    """PURPOSE convert one finding to saved data
-    DOMAIN  blueprint checks
-    """
+    """Convert one finding."""
     return {
         "source": finding.source,
         "code": finding.code,
@@ -207,8 +229,13 @@ def _finding_to_json(finding: Finding) -> dict[str, Any]:
 
 
 def _finding_from_json(data: dict[str, Any]) -> Finding:
-    """PURPOSE restore one finding from JSON data
-    DOMAIN  blueprint checks
+    """Restore one finding from JSON data.
+
+    Args:
+        data: JSON dictionary.
+
+    Returns:
+        Finding object.
     """
     evidence = data.get("evidence")
     return Finding(
@@ -223,8 +250,13 @@ def _finding_from_json(data: dict[str, Any]) -> Finding:
 
 
 def _optional_int(value: Any) -> int | None:
-    """PURPOSE get an integer or None
-    DOMAIN  blueprint checks
+    """Return an integer or None.
+
+    Args:
+        value: Candidate value.
+
+    Returns:
+        Integer or None.
     """
     if isinstance(value, bool):
         return None
@@ -234,8 +266,13 @@ def _optional_int(value: Any) -> int | None:
 
 
 def _optional_string(value: Any) -> str | None:
-    """PURPOSE get a non-empty string or None
-    DOMAIN  blueprint checks
+    """Return a non-empty string or None.
+
+    Args:
+        value: Candidate value.
+
+    Returns:
+        Stripped string or None.
     """
     if value is None:
         return None
@@ -244,8 +281,13 @@ def _optional_string(value: Any) -> str | None:
 
 
 def _string_list(value: Any) -> list[str]:
-    """PURPOSE get a list of strings
-    DOMAIN  blueprint checks
+    """Return a list of strings.
+
+    Args:
+        value: Candidate value.
+
+    Returns:
+        String list.
     """
     if not isinstance(value, list):
         return []
@@ -253,9 +295,13 @@ def _string_list(value: Any) -> list[str]:
 
 
 def _dict_list(value: Any) -> list[dict[str, Any]]:
-    """PURPOSE get a list of dictionaryionaries
-        DOMAIN  blueprint checks
+    """Return a list of dictionaries.
 
+    Args:
+        value: Candidate value.
+
+    Returns:
+        Dictionary list.
     """
     if not isinstance(value, list):
         return []

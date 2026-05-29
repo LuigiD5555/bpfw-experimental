@@ -1,6 +1,4 @@
-"""PURPOSE low-level file-change patch engine used by Blueprint Engine
-DOMAIN  blueprint file changes
-"""
+"""Low-level file-change patch engine used by Blueprint Engine."""
 
 from contextlib import contextmanager
 from pathlib import Path
@@ -39,19 +37,29 @@ PatchProgressCallback = Callable[[int, int, str], None]
 
 
 class AuthorityPatchEngine:
-    """PURPOSE apply an AuthorityPatchPlan to authority files
-    DOMAIN  blueprint file changes
+    """Apply an ``AuthorityPatchPlan`` safely to authority files.
+
+    The engine validates, backs up, writes, validates YAML, updates the root
+    include list when shard files change, and rolls back on failed filesystem
+    operations. It does not build plans and does not decide what authority means.
     """
 
     def __init__(self, project_root: Path) -> None:
-        """PURPOSE set up the engine
-        DOMAIN  blueprint file changes
+        """Initialize the engine.
+
+        Args:
+            project_root: Project root directory containing ``bpfw/``.
         """
         self.project_root = project_root
 
     def preview(self, plan: AuthorityPatchPlan) -> AuthorityPatchResult:
-        """PURPOSE preview affected files without writing
-        DOMAIN  blueprint file changes
+        """Preview affected files without writing.
+
+        Args:
+            plan: Plan to preview.
+
+        Returns:
+            Result object containing affected files and validation messages.
         """
         result = AuthorityPatchResult()
         if plan.is_empty():
@@ -76,8 +84,15 @@ class AuthorityPatchEngine:
         write_context: PatchWriteContext,
         progress_callback: PatchProgressCallback | None = None,
     ) -> AuthorityPatchResult:
-        """PURPOSE apply a plan with write permission
-        DOMAIN  blueprint file changes
+        """Apply a plan with explicit write permission.
+
+        Args:
+            plan: Mechanical patch plan to apply.
+            write_context: Explicit permission context for guarded writes.
+            progress_callback: Optional callback notified after patch operations progress.
+
+        Returns:
+            Structured result describing applied or skipped operations.
         """
         result = AuthorityPatchResult()
 
@@ -134,23 +149,35 @@ class AuthorityPatchEngine:
         return result
 
     def validate_plan(self, plan: AuthorityPatchPlan) -> list[str]:
-        """PURPOSE check a plan without applying it
-        DOMAIN  blueprint file changes
+        """Validate a plan without applying it.
+
+        Args:
+            plan: Plan to validate.
+
+        Returns:
+            Validation messages, or an empty list when valid.
         """
         if plan.is_empty():
             return []
         return plan.validate(self.project_root)
 
     def collect_affected_files(self, plan: AuthorityPatchPlan) -> set[Path]:
-        """PURPOSE get all files the plan would modify
-        DOMAIN  blueprint file changes
+        """Return all files the plan would modify.
+
+        Args:
+            plan: Plan to inspect.
+
+        Returns:
+            Set of affected project-relative paths.
         """
         return plan.affected_files()
 
     @contextmanager
     def _write_authorization(self, context: PatchWriteContext) -> Iterator[None]:
-        """PURPOSE set up blueprint write authorization for the apply
-        DOMAIN  blueprint file changes
+        """Set up blueprint write authorization for the apply.
+
+        Args:
+            context: Write context specifying tool name and guarded write policy.
         """
         with authorize_blueprint_writes_for_tool(context.tool_name):
             if context.allow_guarded_writes:
@@ -169,9 +196,7 @@ class AuthorityPatchEngine:
         result: AuthorityPatchResult,
         progress_callback: PatchProgressCallback | None = None,
     ) -> None:
-        """PURPOSE apply each operation in stable order
-        DOMAIN  blueprint file changes
-        """
+        """Apply each operation in stable order."""
         operations = plan.sorted_operations()
         total_operations = len(operations)
         completed_operations = 0
@@ -210,8 +235,17 @@ class AuthorityPatchEngine:
         total_operations: int,
         progress_callback: PatchProgressCallback | None = None,
     ) -> int:
-        """PURPOSE apply code-reference updates grouped by shard
-        DOMAIN  blueprint file changes
+        """Apply code-reference updates grouped by shard.
+
+        Args:
+            operations: Code-reference update operations to apply.
+            result: Result object to record outcomes.
+            completed_operations: Number of already completed operations.
+            total_operations: Total operations in the full plan.
+            progress_callback: Optional callback notified after each operation.
+
+        Returns:
+            Updated completed operation count.
         """
         from collections import defaultdict
 
@@ -270,8 +304,11 @@ class AuthorityPatchEngine:
         operation: PatchOperation,
         result: AuthorityPatchResult,
     ) -> None:
-        """PURPOSE dispatch one operation to its handler
-        DOMAIN  blueprint file changes
+        """Dispatch one operation to its handler.
+
+        Args:
+            operation: Operation to apply.
+            result: Result object to record outcomes.
         """
         kind = operation.kind
         label = kind.value
@@ -313,8 +350,12 @@ class AuthorityPatchEngine:
         result: AuthorityPatchResult,
         label: str,
     ) -> None:
-        """PURPOSE move a block from source shard to target shard
-        DOMAIN  blueprint file changes
+        """Move a block from source shard to target shard.
+
+        Args:
+            operation: Move operation details.
+            result: Result object to record outcomes.
+            label: Operation label.
         """
         from bpfw.core.authority.shard import AuthorityShard
 
@@ -345,8 +386,12 @@ class AuthorityPatchEngine:
         result: AuthorityPatchResult,
         label: str,
     ) -> None:
-        """PURPOSE create a new block in the target shard
-        DOMAIN  blueprint file changes
+        """Create a new block in the target shard.
+
+        Args:
+            operation: Create operation details.
+            result: Result object to record outcomes.
+            label: Operation label.
         """
         from bpfw.core.authority.shard import AuthorityShard
 
@@ -368,8 +413,12 @@ class AuthorityPatchEngine:
         result: AuthorityPatchResult,
         label: str,
     ) -> None:
-        """PURPOSE delete a block from a shard
-        DOMAIN  blueprint file changes
+        """Delete a block from a shard.
+
+        Args:
+            operation: Delete operation details.
+            result: Result object to record outcomes.
+            label: Operation label.
         """
         from bpfw.core.authority.shard import AuthorityShard
 
@@ -385,9 +434,7 @@ class AuthorityPatchEngine:
         result: AuthorityPatchResult,
         label: str,
     ) -> None:
-        """PURPOSE update main metadata fields on a block
-        DOMAIN  blueprint file changes
-        """
+        """Update main metadata fields on a block."""
         block = self._get_mutable_block(operation.source_shard_path, operation.block_id)
         if block is None:
             result.add_skipped(label, f"block '{operation.block_id}' not found")
@@ -404,8 +451,12 @@ class AuthorityPatchEngine:
         result: AuthorityPatchResult,
         label: str,
     ) -> None:
-        """PURPOSE update a block code path
-        DOMAIN  blueprint file changes
+        """Update a block code path.
+
+        Args:
+            operation: Location update details.
+            result: Result object to record outcomes.
+            label: Operation label.
         """
         block = self._get_mutable_block(operation.source_shard_path, operation.block_id)
         if block is None:
@@ -426,8 +477,12 @@ class AuthorityPatchEngine:
         result: AuthorityPatchResult,
         label: str,
     ) -> None:
-        """PURPOSE update a block code symbol and display name
-        DOMAIN  blueprint file changes
+        """Update a block code symbol and optional display name.
+
+        Args:
+            operation: Symbol update details.
+            result: Result object to record outcomes.
+            label: Operation label.
         """
         block = self._get_mutable_block(operation.source_shard_path, operation.block_id)
         if block is None:
@@ -450,8 +505,12 @@ class AuthorityPatchEngine:
         result: AuthorityPatchResult,
         label: str,
     ) -> None:
-        """PURPOSE update a block code path, symbol, kind, and name
-        DOMAIN  blueprint file changes
+        """Update a block code path, symbol, optional kind, and optional name.
+
+        Args:
+            operation: Code reference update details.
+            result: Result object to record outcomes.
+            label: Operation label.
         """
         block = self._get_mutable_block(operation.source_shard_path, operation.block_id)
         if block is None:
@@ -477,8 +536,12 @@ class AuthorityPatchEngine:
         result: AuthorityPatchResult,
         label: str,
     ) -> None:
-        """PURPOSE add an ignored-code rule to the root blueprint
-        DOMAIN  blueprint file changes
+        """Add an ignored-code rule to the root blueprint.
+
+        Args:
+            operation: Ignore-rule creation details.
+            result: Result object to record outcomes.
+            label: Operation label.
         """
         data = self._load_blueprint_index(operation.blueprint_path)
         authority = data.setdefault("authority", {})
@@ -501,8 +564,12 @@ class AuthorityPatchEngine:
         result: AuthorityPatchResult,
         label: str,
     ) -> None:
-        """PURPOSE remove an ignored-code rule from the root blueprint
-        DOMAIN  blueprint file changes
+        """Remove an ignored-code rule from the root blueprint.
+
+        Args:
+            operation: Ignore-rule removal details.
+            result: Result object to record outcomes.
+            label: Operation label.
         """
         data = self._load_blueprint_index(operation.blueprint_path)
         authority = data.get("authority")
@@ -526,8 +593,12 @@ class AuthorityPatchEngine:
         result: AuthorityPatchResult,
         label: str,
     ) -> None:
-        """PURPOSE add a covered-code relation to the root blueprint
-        DOMAIN  blueprint file changes
+        """Add a covered-code relation to the root blueprint.
+
+        Args:
+            operation: Covered-code creation details.
+            result: Result object to record outcomes.
+            label: Operation label.
         """
         data = self._load_blueprint_index(operation.blueprint_path)
         authority = data.setdefault("authority", {})
@@ -550,8 +621,12 @@ class AuthorityPatchEngine:
         result: AuthorityPatchResult,
         label: str,
     ) -> None:
-        """PURPOSE remove a covered-code relation from the root blueprint
-        DOMAIN  blueprint file changes
+        """Remove a covered-code relation from the root blueprint.
+
+        Args:
+            operation: Covered-code removal details.
+            result: Result object to record outcomes.
+            label: Operation label.
         """
         data = self._load_blueprint_index(operation.blueprint_path)
         authority = data.get("authority")
@@ -574,8 +649,12 @@ class AuthorityPatchEngine:
         result: AuthorityPatchResult,
         label: str,
     ) -> None:
-        """PURPOSE create a new shard file
-        DOMAIN  blueprint file changes
+        """Create a new shard file.
+
+        Args:
+            operation: Shard creation details.
+            result: Result object to record outcomes.
+            label: Operation label.
         """
         target_absolute = self.project_root / operation.shard_path
         target_absolute.parent.mkdir(parents=True, exist_ok=True)
@@ -592,8 +671,12 @@ class AuthorityPatchEngine:
         result: AuthorityPatchResult,
         label: str,
     ) -> None:
-        """PURPOSE delete a shard file from disk
-        DOMAIN  blueprint file changes
+        """Delete a shard file from disk.
+
+        Args:
+            operation: Shard deletion details.
+            result: Result object to record outcomes.
+            label: Operation label.
         """
         target_absolute = self.project_root / operation.shard_path
         target_absolute.unlink()
@@ -606,8 +689,12 @@ class AuthorityPatchEngine:
         result: AuthorityPatchResult,
         label: str,
     ) -> None:
-        """PURPOSE rename a shard file
-        DOMAIN  blueprint file changes
+        """Rename a shard file.
+
+        Args:
+            operation: Rename details.
+            result: Result object to record outcomes.
+            label: Operation label.
         """
         source_absolute = self.project_root / operation.source_shard_path
         target_absolute = self.project_root / operation.target_shard_path
@@ -623,8 +710,12 @@ class AuthorityPatchEngine:
         result: AuthorityPatchResult,
         label: str,
     ) -> None:
-        """PURPOSE move a shard file to a new location
-        DOMAIN  blueprint file changes
+        """Move a shard file to a new location.
+
+        Args:
+            operation: Move details.
+            result: Result object to record outcomes.
+            label: Operation label.
         """
         source_absolute = self.project_root / operation.source_shard_path
         target_absolute = self.project_root / operation.target_shard_path
@@ -635,8 +726,14 @@ class AuthorityPatchEngine:
         result.add_applied(label)
 
     def _get_mutable_block(self, shard_path: Path, block_id: str) -> dict | None:
-        """PURPOSE get a mutable copy of one block from a shard
-        DOMAIN  blueprint file changes
+        """Return a mutable copy of one block from a shard.
+
+        Args:
+            shard_path: Project-relative shard path.
+            block_id: Block identifier.
+
+        Returns:
+            Block dictionary copy, or None when not found.
         """
         from bpfw.core.authority.shard import AuthorityShard
 
@@ -647,8 +744,12 @@ class AuthorityPatchEngine:
         return None
 
     def _save_mutated_block(self, shard_path: Path, block_id: str, block_data: dict) -> None:
-        """PURPOSE replace one block in a shard and save it
-        DOMAIN  blueprint file changes
+        """Replace one block in a shard and save it.
+
+        Args:
+            shard_path: Project-relative shard path.
+            block_id: Block identifier to replace.
+            block_data: New block data.
         """
         from bpfw.core.authority.shard import AuthorityShard
 
@@ -663,9 +764,16 @@ class AuthorityPatchEngine:
         shard.save(self.project_root)
 
     def _load_blueprint_index(self, blueprint_path: Path) -> dict:
-        """PURPOSE read the root blueprint YAML as a dictionaryionary
-                DOMAIN  blueprint file changes
+        """Load the root blueprint YAML as a dictionary.
 
+        Args:
+            blueprint_path: Project-relative blueprint path.
+
+        Returns:
+            Loaded blueprint dictionary.
+
+        Raises:
+            ValueError: If the loaded YAML is not a dictionary.
         """
         absolute_path = self.project_root / blueprint_path
         data = yaml.safe_load(absolute_path.read_text(encoding="utf-8"))
@@ -676,15 +784,23 @@ class AuthorityPatchEngine:
         return data
 
     def _save_blueprint_index(self, blueprint_path: Path, data: dict) -> None:
-        """PURPOSE write the root blueprint YAML
-        DOMAIN  blueprint file changes
+        """Write the root blueprint YAML.
+
+        Args:
+            blueprint_path: Project-relative blueprint path.
+            data: Blueprint dictionary to write.
         """
         absolute_path = self.project_root / blueprint_path
         absolute_path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
 
     def _validate_yaml_files(self, paths: set[Path]) -> list[str]:
-        """PURPOSE check that all written YAML files parse correctly
-        DOMAIN  blueprint file changes
+        """Validate that all written YAML files parse correctly.
+
+        Args:
+            paths: Project-relative paths to validate.
+
+        Returns:
+            List of validation messages.
         """
         errors: list[str] = []
         for relative_path in paths:
@@ -704,8 +820,11 @@ class AuthorityPatchEngine:
         plan: AuthorityPatchPlan,
         result: AuthorityPatchResult,
     ) -> None:
-        """PURPOSE update root blueprint includes after shard file lifecycle changes
-        DOMAIN  blueprint file changes
+        """Update root blueprint includes after shard file lifecycle changes.
+
+        Args:
+            plan: Applied patch plan.
+            result: Result object to record modifications.
         """
         manifest_path = Path("bpfw/blueprint.yaml")
         absolute_path = self.project_root / manifest_path

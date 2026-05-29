@@ -1,5 +1,8 @@
-"""PURPOSE low-level authority document persistence for BPFW
-DOMAIN  blueprint files
+"""Low-level authority document persistence for BPFW.
+
+This module persists the current in-memory authority document exactly as it is.
+It does not compute shard layout drift, does not move blocks automatically, and
+is not a replacement for Blueprint Engine approved patch operations.
 """
 
 from dataclasses import dataclass, field
@@ -23,8 +26,14 @@ from bpfw.core.protection.authority import (
 
 @dataclass
 class AuthorityPersistenceResult:
-    """PURPOSE result of a low-level authority document save operation
-    DOMAIN  blueprint files
+    """Result of a low-level authority document save operation.
+
+    Attributes:
+        saved_shards: Shard files written to disk.
+        created_shards: Shard files created during save.
+        removed_shards: Shard files removed during save.
+        updated_includes: Whether root includes were written.
+        warnings: Non-fatal persistence messages.
     """
 
     saved_shards: list[Path] = field(default_factory=list)
@@ -35,19 +44,24 @@ class AuthorityPersistenceResult:
 
 
 class AuthorityPersistenceEngine:
-    """PURPOSE save authority documents without layout synchronization
-    DOMAIN  blueprint files
-    """
+    """Save authority documents without layout synchronization."""
 
     def __init__(self, project_root: Path) -> None:
-        """PURPOSE set up the persistence engine
-        DOMAIN  blueprint files
+        """Initialize the persistence engine.
+
+        Args:
+            project_root: Project root directory.
         """
         self.project_root = project_root
 
     def save_document(self, document: AuthorityDocument) -> AuthorityPersistenceResult:
-        """PURPOSE save the document's shards and root index
-        DOMAIN  blueprint files
+        """Persist the document's current shards and root index.
+
+        Args:
+            document: Authority document to save exactly as currently modeled.
+
+        Returns:
+            Persistence result describing files written.
         """
         result = AuthorityPersistenceResult()
         lock_state = get_authority_protection_status(project_root=self.project_root).status
@@ -97,8 +111,18 @@ class AuthorityPersistenceEngine:
         document: AuthorityDocument,
         block: dict[str, Any],
     ) -> AuthorityPersistenceResult:
-        """PURPOSE save one block into its shard or the configured default shard
-        DOMAIN  blueprint files
+        """Save one block into its current shard or the configured default shard.
+
+        This method does not move an existing block to an expected shard. New
+        blocks are placed in the default shard unless the caller already inserted
+        them into a specific shard in the document.
+
+        Args:
+            document: Authority document to update.
+            block: Block dictionary to save.
+
+        Returns:
+            Persistence result describing files written.
         """
         block_id = block.get("id")
         if not isinstance(block_id, str) or not block_id.strip():
@@ -142,8 +166,17 @@ class AuthorityPersistenceEngine:
         blocks: list[dict[str, Any]],
         result: AuthorityPersistenceResult,
     ) -> None:
-        """PURPOSE rebuild loaded shard contents using origins only
-        DOMAIN  blueprint files
+        """Rebuild loaded shard contents using current origins only.
+
+        Existing blocks remain in their current shards even if metadata would now
+        imply a different shard. New blocks without an origin are placed in the
+        configured default shard. This preserves drift for later Blueprint Engine
+        review instead of silently correcting it.
+
+        Args:
+            document: Authority document to update.
+            blocks: Logical block list from the document.
+            result: Persistence result to record warnings and created shards.
         """
         authority_config = document.get_authority_config()
         decision_engine = ShardDecisionEngine(authority_config)
@@ -176,8 +209,13 @@ class AuthorityPersistenceEngine:
             document.shards[shard_path].set_blocks(shard_blocks)
 
     def _collect_blocks_from_shards(self, document: AuthorityDocument) -> list[dict[str, Any]]:
-        """PURPOSE collect blocks from all loaded shards
-        DOMAIN  blueprint files
+        """Collect blocks from all loaded shards.
+
+        Args:
+            document: Authority document.
+
+        Returns:
+            Combined block list from all shards.
         """
         blocks: list[dict[str, Any]] = []
         for shard in document.shards.values():
@@ -185,8 +223,10 @@ class AuthorityPersistenceEngine:
         return blocks
 
     def _synchronize_index_with_document(self, document: AuthorityDocument) -> None:
-        """PURPOSE copy root metadata and includes from the document into the index
-        DOMAIN  blueprint files
+        """Copy root metadata and includes from the document into the index.
+
+        Args:
+            document: Authority document whose root metadata should be saved.
         """
         blueprint_data = document.blueprint_data
         for key, value in blueprint_data.items():

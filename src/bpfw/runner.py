@@ -1,6 +1,4 @@
-"""PURPOSE command execution gate backed by the verify pipeline
-DOMAIN  command safety
-"""
+"""Command execution gate backed by the existing verify pipeline."""
 
 from pathlib import Path
 import subprocess
@@ -9,9 +7,7 @@ from bpfw.core.catalog.verify import run_verify
 
 
 def run_command_after_verify(project_root: Path, command: list[str]) -> int:
-    """PURPOSE run a child command only when bpfw verify passes
-    DOMAIN  command safety
-    """
+    """Run a child command only when `bpfw verify` passes."""
     _report, verify_exit_code = run_verify(project_root=project_root.resolve())
     if verify_exit_code != 0:
         print("BPFW verify failed.")

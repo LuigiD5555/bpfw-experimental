@@ -1,6 +1,4 @@
-"""PURPOSE low-level file-change patch small helpers for Blueprint Engine
-DOMAIN  blueprint file changes
-"""
+"""Low-level file-change patch primitives for Blueprint Engine."""
 
 from bpfw.core.authority.patch.actions import (
     AddCoveredCodeOperation,

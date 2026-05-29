@@ -1,6 +1,4 @@
-"""PURPOSE catalog mode verify pipeline for BPFW
-DOMAIN  blueprint checks
-"""
+"""Verification flow for BPFW catalog mode."""
 
 from pathlib import Path
 from typing import Any, List, Tuple
@@ -46,9 +44,7 @@ def read_source_roots(
     blueprint_data: dict,
     domain_document: BlueprintDocument | None = None,
 ) -> List[str]:
-    """PURPOSE read project.source_roots from blueprint, or return defaults
-    DOMAIN  blueprint checks
-    """
+    """Read project.source_roots from blueprint, or return defaults."""
     if domain_document is not None and domain_document.project.get("source_roots"):
         return [str(root) for root in domain_document.project.get("source_roots", [])]
 
@@ -64,9 +60,7 @@ def read_ignored_paths(
     blueprint_data: dict,
     domain_document: BlueprintDocument | None = None,
 ) -> List[str]:
-    """PURPOSE read project.ignored_paths from blueprint, or return defaults
-    DOMAIN  blueprint checks
-    """
+    """Read project.ignored_paths from blueprint, or return defaults."""
     if domain_document is not None and domain_document.project.get("ignored_paths"):
         return [str(path) for path in domain_document.project.get("ignored_paths", [])]
 
@@ -83,10 +77,7 @@ def scan_project_from_blueprint(
     blueprint_data: dict,
     domain_document: BlueprintDocument | None = None,
 ) -> ScanResult:
-    """PURPOSE run one Python code tree scan using source and ignore settings from blueprint data
-        DOMAIN  blueprint checks
-
-    """
+    """Run one Python code tree scan using source and ignore settings from blueprint data."""
 
     source_roots = read_source_roots(blueprint_data, domain_document=domain_document)
     ignored_paths = read_ignored_paths(blueprint_data, domain_document=domain_document)
@@ -98,8 +89,14 @@ def scan_project_from_blueprint(
 
 
 def _validate_sharded_authority(project_root: Path, load_result: Any) -> List[Finding]:
-    """PURPOSE check sharded authority structure and detect shard drift
-    DOMAIN  blueprint checks
+    """Validate sharded authority structure and detect shard drift.
+
+    Args:
+        project_root: Project root directory.
+        load_result: BlueprintLoader load result.
+
+    Returns:
+        List of shard validation findings.
     """
     findings = []
 
@@ -253,9 +250,7 @@ def _build_report(
     declared_count: int = 0,
     discovered_count: int = 0,
 ) -> VerificationReport:
-    """PURPOSE build a VerificationReport with computed counts and allowed flag
-    DOMAIN  blueprint checks
-    """
+    """Build a VerificationReport with computed counts and allowed flag."""
     missing_declared_count = sum(1 for finding in findings if finding.code == CODE_MISSING_DECLARED)
     undeclared_count = sum(1 for finding in findings if finding.code == CODE_UNDECLARED)
     duplicate_active_purpose_count = sum(1 for finding in findings if finding.code == CODE_DUPLICATE_ACTIVE_PURPOSE)
@@ -286,9 +281,7 @@ def run_verify(
     precomputed_scan_result: ScanResult | None = None,
     precomputed_load_result: BlueprintLoadResult | None = None,
 ) -> Tuple[VerificationReport, int]:
-    """PURPOSE execute the complete verify pipeline
-    DOMAIN  blueprint checks
-    """
+    """Execute the complete verify pipeline."""
     resolved_root = project_root.resolve()
 
     # Step 1-2: Load blueprint

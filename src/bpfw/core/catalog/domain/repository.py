@@ -1,6 +1,4 @@
-"""PURPOSE repository abstraction for blueprint authority IO + mapper conversion
-DOMAIN  blueprint data
-"""
+"""Repository abstraction for blueprint authority IO + mapper conversion."""
 
 from __future__ import annotations
 
@@ -18,10 +16,7 @@ from bpfw.core.catalog.paths import resolve_blueprint_path
 
 @dataclass(slots=True)
 class RepositoryLoadResult:
-    """PURPOSE repository load data with domain model and raw dictionaryionary
-        DOMAIN  blueprint data
-
-    """
+    """Repository load data with domain model and raw dictionary."""
 
     document: BlueprintDocument
     raw_data: dict[str, Any]
@@ -29,9 +24,7 @@ class RepositoryLoadResult:
 
 
 class BlueprintRepository:
-    """PURPOSE single entry-point for loading/saving blueprint authority
-    DOMAIN  blueprint data
-    """
+    """Single entry-point for loading/saving blueprint authority."""
 
     def __init__(self, project_root: Path, mapper: BlueprintMapper | None = None) -> None:
         self.project_root = project_root
@@ -40,9 +33,7 @@ class BlueprintRepository:
 
     @staticmethod
     def _has_sharded_authority_layout(raw_blueprint_data: dict[str, Any]) -> bool:
-        """PURPOSE check whether raw blueprint data declares sharded authority
-        DOMAIN  blueprint data
-        """
+        """Return True when raw blueprint data declares sharded authority."""
 
         authority_data = raw_blueprint_data.get("authority")
         if not isinstance(authority_data, dict):

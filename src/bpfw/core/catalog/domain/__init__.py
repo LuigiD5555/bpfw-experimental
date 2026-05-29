@@ -1,6 +1,4 @@
-"""PURPOSE domain package for blueprint models, mapping, and repository
-DOMAIN  blueprint data
-"""
+"""Domain package for blueprint models, mapping, and repository."""
 
 from bpfw.core.catalog.domain.mapper import BlueprintMapper
 from bpfw.core.catalog.domain.models import (

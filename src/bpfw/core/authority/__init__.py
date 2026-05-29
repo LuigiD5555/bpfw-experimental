@@ -1,6 +1,4 @@
-"""PURPOSE authority package for BPFW blueprint files
-DOMAIN  blueprint files
-"""
+"""Authority package for BPFW blueprint files."""
 
 from bpfw.core.blueprint_engine import (
     BlueprintChangeKind,

@@ -1,6 +1,4 @@
-"""PURPOSE status rules for BPFW catalog mode
-DOMAIN  blueprint checks
-"""
+"""Status rules for BPFW catalog mode."""
 
 from typing import Any
 
@@ -18,18 +16,13 @@ ALLOWED_STATUSES = (
 
 
 def is_allowed_status(status: str | None) -> bool:
-    """PURPOSE check whether a status value is allowed in the
-    DOMAIN  blueprint checks
-    """
+    """Check whether a status value is allowed."""
 
     return status in ALLOWED_STATUSES
 
 
 def count_statuses(blueprint_data: dict[str, Any]) -> dict[str, int]:
-    """PURPOSE count allowed status values declared in a blueprint data
-        DOMAIN  blueprint checks
-
-    """
+    """Count allowed status values declared in a blueprint data."""
 
     counts = {status: 0 for status in ALLOWED_STATUSES}
     blocks = blueprint_data.get("blocks", [])

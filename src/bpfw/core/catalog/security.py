@@ -1,6 +1,4 @@
-"""PURPOSE security check for BPFW blueprint files
-DOMAIN  blueprint checks
-"""
+"""Security validation for BPFW blueprint files."""
 
 import re
 from pathlib import PurePosixPath, PureWindowsPath
@@ -41,8 +39,13 @@ _WORD_SECRET_KEYWORDS = {
 
 
 def validate_no_blueprint_secrets(blueprint_data: dict[str, Any]) -> list[Finding]:
-    """PURPOSE check that blueprint data does not contain obvious secrets
-    DOMAIN  blueprint checks
+    """Validate that blueprint data does not contain obvious secrets.
+
+    Args:
+        blueprint_data: Parsed blueprint data.
+
+    Returns:
+        Blocking findings for suspicious secret-like fields or values.
     """
 
     findings: list[Finding] = []
@@ -55,8 +58,12 @@ def validate_no_blueprint_secrets(blueprint_data: dict[str, Any]) -> list[Findin
 
 
 def scan_blueprint_value(value: Any, path: str, findings: list[Finding]) -> None:
-    """PURPOSE recursively scan blueprint values for secret-like content
-    DOMAIN  blueprint checks
+    """Recursively scan blueprint values for secret-like content.
+
+    Args:
+        value: Current value.
+        path: Logical YAML path.
+        findings: Mutable findings list.
     """
 
     if isinstance(value, dict):
@@ -121,8 +128,13 @@ def scan_blueprint_value(value: Any, path: str, findings: list[Finding]) -> None
 
 
 def contains_secret_keyword(value: str) -> bool:
-    """PURPOSE check whether a string contains a secret-like keyword
-    DOMAIN  blueprint checks
+    """Return whether a string contains a secret-like keyword.
+
+    Args:
+        value: String to inspect.
+
+    Returns:
+        True when the value contains a suspicious keyword. False otherwise.
     """
 
     for keyword in SECRET_KEYWORDS:
@@ -135,8 +147,13 @@ def contains_secret_keyword(value: str) -> bool:
 
 
 def looks_like_absolute_path(value: str) -> bool:
-    """PURPOSE check whether a value looks like an absolute filesystem path
-    DOMAIN  blueprint checks
+    """Return whether a value looks like an absolute filesystem path.
+
+    Args:
+        value: String value to inspect.
+
+    Returns:
+        True when the value looks like a POSIX or Windows absolute path.
     """
 
     stripped_value = value.strip()
@@ -147,8 +164,13 @@ def looks_like_absolute_path(value: str) -> bool:
 
 
 def is_allowed_security_policy_path(path: str) -> bool:
-    """PURPOSE check whether a path belongs to allowed security policy metadata
-    DOMAIN  blueprint checks
+    """Return whether a path belongs to allowed security policy metadata.
+
+    Args:
+        path: Logical YAML path.
+
+    Returns:
+        True when the path is allowed to mention security keywords.
     """
 
     allowed_prefixes = (

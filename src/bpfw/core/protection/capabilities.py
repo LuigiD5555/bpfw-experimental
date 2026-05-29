@@ -1,6 +1,4 @@
-"""PURPOSE capability detection for BPFW OS lock backends
-DOMAIN  framework core
-"""
+"""Capability detection for BPFW OS lock backends."""
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -36,9 +34,7 @@ WEAK_POSIX_LOCK_FILESYSTEMS = frozenset(
 
 @dataclass(frozen=True, slots=True)
 class LockSupportResult:
-    """PURPOSE describe whether the project can enforce OS-level locks
-    DOMAIN  framework core
-    """
+    """Describe whether the current project can enforce OS-level locks."""
 
     supported: bool
     status: str
@@ -49,34 +45,26 @@ class LockSupportResult:
 
 @dataclass(frozen=True, slots=True)
 class MountContext:
-    """PURPOSE describe the mounted filesystem that contains a project path
-    DOMAIN  framework core
-    """
+    """Describe the mounted filesystem that contains a project path."""
 
     mount_point: Path
     filesystem_type: str
 
 
 def _can_use_sudo() -> bool:
-    """PURPOSE check whether sudo can be invoked from the terminal
-    DOMAIN  framework core
-    """
+    """Return whether sudo can be invoked from the current terminal."""
 
     return sys.stdin.isatty() and shutil.which("sudo") is not None
 
 
 def _is_root() -> bool:
-    """PURPOSE check whether the process is running as root
-    DOMAIN  framework core
-    """
+    """Return whether the current process is running as root."""
 
     return hasattr(os, "geteuid") and os.geteuid() == 0
 
 
 def _is_windows_admin() -> bool:
-    """PURPOSE check whether the process has Windows administrator privileges
-    DOMAIN  framework core
-    """
+    """Return whether the current process has Windows administrator privileges."""
 
     try:
         return bool(ctypes.windll.shell32.IsUserAnAdmin())
@@ -85,9 +73,7 @@ def _is_windows_admin() -> bool:
 
 
 def _decode_mount_field(value: str) -> str:
-    """PURPOSE decode escaped fields from Linux mountinfo
-    DOMAIN  framework core
-    """
+    """Decode escaped fields from Linux mountinfo."""
 
     return (
         value.replace("\\040", " ")
@@ -98,9 +84,7 @@ def _decode_mount_field(value: str) -> str:
 
 
 def _find_mount_context(path: Path) -> MountContext | None:
-    """PURPOSE get Linux mount context for a path when mountinfo is available
-    DOMAIN  framework core
-    """
+    """Return Linux mount context for a path when mountinfo is available."""
 
     mountinfo_path = Path("/proc/self/mountinfo")
     if not mountinfo_path.exists():
@@ -146,9 +130,7 @@ def _find_mount_context(path: Path) -> MountContext | None:
 
 
 def _does_not_support_strong_posix_lock(path: Path) -> bool:
-    """PURPOSE check whether a path is on a filesystem where strong POSIX locks are not trusted
-    DOMAIN  framework core
-    """
+    """Return whether a path is on a filesystem where strong POSIX locks are not trusted."""
 
     mount_context = _find_mount_context(path=path)
     if mount_context is None:
@@ -157,9 +139,7 @@ def _does_not_support_strong_posix_lock(path: Path) -> bool:
 
 
 def _format_unsupported_reason(project_root: Path) -> str:
-    """PURPOSE get a concrete unsupported-filesystem reason for init output
-    DOMAIN  framework core
-    """
+    """Return a concrete unsupported-filesystem reason for init output."""
 
     mount_context = _find_mount_context(path=project_root)
     if mount_context is None:
@@ -177,9 +157,7 @@ def _format_unsupported_reason(project_root: Path) -> str:
 
 
 def _resolve_username(uid: int) -> str:
-    """PURPOSE find a username for a uid and fall back to the numeric uid
-    DOMAIN  framework core
-    """
+    """Resolve a username for a uid and fall back to the numeric uid."""
 
     if pwd is None:
         return str(uid)
@@ -190,9 +168,7 @@ def _resolve_username(uid: int) -> str:
 
 
 def _format_not_writable_reason(check_directory: Path) -> str:
-    """PURPOSE get a specific reason when the probe directory cannot be written
-    DOMAIN  framework core
-    """
+    """Return a specific reason when the probe directory cannot be written."""
 
     base_reason = (
         "BPFW cannot probe lock support because the project path is not writable: "
@@ -223,9 +199,7 @@ def _format_not_writable_reason(check_directory: Path) -> str:
 
 
 def _run_command(command: list[str]) -> bool:
-    """PURPOSE run a lock capability command without leaking backend output to the terminal
-    DOMAIN  framework core
-    """
+    """Run a lock capability command without leaking backend output to the terminal."""
 
     if shutil.which(command[0]) is None:
         return False
@@ -263,9 +237,7 @@ def _run_command(command: list[str]) -> bool:
 
 
 def _run_immutable_command(platform_name: str, path: Path, enable: bool) -> bool:
-    """PURPOSE run the platform immutable-flag command against a temporary path
-    DOMAIN  framework core
-    """
+    """Run the platform immutable-flag command against a temporary path."""
 
     if platform_name == "darwin":
         flag = "uchg" if enable else "nouchg"
@@ -279,9 +251,7 @@ def _run_immutable_command(platform_name: str, path: Path, enable: bool) -> bool
 
 
 def _restore_mode(path: Path, mode: int) -> None:
-    """PURPOSE restore the original mode for a capability-check path
-    DOMAIN  framework core
-    """
+    """Restore the original mode for a capability-check path."""
 
     try:
         path.chmod(mode)
@@ -290,9 +260,7 @@ def _restore_mode(path: Path, mode: int) -> None:
 
 
 def _restore_owner(path: Path, uid: int, gid: int) -> None:
-    """PURPOSE restore the original owner for a capability-check path
-    DOMAIN  framework core
-    """
+    """Restore the original owner for a capability-check path."""
 
     try:
         os.chown(path, uid, gid)
@@ -301,27 +269,21 @@ def _restore_owner(path: Path, uid: int, gid: int) -> None:
 
 
 def _has_any_write_bit(path: Path) -> bool:
-    """PURPOSE check whether a path has any POSIX write bit enabled
-    DOMAIN  framework core
-    """
+    """Return whether a path has any POSIX write bit enabled."""
 
     current_mode = stat.S_IMODE(path.stat().st_mode)
     return bool(current_mode & (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH))
 
 
 def _is_root_owned(path: Path) -> bool:
-    """PURPOSE check whether a path is owned by root
-    DOMAIN  framework core
-    """
+    """Return whether a path is owned by root."""
 
     path_stat = path.stat()
     return path_stat.st_uid == 0 and path_stat.st_gid == 0
 
 
 def _can_apply_readonly_weak_lock(check_path: Path, check_directory: Path) -> bool:
-    """PURPOSE check whether read-only permissions block normal writes
-    DOMAIN  framework core
-    """
+    """Return whether read-only permissions block normal writes."""
 
     file_mode = stat.S_IMODE(check_path.stat().st_mode)
     directory_mode = stat.S_IMODE(check_directory.stat().st_mode)
@@ -347,9 +309,7 @@ def _can_apply_readonly_weak_lock(check_path: Path, check_directory: Path) -> bo
 
 
 def _can_toggle_root_ownership(check_path: Path, check_directory: Path) -> bool:
-    """PURPOSE check whether root ownership can be applied and restored
-    DOMAIN  framework core
-    """
+    """Return whether root ownership can be applied and restored safely."""
 
     file_stat = check_path.stat()
     directory_stat = check_directory.stat()
@@ -378,9 +338,7 @@ def _can_toggle_root_ownership(check_path: Path, check_directory: Path) -> bool:
 
 
 def _check_posix_lock_support(project_root: Path, platform_name: str) -> LockSupportResult:
-    """PURPOSE check POSIX lock support using project-local temporary resources
-    DOMAIN  framework core
-    """
+    """Check POSIX lock support using project-local temporary resources."""
 
     check_parent = project_root / "bpfw"
     check_directory = check_parent / ".lock_support_check_dir"
@@ -483,9 +441,7 @@ def _check_posix_lock_support(project_root: Path, platform_name: str) -> LockSup
 
 
 def _check_windows_lock_support(project_root: Path) -> LockSupportResult:
-    """PURPOSE check Windows read-only lock support using a temporary project-local file
-    DOMAIN  framework core
-    """
+    """Check Windows read-only lock support using a temporary project-local file."""
 
     check_directory = project_root / "bpfw"
     check_path = check_directory / ".lock_support_check"
@@ -544,9 +500,7 @@ def _check_windows_lock_support(project_root: Path) -> LockSupportResult:
 
 
 def check_lock_support(project_root: Path) -> LockSupportResult:
-    """PURPOSE check whether BPFW can enforce OS protection before mutating real resources
-    DOMAIN  framework core
-    """
+    """Check whether BPFW can enforce OS protection before mutating real resources."""
 
     resolved_root = project_root.resolve()
     platform_name = sys.platform

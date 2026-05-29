@@ -1,15 +1,11 @@
-"""PURPOSE result contracts produced by engine and steps
-DOMAIN  framework core
-"""
+"""Result contracts produced by engine and steps."""
 
 from dataclasses import dataclass, field
 from enum import StrEnum
 
 
 class ResultStatus(StrEnum):
-    """PURPOSE clean status values for every engine result
-    DOMAIN  framework core
-    """
+    """Normalized status values for every engine result."""
 
     OK = "OK"
     INFO = "INFO"
@@ -20,10 +16,7 @@ class ResultStatus(StrEnum):
 
 @dataclass(slots=True)
 class StepResult:
-    """PURPOSE single step outcome with evidence data
-        DOMAIN  framework core
-
-    """
+    """Single step outcome with evidence data."""
 
     status: ResultStatus
     message: str
@@ -35,9 +28,7 @@ class StepResult:
 
 @dataclass(slots=True)
 class EngineResult:
-    """PURPOSE aggregated output for one executed command
-    DOMAIN  framework core
-    """
+    """Aggregated output for one executed command."""
 
     command_name: str
     status: ResultStatus
@@ -55,9 +46,7 @@ _STATUS_PRIORITY: dict[ResultStatus, int] = {
 
 
 def aggregate_status(step_results: list[StepResult]) -> ResultStatus:
-    """PURPOSE calculate final status using the strongest step severity
-    DOMAIN  framework core
-    """
+    """Compute final status using the strongest step severity."""
 
     if not step_results:
         return ResultStatus.INFO

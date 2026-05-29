@@ -1,6 +1,4 @@
-"""PURPOSE internal shared helpers for cross-module reuse
-DOMAIN  shared text helpers
-"""
+"""Internal shared helpers for cross-module reuse."""
 
 from bpfw.shared.text import normalize_text_command, to_snake_case
 

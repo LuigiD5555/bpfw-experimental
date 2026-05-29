@@ -1,6 +1,4 @@
-"""PURPOSE command registry for BPFW catalog mode
-DOMAIN  framework core
-"""
+"""Command registry for BPFW catalog mode."""
 
 from dataclasses import dataclass
 
@@ -22,9 +20,15 @@ from bpfw.core.protection.runtime_lease import runtime_blueprint_write_lease
 
 
 def run_verify(project_root: object, precomputed_scan_result: object | None = None, precomputed_load_result: object | None = None) -> object:
-    """PURPOSE run catalog verification only after it is needed
-        DOMAIN  framework core
+    """Run catalog verification through a lazy import.
 
+    Args:
+        project_root: Project root directory.
+        precomputed_scan_result: Optional precomputed scan result.
+        precomputed_load_result: Optional precomputed blueprint load result.
+
+    Returns:
+        Verification report and exit code from the catalog verifier.
     """
     from bpfw.core.catalog.verify import run_verify as run_catalog_verify
 
@@ -37,9 +41,7 @@ def run_verify(project_root: object, precomputed_scan_result: object | None = No
 
 @dataclass(slots=True)
 class InitProjectStep(PipelineStep):
-    """PURPOSE set up the catalog blueprint file
-    DOMAIN  framework core
-    """
+    """Initialize the catalog blueprint file."""
 
     name: str = "catalog.init"
 
@@ -69,9 +71,7 @@ class InitProjectStep(PipelineStep):
 
 @dataclass(slots=True)
 class IntegrationStep(PipelineStep):
-    """PURPOSE run a named BPFW tool
-    DOMAIN  framework core
-    """
+    """Run a named optional BPFW integration."""
 
     integration_registry: IntegrationRegistry
     integration_name: str
@@ -128,9 +128,7 @@ class IntegrationStep(PipelineStep):
 
 @dataclass(slots=True)
 class VerifyBlueprintStep(PipelineStep):
-    """PURPOSE run the canonical catalog verify pipeline
-    DOMAIN  framework core
-    """
+    """Run the canonical catalog verify pipeline."""
 
     name: str = "catalog.verify"
 
@@ -202,9 +200,7 @@ class VerifyBlueprintStep(PipelineStep):
 
 @dataclass(slots=True)
 class AuthorityLockStep(PipelineStep):
-    """PURPOSE lock the authority resources
-    DOMAIN  framework core
-    """
+    """Lock the authority resources."""
 
     name: str = "protection.lock"
 
@@ -239,9 +235,7 @@ class AuthorityLockStep(PipelineStep):
 
 @dataclass(slots=True)
 class AuthorityUnlockStep(PipelineStep):
-    """PURPOSE unlock the authority resources
-    DOMAIN  framework core
-    """
+    """Unlock the authority resources."""
 
     name: str = "protection.unlock"
 
@@ -265,9 +259,7 @@ class AuthorityUnlockStep(PipelineStep):
 
 @dataclass(slots=True)
 class AuthorityStatusStep(PipelineStep):
-    """PURPOSE report compact status for engine callers
-    DOMAIN  framework core
-    """
+    """Report compact status for engine callers."""
 
     name: str = "catalog.status"
 
@@ -301,9 +293,7 @@ class AuthorityStatusStep(PipelineStep):
 def build_default_registry(
     integration_registry: IntegrationRegistry | None = None,
 ) -> dict[str, Pipeline]:
-    """PURPOSE build the exact command registry
-    DOMAIN  framework core
-    """
+    """Build the exact command registry."""
 
     optional_integrations = integration_registry or build_default_integration_registry()
     return {

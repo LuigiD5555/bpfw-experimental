@@ -1,6 +1,4 @@
-"""PURPOSE build low-level patch plans from Blueprint Engine requests
-DOMAIN  approved blueprint changes
-"""
+"""Build low-level patch plans from Blueprint Engine requests."""
 
 from pathlib import Path
 from typing import Any
@@ -28,22 +26,23 @@ from bpfw.core.blueprint_engine.models import BlueprintChangeKind, BlueprintChan
 
 
 class BlueprintPlanBuilder:
-    """PURPOSE convert approved change requests into file change plans
-        DOMAIN  approved blueprint changes
-        """
+    """Convert approved change requests into file change plans."""
 
     def build_plan(self, requests: list[BlueprintChangeRequest]) -> AuthorityPatchPlan:
-        """PURPOSE build a patch plan from change requests
-        DOMAIN  approved blueprint changes
-        """
+        """Build a patch plan from change requests."""
         plan = AuthorityPatchPlan()
         for request in requests:
             plan.add_operation(self._build_operation(request))
         return plan
 
     def _build_operation(self, request: BlueprintChangeRequest):  # noqa: ANN202
-        """PURPOSE build one patch operation from a request
-        DOMAIN  approved blueprint changes
+        """Build one patch operation from a request.
+
+        Args:
+            request: Blueprint change request.
+
+        Returns:
+            Low-level patch operation.
         """
         kind = request.kind
         payload = request.payload
@@ -134,20 +133,14 @@ class BlueprintPlanBuilder:
         raise AuthorityError(f"Unsupported BlueprintChangeKind: {kind}")
 
     def _required_string(self, payload: dict[str, Any], key: str) -> str:
-        """PURPOSE read a required non-empty string from a data
-                DOMAIN  approved blueprint changes
-
-        """
+        """Read a required non-empty string from a data."""
         value = payload.get(key)
         if not isinstance(value, str) or not value.strip():
             raise AuthorityError(f"Blueprint change payload requires non-empty string '{key}'.")
         return value
 
     def _optional_string(self, payload: dict[str, Any], key: str) -> str | None:
-        """PURPOSE read an string from a data
-                DOMAIN  approved blueprint changes
-
-        """
+        """Read an optional string from a data."""
         value = payload.get(key)
         if value is None:
             return None
@@ -156,10 +149,7 @@ class BlueprintPlanBuilder:
         return value
 
     def _required_path(self, payload: dict[str, Any], key: str) -> Path:
-        """PURPOSE read a required path from a data
-                DOMAIN  approved blueprint changes
-
-        """
+        """Read a required path from a data."""
         value = payload.get(key)
         if isinstance(value, Path):
             return value
@@ -168,19 +158,14 @@ class BlueprintPlanBuilder:
         raise AuthorityError(f"Blueprint change payload requires path '{key}'.")
 
     def _required_dict(self, payload: dict[str, Any], key: str) -> dict[str, Any]:
-        """PURPOSE read a required dictionaryionary from a data
-                DOMAIN  approved blueprint changes
-
-        """
+        """Read a required dictionary from a data."""
         value = payload.get(key)
         if not isinstance(value, dict) or not value:
             raise AuthorityError(f"Blueprint change payload requires non-empty dict '{key}'.")
         return value
 
     def _optional_blocks(self, payload: dict[str, Any]) -> list[dict[str, Any]]:
-        """PURPOSE read initial shard blocks
-        DOMAIN  approved blueprint changes
-        """
+        """Read optional initial shard blocks."""
         value = payload.get("initial_blocks", [])
         if not isinstance(value, list):
             raise AuthorityError("initial_blocks must be a list when provided.")

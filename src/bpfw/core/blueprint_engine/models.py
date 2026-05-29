@@ -1,5 +1,8 @@
-"""PURPOSE data models for the authority Blueprint Engine
-DOMAIN  approved blueprint changes
+"""Data models for the authority Blueprint Engine.
+
+These models describe approved authority changes. They are intentionally
+separate from drift findings: findings detect problems, while change requests
+express what an authorized tool wants the engine to modify under ``bpfw/``.
 """
 
 from dataclasses import dataclass, field
@@ -11,9 +14,7 @@ from bpfw.core.authority.patch.result import AuthorityPatchResult
 
 
 class BlueprintChangeKind(Enum):
-    """PURPOSE stable labels for supported Blueprint Engine change requests
-    DOMAIN  approved blueprint changes
-    """
+    """Stable labels for supported Blueprint Engine change requests."""
 
     CREATE_BLOCK = "create_block"
     DELETE_BLOCK = "delete_block"
@@ -33,9 +34,7 @@ class BlueprintChangeKind(Enum):
 
 
 class BlueprintChangeSource(Enum):
-    """PURPOSE origin of a Blueprint Engine change request
-    DOMAIN  approved blueprint changes
-    """
+    """Origin of a Blueprint Engine change request."""
 
     INSPECTOR = "inspector"
     EDITOR = "editor"
@@ -48,9 +47,7 @@ class BlueprintChangeSource(Enum):
 
 @dataclass(frozen=True)
 class MechanicalChangeEvidence:
-    """PURPOSE evidence required for automatic safe file updates
-        DOMAIN  approved blueprint changes
-        """
+    """Evidence required for automatic safe file updates."""
 
     exact_content_match: bool = False
     one_to_one_match: bool = False
@@ -61,9 +58,7 @@ class MechanicalChangeEvidence:
     description: str | None = None
 
     def is_safe_mechanical_match(self) -> bool:
-        """PURPOSE check whether evidence allows an automatic safe file update
-                DOMAIN  approved blueprint changes
-                """
+        """Check whether evidence allows an automatic safe file update."""
         return (
             self.exact_content_match
             and self.one_to_one_match
@@ -76,9 +71,7 @@ class MechanicalChangeEvidence:
 
 @dataclass(frozen=True)
 class BlueprintChangeRequest:
-    """PURPOSE approved or candidate request to modify BPFW authority files
-    DOMAIN  approved blueprint changes
-    """
+    """Approved or candidate request to modify BPFW authority files."""
 
     kind: BlueprintChangeKind
     source: BlueprintChangeSource
@@ -90,8 +83,14 @@ class BlueprintChangeRequest:
 
 @dataclass(frozen=True)
 class BlueprintChangePreview:
-    """PURPOSE read-only preview of a Blueprint Engine change request
-    DOMAIN  approved blueprint changes
+    """Read-only preview of a Blueprint Engine change request.
+
+    Attributes:
+        allowed: Whether the request can be applied.
+        operation_count: Number of patch operations that would run.
+        affected_files: Project-relative files that would be modified.
+        messages: Human-readable preview and validation messages.
+        blocked_reason: Reason the preview is blocked, if any.
     """
 
     allowed: bool
@@ -103,8 +102,13 @@ class BlueprintChangePreview:
 
 @dataclass
 class BlueprintChangeResult:
-    """PURPOSE result returned by Blueprint Engine apply methods
-    DOMAIN  approved blueprint changes
+    """Result returned by Blueprint Engine apply methods.
+
+    Attributes:
+        success: Whether the change applied successfully.
+        patch_result: Low-level patch result returned by the patch engine.
+        messages: Human-readable result messages.
+        blocked_reason: Reason the change was blocked before patching, if any.
     """
 
     success: bool = False

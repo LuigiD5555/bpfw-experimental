@@ -1,6 +1,4 @@
-"""PURPOSE session recovery metadata helpers for pending unified authority sessions
-DOMAIN  temporary blueprint sessions
-"""
+"""Session recovery metadata helpers for pending unified authority sessions."""
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -10,9 +8,7 @@ from typing import Any
 
 @dataclass(slots=True)
 class AuthoritySessionMeta:
-    """PURPOSE structured metadata persisted for one interactive authority session
-    DOMAIN  temporary blueprint sessions
-    """
+    """Structured metadata persisted for one interactive authority session."""
 
     tool_name: str
     status: str
@@ -23,17 +19,13 @@ class AuthoritySessionMeta:
 
 
 def utc_now_iso8601() -> str:
-    """PURPOSE get the UTC timestamp in ISO-8601 format with timezone
-    DOMAIN  temporary blueprint sessions
-    """
+    """Return the current UTC timestamp in ISO-8601 format with timezone."""
 
     return datetime.now(timezone.utc).isoformat()
 
 
 def write_session_meta(meta_path: Path, meta: AuthoritySessionMeta) -> None:
-    """PURPOSE write authority session metadata YAML to disk
-    DOMAIN  temporary blueprint sessions
-    """
+    """Write authority session metadata YAML to disk."""
 
     import yaml
 
@@ -51,8 +43,13 @@ def write_session_meta(meta_path: Path, meta: AuthoritySessionMeta) -> None:
 
 
 def read_session_meta(meta_path: Path) -> AuthoritySessionMeta | None:
-    """PURPOSE read authority session metadata YAML when present
-    DOMAIN  temporary blueprint sessions
+    """Read authority session metadata YAML when present.
+
+    Args:
+        meta_path: Absolute metadata YAML file path.
+
+    Returns:
+        Parsed session metadata when available, otherwise None.
     """
 
     if not meta_path.exists():

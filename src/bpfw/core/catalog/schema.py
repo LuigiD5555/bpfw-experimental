@@ -1,6 +1,4 @@
-"""PURPOSE canonical blueprint terminology helpers
-DOMAIN  blueprint checks
-"""
+"""Canonical blueprint terminology helpers."""
 
 from typing import Any, Callable, Dict, List
 
@@ -19,8 +17,10 @@ DEFAULT_ALLOWED_STATUSES = ["active", "experimental", "legacy", "deprecated"]
 
 
 class BlueprintSchema:
-    """PURPOSE consolidated access to canonical blueprint structure
-    DOMAIN  blueprint checks
+    """Consolidated access to canonical blueprint structure.
+
+    Provides getters and setters for canonical blueprint fields, reducing
+    boilerplate and ensuring consistency across the codebase.
     """
 
     # ---------------------------------------------------------------------------
@@ -28,9 +28,7 @@ class BlueprintSchema:
     # ---------------------------------------------------------------------------
 
     class _FieldAccessor:
-        """PURPOSE descriptor that generates a getter function for a canonical key
-        DOMAIN  blueprint checks
-        """
+        """Descriptor that generates a getter function for a canonical key."""
 
         def __init__(
             self,
@@ -58,9 +56,7 @@ class BlueprintSchema:
             return value
 
     class _FieldSetter:
-        """PURPOSE descriptor that generates a setter function for a canonical key
-        DOMAIN  blueprint checks
-        """
+        """Descriptor that generates a setter function for a canonical key."""
 
         def __init__(
             self,
@@ -116,15 +112,11 @@ class BlueprintSchema:
     # ---------------------------------------------------------------------------
 
     def get_blocks(self, blueprint_data: Dict[str, Any]) -> List[Any]:
-        """PURPOSE get declared blocks from canonical blueprint data
-        DOMAIN  blueprint checks
-        """
+        """Return declared blocks from canonical blueprint data."""
         return self._get_blocks(blueprint_data)
 
     def set_blocks(self, blueprint_data: Dict[str, Any], blocks: List[Dict[str, Any]]) -> None:
-        """PURPOSE set canonical blocks on blueprint data
-        DOMAIN  blueprint checks
-        """
+        """Set canonical blocks on blueprint data."""
         blueprint_data[CANONICAL_BLOCKS_KEY] = blocks
 
     # ---------------------------------------------------------------------------
@@ -132,27 +124,19 @@ class BlueprintSchema:
     # ---------------------------------------------------------------------------
 
     def get_purpose(self, block: Dict[str, Any]) -> Any:
-        """PURPOSE get a block purpose from canonical blueprint data
-        DOMAIN  blueprint checks
-        """
+        """Return a block purpose from canonical blueprint data."""
         return self._get_purpose(block)
 
     def set_purpose(self, block: Dict[str, Any], value: Any) -> None:
-        """PURPOSE set the canonical purpose key on a block
-        DOMAIN  blueprint checks
-        """
+        """Set the canonical purpose key on a block."""
         self._set_purpose(block, value)
 
     def get_status(self, block: Dict[str, Any]) -> Any:
-        """PURPOSE get a block status from canonical blueprint data
-        DOMAIN  blueprint checks
-        """
+        """Return a block status from canonical blueprint data."""
         return self._get_status(block)
 
     def set_status(self, block: Dict[str, Any], value: Any) -> None:
-        """PURPOSE set the canonical status key on a block
-        DOMAIN  blueprint checks
-        """
+        """Set the canonical status key on a block."""
         self._set_status(block, value)
 
     # ---------------------------------------------------------------------------
@@ -160,27 +144,19 @@ class BlueprintSchema:
     # ---------------------------------------------------------------------------
 
     def get_code(self, block: Dict[str, Any]) -> Dict[str, Any]:
-        """PURPOSE get canonical code metadata from a block
-        DOMAIN  blueprint checks
-        """
+        """Return canonical code metadata from a block."""
         return self._get_code(block)
 
     def set_code(self, block: Dict[str, Any], value: Dict[str, Any]) -> None:
-        """PURPOSE set canonical code metadata on a block
-        DOMAIN  blueprint checks
-        """
+        """Set canonical code metadata on a block."""
         self._set_code(block, value)
 
     def get_kind(self, code: Dict[str, Any]) -> Any:
-        """PURPOSE get canonical code kind metadata
-        DOMAIN  blueprint checks
-        """
+        """Return canonical code kind metadata."""
         return self._get_kind(code)
 
     def set_kind(self, code: Dict[str, Any], value: Any) -> None:
-        """PURPOSE set canonical code kind metadata
-        DOMAIN  blueprint checks
-        """
+        """Set canonical code kind metadata."""
         self._set_kind(code, value)
 
     # ---------------------------------------------------------------------------
@@ -188,15 +164,11 @@ class BlueprintSchema:
     # ---------------------------------------------------------------------------
 
     def get_connections(self, block: Dict[str, Any]) -> List[Any]:
-        """PURPOSE get canonical block connections
-        DOMAIN  blueprint checks
-        """
+        """Return canonical block connections."""
         return self._get_connections(block)
 
     def get_connection_meaning(self, connection: Dict[str, Any]) -> Any:
-        """PURPOSE get canonical connection meaning metadata
-        DOMAIN  blueprint checks
-        """
+        """Return canonical connection meaning metadata."""
         return self._get_connection_meaning(connection)
 
     # ---------------------------------------------------------------------------
@@ -204,21 +176,15 @@ class BlueprintSchema:
     # ---------------------------------------------------------------------------
 
     def get_uniqueness(self, block: Dict[str, Any]) -> Dict[str, Any]:
-        """PURPOSE get canonical uniqueness metadata from a block
-        DOMAIN  blueprint checks
-        """
+        """Return canonical uniqueness metadata from a block."""
         return self._get_uniqueness(block)
 
     def get_allowed_statuses(self, policy: Dict[str, Any]) -> List[str]:
-        """PURPOSE get canonical allowed statuses from policy metadata
-        DOMAIN  blueprint checks
-        """
+        """Return canonical allowed statuses from policy metadata."""
         return self._get_allowed_statuses(policy)
 
     def get_one_active_block_per_purpose(self, policy: Dict[str, Any]) -> bool:
-        """PURPOSE get the canonical duplicate-active-purpose policy value
-        DOMAIN  blueprint checks
-        """
+        """Return the canonical duplicate-active-purpose policy value."""
         return self._get_one_active_block_per_purpose(policy)
 
 

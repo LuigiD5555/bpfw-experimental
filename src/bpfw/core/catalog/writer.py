@@ -1,6 +1,4 @@
-"""PURPOSE blueprint writer for BPFW catalog mode initial blueprint generation
-DOMAIN  blueprint checks
-"""
+"""Blueprint writer for BPFW catalog mode initial blueprint generation."""
 
 from pathlib import Path
 import subprocess
@@ -30,9 +28,10 @@ from bpfw.shared.text import to_snake_case
 
 
 class BlockFactory:
-    """PURPOSE centralized factory for creating blueprint block dictionaryionaries
-        DOMAIN  blueprint checks
+    """Centralized factory for creating blueprint block dictionaries.
 
+    Ensures every block has a consistent schema with all required keys,
+    avoiding scattered dict-literal construction across the codebase.
     """
 
     @staticmethod
@@ -52,9 +51,25 @@ class BlockFactory:
         replacement: Dict[str, Any] | None = None,
         notes: Any = None,
     ) -> Dict[str, Any]:
-        """PURPOSE create a fully populated block dictionaryionary
-                DOMAIN  blueprint checks
+        """Create a fully populated block dictionary.
 
+        Args:
+            block_id: Unique block identifier.
+            name: Human-readable block name.
+            code: Code metadata dict (path, module, symbol, kind, start_line, end_line).
+            detected: Detection metadata dict (qualified_name, kind, methods, functions).
+            purpose: Block purpose (default None).
+            domain: Block domain (default None).
+            status: Block status (default None).
+            interface: Optional interface metadata.
+            entrypoints: Optional entrypoints list.
+            connections: Optional connections list.
+            uniqueness: Optional uniqueness metadata.
+            replacement: Optional replacement metadata.
+            notes: Optional notes string.
+
+        Returns:
+            Complete block dictionary with all canonical keys.
         """
         block: Dict[str, Any] = {
             "id": block_id,
@@ -92,8 +107,17 @@ def build_initial_blueprint(
     ignored_paths: List[str],
     discovered_units: List[DiscoveredCodeUnit],
 ) -> Dict[str, Any]:
-    """PURPOSE build initial blueprint data from project structure and discovered units
-    DOMAIN  blueprint checks
+    """Build initial blueprint data from project structure and discovered units.
+
+    Args:
+        project_root: Root directory of the project.
+        allow_unprotected: Whether init may succeed without OS authority protection.
+        source_roots: List of source root directories.
+        ignored_paths: List of ignored path patterns.
+        discovered_units: List of discovered code units.
+
+    Returns:
+        Dictionary containing blueprint index data (without blocks).
     """
     project_directory_name = project_root.name
     project_id = to_snake_case(project_directory_name)
@@ -137,8 +161,13 @@ def build_initial_blueprint(
 
 
 def build_core_shard(discovered_units: List[DiscoveredCodeUnit]) -> Dict[str, Any]:
-    """PURPOSE build core shard data from discovered units
-    DOMAIN  blueprint checks
+    """Build core shard data from discovered units.
+
+    Args:
+        discovered_units: List of discovered code units.
+
+    Returns:
+        Dictionary containing shard data with blocks.
     """
     blocks = []
     seen_block_ids: dict[str, int] = {}
@@ -191,8 +220,12 @@ def build_core_shard(discovered_units: List[DiscoveredCodeUnit]) -> Dict[str, An
 
 
 def _write_shard(shard_path: Path, shard_data: Dict[str, Any], project_root: Path) -> None:
-    """PURPOSE write a shard file to disk
-    DOMAIN  blueprint checks
+    """Write a shard file to disk.
+
+    Args:
+        shard_path: Path to the shard file.
+        shard_data: Shard data to write.
+        project_root: Project root for lock management.
     """
     try:
         import yaml
@@ -236,8 +269,12 @@ def write_blueprint(
     blueprint_data: Dict[str, Any],
     shard_data: Dict[str, Any] | None = None,
 ) -> None:
-    """PURPOSE write blueprint index and optionally shard data to YAML files
-    DOMAIN  blueprint checks
+    """Write blueprint index and optionally shard data to YAML files.
+
+    Args:
+        blueprint_path: Path to the blueprint index file.
+        blueprint_data: Blueprint index data to write.
+        shard_data: Optional shard data to write to default core shard.
     """
     try:
         import yaml
@@ -287,9 +324,7 @@ BLUEPRINT_RELATIVE_PATH = "bpfw/blueprint.yaml"
 
 
 def _extract_repair_command(reason: str) -> str | None:
-    """PURPOSE get ownership repair command from protection setup reason text
-    DOMAIN  blueprint checks
-    """
+    """Extract ownership repair command from protection setup reason text."""
 
     marker = "Repair with: "
     if marker not in reason:
@@ -299,9 +334,7 @@ def _extract_repair_command(reason: str) -> str | None:
 
 
 def _try_interactive_permission_repair(setup_result) -> bool:  # noqa: ANN001
-    """PURPOSE run ownership repair as an interactive fallback when available
-    DOMAIN  blueprint checks
-    """
+    """Run ownership repair as an interactive fallback when available."""
 
     if not sys.stdin.isatty():
         return False
@@ -321,8 +354,14 @@ def _try_interactive_permission_repair(setup_result) -> bool:  # noqa: ANN001
 
 
 def run_init(project_root: Path, allow_unprotected: bool = False) -> tuple[bool, str, int]:
-    """PURPOSE run the init command to create initial blueprint
-    DOMAIN  blueprint checks
+    """Run the init command to create initial blueprint.
+
+    Args:
+        project_root: Root directory of the project.
+        allow_unprotected: Whether init may succeed without OS authority protection.
+
+    Returns:
+        Tuple of (success, message, exit_code).
     """
     from bpfw.core.catalog.scanner import scan_python_project
 

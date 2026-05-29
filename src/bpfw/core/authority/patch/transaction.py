@@ -1,6 +1,4 @@
-"""PURPOSE transaction support for Blueprint Engine file writes
-DOMAIN  blueprint file changes
-"""
+"""Transaction support for Blueprint Engine file-change writes."""
 
 import shutil
 from dataclasses import dataclass
@@ -9,28 +7,33 @@ from pathlib import Path
 
 @dataclass
 class PatchWriteContext:
-    """PURPOSE explicit permission context required by patch application
-    DOMAIN  blueprint file changes
+    """Explicit permission context required by patch application.
+
+    Attributes:
+        tool_name: Name of the approved tool requesting writes.
+        allow_guarded_writes: Whether temporary authority unlock is allowed.
     """
 
     tool_name: str = ""
     allow_guarded_writes: bool = False
 
     def is_valid(self) -> bool:
-        """PURPOSE check whether the context has the minimum required fields
-        DOMAIN  blueprint file changes
+        """Return whether the context has the minimum required fields.
+
+        Returns:
+            True when ``tool_name`` is non-empty.
         """
         return bool(self.tool_name.strip())
 
 
 class TransactionBackup:
-    """PURPOSE create and manage file backups for rollback during apply
-    DOMAIN  blueprint file changes
-    """
+    """Create and manage file backups for rollback during apply."""
 
     def __init__(self, project_root: Path) -> None:
-        """PURPOSE set up the backup manager
-        DOMAIN  blueprint file changes
+        """Initialize the backup manager.
+
+        Args:
+            project_root: Project root directory.
         """
         self._project_root = project_root
         self._backup_dir = project_root / ".bpfw" / "blueprint_engine_backup"
@@ -38,21 +41,27 @@ class TransactionBackup:
 
     @property
     def backup_dir(self) -> Path:
-        """PURPOSE get the backup directory path
-        DOMAIN  blueprint file changes
+        """Return the backup directory path.
+
+        Returns:
+            Backup directory path.
         """
         return self._backup_dir
 
     @property
     def backed_up_files(self) -> set[Path]:
-        """PURPOSE get backed-up project-relative files
-        DOMAIN  blueprint file changes
+        """Return backed-up project-relative files.
+
+        Returns:
+            Copy of the backed-up path set.
         """
         return set(self._backed_up)
 
     def backup(self, relative_path: Path) -> None:
-        """PURPOSE create a backup of a file if it exists
-        DOMAIN  blueprint file changes
+        """Create a backup of a file if it exists.
+
+        Args:
+            relative_path: Project-relative path to back up.
         """
         absolute_source = self._project_root / relative_path
         if relative_path in self._backed_up:
@@ -67,8 +76,10 @@ class TransactionBackup:
         shutil.copy2(absolute_source, backup_target)
 
     def rollback(self) -> list[Path]:
-        """PURPOSE restore all backed-up files and remove newly created files
-        DOMAIN  blueprint file changes
+        """Restore all backed-up files and remove newly created files.
+
+        Returns:
+            List of project-relative paths restored or removed.
         """
         restored: list[Path] = []
         for relative_path in self._backed_up:
@@ -86,9 +97,7 @@ class TransactionBackup:
         return restored
 
     def commit(self) -> None:
-        """PURPOSE clean up backup files after a successful apply
-        DOMAIN  blueprint file changes
-        """
+        """Clean up backup files after a successful apply."""
         if self._backup_dir.exists():
             shutil.rmtree(self._backup_dir, ignore_errors=True)
         self._backed_up.clear()

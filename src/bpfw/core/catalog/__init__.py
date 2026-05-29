@@ -1,6 +1,4 @@
-"""PURPOSE catalog checks
-DOMAIN  blueprint checks
-"""
+"""Catalog verification support."""
 
 from bpfw.core.catalog.status import (
     ALLOWED_STATUSES,

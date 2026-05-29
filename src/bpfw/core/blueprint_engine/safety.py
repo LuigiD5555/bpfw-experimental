@@ -1,6 +1,4 @@
-"""PURPOSE safety policy for Blueprint Engine change requests
-DOMAIN  approved blueprint changes
-"""
+"""Safety policy for Blueprint Engine change requests."""
 
 from bpfw.core.blueprint_engine.models import (
     BlueprintChangeKind,
@@ -10,9 +8,7 @@ from bpfw.core.blueprint_engine.models import (
 
 
 class BlueprintEngineSafetyPolicy:
-    """PURPOSE check that a change request is authorized to be applied
-    DOMAIN  approved blueprint changes
-    """
+    """Validate that a change request is authorized to be applied."""
 
     _SAFE_MECHANICAL_KINDS: frozenset[BlueprintChangeKind] = frozenset(
         {
@@ -23,8 +19,13 @@ class BlueprintEngineSafetyPolicy:
     )
 
     def validate_request(self, request: BlueprintChangeRequest) -> str | None:
-        """PURPOSE get a blocking reason when a request is not authorized
-        DOMAIN  approved blueprint changes
+        """Return a blocking reason when a request is not authorized.
+
+        Args:
+            request: Blueprint change request to validate.
+
+        Returns:
+            None when allowed, otherwise a human-readable blocked reason.
         """
         if request.human_confirmed:
             return None

@@ -1,6 +1,4 @@
-"""PURPOSE blueprint Engine for approved approved file changes under bpfw/
-DOMAIN  approved blueprint changes
-"""
+"""Blueprint Engine for approved approved file changes under ``bpfw/``."""
 
 from bpfw.core.blueprint_engine.engine import BlueprintEngine
 from bpfw.core.blueprint_engine.models import (

@@ -1,6 +1,4 @@
-"""PURPOSE structured result of applying an authority patch plan
-DOMAIN  blueprint file changes
-"""
+"""Structured result of applying an authority patch plan."""
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -8,8 +6,18 @@ from pathlib import Path
 
 @dataclass
 class AuthorityPatchResult:
-    """PURPOSE structured result returned by AuthorityPatchEngine.apply
-    DOMAIN  blueprint file changes
+    """Structured result returned by ``AuthorityPatchEngine.apply``.
+
+    Attributes:
+        success: Whether all operations were applied without errors.
+        applied_operations: Operation kinds that were successfully applied.
+        skipped_operations: Operation kinds that were skipped due to
+            precondition failures.
+        modified_files: Project-relative paths that were written.
+        manifest_updated: Whether the root index was updated.
+        rolled_back: Whether a rollback was attempted after a failure.
+        messages: Human-readable informational messages.
+        error_message: Optional error description when success is False.
     """
 
     success: bool = False
@@ -22,20 +30,27 @@ class AuthorityPatchResult:
     error_message: str | None = None
 
     def add_applied(self, kind_label: str) -> None:
-        """PURPOSE record a successfully applied operation
-        DOMAIN  blueprint file changes
+        """Record a successfully applied operation.
+
+        Args:
+            kind_label: The ``PatchOperationKind.value`` string.
         """
         self.applied_operations.append(kind_label)
 
     def add_skipped(self, kind_label: str, reason: str) -> None:
-        """PURPOSE record a skipped operation
-        DOMAIN  blueprint file changes
+        """Record a skipped operation.
+
+        Args:
+            kind_label: The ``PatchOperationKind.value`` string.
+            reason: Why the operation was skipped.
         """
         self.skipped_operations.append(kind_label)
         self.messages.append(f"Skipped {kind_label}: {reason}")
 
     def add_modified(self, path: Path) -> None:
-        """PURPOSE record a file that was written
-        DOMAIN  blueprint file changes
+        """Record a file that was written.
+
+        Args:
+            path: Project-relative path of the modified file.
         """
         self.modified_files.append(path)

@@ -1,6 +1,4 @@
-"""PURPOSE blueprint protection support for BPFW catalog mode
-DOMAIN  framework core
-"""
+"""Blueprint protection support for BPFW catalog mode."""
 
 from bpfw.core.protection.authority import (
     ProtectedResource,

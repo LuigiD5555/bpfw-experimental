@@ -1,6 +1,4 @@
-"""PURPOSE authority shard for BPFW block storage
-DOMAIN  blueprint files
-"""
+"""Authority shard for BPFW block storage."""
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,30 +11,46 @@ from bpfw.core.yaml_io import dump_yaml_data, load_yaml_text
 
 @dataclass(frozen=True)
 class BlockOrigin:
-    """PURPOSE track which shard a block originated from
-    DOMAIN  blueprint files
-    """
+    """Track which shard a block originated from."""
 
     block_id: str
     shard_path: Path  # Project-relative path
 
 
 class AuthorityShard:
-    """PURPOSE store information about a single shard file containing blocks
-    DOMAIN  blueprint files
+    """Represent a single shard file containing blocks.
+
+    Shard files contain only:
+
+    blocks:
+      - ...
+
+    They must not contain:
+    - project
+    - policy
+    - authority
+    - includes
     """
 
     def __init__(self, path: Path, blocks: list[dict[str, Any]]) -> None:
-        """PURPOSE set up the authority shard
-        DOMAIN  blueprint files
+        """Initialize the authority shard.
+
+        Args:
+            path: Project-relative path to the shard file.
+            blocks: List of block dictionaries.
+
+        Raises:
+            InvalidAuthorityShardError: If the shard is invalid.
         """
         self.path = path
         self._blocks = blocks
         self._validate()
 
     def _validate(self) -> None:
-        """PURPOSE check the shard structure
-        DOMAIN  blueprint files
+        """Validate the shard structure.
+
+        Raises:
+            InvalidAuthorityShardError: If validation fails.
         """
         if not isinstance(self._blocks, list):
             raise InvalidAuthorityShardError(
@@ -57,8 +71,18 @@ class AuthorityShard:
 
     @classmethod
     def load(cls, project_root: Path, shard_path: Path) -> "AuthorityShard":
-        """PURPOSE read a shard file from the project root
-        DOMAIN  blueprint files
+        """Load a shard file from the project root.
+
+        Args:
+            project_root: The project root directory.
+            shard_path: Project-relative path to the shard file.
+
+        Returns:
+            Loaded AuthorityShard instance.
+
+        Raises:
+            InvalidAuthorityShardError: If the shard cannot be loaded or is invalid.
+            FileNotFoundError: If the shard file does not exist.
         """
         # Resolve shard path relative to project root
         absolute_path = project_root / shard_path
@@ -115,8 +139,13 @@ class AuthorityShard:
         return cls(path=shard_path, blocks=blocks)
 
     def save(self, project_root: Path) -> None:
-        """PURPOSE save the shard file to the project root
-        DOMAIN  blueprint files
+        """Save the shard file to the project root.
+
+        Args:
+            project_root: The project root directory.
+
+        Raises:
+            InvalidAuthorityShardError: If the shard is invalid or cannot be saved.
         """
         # Re-validate before saving
         self._validate()
@@ -142,33 +171,46 @@ class AuthorityShard:
             ) from error
 
     def set_blocks(self, blocks: list[dict[str, Any]]) -> None:
-        """PURPOSE set the blocks for this shard
-        DOMAIN  blueprint files
+        """Set the blocks for this shard.
+
+        Args:
+            blocks: List of block dictionaries.
         """
         self._blocks = blocks
         self._validate()
 
     def get_blocks(self) -> list[dict[str, Any]]:
-        """PURPOSE get the blocks in this shard
-        DOMAIN  blueprint files
+        """Get the blocks in this shard.
+
+        Returns:
+            List of block dictionaries.
         """
         return self._blocks.copy()
 
     def is_empty(self) -> bool:
-        """PURPOSE check if this shard has no blocks
-        DOMAIN  blueprint files
+        """Check if this shard has no blocks.
+
+        Returns:
+            True if the shard is empty, False otherwise.
         """
         return len(self._blocks) == 0
 
     def block_count(self) -> int:
-        """PURPOSE get the number of blocks in this shard
-        DOMAIN  blueprint files
+        """Get the number of blocks in this shard.
+
+        Returns:
+            Number of blocks.
         """
         return len(self._blocks)
 
     def contains_block_id(self, block_id: str) -> bool:
-        """PURPOSE check if this shard contains a block with the given ID
-        DOMAIN  blueprint files
+        """Check if this shard contains a block with the given ID.
+
+        Args:
+            block_id: The block ID to check for.
+
+        Returns:
+            True if the shard contains the block, False otherwise.
         """
         for block in self._blocks:
             if isinstance(block, dict) and block.get("id") == block_id:
@@ -176,8 +218,13 @@ class AuthorityShard:
         return False
 
     def remove_block(self, block_id: str) -> dict[str, Any] | None:
-        """PURPOSE remove a block from this shard by ID
-        DOMAIN  blueprint files
+        """Remove a block from this shard by ID.
+
+        Args:
+            block_id: The block ID to remove.
+
+        Returns:
+            The removed block dictionary, or None if not found.
         """
         for i, block in enumerate(self._blocks):
             if isinstance(block, dict) and block.get("id") == block_id:
@@ -186,20 +233,18 @@ class AuthorityShard:
         return None
 
     def add_block(self, block: dict[str, Any]) -> None:
-        """PURPOSE add a block to this shard
-        DOMAIN  blueprint files
+        """Add a block to this shard.
+
+        Args:
+            block: The block dictionary to add.
         """
         self._blocks.append(block)
         self._validate()
 
     def sort_blocks(self) -> None:
-        """PURPOSE sort blocks stableally
-                DOMAIN  blueprint files
-                """
+        """Sort blocks in the same order every time."""
         def sort_key(block: dict[str, Any]) -> tuple:
-            """PURPOSE generate sort key for a block
-            DOMAIN  blueprint files
-            """
+            """Generate sort key for a block."""
             domain = block.get("domain") or ""
             code = block.get("code") or {}
             path = code.get("path") or ""

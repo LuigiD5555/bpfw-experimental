@@ -1,5 +1,13 @@
-"""PURPOSE review ordering logic for cognitive dependency-first traversal
-DOMAIN  blueprint checks
+"""Review ordering logic for cognitive dependency-first traversal.
+
+The review order is dependency-first: if code block A uses code block B,
+then B must be reviewed before A.
+
+This implementation:
+- Uses qualified_name as the only canonical identifier
+- Extracts structured calls with context (self.method, shard.get_blocks, etc.)
+- Resolves references using strict scope rules
+- Does not create false dependencies from arbitrary method calls
 """
 
 from collections import defaultdict
@@ -9,8 +17,19 @@ from bpfw.core.catalog.models import DiscoveredCodeUnit
 
 
 def order_blocks_for_review(units: List[DiscoveredCodeUnit]) -> List[DiscoveredCodeUnit]:
-    """PURPOSE get units ordered from dependencies to dependents
-    DOMAIN  blueprint checks
+    """
+    Return units ordered from dependencies to dependents.
+
+    The order guarantees:
+    1. Containment: nested functions/classes come before their containers
+    2. Dependencies: called methods/functions come before their callers
+    3. Stability: source order breaks ties when no dependency exists
+
+    Args:
+        units: List of discovered code units.
+
+    Returns:
+        Units in dependency-first order.
     """
     if not units:
         return []
@@ -31,8 +50,18 @@ def _build_dependency_graph(
     units: List[DiscoveredCodeUnit],
     index: Dict[str, DiscoveredCodeUnit],
 ) -> Dict[str, List[str]]:
-    """PURPOSE build dependency graph where edges point from dependents to dependencies
-    DOMAIN  blueprint checks
+    """
+    Build dependency graph where edges point from dependents to dependencies.
+
+    If unit A depends on unit B, then graph[A] contains B.
+    This means A will come after B in the final order.
+
+    Args:
+        units: List of discovered code units.
+        index: Canonical index mapping qualified_name to DiscoveredCodeUnit.
+
+    Returns:
+        Dependency graph as dict {dependent_qualified_name: [dependency_qualified_name, ...]}.
     """
     graph: Dict[str, List[str]] = defaultdict(list)
 
@@ -56,8 +85,24 @@ def _resolve_call(
     caller: DiscoveredCodeUnit,
     index: Dict[str, DiscoveredCodeUnit],
 ) -> str | None:
-    """PURPOSE find a structured call to a discovered code unit
-    DOMAIN  blueprint checks
+    """
+    Resolve a structured call to a discovered code unit.
+
+    Resolution rules:
+    1. self.method_name() → method in same class
+    2. cls.method_name() → method in same class
+    3. bare_name() → nested/enclosing/module-level function
+    4. ClassName() → class constructor
+    5. Arbitrary object methods (shard.get_blocks()) are NOT resolved
+    6. Chained attributes (self.index.get_config()) are NOT resolved
+
+    Args:
+        call: Structured call dict with keys 'context', 'name'.
+        caller: The unit making the call.
+        index: Canonical index of all discovered units.
+
+    Returns:
+        Qualified name of the discovered unit, or None if not resolved.
     """
     context = call.get("context")
     name = call.get("name")
@@ -87,8 +132,16 @@ def _resolve_same_class_method(
     caller: DiscoveredCodeUnit,
     index: Dict[str, DiscoveredCodeUnit],
 ) -> str | None:
-    """PURPOSE find self.method_name() or cls.method_name() to same class method
-    DOMAIN  blueprint checks
+    """
+    Resolve self.method_name() or cls.method_name() to same class method.
+
+    Args:
+        method_name: The method name being called.
+        caller: The unit making the call.
+        index: Canonical index of all discovered units.
+
+    Returns:
+        Qualified name of the method in the same class, or None.
     """
     # Caller must be a method in a class
     if caller.symbol_type != "method":
@@ -113,8 +166,21 @@ def _resolve_bare_function(
     caller: DiscoveredCodeUnit,
     index: Dict[str, DiscoveredCodeUnit],
 ) -> str | None:
-    """PURPOSE find bare_name() to nested/enclosing/module-level function
-    DOMAIN  blueprint checks
+    """
+    Resolve bare_name() to nested/enclosing/module-level function.
+
+    Resolution order:
+    1. Nested function in current scope
+    2. Enclosing function/method
+    3. Module-level function
+
+    Args:
+        function_name: The function name being called.
+        caller: The unit making the call.
+        index: Canonical index of all discovered units.
+
+    Returns:
+        Qualified name of the function, or None.
     """
     # Try nested function (if caller is a function/method with nested functions)
     for nested_name in caller.functions:
@@ -138,8 +204,16 @@ def _resolve_class_constructor(
     caller: DiscoveredCodeUnit,
     index: Dict[str, DiscoveredCodeUnit],
 ) -> str | None:
-    """PURPOSE find ClassName() to a discovered class
-    DOMAIN  blueprint checks
+    """
+    Resolve ClassName() to a discovered class.
+
+    Args:
+        class_name: The class name being constructed.
+        caller: The unit making the call.
+        index: Canonical index of all discovered units.
+
+    Returns:
+        Qualified name of the class, or None.
     """
     # Try module-level class
     module_qualified = f"{caller.module}.{class_name}"
@@ -156,8 +230,18 @@ def _topological_sort(
     graph: Dict[str, List[str]],
     index: Dict[str, DiscoveredCodeUnit],
 ) -> List[DiscoveredCodeUnit]:
-    """PURPOSE topologically sort dependency graph with cycle safety
-    DOMAIN  blueprint checks
+    """
+    Topologically sort dependency graph with cycle safety.
+
+    Uses DFS with cycle detection. Cycles are broken by keeping the
+    nodes that form the cycle in stable source order.
+
+    Args:
+        graph: Dependency graph {dependent: [dependencies]}.
+        index: Canonical index mapping qualified_name to DiscoveredCodeUnit.
+
+    Returns:
+        Units in dependency-first order.
     """
     ordered: List[DiscoveredCodeUnit] = []
     visited: Set[str] = set()
@@ -194,8 +278,16 @@ def _visit_node(
     visiting: Set[str],
     ordered: List[DiscoveredCodeUnit],
 ) -> None:
-    """PURPOSE visit a node in topological DFS
-    DOMAIN  blueprint checks
+    """
+    Visit a node in topological DFS.
+
+    Args:
+        node: Qualified name of the node to visit.
+        graph: Dependency graph.
+        index: Canonical index mapping qualified_name to DiscoveredCodeUnit.
+        visited: Set of fully visited nodes.
+        visiting: Set of nodes currently being visited (for cycle detection).
+        ordered: Accumulated ordered units.
     """
     if node in visited:
         return

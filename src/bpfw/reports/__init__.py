@@ -1,6 +1,4 @@
-"""PURPOSE bPFW reports module for catalog mode
-DOMAIN  terminal reports
-"""
+"""BPFW reports module for catalog mode."""
 
 from bpfw.reports.finding import (
     FINDING_SEVERITY_BLOCK,

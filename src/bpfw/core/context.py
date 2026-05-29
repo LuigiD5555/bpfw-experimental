@@ -1,6 +1,4 @@
-"""PURPOSE execution context models for BPFW pipelines
-DOMAIN  framework core
-"""
+"""Execution context models for BPFW pipelines."""
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -10,9 +8,7 @@ from bpfw.core.catalog.paths import CANONICAL_BLUEPRINT_FILE
 
 @dataclass(slots=True)
 class EngineCommand:
-    """PURPOSE user command clean for stable engine execution
-    DOMAIN  framework core
-    """
+    """User command clean for stable engine execution."""
 
     command_name: str
     project_root: Path
@@ -21,9 +17,7 @@ class EngineCommand:
 
 @dataclass(slots=True)
 class ProjectContext:
-    """PURPOSE runtime context shared across pipeline steps
-    DOMAIN  framework core
-    """
+    """Runtime context shared across pipeline steps."""
 
     project_root: Path
     blueprint_file: Path
@@ -32,9 +26,7 @@ class ProjectContext:
 
 
 def build_project_context(project_root: Path, command_arguments: dict[str, str] | None = None) -> ProjectContext:
-    """PURPOSE build a minimal project context used by engine pipelines
-    DOMAIN  framework core
-    """
+    """Build a minimal project context used by engine pipelines."""
 
     return ProjectContext(
         project_root=project_root,

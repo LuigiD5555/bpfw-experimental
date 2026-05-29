@@ -1,6 +1,4 @@
-"""PURPOSE runtime lock lease for temporary authority writes during interactive tools
-DOMAIN  framework core
-"""
+"""Runtime lock lease for temporary authority writes during interactive tools."""
 
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -22,9 +20,7 @@ PROTECTED_RUNTIME_TOOLS = {"init", "inspector", "editor", "planner"}
 
 @dataclass(slots=True)
 class RuntimeLockLease:
-    """PURPOSE lease metadata produced while a protected tool is running
-    DOMAIN  framework core
-    """
+    """Lease metadata produced while a protected integration is running."""
 
     tool_name: str
     temporarily_unlocked: bool = False
@@ -51,9 +47,7 @@ def runtime_blueprint_write_lease(
     tool_name: str,
     input_func: Callable[[str], str] = input,
 ) -> Iterator[RuntimeLockLease]:
-    """PURPOSE authorize temporary blueprint writes for one protected tool runtime
-    DOMAIN  framework core
-    """
+    """Authorize temporary blueprint writes for one protected tool runtime."""
 
     lease = RuntimeLockLease(tool_name=tool_name)
     if tool_name not in PROTECTED_RUNTIME_TOOLS:

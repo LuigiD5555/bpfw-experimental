@@ -1,6 +1,4 @@
-"""PURPOSE declared-vs-discovered drift comparison for BPFW catalog mode
-DOMAIN  blueprint checks
-"""
+"""Declared-vs-discovered drift comparison for BPFW catalog mode."""
 
 from typing import Any, Dict, List, Set, Tuple
 
@@ -20,9 +18,7 @@ _DeclarationKey = Tuple[str, str, str]
 def _extract_declared_keys(
     blueprint_data: Dict[str, Any],
 ) -> Tuple[Set[_DeclarationKey], Dict[_DeclarationKey, Dict[str, Any]]]:
-    """PURPOSE get the set of declared block keys from blueprint data
-    DOMAIN  blueprint checks
-    """
+    """Extract the set of declared block keys from blueprint data."""
     blocks = blueprint_data.get("blocks", [])
     if not isinstance(blocks, list):
         return set(), {}
@@ -53,8 +49,11 @@ def _extract_declared_keys(
 def _extract_discovered_keys(
     discovered_units: List[DiscoveredCodeUnit],
 ) -> Tuple[Set[_DeclarationKey], Dict[_DeclarationKey, DiscoveredCodeUnit]]:
-    """PURPOSE get the set of discovered code unit keys
-    DOMAIN  blueprint checks
+    """Extract the set of discovered code unit keys.
+
+    Returns a tuple of:
+      - The set of all discovered keys.
+      - A mapping from each key back to its DiscoveredCodeUnit.
     """
     discovered_keys: Set[_DeclarationKey] = set()
     discovered_by_key: Dict[_DeclarationKey, DiscoveredCodeUnit] = {}
@@ -69,8 +68,14 @@ def _extract_discovered_keys(
 
 
 def _extract_rule_keys(blueprint_data: Dict[str, Any], section_name: str) -> Set[_DeclarationKey]:
-    """PURPOSE get path, symbol, and kind keys from an authority rule section
-    DOMAIN  blueprint checks
+    """Extract path, symbol, and kind keys from an authority rule section.
+
+    Args:
+        blueprint_data: Parsed blueprint data.
+        section_name: Authority section key, such as ``ignored_code`` or ``covered_code``.
+
+    Returns:
+        Set of declaration keys covered by the authority rules.
     """
     authority = blueprint_data.get("authority")
     if not isinstance(authority, dict):
@@ -99,9 +104,7 @@ def _find_missing_declared(
     declared_keys: Set[_DeclarationKey],
     discovered_keys: Set[_DeclarationKey],
 ) -> List[Finding]:
-    """PURPOSE produce MISSING_DECLARED_CODE findings for declared keys absent from discovery
-    DOMAIN  blueprint checks
-    """
+    """Produce MISSING_DECLARED_CODE findings for declared keys absent from discovery."""
     findings: List[Finding] = []
 
     missing_keys = declared_keys - discovered_keys
@@ -131,9 +134,7 @@ def _find_undeclared(
     declared_keys: Set[_DeclarationKey],
     discovered_by_key: Dict[_DeclarationKey, DiscoveredCodeUnit],
 ) -> List[Finding]:
-    """PURPOSE produce UNDECLARED_CODE findings for discovered keys absent from declarations
-    DOMAIN  blueprint checks
-    """
+    """Produce UNDECLARED_CODE findings for discovered keys absent from declarations."""
     findings: List[Finding] = []
 
     undeclared_keys = discovered_keys - declared_keys
@@ -165,9 +166,7 @@ def compare_declared_to_discovered(
     discovered_units: List[DiscoveredCodeUnit],
     authority_state: str,
 ) -> List[Finding]:
-    """PURPOSE compare declared blocks against discovered code units
-    DOMAIN  blueprint checks
-    """
+    """Compare declared blocks against discovered code units."""
     # Non-actionable blueprint states return no drift findings. Draft remains
     # actionable for structural path/symbol comparison.
     if authority_state not in {AUTHORITY_STATE_DEFINED, AUTHORITY_STATE_DRAFT}:

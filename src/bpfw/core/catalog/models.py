@@ -1,6 +1,4 @@
-"""PURPOSE data models for BPFW catalog mode
-DOMAIN  blueprint checks
-"""
+"""Data models for BPFW catalog mode."""
 
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
@@ -17,10 +15,7 @@ AUTHORITY_STATE_INVALID = "invalid"
 
 @dataclass(frozen=True)
 class DiscoveredCodeUnit:
-    """PURPOSE store information about a code unit discovered by Python code tree scanning
-        DOMAIN  blueprint checks
-
-    """
+    """Represent a code unit discovered by Python code tree scanning."""
 
     path: str
     module: str
@@ -45,9 +40,7 @@ class DiscoveredCodeUnit:
 
 @dataclass(frozen=True)
 class BlueprintLoadResult:
-    """PURPOSE result of loading and parsing blueprint.yaml
-    DOMAIN  blueprint checks
-    """
+    """Result of loading and parsing blueprint.yaml."""
 
     state: str
     path: str
@@ -59,10 +52,7 @@ class BlueprintLoadResult:
 
 @dataclass(frozen=True)
 class ScanResult:
-    """PURPOSE result of scanning Python code with Python code tree
-        DOMAIN  blueprint checks
-
-    """
+    """Result of scanning Python code with Python code tree."""
 
     discovered_units: List[DiscoveredCodeUnit]
     findings: List[Finding] = field(default_factory=list)
@@ -70,9 +60,7 @@ class ScanResult:
 
 @dataclass(frozen=True)
 class VerificationReport:
-    """PURPOSE report from verifying blueprint against discovered code
-    DOMAIN  blueprint checks
-    """
+    """Report from verifying blueprint against discovered code."""
 
     authority_state: str
     allowed: bool

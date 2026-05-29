@@ -1,6 +1,4 @@
-"""PURPOSE data mapper between raw YAML dictionaryionaries and Pydantic domain models
-DOMAIN  blueprint data
-"""
+"""Data mapper between raw YAML dictionaries and Pydantic domain models."""
 
 from __future__ import annotations
 
@@ -10,10 +8,7 @@ from bpfw.core.catalog.domain.models import BlueprintDocument, Policy, Responsib
 
 
 class BlueprintMapper:
-    """PURPOSE map raw blueprint dictionaryionaries to domain objects and back
-        DOMAIN  blueprint data
-
-    """
+    """Map raw blueprint dictionaries to domain objects and back."""
 
     def from_raw(self, raw_blueprint_data: dict[str, Any]) -> BlueprintDocument:
         blocks_raw = raw_blueprint_data.get("blocks")

@@ -1,6 +1,4 @@
-"""PURPOSE blueprint write access control for BPFW catalog mode
-DOMAIN  blueprint checks
-"""
+"""Blueprint write access control for BPFW catalog mode."""
 
 from collections.abc import Callable
 from contextlib import contextmanager
@@ -26,9 +24,7 @@ _TEMPORARY_UNLOCK_TOOLS: ContextVar[frozenset[str]] = ContextVar(
 
 @contextmanager
 def authorize_blueprint_writes_for_tool(tool_name: str) -> Iterator[None]:
-    """PURPOSE temporarily authorize one tool to write blueprint data in this runtime context
-    DOMAIN  blueprint checks
-    """
+    """Temporarily authorize one tool to write blueprint data in this runtime context."""
 
     current_tools = _AUTHORIZED_TOOLS.get()
     next_tools = set(current_tools)
@@ -41,9 +37,7 @@ def authorize_blueprint_writes_for_tool(tool_name: str) -> Iterator[None]:
 
 
 def has_blueprint_write_authorization(tool_name: str | None = None) -> bool:
-    """PURPOSE check whether runtime context has an active blueprint write authorization
-    DOMAIN  blueprint checks
-    """
+    """Return whether current runtime context has an active blueprint write authorization."""
 
     authorized_tools = _AUTHORIZED_TOOLS.get()
     if tool_name is None:
@@ -53,9 +47,7 @@ def has_blueprint_write_authorization(tool_name: str | None = None) -> bool:
 
 @contextmanager
 def authorize_temporary_blueprint_unlock_for_tool(tool_name: str) -> Iterator[None]:
-    """PURPOSE temporarily authorize one tool to unlock blueprint for a guarded write transaction
-    DOMAIN  blueprint checks
-    """
+    """Temporarily authorize one tool to unlock blueprint for a guarded write transaction."""
 
     current_tools = _TEMPORARY_UNLOCK_TOOLS.get()
     next_tools = set(current_tools)
@@ -68,9 +60,7 @@ def authorize_temporary_blueprint_unlock_for_tool(tool_name: str) -> Iterator[No
 
 
 def has_temporary_blueprint_unlock_authorization(tool_name: str | None = None) -> bool:
-    """PURPOSE check whether runtime context can perform guarded temporary unlock
-    DOMAIN  blueprint checks
-    """
+    """Return whether current runtime context can perform guarded temporary unlock."""
 
     authorized_tools = _TEMPORARY_UNLOCK_TOOLS.get()
     if tool_name is None:
@@ -79,9 +69,7 @@ def has_temporary_blueprint_unlock_authorization(tool_name: str | None = None) -
 
 
 def ensure_blueprint_can_be_written(project_root: Path) -> None:
-    """PURPOSE raise when the blueprint is locked against writes
-    DOMAIN  blueprint checks
-    """
+    """Raise when the blueprint is locked against writes."""
 
     if (
         get_authority_protection_status(project_root=project_root).status in {"locked", "degraded"}
@@ -96,8 +84,16 @@ def ensure_blueprint_can_be_written(project_root: Path) -> None:
 
 
 def with_blueprint_write_auth(tool_name: str) -> Callable[[_Func], _Func]:
-    """PURPOSE decorator that wraps a function call with blueprint write authorization
-    DOMAIN  blueprint checks
+    """Decorator that wraps a function call with blueprint write authorization.
+
+    Usage::
+
+        @with_blueprint_write_auth("my_tool")
+        def save_stuff(project_root: Path) -> None:
+            ...
+
+    The decorated function runs inside ``authorize_blueprint_writes_for_tool``
+    so that ``has_blueprint_write_authorization()`` returns True during execution.
     """
 
     def decorator(func: _Func) -> _Func:
@@ -110,8 +106,18 @@ def with_blueprint_write_auth(tool_name: str) -> Callable[[_Func], _Func]:
 
 
 def with_temporary_unlock(tool_name: str) -> Callable[[_Func], _Func]:
-    """PURPOSE decorator that grants temporary blueprint unlock authorization
-    DOMAIN  blueprint checks
+    """Decorator that grants temporary blueprint unlock authorization.
+
+    Usage::
+
+        @with_temporary_unlock("my_tool")
+        def write_locked_data(project_root: Path) -> None:
+            ...
+
+    The decorated function runs inside both
+    ``authorize_blueprint_writes_for_tool`` and
+    ``authorize_temporary_blueprint_unlock_for_tool``, allowing guarded writes
+    even when the blueprint is OS-locked.
     """
 
     def decorator(func: _Func) -> _Func:

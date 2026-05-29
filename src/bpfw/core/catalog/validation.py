@@ -1,6 +1,4 @@
-"""PURPOSE structural and status check for BPFW blueprint authority
-DOMAIN  blueprint checks
-"""
+"""Structural and status validation for BPFW blueprint authority."""
 
 from typing import Any, Dict, List
 
@@ -19,16 +17,12 @@ _CODE_REQUIRED_FIELDS = ("path", "symbol", "kind")
 
 
 def _is_blank(value: Any) -> bool:
-    """PURPOSE check if a value is None or an empty string
-    DOMAIN  blueprint checks
-    """
+    """Check if a value is None or an empty string."""
     return value is None or value == ""
 
 
 def _safe_code_field(block: Dict[str, Any], field_name: str) -> Any:
-    """PURPOSE safely retrieve a field from canonical code metadata
-    DOMAIN  blueprint checks
-    """
+    """Safely retrieve a field from canonical code metadata."""
     code = block.get("code", {})
     if not isinstance(code, dict):
         code = {}
@@ -42,25 +36,17 @@ def _safe_code_field(block: Dict[str, Any], field_name: str) -> Any:
 # ---------------------------------------------------------------------------
 
 class ValidationRule:
-    """PURPOSE base class for composable check rules
-    DOMAIN  blueprint checks
-    """
+    """Base class for composable validation rules."""
 
     def validate(self, blocks: List[Any], findings: List[Finding]) -> None:
-        """PURPOSE run this rule against *blocks*, appending any findings
-        DOMAIN  blueprint checks
-        """
+        """Run this rule against *blocks*, appending any findings."""
 
 
 class PerBlockValidationRule(ValidationRule):
-    """PURPOSE rule applied to each block individually
-    DOMAIN  blueprint checks
-    """
+    """Rule applied to each block individually."""
 
     def validate_block(self, block: Any, block_index: int, findings: List[Finding]) -> None:
-        """PURPOSE check a single block
-        DOMAIN  blueprint checks
-        """
+        """Validate a single block."""
 
     def validate(self, blocks: List[Any], findings: List[Finding]) -> None:
         for block_index, block in enumerate(blocks):
@@ -68,16 +54,12 @@ class PerBlockValidationRule(ValidationRule):
 
 
 class CrossBlockValidationRule(ValidationRule):
-    """PURPOSE rule applied across all blocks at once
-    DOMAIN  blueprint checks
-    """
+    """Rule applied across all blocks at once."""
     pass
 
 
 class BlockFieldsRule(PerBlockValidationRule):
-    """PURPOSE check that all required block fields are present and non-blank
-    DOMAIN  blueprint checks
-    """
+    """Validate that all required block fields are present and non-blank."""
 
     def validate_block(self, block: Any, block_index: int, findings: List[Finding]) -> None:
         if not isinstance(block, dict):
@@ -134,9 +116,7 @@ class BlockFieldsRule(PerBlockValidationRule):
 
 
 class BlockStatusRule(PerBlockValidationRule):
-    """PURPOSE check that the block status is allowed in the
-    DOMAIN  blueprint checks
-    """
+    """Check that the block status is allowed."""
 
     def validate_block(self, block: Any, block_index: int, findings: List[Finding]) -> None:
         if not isinstance(block, dict):
@@ -161,9 +141,7 @@ class BlockStatusRule(PerBlockValidationRule):
 
 
 class DuplicateIdsRule(CrossBlockValidationRule):
-    """PURPOSE find block entries that share the same id
-    DOMAIN  blueprint checks
-    """
+    """Detect block entries that share the same id."""
 
     def validate(self, blocks: List[Any], findings: List[Finding]) -> None:
         id_indexes: Dict[str, List[int]] = {}
@@ -194,9 +172,7 @@ class DuplicateIdsRule(CrossBlockValidationRule):
 
 
 class DuplicateActivePurposeRule(CrossBlockValidationRule):
-    """PURPOSE find purposes that have more than one active block
-    DOMAIN  blueprint checks
-    """
+    """Detect purposes that have more than one active block."""
 
     def validate(self, blocks: List[Any], findings: List[Finding]) -> None:
         purpose_active_ids: Dict[str, List[str]] = {}
@@ -233,9 +209,7 @@ class DuplicateActivePurposeRule(CrossBlockValidationRule):
 
 
 class BlueprintValidator:
-    """PURPOSE composable check pipeline that runs ordered rules
-    DOMAIN  blueprint checks
-    """
+    """Composable validation pipeline that runs ordered rules."""
 
     def __init__(self, rules: List[ValidationRule] | None = None) -> None:
         self.rules: List[ValidationRule] = rules or [
@@ -246,9 +220,7 @@ class BlueprintValidator:
         ]
 
     def validate(self, blocks: List[Any]) -> List[Finding]:
-        """PURPOSE run all rules and return accumulated findings
-        DOMAIN  blueprint checks
-        """
+        """Run all rules and return accumulated findings."""
         findings: List[Finding] = []
         for rule in self.rules:
             rule.validate(blocks, findings)
@@ -263,9 +235,7 @@ def validate_blueprint_structure(
     blueprint_data: Dict[str, Any],
     authority_state: str,
 ) -> List[Finding]:
-    """PURPOSE check the structural integrity and status rules of a blueprint
-    DOMAIN  blueprint checks
-    """
+    """Validate the structural integrity and status rules of a blueprint."""
     if authority_state in (AUTHORITY_STATE_MISSING, AUTHORITY_STATE_EMPTY):
         return []
 

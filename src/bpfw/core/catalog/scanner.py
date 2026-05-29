@@ -1,6 +1,4 @@
-"""PURPOSE Python code scanner for BPFW catalog mode
-DOMAIN  blueprint checks
-"""
+"""Python Python code scanner for BPFW catalog mode."""
 
 import ast
 import hashlib
@@ -17,9 +15,7 @@ def scan_python_project(
     source_roots: List[str],
     ignored_paths: List[str],
 ) -> ScanResult:
-    """PURPOSE scan Python project by reading Python code structure
-    DOMAIN  blueprint checks
-    """
+    """Scan Python project using Python code tree parsing."""
     discovered_units: List[DiscoveredCodeUnit] = []
     findings: List[Finding] = []
 
@@ -61,8 +57,15 @@ def scan_python_project(
 
 
 def _is_path_ignored(file_path: Path, ignored_paths: List[str]) -> bool:
-    """PURPOSE check if a file path should be ignored
-    DOMAIN  blueprint checks
+    """
+    Check if a file path should be ignored.
+
+    Args:
+        file_path: Relative file path to check.
+        ignored_paths: List of path patterns to ignore.
+
+    Returns:
+        True if the path should be ignored, False otherwise.
     """
     path_parts = file_path.parts
 
@@ -78,8 +81,16 @@ def _scan_python_file(
     file_path: Path,
     relative_path: Path,
 ) -> tuple[List[DiscoveredCodeUnit], List[Finding]]:
-    """PURPOSE scan a single Python file for code units
-    DOMAIN  blueprint checks
+    """
+    Scan a single Python file for code units.
+
+    Args:
+        project_root: Root directory of the project.
+        file_path: Absolute path to the Python file.
+        relative_path: Relative path from project root.
+
+    Returns:
+        Tuple of (discovered units, findings).
     """
     discovered_units: List[DiscoveredCodeUnit] = []
     findings: List[Finding] = []
@@ -148,9 +159,7 @@ def _extract_code_units(
     parent_kind: str | None,
     source_text: str,
 ) -> List[DiscoveredCodeUnit]:
-    """PURPOSE get main and nested code units from Python code nodes
-    DOMAIN  blueprint checks
-    """
+    """Extract main and nested code units from Python code nodes."""
 
     discovered_units: List[DiscoveredCodeUnit] = []
     for node in nodes:
@@ -240,9 +249,7 @@ def _extract_code_units(
 
 
 def _is_trivial_method(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
-    """PURPOSE check if a method is trivial (getter/setter with minimal logic)
-    DOMAIN  blueprint checks
-    """
+    """Check if a method is trivial (getter/setter with minimal logic). A method is considered trivial if: - It has less than 3 lines of actual code (excluding decorators and docstring) - It doesn't contain complex logic (loops, conditions, try/except) Args: node: Python code tree FunctionDef or AsyncFunctionDef node. Returns: True if the method is trivial, False otherwise."""
     # Count actual code lines (excluding decorators and docstring)
     code_lines = 0
     for stmt in node.body:
@@ -261,9 +268,7 @@ def _is_trivial_method(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
 
 
 def _is_tiny_nested_function(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
-    """PURPOSE check if a nested function is too small to be a separate block
-    DOMAIN  blueprint checks
-    """
+    """Check if a nested function is too small to be a separate block."""
     # Count total lines in body
     total_lines = 0
     for stmt in node.body:
@@ -277,9 +282,7 @@ def _is_tiny_nested_function(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bo
 
 
 def _class_symbol_type(parent_symbols: List[str]) -> str:
-    """PURPOSE get the catalog symbol type for a class node
-    DOMAIN  blueprint checks
-    """
+    """Return the catalog symbol type for a class node."""
 
     if parent_symbols:
         return "nested_class"
@@ -287,9 +290,7 @@ def _class_symbol_type(parent_symbols: List[str]) -> str:
 
 
 def _function_symbol_type(parent_symbols: List[str], parent_kind: str | None) -> str:
-    """PURPOSE get the catalog symbol type for a function-like node
-    DOMAIN  blueprint checks
-    """
+    """Return the catalog symbol type for a function-like node."""
 
     if parent_kind == "class":
         return "method"
@@ -299,9 +300,7 @@ def _function_symbol_type(parent_symbols: List[str], parent_kind: str | None) ->
 
 
 def _normalized_body_hash(node: ast.AST) -> str:
-    """PURPOSE get a stable hash for a code unit body independent of its name
-    DOMAIN  blueprint checks
-    """
+    """Get a stable hash for a code unit body independent of its name."""
     body = getattr(node, "body", [])
     normalized_module = ast.Module(body=list(body), type_ignores=[])
     normalized_dump = ast.dump(normalized_module, include_attributes=False)
@@ -309,9 +308,7 @@ def _normalized_body_hash(node: ast.AST) -> str:
 
 
 def _detect_dangerous_capabilities(node: ast.AST) -> dict[str, bool]:
-    """PURPOSE find high-risk side-effect capabilities used by a code unit
-    DOMAIN  blueprint checks
-    """
+    """Detect high-risk side-effect capabilities used by a code unit."""
     capabilities = {
         "writes_files": False,
         "deletes_files": False,
@@ -341,10 +338,7 @@ def _detect_dangerous_capabilities(node: ast.AST) -> dict[str, bool]:
 
 
 def _call_name(node: ast.AST) -> str | None:
-    """PURPOSE get a dotted call name from an Python code expression
-        DOMAIN  blueprint checks
-
-    """
+    """Get a dotted call name from an Python code expression."""
     if isinstance(node, ast.Name):
         return node.id
     if isinstance(node, ast.Attribute):
@@ -356,9 +350,7 @@ def _call_name(node: ast.AST) -> str | None:
 
 
 def _call_uses_write_mode(node: ast.Call) -> bool:
-    """PURPOSE check whether an open-like call uses a write-capable mode
-    DOMAIN  blueprint checks
-    """
+    """Check whether an open-like call uses a write-capable mode."""
     write_modes = {"w", "a", "x", "+"}
     candidate_values: list[ast.AST] = []
     if len(node.args) >= 2:
@@ -378,8 +370,12 @@ def _should_discover_function(
     parent_kind: str | None,
     module: str,
 ) -> bool:
-    """PURPOSE check whether a function-like node should become a block
-    DOMAIN  blueprint checks
+    """
+    Return whether a function-like node should become a block.
+    Filters out:
+    - All dunder methods in classes (__init__, __str__, etc.)
+    - Trivial getters/setters (less than 3 lines of actual code)
+    - Very small nested functions (less than 5 lines)
     """
     # Exclude all dunder methods in classes
     if parent_kind == "class" and node.name.startswith("__") and node.name.endswith("__"):
@@ -394,8 +390,17 @@ def _should_discover_function(
 
 
 def _derive_module_path(relative_path: Path) -> str:
-    """PURPOSE derive module path from relative file path
-    DOMAIN  blueprint checks
+    """
+    Derive module path from relative file path.
+
+    Example:
+        app/services/users.py -> app.services.users
+
+    Args:
+        relative_path: Relative path from project root.
+
+    Returns:
+        Module path as dotted string.
     """
     # Remove .py extension and convert to module path
     stem = relative_path.stem
@@ -408,10 +413,7 @@ def _derive_module_path(relative_path: Path) -> str:
 
 
 def _extract_imports(tree: ast.AST) -> List[str]:
-    """PURPOSE get and clean imports from Python code tree
-        DOMAIN  blueprint checks
-
-    """
+    """Extract and clean imports from Python code tree."""
     imports: List[str] = []
 
     for node in ast.walk(tree):
@@ -443,10 +445,7 @@ def _extract_class_unit(
     symbol_type: str,
     source_text: str,
 ) -> Optional[DiscoveredCodeUnit]:
-    """PURPOSE get class information from Python code node
-        DOMAIN  blueprint checks
-
-    """
+    """Extract class information from Python code node."""
     methods = _extract_direct_child_function_qualified_names(
         nodes=node.body,
         module=module,
@@ -506,10 +505,7 @@ def _extract_function_unit(
     symbol_type: str,
     source_text: str,
 ) -> Optional[DiscoveredCodeUnit]:
-    """PURPOSE get function information from Python code node
-        DOMAIN  blueprint checks
-
-    """
+    """Extract function information from Python code node."""
     # Extract decorators
     decorators = _extract_decorators(node.decorator_list)
 
@@ -556,9 +552,7 @@ def _extract_function_unit(
 
 
 def _extract_direct_child_symbols(nodes: List[ast.stmt], parent_symbol: str) -> List[str]:
-    """PURPOSE get direct nested block symbols for a code unit
-    DOMAIN  blueprint checks
-    """
+    """Return direct nested block symbols for a code unit."""
 
     child_symbols: List[str] = []
     child_symbols.extend(
@@ -582,9 +576,7 @@ def _extract_direct_child_qualified_names(
     module: str,
     parent_symbol: str,
 ) -> List[str]:
-    """PURPOSE get direct nested block qualified names for a code unit
-    DOMAIN  blueprint checks
-    """
+    """Return direct nested block qualified names for a code unit."""
 
     child_qualified: List[str] = []
     child_qualified.extend(
@@ -611,9 +603,7 @@ def _extract_direct_child_function_qualified_names(
     parent_symbol: str,
     skip_dunder: bool,
 ) -> List[str]:
-    """PURPOSE get direct nested function-like qualified names for a code unit
-    DOMAIN  blueprint checks
-    """
+    """Return direct nested function-like qualified names for a code unit."""
 
     child_qualified: List[str] = []
     for node in nodes:
@@ -635,9 +625,7 @@ def _extract_direct_child_class_qualified_names(
     module: str,
     parent_symbol: str,
 ) -> List[str]:
-    """PURPOSE get direct nested class qualified names for a code unit
-    DOMAIN  blueprint checks
-    """
+    """Return direct nested class qualified names for a code unit."""
 
     child_qualified: List[str] = []
     for node in nodes:
@@ -652,9 +640,7 @@ def _extract_direct_child_function_symbols(
     parent_symbol: str,
     skip_dunder: bool,
 ) -> List[str]:
-    """PURPOSE get direct nested function-like symbols for a code unit
-    DOMAIN  blueprint checks
-    """
+    """Return direct nested function-like symbols for a code unit."""
 
     child_symbols: List[str] = []
     for node in nodes:
@@ -674,9 +660,7 @@ def _extract_direct_child_class_symbols(
     nodes: List[ast.stmt],
     parent_symbol: str,
 ) -> List[str]:
-    """PURPOSE get direct nested class symbols for a code unit
-    DOMAIN  blueprint checks
-    """
+    """Return direct nested class symbols for a code unit."""
 
     child_symbols: List[str] = []
     for node in nodes:
@@ -686,9 +670,7 @@ def _extract_direct_child_class_symbols(
 
 
 def _extract_decorators(decorator_list: List[ast.expr]) -> List[str]:
-    """PURPOSE get decorator names from decorator list
-    DOMAIN  blueprint checks
-    """
+    """Extract decorator names from decorator list."""
     decorators: List[str] = []
 
     for decorator in decorator_list:
@@ -717,9 +699,7 @@ def _extract_decorators(decorator_list: List[ast.expr]) -> List[str]:
 
 
 def _get_attribute_name(node: ast.Attribute) -> str:
-    """PURPOSE get dotted name from attribute node
-    DOMAIN  blueprint checks
-    """
+    """Get dotted name from attribute node."""
     parts = []
     current = node
 
@@ -736,10 +716,7 @@ def _get_attribute_name(node: ast.Attribute) -> str:
 def _extract_structured_calls_from_node(
     node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
 ) -> List[Dict[str, Any]]:
-    """PURPOSE get structured call references from an Python code node
-        DOMAIN  blueprint checks
-
-    """
+    """Extract structured call references from an Python code node. Returns a list of dicts, each with 'context' and 'name' keys. Examples: - self.get_origin() → {"context": "self", "name": "get_origin"} - shard.get_blocks() → {"context": "shard", "name": "get_blocks"} - helper() → {"context": None, "name": "helper"} - Service() → {"context": None, "name": "Service"} - self.index.get_authority_config() → {"context": None, "name": "get_authority_config"} (chained, not resolved) Args: node: Python code tree ClassDef, FunctionDef, or AsyncFunctionDef node. Returns: List of structured call dicts."""
     calls: List[Dict[str, Any]] = []
 
     for child in ast.walk(node):
@@ -763,9 +740,7 @@ def _extract_structured_calls_from_node(
 
 
 def _analyze_call(func_node: ast.expr) -> Dict[str, Any] | None:
-    """PURPOSE analyze a call function node to extract context and name
-    DOMAIN  blueprint checks
-    """
+    """Analyze a call function node to extract context and name. Args: func_node: The Python code expression representing the function being called. Returns: Dict with 'context' and 'name' keys, or None if not a local call."""
     # Case 1: self.method_name() or cls.method_name()
     if isinstance(func_node, ast.Attribute):
         # Check if the object being accessed is 'self' or 'cls'
@@ -786,9 +761,7 @@ def _analyze_call(func_node: ast.expr) -> Dict[str, Any] | None:
 
 
 def _extract_context_prefix(node: ast.expr) -> str | None:
-    """PURPOSE get context prefix from an attribute chain
-    DOMAIN  blueprint checks
-    """
+    """Extract context prefix from an attribute chain. Examples: - self.index.get_config → "self.index" - shard.get_blocks → "shard" - obj.prop.method → "obj.prop" Args: node: Python code expression node. Returns: Context prefix as string, or None."""
     if isinstance(node, ast.Name):
         return node.id
 
@@ -808,9 +781,7 @@ def _extract_context_prefix(node: ast.expr) -> str | None:
 def _extract_function_signature(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
 ) -> Optional[str]:
-    """PURPOSE get function signature as string
-    DOMAIN  blueprint checks
-    """
+    """Extract function signature as string."""
     try:
         # Build signature manually for simplicity
         name = node.name
@@ -832,9 +803,7 @@ def _extract_function_signature(
 
 
 def _extract_args_string(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
-    """PURPOSE get function arguments as string
-    DOMAIN  blueprint checks
-    """
+    """Extract function arguments as string."""
     args = []
     pos_only = []
     pos_or_kw = []
@@ -877,9 +846,7 @@ def _extract_args_string(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str:
 def _extract_return_annotation(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
 ) -> Optional[str]:
-    """PURPOSE get return annotation from function node
-    DOMAIN  blueprint checks
-    """
+    """Extract return annotation from function node."""
     if node.returns is None:
         return None
 
@@ -894,9 +861,7 @@ def _extract_return_annotation(
 
 
 def _extract_parameter_annotation(arg: ast.arg) -> Optional[str]:
-    """PURPOSE get type annotation from a parameter as string
-    DOMAIN  blueprint checks
-    """
+    """Extract type annotation from a parameter as string."""
     if arg.annotation is None:
         return None
 
@@ -910,9 +875,7 @@ def _extract_parameter_annotation(arg: ast.arg) -> Optional[str]:
 
 
 def _get_default_value(node: ast.FunctionDef | ast.AsyncFunctionDef, arg_name: str) -> Any:
-    """PURPOSE get the default value for a parameter as a Python literal
-    DOMAIN  blueprint checks
-    """
+    """Get the default value for a parameter as a Python literal."""
     # Get defaults from args
     # args.args are positional or keyword arguments
     # defaults list aligns with the rightmost args
@@ -967,9 +930,7 @@ def _get_default_value(node: ast.FunctionDef | ast.AsyncFunctionDef, arg_name: s
 
 
 def _ast_to_literal(node: ast.AST) -> Any:
-    """PURPOSE convert a value written in source code to its Python value
-    DOMAIN  blueprint checks
-    """
+    """Convert an Python code tree literal node to its Python value."""
     if node is None:
         return None
     if isinstance(node, ast.Constant):
@@ -992,10 +953,7 @@ def extract_interface_metadata(
     symbol_type: str,
     class_body: List[ast.stmt] | None = None,
 ) -> tuple[List[Dict[str, Any]], Optional[Dict[str, Any]]]:
-    """PURPOSE get input/output metadata from a class or function node
-        DOMAIN  blueprint checks
-
-    """
+    """Extract interface metadata from a class or function node."""
     # For classes, try to find __init__ and use its signature
     if isinstance(node, ast.ClassDef):
         if class_body is None:
@@ -1024,10 +982,7 @@ def _extract_function_interface(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
     skip_self: bool = False,
 ) -> tuple[List[Dict[str, Any]], Optional[Dict[str, Any]]]:
-    """PURPOSE get input/output metadata from a function node
-        DOMAIN  blueprint checks
-
-    """
+    """Extract interface metadata from a function node."""
     inputs: List[Dict[str, Any]] = []
 
     # Collect all parameters in order with their default status
@@ -1094,9 +1049,7 @@ def _extract_function_interface(
 def _build_defaults_map(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
 ) -> dict[str, bool]:
-    """PURPOSE build a mapping of parameter names to whether they have defaults
-    DOMAIN  blueprint checks
-    """
+    """Build a mapping of parameter names to whether they have defaults."""
     defaults_map: dict[str, bool] = {}
 
     # Process positional or keyword arguments
@@ -1127,9 +1080,7 @@ def _build_defaults_map(
 
 
 def _is_data_class(node: ast.ClassDef) -> bool:
-    """PURPOSE check if a class is a data class (no instance methods)
-    DOMAIN  blueprint checks
-    """
+    """Check if a class is a data class (no instance methods). A data class is a class that: - Has no methods (except __init__ and __init_subclass__) - Only has attributes/properties - Is typically a simple data container Args: node: Python code tree ClassDef node. Returns: True if it's a data class, False otherwise."""
     # Count instance methods (excluding __init__ and __init_subclass__)
     instance_methods = 0
     for stmt in node.body:
@@ -1151,9 +1102,7 @@ def _is_data_class(node: ast.ClassDef) -> bool:
 
 
 def _is_protocol_or_abstract_class(node: ast.ClassDef) -> bool:
-    """PURPOSE check if a class is a shape or abstract class
-    DOMAIN  blueprint checks
-    """
+    """Check whether a class is only a shared shape or abstract base."""
     # Check for @protocol decorator
     for decorator in node.decorator_list:
         if isinstance(decorator, ast.Name) and decorator.id == "protocol":
@@ -1179,9 +1128,7 @@ def _is_decorator_nested_function(
     parent_kind: str | None,
     parent_symbols: List[str],
 ) -> bool:
-    """PURPOSE check if this is a nested function inside a decorator factory
-    DOMAIN  blueprint checks
-    """
+    """Check if this is a nested function inside a decorator factory. Args: node: Python code tree FunctionDef or AsyncFunctionDef node. parent_kind: Kind of parent node. parent_symbols: List of parent symbol names. Returns: True if it's a decorator nested function, False otherwise."""
     if parent_kind != "function":
         return False
     # Check if parent function name suggests it's a decorator factory
@@ -1195,9 +1142,7 @@ def _is_schema_wrapper_function(
     node: ast.FunctionDef | ast.AsyncFunctionDef,
     module: str,
 ) -> bool:
-    """PURPOSE check if a function is a schema.py wrapper function
-    DOMAIN  blueprint checks
-    """
+    """Check if a function is a schema.py wrapper function. These are trivial getter/setter functions that just access dictionary keys and don't contain business logic. Args: node: Python code tree FunctionDef or AsyncFunctionDef node. module: Module name. Returns: True if it's a schema wrapper, False otherwise."""
     # Only check schema.py
     if module != "src.bpfw.core.catalog.schema":
         return False

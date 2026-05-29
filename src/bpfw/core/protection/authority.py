@@ -1,6 +1,4 @@
-"""PURPOSE blueprint and guard-file protection authority for BPFW catalog mode
-DOMAIN  framework core
-"""
+"""Blueprint and guard-file protection authority for BPFW catalog mode."""
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -25,9 +23,7 @@ MISSING_BLUEPRINT_STATUS = "missing_blueprint"
 
 @dataclass(frozen=True)
 class ProtectedResource:
-    """PURPOSE store information about a file protected by BPFW
-    DOMAIN  framework core
-    """
+    """Represent a file protected by BPFW."""
 
     path: Path
     resource_type: str
@@ -36,9 +32,7 @@ class ProtectedResource:
 
 @dataclass(frozen=True)
 class ProtectionResult:
-    """PURPOSE store information about the result of a BPFW authority protection operation
-    DOMAIN  framework core
-    """
+    """Represent the result of a BPFW authority protection operation."""
 
     operation: str
     blueprint_path: Path
@@ -49,25 +43,19 @@ class ProtectionResult:
 
 
 def resolve_project_blueprint_path(project_root: Path) -> Path:
-    """PURPOSE get the project blueprint authority file path
-    DOMAIN  framework core
-    """
+    """Return the project blueprint authority file path."""
 
     return project_root / CANONICAL_BLUEPRINT_FILE
 
 
 def resolve_bpfw_package_root() -> Path:
-    """PURPOSE get the installed BPFW package root directory
-    DOMAIN  framework core
-    """
+    """Return the installed BPFW package root directory."""
 
     return Path(bpfw.__file__).resolve().parent
 
 
 def resolve_guard_files() -> List[Path]:
-    """PURPOSE get paths to BPFW package files that implement the protection mechanism
-    DOMAIN  framework core
-    """
+    """Return paths to BPFW package files that implement the protection mechanism."""
 
     package_root = resolve_bpfw_package_root()
     return [
@@ -79,9 +67,7 @@ def resolve_guard_files() -> List[Path]:
 
 
 def resolve_protected_resources(project_root: Path) -> List[ProtectedResource]:
-    """PURPOSE build the full protection resource list for a project, including its blueprint and BPFW guard files
-    DOMAIN  framework core
-    """
+    """Build the full protection resource list for a project, including its blueprint and BPFW guard files."""
 
     bpfw_directory = project_root / "bpfw"
     blueprint_path = resolve_project_blueprint_path(project_root=project_root)
@@ -107,9 +93,7 @@ def resolve_protected_resources(project_root: Path) -> List[ProtectedResource]:
 
 
 def _resolve_shard_resources(project_root: Path, blueprint_path: Path) -> List[ProtectedResource]:
-    """PURPOSE get shard resources declared by the authority index
-    DOMAIN  framework core
-    """
+    """Return shard resources declared by the authority index."""
 
     if not blueprint_path.exists():
         return []
@@ -150,9 +134,7 @@ def _resolve_shard_resources(project_root: Path, blueprint_path: Path) -> List[P
 
 
 def _missing_blueprint_result(operation: str, blueprint_path: Path) -> ProtectionResult:
-    """PURPOSE build the shared missing-blueprint protection result
-    DOMAIN  framework core
-    """
+    """Build the shared missing-blueprint protection result."""
 
     return ProtectionResult(
         operation=operation,
@@ -163,33 +145,25 @@ def _missing_blueprint_result(operation: str, blueprint_path: Path) -> Protectio
 
 
 def _lock_existing_resource(project_root: Path, resource: ProtectedResource) -> str:
-    """PURPOSE lock one resource using the OS lock backend
-    DOMAIN  framework core
-    """
+    """Lock one existing resource using the OS lock backend."""
 
     return lock_project_file(project_root=project_root, path=resource.path)
 
 
 def _unlock_existing_resource(project_root: Path, resource: ProtectedResource) -> str:
-    """PURPOSE unlock one resource using the OS lock backend
-    DOMAIN  framework core
-    """
+    """Unlock one existing resource using the OS lock backend."""
 
     return unlock_project_file(project_root=project_root, path=resource.path)
 
 
 def _get_existing_resource_state(project_root: Path, resource: ProtectedResource) -> str:
-    """PURPOSE get the OS lock state for one resource
-    DOMAIN  framework core
-    """
+    """Return the OS lock state for one existing resource."""
 
     return get_project_file_lock_state(project_root=project_root, path=resource.path)
 
 
 def lock_authority(project_root: Path) -> ProtectionResult:
-    """PURPOSE lock the project blueprint and BPFW internal guard files
-    DOMAIN  framework core
-    """
+    """Lock the project blueprint and BPFW internal guard files."""
 
     blueprint_path = resolve_project_blueprint_path(project_root=project_root)
     resources = resolve_protected_resources(project_root=project_root)
@@ -247,9 +221,7 @@ def lock_authority(project_root: Path) -> ProtectionResult:
 
 
 def unlock_authority(project_root: Path) -> ProtectionResult:
-    """PURPOSE unlock the project blueprint and BPFW internal guard files
-    DOMAIN  framework core
-    """
+    """Unlock the project blueprint and BPFW internal guard files."""
 
     blueprint_path = resolve_project_blueprint_path(project_root=project_root)
     resources = resolve_protected_resources(project_root=project_root)
@@ -301,9 +273,7 @@ def unlock_authority(project_root: Path) -> ProtectionResult:
 
 
 def get_authority_protection_status(project_root: Path) -> ProtectionResult:
-    """PURPOSE get the protection status for the blueprint and guard files
-    DOMAIN  framework core
-    """
+    """Return the protection status for the blueprint and guard files."""
 
     blueprint_path = resolve_project_blueprint_path(project_root=project_root)
     resources = resolve_protected_resources(project_root=project_root)

@@ -1,6 +1,4 @@
-"""PURPOSE blueprint loader for bpfw/blueprint.yaml with sharded authority
-DOMAIN  blueprint checks
-"""
+"""Blueprint loader for bpfw/blueprint.yaml with sharded authority."""
 
 from pathlib import Path
 
@@ -30,20 +28,22 @@ from bpfw.reports.finding import (
 
 
 class BlueprintLoader:
-    """PURPOSE read and parse bpfw/blueprint.yaml with sharded authority
-    DOMAIN  blueprint checks
-    """
+    """Load and parse bpfw/blueprint.yaml with sharded authority."""
 
     def __init__(self, project_root: Path):
-        """PURPOSE set up the blueprint loader
-        DOMAIN  blueprint checks
+        """Initialize the blueprint loader.
+
+        Args:
+            project_root: The project root directory.
         """
         self.project_root = project_root
         self.blueprint_path = resolve_blueprint_path(project_root)
 
     def load(self) -> BlueprintLoadResult:
-        """PURPOSE read and parse the blueprint.yaml file using sharded authority
-        DOMAIN  blueprint checks
+        """Load and parse the blueprint.yaml file using sharded authority.
+
+        Returns:
+            BlueprintLoadResult with state, data, and findings.
         """
         domain_document = None
         authority_document = None
@@ -172,8 +172,23 @@ class BlueprintLoader:
 
 
 def is_block_complete(block: dict) -> bool:
-    """PURPOSE check if a block has all required authority fields
-    DOMAIN  blueprint checks
+    """Check if a block has all required authority fields.
+
+    Required fields:
+    - id
+    - purpose
+    - name
+    - domain
+    - status
+    - code.path
+    - code.symbol
+    - code.kind
+
+    Args:
+        block: The block dictionary to check.
+
+    Returns:
+        True if block is complete, False otherwise.
     """
     for key in ("id", "name", "domain"):
         value = block.get(key)
