@@ -1,14 +1,10 @@
-"""PURPOSE shared text rendering small helpers used by visual helpers
-DOMAIN  terminal UI
-"""
+"""Shared text rendering primitives used by visual helpers."""
 
 from bpfw.integrations.shared.visual_width import display_width, fit_text
 
 
 def center_text(text: str, width: int) -> str:
-    """PURPOSE center plain text inside fixed width
-    DOMAIN  terminal UI
-    """
+    """Center plain text inside fixed width."""
 
     text_width = display_width(text)
     if text_width >= width:

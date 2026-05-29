@@ -1,6 +1,4 @@
-"""PURPOSE terminal box rendering helpers for interactive tools
-DOMAIN  terminal UI
-"""
+"""Terminal box rendering helpers for interactive integrations."""
 
 from typing import List
 
@@ -11,9 +9,7 @@ MIN_TEXT_RIGHT_PADDING = 1
 
 
 def _centered_title_bar(title: str, width: int, fill: str = "─") -> str:
-    """PURPOSE build a centered title bar segment with symmetric fill
-    DOMAIN  terminal UI
-    """
+    """Build a centered title bar segment with symmetric fill."""
 
     if not title.strip():
         return fill * width
@@ -28,9 +24,7 @@ def _centered_title_bar(title: str, width: int, fill: str = "─") -> str:
 
 
 def render_box(title: str, lines: list[str], width: int) -> list[str]:
-    """PURPOSE build a bordered section with a title and text lines
-    DOMAIN  terminal UI
-    """
+    """Build a bordered section with a title and text lines."""
 
     top = f"╭{_centered_title_bar(title=title, width=width, fill='─')}╮"
     body = [f"│{pad_text(line, width)}│" for line in lines]
@@ -46,9 +40,7 @@ def render_two_column_box(
     total_width: int,
     preferred_left_ratio: float = 0.5,
 ) -> List[str]:
-    """PURPOSE show a two-column box using dynamically calculated widths
-    DOMAIN  terminal UI
-    """
+    """Render a two-column box using dynamically calculated widths."""
 
     available_width = max(2, total_width - COLUMN_GAP_WIDTH)
     left_required = max(display_width(left_title) + 2, measure_lines(left_lines) + MIN_TEXT_RIGHT_PADDING)
@@ -83,9 +75,7 @@ def render_split_box(
     right_border_fill: str = "─",
     preferred_left_ratio: float = 0.5,
 ) -> list[str]:
-    """PURPOSE show a two-column terminal box with independent visual emphasis
-    DOMAIN  terminal UI
-    """
+    """Render a two-column terminal box with independent visual emphasis."""
 
     available_width = max(2, total_width - COLUMN_GAP_WIDTH)
     left_required = max(display_width(left_title) + 3, measure_lines(left_lines) + MIN_TEXT_RIGHT_PADDING)
@@ -118,9 +108,7 @@ def _resolve_two_column_widths(
     preferred_left_ratio: float,
     min_column_width: int,
 ) -> tuple[int, int]:
-    """PURPOSE find column widths without truncating when the total width can fit
-    DOMAIN  terminal UI
-    """
+    """Resolve column widths without truncating when the total width can fit."""
 
     available_width = max(2, available_width)
     if left_required + right_required <= available_width:

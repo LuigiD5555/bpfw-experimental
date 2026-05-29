@@ -1,6 +1,4 @@
-"""PURPOSE planner tool for blueprint-first planning and design
-DOMAIN  planner workflow
-"""
+"""Planner integration for blueprint-first planning and design."""
 
 from pathlib import Path
 
@@ -22,25 +20,19 @@ from bpfw.integrations.result import OptionalIntegrationResult
 
 
 def run_planner(project_root: Path) -> int:
-    """PURPOSE run the planner tool
-    DOMAIN  planner workflow
-    """
+    """Run the planner integration."""
 
     controller = PlannerController(project_root=project_root)
     return controller.run()
 
 
 class PlannerIntegration(OptionalIntegration):
-    """PURPOSE optional tool for blueprint-first planning mode
-    DOMAIN  planner workflow
-    """
+    """Optional integration for blueprint-first planning mode."""
 
     name = "planner"
 
     def is_available(self) -> bool:
-        """PURPOSE check whether the planner tool can run
-        DOMAIN  planner workflow
-        """
+        """Return True when the planner integration can run."""
 
         return True
 
@@ -49,9 +41,7 @@ class PlannerIntegration(OptionalIntegration):
         project_root: Path,
         command_arguments: dict[str, str] | None = None,
     ) -> OptionalIntegrationResult:
-        """PURPOSE run planner against the given project root
-        DOMAIN  planner workflow
-        """
+        """Run planner against the given project root."""
 
         _ = command_arguments
         exit_code = run_planner(project_root=project_root)

@@ -1,6 +1,4 @@
-"""PURPOSE reusable metadata window used inside bpfw diff
-DOMAIN  optional integrations
-"""
+"""Reusable metadata window used inside ``bpfw diff``."""
 
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -16,8 +14,14 @@ PrintFunc = Callable[[str], None]
 
 @dataclass
 class MetadataDraft:
-    """PURPOSE mutable metadata draft returned by the diff inspector window
-    DOMAIN  optional integrations
+    """Mutable metadata draft returned by the diff inspector window.
+
+    Attributes:
+        name: Authority display name.
+        purpose: Authority purpose.
+        domain: Authority domain.
+        status: Authority status or lifecycle.
+        observations: Human observations or notes.
     """
 
     name: str | None = None
@@ -28,9 +32,13 @@ class MetadataDraft:
 
     @classmethod
     def from_block(cls, block: dict[str, Any]) -> "MetadataDraft":
-        """PURPOSE create a metadata draft from a block dictionaryionary
-                DOMAIN  optional integrations
+        """Create a metadata draft from a block dictionary.
 
+        Args:
+            block: Authority block dictionary.
+
+        Returns:
+            Metadata draft populated from the block.
         """
         return cls(
             name=_clean(block.get("name")),
@@ -41,8 +49,13 @@ class MetadataDraft:
         )
 
     def apply_to_block(self, block: dict[str, Any]) -> dict[str, Any]:
-        """PURPOSE get a block copy with this metadata applied
-        DOMAIN  optional integrations
+        """Return a block copy with this metadata applied.
+
+        Args:
+            block: Original block dictionary.
+
+        Returns:
+            Updated block copy.
         """
         updated = dict(block)
         updated["name"] = self.name
@@ -54,8 +67,10 @@ class MetadataDraft:
         return updated
 
     def metadata_changes(self) -> dict[str, Any]:
-        """PURPOSE get metadata changes suitable for BlueprintEngine
-        DOMAIN  optional integrations
+        """Return metadata changes suitable for BlueprintEngine.
+
+        Returns:
+            Non-empty dictionary of metadata fields.
         """
         changes: dict[str, Any] = {}
         if self.name is not None:
@@ -79,8 +94,16 @@ def run_metadata_window(
     input_func: InputFunc,
     print_func: PrintFunc,
 ) -> MetadataDraft | None:
-    """PURPOSE run the metadata editor window used by diff
-    DOMAIN  optional integrations
+    """Run the metadata editor window used by diff.
+
+    Args:
+        block: Block dictionary used as the initial metadata source.
+        title: Window title.
+        input_func: Function used to read user input.
+        print_func: Function used to print the window.
+
+    Returns:
+        Saved metadata draft, or None when the user exits without saving.
     """
     draft = MetadataDraft.from_block(block)
     while True:
@@ -119,8 +142,13 @@ def _render_metadata_window(
     draft: MetadataDraft,
     print_func: PrintFunc,
 ) -> None:
-    """PURPOSE show the metadata editor window
-    DOMAIN  optional integrations
+    """Render the metadata editor window.
+
+    Args:
+        title: Window title.
+        block: Block dictionary used for target display.
+        draft: Current metadata draft.
+        print_func: Print function.
     """
     code = block.get("code") if isinstance(block.get("code"), dict) else {}
     print_func("")
@@ -153,9 +181,7 @@ def _read_purpose(
     input_func: InputFunc,
     print_func: PrintFunc,
 ) -> str | None:
-    """PURPOSE prompt for purpose with stable suggestions
-    DOMAIN  optional integrations
-    """
+    """Prompt for purpose with stable suggestions."""
     suggestions = suggest_purposes(block, project_blocks=[], existing_purposes=())
     print_func("")
     print_func("EDIT PURPOSE")
@@ -185,9 +211,7 @@ def _read_domain(
     input_func: InputFunc,
     print_func: PrintFunc,
 ) -> str | None:
-    """PURPOSE prompt for domain with stable suggestions
-    DOMAIN  optional integrations
-    """
+    """Prompt for domain with stable suggestions."""
     suggestions = suggest_domains(block, project_blocks=[])
     print_func("")
     print_func("EDIT DOMAIN")
@@ -216,8 +240,15 @@ def _read_status(
     input_func: InputFunc,
     print_func: PrintFunc,
 ) -> str | None:
-    """PURPOSE prompt for lifecycle/status value
-    DOMAIN  optional integrations
+    """Prompt for lifecycle/status value.
+
+    Args:
+        current_value: Current status.
+        input_func: Input function.
+        print_func: Print function.
+
+    Returns:
+        Selected status.
     """
     values = ["active", "experimental", "legacy", "deprecated"]
     print_func("")
@@ -243,8 +274,16 @@ def _read_optional_value(
     input_func: InputFunc,
     print_func: PrintFunc,
 ) -> str | None:
-    """PURPOSE prompt for a free-text field
-    DOMAIN  optional integrations
+    """Prompt for a free-text optional field.
+
+    Args:
+        field_label: Field label.
+        current_value: Current value.
+        input_func: Input function.
+        print_func: Print function.
+
+    Returns:
+        Cleaned value or current value when blank.
     """
     print_func("")
     print_func(f"{field_label}:")
@@ -255,15 +294,25 @@ def _read_optional_value(
 
 
 def _display(value: str | None) -> str:
-    """PURPOSE get a printable value
-    DOMAIN  optional integrations
+    """Return a printable value.
+
+    Args:
+        value: Optional string.
+
+    Returns:
+        Value or dash marker.
     """
     return value if value else "<empty>"
 
 
 def _clean(value: Any) -> str | None:
-    """PURPOSE get a stripped string or None
-    DOMAIN  optional integrations
+    """Return a stripped string or None.
+
+    Args:
+        value: Value to clean.
+
+    Returns:
+        Cleaned string or None.
     """
     if value is None:
         return None

@@ -1,6 +1,4 @@
-"""PURPOSE common Lego kit for interactive tools (inspector, editor, planner)
-DOMAIN  terminal UI
-"""
+"""Common Lego kit for interactive integrations (inspector, editor, planner)."""
 
 from bpfw.integrations.shared.visual_width import (
     display_width,

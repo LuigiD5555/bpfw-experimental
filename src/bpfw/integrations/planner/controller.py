@@ -1,6 +1,4 @@
-"""PURPOSE main controller for Planner tool using state machine pattern
-DOMAIN  planner workflow
-"""
+"""Main controller for Planner integration using state machine pattern."""
 
 from pathlib import Path
 from typing import Optional
@@ -28,13 +26,13 @@ from bpfw.core.errors import BlueprintLockedError
 
 
 class PlannerController:
-    """PURPOSE orchestrate complete planner session using state machine pattern
-    DOMAIN  planner workflow
-    """
+    """Orchestrate complete planner session using state machine pattern."""
 
     def __init__(self, project_root: Path) -> None:
-        """PURPOSE set up planner controller
-        DOMAIN  planner workflow
+        """Initialize planner controller.
+
+        Args:
+            project_root: Root directory of project.
         """
         self.project_root = project_root
         self.state = self._load_state_with_fallback(project_root)
@@ -50,9 +48,7 @@ class PlannerController:
             self.state.screen = "broken_connections"
 
     def _load_state_with_fallback(self, project_root: Path) -> PlannerState:
-        """PURPOSE read state and fall back to user-facing invalid YAML screen on failure
-        DOMAIN  planner workflow
-        """
+        """Load state and fall back to user-facing invalid YAML screen on failure."""
         try:
             return BlueprintStateLoader.load(project_root)
         except ValueError as error:
@@ -68,8 +64,10 @@ class PlannerController:
             )
 
     def run(self) -> int:
-        """PURPOSE run interactive planner session
-        DOMAIN  planner workflow
+        """Run interactive planner session.
+
+        Returns:
+            Exit code (0 for success, 1 for error).
         """
         handlers_by_screen = {
             "welcome": self._handle_welcome_key,
@@ -112,17 +110,13 @@ class PlannerController:
         )
 
     def _render_current_screen(self) -> None:
-        """PURPOSE show active screen with synchronized modal state
-        DOMAIN  planner workflow
-        """
+        """Render active screen with synchronized modal state."""
         self.state.modal_data = self.modal_data
         self.state.modal_cursor = self.modal_cursor
         render_planner(self.state)
 
     def _prompt_for_current_screen(self, screen: str | None = None) -> str:
-        """PURPOSE get contextual input prompt for planner screen
-        DOMAIN  planner workflow
-        """
+        """Return contextual input prompt for current planner screen."""
         active_screen = screen or self.state.screen
         if active_screen == "add_block":
             return "> Name (example: InvoiceParser): "
@@ -141,8 +135,10 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_welcome_key(self, key: str) -> None:
-        """PURPOSE handle key input on welcome screen
-        DOMAIN  planner workflow
+        """Handle key input on welcome screen.
+
+        Args:
+            key: Key pressed by user.
         """
         command = key.lower()
         if command in {"", "enter", "continue", "start", "c"}:
@@ -155,8 +151,10 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_workspace_key(self, key: str) -> None:
-        """PURPOSE handle key input on workspace screen
-        DOMAIN  planner workflow
+        """Handle key input on workspace screen.
+
+        Args:
+            key: Key pressed by user.
         """
         command = key.lower()
         # Actions (command-driven)
@@ -215,9 +213,7 @@ class PlannerController:
                 self.state.selected_box_id = ordered_boxes[index].id
 
     def _handle_pieces_filter_input(self, key: str) -> None:
-        """PURPOSE handle filter input while workspace filter mode is active
-        DOMAIN  planner workflow
-        """
+        """Handle filter input while workspace filter mode is active."""
         if key == "enter":
             self.state.pieces_filter_mode = False
             return
@@ -231,9 +227,7 @@ class PlannerController:
             self.state.selected_box_id = visible_boxes[0].id
 
     def _navigate_up(self) -> None:
-        """PURPOSE navigate to previous box
-        DOMAIN  planner workflow
-        """
+        """Navigate to previous box."""
         visible_boxes = self._get_visible_boxes()
         if not visible_boxes:
             return
@@ -250,9 +244,7 @@ class PlannerController:
                 break
 
     def _navigate_down(self) -> None:
-        """PURPOSE navigate to next box
-        DOMAIN  planner workflow
-        """
+        """Navigate to next box."""
         visible_boxes = self._get_visible_boxes()
         if not visible_boxes:
             return
@@ -269,9 +261,7 @@ class PlannerController:
                 break
 
     def _check_disconnect_available(self) -> None:
-        """PURPOSE check if there are connections to disconnect
-        DOMAIN  planner workflow
-        """
+        """Check if there are connections to disconnect."""
         if not self.state.selected_box_id:
             return
 
@@ -292,9 +282,7 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_add_block_key(self, key: str) -> None:
-        """PURPOSE handle command-driven add block flow
-        DOMAIN  planner workflow
-        """
+        """Handle command-driven add block flow."""
         name = key.strip()
         if not name:
             self.state.screen = "workspace"
@@ -331,8 +319,11 @@ class PlannerController:
         self.modal_data = {}
 
     def _handle_modal_input(self, key: str, fields: list) -> None:
-        """PURPOSE handle input for modal fields
-        DOMAIN  planner workflow
+        """Handle input for modal fields.
+
+        Args:
+            key: Key pressed by user.
+            fields: List of field names in order.
         """
         if key == 'backspace':
             # Remove last character from current field
@@ -359,9 +350,7 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_connect_target_key(self, key: str) -> None:
-        """PURPOSE handle command-driven connection flow (source/target/meaning by number)
-        DOMAIN  planner workflow
-        """
+        """Handle command-driven connection flow (source/target/meaning by number)."""
         ordered_boxes = sorted(self.state.boxes, key=lambda box: box.name)
         source_input = key.strip()
         if not source_input.isdigit():
@@ -390,8 +379,10 @@ class PlannerController:
         self.state.screen = "connect_meaning"
 
     def _get_connect_targets(self) -> list:
-        """PURPOSE get list of valid target boxes for connection
-        DOMAIN  planner workflow
+        """Get list of valid target boxes for connection.
+
+        Returns:
+            List of boxes that can be targets.
         """
         if not self.state.selected_box_id:
             return []
@@ -404,9 +395,7 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_connect_meaning_key(self, key: str) -> None:
-        """PURPOSE handle command-driven relationship selection
-        DOMAIN  planner workflow
-        """
+        """Handle command-driven relationship selection."""
         choice = key.strip()
         if not choice:
             choice = read_line("Meaning [1-8]: ").strip()
@@ -421,9 +410,7 @@ class PlannerController:
         self._create_connection()
 
     def _create_connection(self) -> None:
-        """PURPOSE create a connection based on modal data
-        DOMAIN  planner workflow
-        """
+        """Create a connection based on modal data."""
         source_id = self.state.selected_box_id
         target_id = self.modal_data.get('target_id')
         rel_index = self.modal_data.get('relationship_index', 0)
@@ -478,9 +465,7 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_connect_feedback_key(self, key: str) -> None:
-        """PURPOSE handle connected feedback and return to board
-        DOMAIN  planner workflow
-        """
+        """Handle connected feedback and return to board."""
         self.state.screen = "workspace"
         self.modal_data = {}
 
@@ -489,9 +474,7 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_edit_block_key(self, key: str) -> None:
-        """PURPOSE handle command-driven block selection and field selection
-        DOMAIN  planner workflow
-        """
+        """Handle command-driven block selection and field selection."""
         ordered_boxes = sorted(self.state.boxes, key=lambda box: (box.domain, box.name))
         selection = key.strip()
         if not selection.isdigit():
@@ -540,8 +523,10 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_edit_field_key(self, key: str) -> None:
-        """PURPOSE handle key input when editing a text field
-        DOMAIN  planner workflow
+        """Handle key input when editing a text field.
+
+        Args:
+            key: Key pressed by user.
         """
         field = self.modal_data.get('field')
         current_value = str(self.modal_data.get('value', ''))
@@ -588,10 +573,7 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_edit_inputs_key(self, key: str) -> None:
-        """PURPOSE manage a block inputs and output using commands
-                DOMAIN  planner workflow
-
-        """
+        """Manage a block interface using commands."""
         selected_box = self._get_selected_box()
         if selected_box is None or self.modal_data.get("selecting_interface_block"):
             ordered_boxes = sorted(self.state.boxes, key=lambda box: (box.domain, box.name))
@@ -676,8 +658,10 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_edit_input_key(self, key: str) -> None:
-        """PURPOSE handle key input when editing a single input
-        DOMAIN  planner workflow
+        """Handle key input when editing a single input.
+
+        Args:
+            key: Key pressed by user.
         """
         selected_box = self._get_selected_box()
         if not selected_box:
@@ -712,8 +696,10 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_edit_output_key(self, key: str) -> None:
-        """PURPOSE handle key input on edit output modal
-        DOMAIN  planner workflow
+        """Handle key input on edit output modal.
+
+        Args:
+            key: Key pressed by user.
         """
         selected_box = self._get_selected_box()
         if selected_box is None:
@@ -748,8 +734,10 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_project_settings_key(self, key: str) -> None:
-        """PURPOSE handle key input on project settings modal
-        DOMAIN  planner workflow
+        """Handle key input on project settings modal.
+
+        Args:
+            key: Key pressed by user.
         """
         selection = key.strip()
         if not selection:
@@ -805,8 +793,10 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_review_key(self, key: str) -> None:
-        """PURPOSE handle key input on review modal
-        DOMAIN  planner workflow
+        """Handle key input on review modal.
+
+        Args:
+            key: Key pressed by user.
         """
         action = key.strip().lower()
         if action == "s":
@@ -819,9 +809,7 @@ class PlannerController:
             self.state.screen = "workspace"
 
     def _save_blueprint(self) -> None:
-        """PURPOSE save blueprint to file
-        DOMAIN  planner workflow
-        """
+        """Save blueprint to file."""
         # Check for empty plan
         if not self.state.boxes:
             self.state.screen = "cannot_save_empty"
@@ -850,8 +838,10 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_yaml_preview_key(self, key: str) -> None:
-        """PURPOSE handle key input on YAML preview modal
-        DOMAIN  planner workflow
+        """Handle key input on YAML preview modal.
+
+        Args:
+            key: Key pressed by user.
         """
         command = key.strip().lower()
         if command in {'', 'b', 'enter', 'back'}:
@@ -865,8 +855,10 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_saved_key(self, key: str) -> None:
-        """PURPOSE handle key input on saved modal
-        DOMAIN  planner workflow
+        """Handle key input on saved modal.
+
+        Args:
+            key: Key pressed by user.
         """
         command = key.strip().lower()
         if command == '' or command == 'enter' or command in {'b', 'back'}:
@@ -879,8 +871,10 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_graph_overview_key(self, key: str) -> None:
-        """PURPOSE handle key input on graph overview modal
-        DOMAIN  planner workflow
+        """Handle key input on graph overview modal.
+
+        Args:
+            key: Key pressed by user.
         """
         command = key.strip().lower()
         if command == '' or command in {'b', 'enter', 'back'}:
@@ -891,8 +885,10 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_disconnect_key(self, key: str) -> None:
-        """PURPOSE handle key input on disconnect modal
-        DOMAIN  planner workflow
+        """Handle key input on disconnect modal.
+
+        Args:
+            key: Key pressed by user.
         """
         command = key.strip().lower()
         if command in {'', 'back'} or is_back_command(command):
@@ -907,17 +903,17 @@ class PlannerController:
         self._remove_connection()
 
     def _handle_removed_connection_key(self, key: str) -> None:
-        """PURPOSE handle key input on removed connection confirmation modal
-        DOMAIN  planner workflow
-        """
+        """Handle key input on removed connection confirmation modal."""
         command = key.strip().lower()
         if command in {"", "b", "enter", "back"}:
             self.state.screen = "workspace"
             self.modal_data = {}
 
     def _get_box_connections(self) -> list:
-        """PURPOSE get connections for selected box
-        DOMAIN  planner workflow
+        """Get connections for selected box.
+
+        Returns:
+            List of connections.
         """
         if not self.state.selected_box_id:
             return []
@@ -929,9 +925,7 @@ class PlannerController:
         ]
 
     def _remove_connection(self) -> None:
-        """PURPOSE remove selected connection
-        DOMAIN  planner workflow
-        """
+        """Remove selected connection."""
         connections = self._get_box_connections()
 
         if self.modal_cursor < len(connections):
@@ -958,8 +952,10 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_delete_block_key(self, key: str) -> None:
-        """PURPOSE handle key input on delete block modal
-        DOMAIN  planner workflow
+        """Handle key input on delete block modal.
+
+        Args:
+            key: Key pressed by user.
         """
         command = key.strip().lower()
         if command in {'', 'back'} or is_back_command(command):
@@ -970,9 +966,7 @@ class PlannerController:
             self._delete_selected_block()
 
     def _delete_selected_block(self) -> None:
-        """PURPOSE delete selected block and its connections
-        DOMAIN  planner workflow
-        """
+        """Delete selected block and its connections."""
         if not self.state.selected_box_id:
             return
 
@@ -1004,8 +998,10 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_unsaved_changes_key(self, key: str) -> None:
-        """PURPOSE handle key input on unsaved changes modal
-        DOMAIN  planner workflow
+        """Handle key input on unsaved changes modal.
+
+        Args:
+            key: Key pressed by user.
         """
         command = key.strip().lower()
         if command in {'', 'b', 'back'}:
@@ -1024,8 +1020,10 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_broken_connections_key(self, key: str) -> None:
-        """PURPOSE handle key input on broken connections modal
-        DOMAIN  planner workflow
+        """Handle key input on broken connections modal.
+
+        Args:
+            key: Key pressed by user.
         """
         command = key.strip().lower()
         if command == 'r':
@@ -1044,8 +1042,10 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _get_selected_box(self) -> Optional[PlannerBox]:
-        """PURPOSE get currently selected box
-        DOMAIN  planner workflow
+        """Get currently selected box.
+
+        Returns:
+            Selected box or None if not selected.
         """
         if not self.state.selected_box_id:
             return None
@@ -1056,9 +1056,7 @@ class PlannerController:
         return None
 
     def _get_visible_boxes(self) -> list[PlannerBox]:
-        """PURPOSE get visible boxes according to active Pieces filter
-        DOMAIN  planner workflow
-        """
+        """Return visible boxes according to active Pieces filter."""
         filter_text = self.state.pieces_filter.strip().lower()
         if not filter_text:
             return list(self.state.boxes)
@@ -1068,9 +1066,7 @@ class PlannerController:
         ]
 
     def _apply_box_updates(self, selected_box: PlannerBox, updates: dict) -> None:
-        """PURPOSE apply updates to selected box and track edit counters
-        DOMAIN  planner workflow
-        """
+        """Apply updates to selected box and track edit counters."""
         updated_box = BoxFactory.update_box(selected_box, updates)
 
         for idx, box in enumerate(self.state.boxes):
@@ -1083,9 +1079,7 @@ class PlannerController:
         self.state.dirty = True
 
     def _find_box_by_path(self, path: str, exclude_box_id: str) -> Optional[PlannerBox]:
-        """PURPOSE find an box using the same path, excluding one box id
-        DOMAIN  planner workflow
-        """
+        """Find an existing box using the same path, excluding one box id."""
         for box in self.state.boxes:
             if box.id != exclude_box_id and box.path == path:
                 return box
@@ -1096,8 +1090,10 @@ class PlannerController:
     # ---------------------------------------------------------------------------
 
     def _handle_no_blocks_to_connect_key(self, key: str) -> None:
-        """PURPOSE handle key input when no blocks to connect
-        DOMAIN  planner workflow
+        """Handle key input when no blocks to connect.
+
+        Args:
+            key: Key pressed by user.
         """
         command = key.strip().lower()
         if command == 'a':
@@ -1107,16 +1103,20 @@ class PlannerController:
             self.state.screen = "workspace"
 
     def _handle_duplicate_connection_key(self, key: str) -> None:
-        """PURPOSE handle key input for duplicate connection modal
-        DOMAIN  planner workflow
+        """Handle key input for duplicate connection modal.
+
+        Args:
+            key: Key pressed by user.
         """
         command = key.strip().lower()
         if command in {'', 'enter', 'back'} or is_back_command(command):
             self.state.screen = "workspace"
 
     def _handle_self_connection_key(self, key: str) -> None:
-        """PURPOSE handle key input for self-connection modal
-        DOMAIN  planner workflow
+        """Handle key input for self-connection modal.
+
+        Args:
+            key: Key pressed by user.
         """
         command = key.strip().lower()
         if command in {'', 'enter'}:
@@ -1126,8 +1126,10 @@ class PlannerController:
             self.state.screen = "workspace"
 
     def _handle_cannot_save_empty_key(self, key: str) -> None:
-        """PURPOSE handle key input when trying to save empty plan
-        DOMAIN  planner workflow
+        """Handle key input when trying to save empty plan.
+
+        Args:
+            key: Key pressed by user.
         """
         command = key.strip().lower()
         if command == 'a':
@@ -1137,9 +1139,7 @@ class PlannerController:
             self.state.screen = "workspace"
 
     def _handle_path_already_used_key(self, key: str) -> None:
-        """PURPOSE handle key input for path already used modal
-        DOMAIN  planner workflow
-        """
+        """Handle key input for path already used modal."""
         selected_box = self._get_selected_box()
         if selected_box is None:
             self.state.screen = "workspace"
@@ -1169,9 +1169,7 @@ class PlannerController:
             self.modal_data = {}
 
     def _handle_domain_changed_key(self, key: str) -> None:
-        """PURPOSE handle key input for domain changed modal
-        DOMAIN  planner workflow
-        """
+        """Handle key input for domain changed modal."""
         selected_box = self._get_selected_box()
         if selected_box is None:
             self.state.screen = "workspace"
@@ -1212,9 +1210,7 @@ class PlannerController:
             self.modal_data = {}
 
     def _handle_blueprint_locked_key(self, key: str) -> None:
-        """PURPOSE handle key input for blueprint locked modal
-        DOMAIN  planner workflow
-        """
+        """Handle key input for blueprint locked modal."""
         command = key.strip().lower()
         if command in {"", "enter", "b", "back"}:
             self.state.screen = "workspace"
@@ -1222,9 +1218,7 @@ class PlannerController:
             self.should_exit = True
 
     def _handle_invalid_blueprint_key(self, key: str) -> None:
-        """PURPOSE handle key input for invalid blueprint modal
-        DOMAIN  planner workflow
-        """
+        """Handle key input for invalid blueprint modal."""
         command = key.strip().lower()
         if command in {"", "enter", "b", "back"} or is_quit_command(command):
             self.should_exit = True

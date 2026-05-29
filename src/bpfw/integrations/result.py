@@ -1,23 +1,17 @@
-"""PURPOSE result objects for BPFW tools
-DOMAIN  optional integrations
-"""
+"""Result objects for optional BPFW integrations."""
 
 from dataclasses import dataclass
 
 
 @dataclass
 class OptionalIntegrationResult:
-    """PURPOSE store information about the outcome of an tool run
-    DOMAIN  optional integrations
-    """
+    """Represent the outcome of an optional integration run."""
 
     message: str
     exit_code: int
 
     @property
     def success(self) -> bool:
-        """PURPOSE check whether the tool completed successfully
-        DOMAIN  optional integrations
-        """
+        """Return True when the integration completed successfully."""
 
         return self.exit_code == 0

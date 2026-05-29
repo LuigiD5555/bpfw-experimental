@@ -1,6 +1,4 @@
-"""PURPOSE reusable terminal layout helpers for interactive tools
-DOMAIN  terminal UI
-"""
+"""Reusable terminal layout helpers for interactive integrations."""
 
 from dataclasses import dataclass
 from typing import Sequence, TypeVar
@@ -16,9 +14,7 @@ from bpfw.integrations.shared.visual_theme import (
 
 @dataclass(frozen=True)
 class VisualPanel:
-    """PURPOSE a boxed visual panel with command styling
-    DOMAIN  terminal UI
-    """
+    """A boxed visual panel with optional command styling."""
 
     title: str
     lines: Sequence[str]
@@ -33,9 +29,7 @@ def resolve_uniform_width(
     panels: Sequence[tuple[str, Sequence[str]] | VisualPanel],
     theme: ThemeConfig = DEFAULT_THEME,
 ) -> int:
-    """PURPOSE calculate one shared width for several visual panels
-    DOMAIN  terminal UI
-    """
+    """Compute one shared width for several visual panels."""
 
     panel_widths = [
         compute_panel_width(
@@ -62,9 +56,7 @@ def render_visual_screen(
     theme: ThemeConfig = DEFAULT_THEME,
     spacing: int = 1,
 ) -> list[str]:
-    """PURPOSE show stacked panels using one uniform adaptive width
-    DOMAIN  terminal UI
-    """
+    """Render stacked panels using one uniform adaptive width."""
 
     panel_width = resolve_uniform_width(
         terminal_width=terminal_width,
@@ -83,9 +75,7 @@ def render_visual_screen(
 
 
 def limited_items(items: Sequence[Item], max_items: int) -> tuple[Sequence[Item], int]:
-    """PURPOSE get visible items and hidden count for large terminal lists
-    DOMAIN  terminal UI
-    """
+    """Return visible items and hidden count for large terminal lists."""
 
     if max_items < 0:
         return items, 0
@@ -94,9 +84,7 @@ def limited_items(items: Sequence[Item], max_items: int) -> tuple[Sequence[Item]
 
 
 def append_hidden_count(lines: list[str], hidden_count: int, noun: str) -> None:
-    """PURPOSE append a standard hidden-count line when a list is truncated
-    DOMAIN  terminal UI
-    """
+    """Append a standard hidden-count line when a list is truncated."""
 
     if hidden_count > 0:
         lines.append(f"... {hidden_count} more {noun}")

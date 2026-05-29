@@ -1,6 +1,4 @@
-"""PURPOSE blueprint assembler for converting PlannerState to YAML
-DOMAIN  planner workflow
-"""
+"""Blueprint assembler for converting PlannerState to YAML."""
 
 from pathlib import Path
 from typing import Any, Dict, List
@@ -10,15 +8,17 @@ from bpfw.integrations.planner.models import PlannerBox, PlannerConnection, Plan
 
 
 class BlueprintAssembler:
-    """PURPOSE convert PlannerState to blueprint.yaml dictionaryionary
-        DOMAIN  planner workflow
-
-    """
+    """Convert PlannerState to blueprint.yaml dictionary."""
 
     @staticmethod
     def assemble(state: PlannerState) -> Dict[str, Any]:
-        """PURPOSE assemble planner state into blueprint data
-        DOMAIN  planner workflow
+        """Assemble planner state into blueprint data.
+
+        Args:
+            state: Current planner state.
+
+        Returns:
+            Dictionary ready for YAML serialization.
         """
         blueprint_data = {
             "version": 1,
@@ -31,8 +31,13 @@ class BlueprintAssembler:
 
     @staticmethod
     def _assemble_project(state: PlannerState) -> Dict[str, Any]:
-        """PURPOSE assemble project section
-        DOMAIN  planner workflow
+        """Assemble project section.
+
+        Args:
+            state: Current planner state.
+
+        Returns:
+            Project dictionary.
         """
         config = state.project_config
 
@@ -47,8 +52,13 @@ class BlueprintAssembler:
 
     @staticmethod
     def _assemble_policy(state: PlannerState) -> Dict[str, Any]:
-        """PURPOSE assemble policy section
-        DOMAIN  planner workflow
+        """Assemble policy section.
+
+        Args:
+            state: Current planner state.
+
+        Returns:
+            Policy dictionary.
         """
         config = state.project_config
 
@@ -71,8 +81,13 @@ class BlueprintAssembler:
 
     @staticmethod
     def _assemble_blocks(state: PlannerState) -> List[Dict[str, Any]]:
-        """PURPOSE assemble blocks section
-        DOMAIN  planner workflow
+        """Assemble blocks section.
+
+        Args:
+            state: Current planner state.
+
+        Returns:
+            List of block dictionaries.
         """
         blocks = []
 
@@ -99,8 +114,14 @@ class BlueprintAssembler:
         box: PlannerBox,
         connections: List[PlannerConnection],
     ) -> Dict[str, Any]:
-        """PURPOSE assemble a single block
-        DOMAIN  planner workflow
+        """Assemble a single block.
+
+        Args:
+            box: The box to convert.
+            connections: Connections from this box.
+
+        Returns:
+            Block dictionary.
         """
         # Build connections from accepted planner connections
         block_connections = []
@@ -186,14 +207,15 @@ class BlueprintAssembler:
 
 
 class BlueprintYamlWriter:
-    """PURPOSE write assembled blueprint data to YAML file
-    DOMAIN  planner workflow
-    """
+    """Write assembled blueprint data to YAML file."""
 
     @staticmethod
     def write(blueprint_path: Path, blueprint_data: Dict[str, Any]) -> None:
-        """PURPOSE write blueprint data to YAML file using AuthorityRepository
-        DOMAIN  planner workflow
+        """Write blueprint data to YAML file using AuthorityRepository.
+
+        Args:
+            blueprint_path: Path to the blueprint file.
+            blueprint_data: Blueprint data to write.
         """
         from bpfw.core.authority import AuthorityRepository
 

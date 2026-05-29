@@ -1,6 +1,4 @@
-"""PURPOSE models used by the BPFW diff decision manager
-DOMAIN  optional integrations
-"""
+"""Models used by the BPFW diff decision manager."""
 
 from dataclasses import dataclass, field
 from enum import Enum
@@ -11,9 +9,7 @@ from bpfw.reports.finding import Finding
 
 
 class DiffItemKind(Enum):
-    """PURPOSE stable diff item kinds shown by the diff manager
-    DOMAIN  optional integrations
-    """
+    """Stable diff item kinds shown by the diff manager."""
 
     UNDECLARED_CODE = "UNDECLARED_CODE"
     MISSING_DECLARED_CODE = "MISSING_DECLARED_CODE"
@@ -28,9 +24,7 @@ class DiffItemKind(Enum):
 
 
 class DiffRisk(Enum):
-    """PURPOSE risk labels used by the review screens
-    DOMAIN  optional integrations
-    """
+    """Risk labels used by the review screens."""
 
     LOW = "LOW"
     MEDIUM = "MEDIUM"
@@ -38,9 +32,7 @@ class DiffRisk(Enum):
 
 
 class DiffActionLevel(Enum):
-    """PURPOSE classify how a diff item must be handled
-    DOMAIN  optional integrations
-    """
+    """Classify how a diff item must be handled."""
 
     READ_ONLY = "READ_ONLY"
     SAFE_MECHANICAL_UPDATE = "SAFE_MECHANICAL_UPDATE"
@@ -48,9 +40,7 @@ class DiffActionLevel(Enum):
 
 
 class SourceChangeKind(Enum):
-    """PURPOSE source-code actions that are outside BlueprintEngine authority writes
-    DOMAIN  optional integrations
-    """
+    """Source-code actions that are outside BlueprintEngine authority writes."""
 
     DELETE_CODE_SYMBOL = "DELETE_CODE_SYMBOL"
     MARK_FOR_SOURCE_DELETE = "MARK_FOR_SOURCE_DELETE"
@@ -58,8 +48,15 @@ class SourceChangeKind(Enum):
 
 @dataclass(frozen=True)
 class CodeTarget:
-    """PURPOSE store information about a code symbol involved in a diff item
-    DOMAIN  optional integrations
+    """Represent a code symbol involved in a diff item.
+
+    Attributes:
+        path: Project-relative source file path.
+        symbol: Symbol name detected in the source file.
+        kind: Symbol kind such as class, function, or method.
+        start_line: Optional starting line for the symbol.
+        end_line: Optional ending line for the symbol.
+        qualified_name: Optional fully qualified detected name.
     """
 
     path: str
@@ -70,16 +67,29 @@ class CodeTarget:
     qualified_name: str | None = None
 
     def display_label(self) -> str:
-        """PURPOSE get a compact source label
-        DOMAIN  optional integrations
+        """Return a compact source label.
+
+        Returns:
+            Human-readable code location.
         """
         return f"{self.path}::{self.symbol}"
 
 
 @dataclass(frozen=True)
 class BlueprintTarget:
-    """PURPOSE store information about a blueprint block involved in a diff item
-    DOMAIN  optional integrations
+    """Represent a blueprint block involved in a diff item.
+
+    Attributes:
+        block_id: Authority block identifier.
+        path: Declared source path.
+        symbol: Declared symbol.
+        kind: Declared symbol kind.
+        source_shard_path: Shard containing this block.
+        purpose: Declared purpose.
+        name: Declared display name.
+        domain: Declared domain.
+        status: Declared status or lifecycle value.
+        block_data: Raw block dictionary.
     """
 
     block_id: str
@@ -94,8 +104,10 @@ class BlueprintTarget:
     block_data: dict[str, Any] = field(default_factory=dict)
 
     def display_label(self) -> str:
-        """PURPOSE get a compact authority label
-        DOMAIN  optional integrations
+        """Return a compact authority label.
+
+        Returns:
+            Human-readable block label.
         """
         if self.path and self.symbol:
             return f"{self.block_id} ({self.path}::{self.symbol})"
@@ -104,8 +116,18 @@ class BlueprintTarget:
 
 @dataclass(frozen=True)
 class DiffItem:
-    """PURPOSE one difference between real code and blueprint authority
-    DOMAIN  optional integrations
+    """One difference between real code and blueprint authority.
+
+    Attributes:
+        identifier: Stable identifier for the item within one diff session.
+        kind: Category of difference.
+        risk: Review risk label.
+        reason: Human-readable explanation.
+        finding: Original verification finding when the item came from verify.
+        code_target: Code-side target, when applicable.
+        blueprint_target: Authority-side target, when applicable.
+        candidates: Candidate code targets for moved-code or replacement decisions.
+        related_blocks: Extra authority blocks related to duplicate or conflict decisions.
     """
 
     identifier: str
@@ -122,8 +144,13 @@ class DiffItem:
 
 @dataclass(frozen=True)
 class SourceChangeRequest:
-    """PURPOSE store information about a source-code action planned by diff
-    DOMAIN  optional integrations
+    """Represent a source-code action planned by diff.
+
+    Attributes:
+        kind: Source-code action kind.
+        target: Source code target.
+        reason: Human-readable reason.
+        apply_enabled: Whether automatic source edits are enabled.
     """
 
     kind: SourceChangeKind

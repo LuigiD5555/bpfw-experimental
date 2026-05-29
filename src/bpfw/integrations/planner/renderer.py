@@ -1,6 +1,4 @@
-"""PURPOSE uI renderer for Blueprint Planner with Pieces/Assembly/Details layout
-DOMAIN  planner workflow
-"""
+"""UI renderer for Blueprint Planner with Pieces/Assembly/Details layout."""
 
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -38,8 +36,10 @@ PLANNER_TITLE = "Blueprint Planner"
 
 
 def render_planner(state: PlannerState) -> None:
-    """PURPOSE main entry point: render appropriate screen based on state.screen
-    DOMAIN  planner workflow
+    """Main entry point: render appropriate screen based on state.screen.
+
+    Args:
+        state: Current planner state.
     """
     if state.screen == "welcome":
         render_welcome(state)
@@ -130,8 +130,10 @@ def render_planner(state: PlannerState) -> None:
 # ---------------------------------------------------------------------------
 
 def render_welcome(state: PlannerState) -> None:
-    """PURPOSE show welcome screen when starting planner
-    DOMAIN  planner workflow
+    """Render welcome screen when starting planner.
+
+    Args:
+        state: Current planner state.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -202,9 +204,7 @@ def render_welcome(state: PlannerState) -> None:
 # ---------------------------------------------------------------------------
 
 def render_workspace(state: PlannerState) -> None:
-    """PURPOSE show command-driven planner board
-    DOMAIN  planner workflow
-    """
+    """Render command-driven planner board."""
     refresh_screen()
     terminal_width = get_terminal_width()
     warnings_count = len(state.broken_connections)
@@ -265,8 +265,14 @@ def render_pieces_panel_internal(
     filter_text: str = "",
     filter_mode: bool = False,
 ) -> List[str]:
-    """PURPOSE show pieces panel content
-    DOMAIN  planner workflow
+    """Render pieces panel content.
+
+    Args:
+        boxes: List of boxes to display.
+        selected_id: ID of selected box.
+
+    Returns:
+        List of lines for the panel.
     """
     if not boxes:
         return [
@@ -343,8 +349,15 @@ def render_assembly_panel_internal(
     incoming: List[tuple],
     outgoing: List[tuple],
 ) -> List[str]:
-    """PURPOSE show assembly panel content
-    DOMAIN  planner workflow
+    """Render assembly panel content.
+
+    Args:
+        selected_box: Currently selected box.
+        incoming: List of (source_box, connection) tuples.
+        outgoing: List of (target_box, connection) tuples.
+
+    Returns:
+        List of lines for the panel.
     """
     if not selected_box:
         return [
@@ -401,8 +414,13 @@ def render_assembly_panel_internal(
 
 
 def render_details_panel_internal(selected_box: Optional[PlannerBox]) -> List[str]:
-    """PURPOSE show details panel content
-    DOMAIN  planner workflow
+    """Render details panel content.
+
+    Args:
+        selected_box: Currently selected box.
+
+    Returns:
+        List of lines for the panel.
     """
     if not selected_box:
         return [
@@ -448,8 +466,10 @@ def render_details_panel_internal(selected_box: Optional[PlannerBox]) -> List[st
 # ---------------------------------------------------------------------------
 
 def render_add_block_modal(state: PlannerState) -> None:
-    """PURPOSE show add block modal
-    DOMAIN  planner workflow
+    """Render add block modal.
+
+    Args:
+        state: Current planner state.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -479,8 +499,10 @@ def render_add_block_modal(state: PlannerState) -> None:
 
 
 def render_connect_target_modal(state: PlannerState) -> None:
-    """PURPOSE show connect target selection modal
-    DOMAIN  planner workflow
+    """Render connect target selection modal.
+
+    Args:
+        state: Current planner state.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -500,8 +522,10 @@ def render_connect_target_modal(state: PlannerState) -> None:
 
 
 def render_connect_meaning_modal(state: PlannerState) -> None:
-    """PURPOSE show connection meaning selection modal
-    DOMAIN  planner workflow
+    """Render connection meaning selection modal.
+
+    Args:
+        state: Current planner state.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -527,8 +551,10 @@ def render_connect_meaning_modal(state: PlannerState) -> None:
 
 
 def render_connect_feedback_modal(state: PlannerState) -> None:
-    """PURPOSE show connection feedback modal
-    DOMAIN  planner workflow
+    """Render connection feedback modal.
+
+    Args:
+        state: Current planner state.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -559,8 +585,10 @@ def render_connect_feedback_modal(state: PlannerState) -> None:
 
 
 def render_edit_block_modal(state: PlannerState) -> None:
-    """PURPOSE show edit block modal
-    DOMAIN  planner workflow
+    """Render edit block modal.
+
+    Args:
+        state: Current planner state.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -585,8 +613,10 @@ def render_edit_block_modal(state: PlannerState) -> None:
 
 
 def render_edit_inputs_modal(state: PlannerState) -> None:
-    """PURPOSE show the screen for editing inputs and output
-    DOMAIN  planner workflow
+    """Render edit interface modal.
+
+    Args:
+        state: Current planner state.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -651,10 +681,7 @@ def render_edit_inputs_modal(state: PlannerState) -> None:
 
 
 def render_edit_input_modal(state: PlannerState) -> None:
-    """PURPOSE show add input prompt for a block inputs and output
-        DOMAIN  planner workflow
-
-    """
+    """Render add input prompt for a block interface."""
     refresh_screen()
     terminal_width = get_terminal_width()
     selected_box = next((box for box in state.boxes if box.id == state.selected_box_id), None)
@@ -679,8 +706,10 @@ def render_edit_input_modal(state: PlannerState) -> None:
 
 
 def render_edit_output_modal(state: PlannerState) -> None:
-    """PURPOSE show edit output modal
-    DOMAIN  planner workflow
+    """Render edit output modal.
+
+    Args:
+        state: Current planner state.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -715,8 +744,10 @@ def render_edit_output_modal(state: PlannerState) -> None:
 
 
 def render_project_settings_modal(state: PlannerState) -> None:
-    """PURPOSE show project settings modal
-    DOMAIN  planner workflow
+    """Render project settings modal.
+
+    Args:
+        state: Current planner state.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -750,8 +781,10 @@ def render_project_settings_modal(state: PlannerState) -> None:
 
 
 def render_review_modal(state: PlannerState) -> None:
-    """PURPOSE show plan review modal before saving
-    DOMAIN  planner workflow
+    """Render plan review modal before saving.
+
+    Args:
+        state: Current planner state.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -790,8 +823,10 @@ def render_review_modal(state: PlannerState) -> None:
 
 
 def render_yaml_preview_modal(state: PlannerState) -> None:
-    """PURPOSE show YAML preview modal
-    DOMAIN  planner workflow
+    """Render YAML preview modal.
+
+    Args:
+        state: Current planner state.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -846,8 +881,10 @@ def render_yaml_preview_modal(state: PlannerState) -> None:
 
 
 def render_saved_modal(state: PlannerState) -> None:
-    """PURPOSE show saved confirmation modal
-    DOMAIN  planner workflow
+    """Render saved confirmation modal.
+
+    Args:
+        state: Current planner state.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -872,8 +909,10 @@ def render_saved_modal(state: PlannerState) -> None:
 
 
 def render_graph_overview(state: PlannerState) -> None:
-    """PURPOSE show graph overview modal
-    DOMAIN  planner workflow
+    """Render graph overview modal.
+
+    Args:
+        state: Current planner state.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -898,8 +937,10 @@ def render_graph_overview(state: PlannerState) -> None:
 
 
 def render_disconnect_modal(state: PlannerState) -> None:
-    """PURPOSE show disconnect connection modal
-    DOMAIN  planner workflow
+    """Render disconnect connection modal.
+
+    Args:
+        state: Current planner state.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -958,8 +999,10 @@ def render_disconnect_modal(state: PlannerState) -> None:
 
 
 def render_delete_block_modal(state: PlannerState) -> None:
-    """PURPOSE show delete block confirmation modal
-    DOMAIN  planner workflow
+    """Render delete block confirmation modal.
+
+    Args:
+        state: Current planner state.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -1012,8 +1055,10 @@ def render_delete_block_modal(state: PlannerState) -> None:
 
 
 def render_unsaved_changes_modal(state: PlannerState) -> None:
-    """PURPOSE show unsaved changes modal
-    DOMAIN  planner workflow
+    """Render unsaved changes modal.
+
+    Args:
+        state: Current planner state.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -1050,9 +1095,7 @@ def render_unsaved_changes_modal(state: PlannerState) -> None:
 
 
 def render_removed_connection_modal(state: PlannerState) -> None:
-    """PURPOSE show confirmation after removing a connection
-    DOMAIN  planner workflow
-    """
+    """Render confirmation after removing a connection."""
     refresh_screen()
     terminal_width = get_terminal_width()
 
@@ -1072,8 +1115,10 @@ def render_removed_connection_modal(state: PlannerState) -> None:
 
 
 def render_broken_connections_modal(state: PlannerState) -> None:
-    """PURPOSE show broken connections warning modal
-    DOMAIN  planner workflow
+    """Render broken connections warning modal.
+
+    Args:
+        state: Current planner state with broken connections.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -1107,8 +1152,10 @@ def render_broken_connections_modal(state: PlannerState) -> None:
 
 
 def render_no_blocks_to_connect_modal(state: PlannerState) -> None:
-    """PURPOSE show modal when there are no other blocks to connect to
-    DOMAIN  planner workflow
+    """Render modal when there are no other blocks to connect to.
+
+    Args:
+        state: Current planner state.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -1133,8 +1180,11 @@ def render_no_blocks_to_connect_modal(state: PlannerState) -> None:
 
 
 def render_duplicate_connection_modal(state: PlannerState, existing_conn: PlannerConnection) -> None:
-    """PURPOSE show modal when trying to create a duplicate connection
-    DOMAIN  planner workflow
+    """Render modal when trying to create a duplicate connection.
+
+    Args:
+        state: Current planner state.
+        existing_conn: The existing duplicate connection.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -1163,8 +1213,10 @@ def render_duplicate_connection_modal(state: PlannerState, existing_conn: Planne
 
 
 def render_self_connection_modal(state: PlannerState) -> None:
-    """PURPOSE show modal when trying to connect a block to itself
-    DOMAIN  planner workflow
+    """Render modal when trying to connect a block to itself.
+
+    Args:
+        state: Current planner state.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -1184,8 +1236,10 @@ def render_self_connection_modal(state: PlannerState) -> None:
 
 
 def render_cannot_save_empty_modal(state: PlannerState) -> None:
-    """PURPOSE show modal when trying to save without any blocks
-    DOMAIN  planner workflow
+    """Render modal when trying to save without any blocks.
+
+    Args:
+        state: Current planner state.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -1206,8 +1260,12 @@ def render_cannot_save_empty_modal(state: PlannerState) -> None:
 
 
 def render_duplicate_name_modal(state: PlannerState, existing_box: PlannerBox, suggested_names: List[str]) -> None:
-    """PURPOSE show modal when trying to create duplicate block name
-    DOMAIN  planner workflow
+    """Render modal when trying to create duplicate block name.
+
+    Args:
+        state: Current planner state.
+        existing_box: Existing box with duplicate name.
+        suggested_names: List of suggested alternative names.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -1235,8 +1293,12 @@ def render_duplicate_name_modal(state: PlannerState, existing_box: PlannerBox, s
 
 
 def render_active_purpose_conflict_modal(state: PlannerState, existing_box: PlannerBox, new_purpose: str) -> None:
-    """PURPOSE show modal when creating block with duplicate active purpose
-    DOMAIN  planner workflow
+    """Render modal when creating block with duplicate active purpose.
+
+    Args:
+        state: Current planner state.
+        existing_box: Existing active box with same purpose.
+        new_purpose: The conflicting purpose.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -1270,8 +1332,12 @@ def render_active_purpose_conflict_modal(state: PlannerState, existing_box: Plan
 
 
 def render_path_already_used_modal(state: PlannerState, path: str, existing_box: PlannerBox) -> None:
-    """PURPOSE show modal when path is already used by another block
-    DOMAIN  planner workflow
+    """Render modal when path is already used by another block.
+
+    Args:
+        state: Current planner state.
+        path: The duplicate path.
+        existing_box: Existing box using this path.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -1303,8 +1369,14 @@ def render_path_already_used_modal(state: PlannerState, path: str, existing_box:
 
 
 def render_domain_changed_modal(state: PlannerState, old_domain: str, new_domain: str, current_path: str, suggested_path: str) -> None:
-    """PURPOSE show modal when domain changes and path may be inconsistent
-    DOMAIN  planner workflow
+    """Render modal when domain changes and path may be inconsistent.
+
+    Args:
+        state: Current planner state.
+        old_domain: Previous domain.
+        new_domain: New domain.
+        current_path: Current path.
+        suggested_path: Suggested new path.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -1331,8 +1403,10 @@ def render_domain_changed_modal(state: PlannerState, old_domain: str, new_domain
 
 
 def render_no_connections_warning_modal(state: PlannerState) -> None:
-    """PURPOSE show warning when saving without connections
-    DOMAIN  planner workflow
+    """Render warning when saving without connections.
+
+    Args:
+        state: Current planner state.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -1358,8 +1432,12 @@ def render_no_connections_warning_modal(state: PlannerState) -> None:
 
 
 def render_experimental_to_active_warning_modal(state: PlannerState, experimental_box: PlannerBox, active_box: PlannerBox) -> None:
-    """PURPOSE show warning when connecting experimental block to active
-    DOMAIN  planner workflow
+    """Render warning when connecting experimental block to active.
+
+    Args:
+        state: Current planner state.
+        experimental_box: The experimental block being connected.
+        active_box: The active block being connected to.
     """
     refresh_screen()
     terminal_width = get_terminal_width()
@@ -1387,9 +1465,7 @@ def render_experimental_to_active_warning_modal(state: PlannerState, experimenta
 
 
 def render_blueprint_locked_modal(state: PlannerState) -> None:
-    """PURPOSE show modal when blueprint is locked and cannot be saved
-    DOMAIN  planner workflow
-    """
+    """Render modal when blueprint is locked and cannot be saved."""
     refresh_screen()
     terminal_width = get_terminal_width()
 
@@ -1413,9 +1489,7 @@ def render_blueprint_locked_modal(state: PlannerState) -> None:
 
 
 def render_invalid_blueprint_modal(state: PlannerState) -> None:
-    """PURPOSE show modal when blueprint.yaml cannot be parsed
-    DOMAIN  planner workflow
-    """
+    """Render modal when blueprint.yaml cannot be parsed."""
     refresh_screen()
     terminal_width = get_terminal_width()
 

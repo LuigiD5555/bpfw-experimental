@@ -1,6 +1,4 @@
-"""PURPOSE blueprint state loader for the Planner tool
-DOMAIN  planner workflow
-"""
+"""Blueprint state loader for the Planner integration."""
 
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -23,14 +21,17 @@ from bpfw.integrations.planner.utils import get_project_defaults
 
 
 class BlueprintStateLoader:
-    """PURPOSE read blueprint.yaml into PlannerState or create new state
-    DOMAIN  planner workflow
-    """
+    """Load blueprint.yaml into PlannerState or create new state."""
 
     @staticmethod
     def load(project_root: Path) -> PlannerState:
-        """PURPOSE read blueprint state from project
-        DOMAIN  planner workflow
+        """Load blueprint state from project.
+
+        Args:
+            project_root: Root directory of the project.
+
+        Returns:
+            PlannerState with loaded or default configuration.
         """
         blueprint_path = resolve_blueprint_path(project_root)
 
@@ -41,8 +42,14 @@ class BlueprintStateLoader:
 
     @staticmethod
     def _create_new_state(project_root: Path, blueprint_path: Path) -> PlannerState:
-        """PURPOSE create a new planner state with defaults
-        DOMAIN  planner workflow
+        """Create a new planner state with defaults.
+
+        Args:
+            project_root: Root directory of the project.
+            blueprint_path: Path where blueprint.yaml should be created.
+
+        Returns:
+            New PlannerState with defaults.
         """
         defaults = get_project_defaults(project_root)
 
@@ -61,8 +68,17 @@ class BlueprintStateLoader:
 
     @staticmethod
     def _load_existing_blueprint(project_root: Path, blueprint_path: Path) -> PlannerState:
-        """PURPOSE read blueprint.yaml into PlannerState
-        DOMAIN  planner workflow
+        """Load existing blueprint.yaml into PlannerState.
+
+        Args:
+            project_root: Root directory of the project.
+            blueprint_path: Path to existing blueprint.yaml.
+
+        Returns:
+            PlannerState loaded from existing blueprint.
+
+        Raises:
+            ValueError: If YAML is invalid.
         """
         # Check if file is empty
         if blueprint_path.stat().st_size == 0:
@@ -122,8 +138,13 @@ class BlueprintStateLoader:
 
     @staticmethod
     def _load_project_config(blueprint_data: Dict[str, Any]) -> PlannerProjectConfig:
-        """PURPOSE read project configuration from blueprint data
-        DOMAIN  planner workflow
+        """Load project configuration from blueprint data.
+
+        Args:
+            blueprint_data: The parsed blueprint.yaml data.
+
+        Returns:
+            PlannerProjectConfig instance.
         """
         project = blueprint_data.get("project", {})
         policy = blueprint_data.get("policy", {})
@@ -156,8 +177,13 @@ class BlueprintStateLoader:
 
     @staticmethod
     def _load_boxes(blueprint_data: Dict[str, Any]) -> List[PlannerBox]:
-        """PURPOSE read boxes from blocks section
-        DOMAIN  planner workflow
+        """Load boxes from blocks section.
+
+        Args:
+            blueprint_data: The parsed blueprint.yaml data.
+
+        Returns:
+            List of PlannerBox instances.
         """
         blocks = blueprint_data.get("blocks", [])
         boxes = []
@@ -227,8 +253,14 @@ class BlueprintStateLoader:
 
     @staticmethod
     def _load_connections(blueprint_data: Dict[str, Any], boxes: List[PlannerBox]) -> tuple[List[PlannerConnection], List[PlannerConnection]]:
-        """PURPOSE read connections from block connections sections
-        DOMAIN  planner workflow
+        """Load connections from block connections sections.
+
+        Args:
+            blueprint_data: The parsed blueprint.yaml data.
+            boxes: List of loaded boxes for ID mapping.
+
+        Returns:
+            Tuple of (valid_connections, broken_connections).
         """
         blocks = blueprint_data.get("blocks", [])
         connections = []

@@ -1,6 +1,4 @@
-"""PURPOSE registry for BPFW tools
-DOMAIN  optional integrations
-"""
+"""Registry for optional BPFW integrations."""
 
 from importlib import import_module
 from inspect import signature
@@ -11,42 +9,50 @@ from bpfw.integrations.result import OptionalIntegrationResult
 
 
 class IntegrationRegistry:
-    """PURPOSE store tools by capability name
-    DOMAIN  optional integrations
-    """
+    """Store optional integrations by capability name."""
 
     def __init__(self) -> None:
-        """PURPOSE set up the tool registry
-        DOMAIN  optional integrations
-        """
+        """Initialize the integration registry."""
 
         self._integrations: dict[str, OptionalIntegration] = {}
         self._load_errors: dict[str, str] = {}
 
     def register(self, integration: OptionalIntegration) -> None:
-        """PURPOSE register an tool
-        DOMAIN  optional integrations
+        """Register an optional integration.
+
+        Args:
+            integration: Integration instance to register by name.
         """
 
         self._integrations[integration.name] = integration
 
     def record_load_error(self, name: str, error_message: str) -> None:
-        """PURPOSE record why an tool could not be loaded
-        DOMAIN  optional integrations
+        """Record why an integration could not be loaded.
+
+        Args:
+            name: Integration name requested by the command registry.
+            error_message: Human-readable loading failure.
         """
 
         self._load_errors[name] = error_message
 
     def list_integrations(self) -> list[OptionalIntegration]:
-        """PURPOSE get registered tools
-        DOMAIN  optional integrations
+        """Return registered optional integrations.
+
+        Returns:
+            Registered optional integration instances.
         """
 
         return list(self._integrations.values())
 
     def get(self, name: str) -> OptionalIntegration | None:
-        """PURPOSE get one tool by name
-        DOMAIN  optional integrations
+        """Return one optional integration by name.
+
+        Args:
+            name: Integration name to retrieve.
+
+        Returns:
+            The matching integration, or None when unavailable.
         """
 
         return self._integrations.get(name)
@@ -57,9 +63,7 @@ class IntegrationRegistry:
         project_root: Path,
         command_arguments: dict[str, str] | None = None,
     ) -> OptionalIntegrationResult:
-        """PURPOSE run one tool or return a clear unavailable result
-        DOMAIN  optional integrations
-        """
+        """Run one optional integration or return a clear unavailable result."""
 
         integration = self.get(name)
         if integration is None:
@@ -97,8 +101,10 @@ class IntegrationRegistry:
 
 
 def build_default_integration_registry() -> IntegrationRegistry:
-    """PURPOSE build the default tool registry
-    DOMAIN  optional integrations
+    """Build the default optional integration registry.
+
+    Returns:
+        Registry containing all integrations that can be imported successfully.
     """
 
     registry = IntegrationRegistry()

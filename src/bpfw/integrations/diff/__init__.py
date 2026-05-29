@@ -1,6 +1,4 @@
-"""PURPOSE diff tool for BPFW drift decisions
-DOMAIN  optional integrations
-"""
+"""Diff integration for BPFW drift decisions."""
 
 import sys
 from pathlib import Path
@@ -11,15 +9,22 @@ from bpfw.integrations.result import OptionalIntegrationResult
 
 
 def can_use_interactive_terminal() -> bool:
-    """PURPOSE check whether standard streams support interactive diff input
-    DOMAIN  optional integrations
+    """Return True when standard streams support interactive diff input.
+
+    Returns:
+        True when stdin and stdout are attached to a terminal.
     """
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
 def run_diff(project_root: Path) -> int:
-    """PURPOSE run the interactive diff decision manager
-    DOMAIN  optional integrations
+    """Run the interactive diff decision manager.
+
+    Args:
+        project_root: Root directory of the project being reviewed.
+
+    Returns:
+        Process exit code.
     """
     if not can_use_interactive_terminal():
         print(
@@ -37,15 +42,15 @@ def run_diff(project_root: Path) -> int:
 
 
 class DiffIntegration(OptionalIntegration):
-    """PURPOSE optional tool that resolves blueprint-vs-code drift decisions
-    DOMAIN  optional integrations
-    """
+    """Optional integration that resolves blueprint-vs-code drift decisions."""
 
     name = "diff"
 
     def is_available(self) -> bool:
-        """PURPOSE check whether the diff tool can run
-        DOMAIN  optional integrations
+        """Return True when the diff integration can run.
+
+        Returns:
+            Always True for the bundled terminal diff manager.
         """
         return True
 
@@ -54,9 +59,7 @@ class DiffIntegration(OptionalIntegration):
         project_root: Path,
         command_arguments: dict[str, str] | None = None,
     ) -> OptionalIntegrationResult:
-        """PURPOSE run diff against the given project root
-        DOMAIN  optional integrations
-        """
+        """Run diff against the given project root."""
         _ = command_arguments
         exit_code = run_diff(project_root=project_root)
         return OptionalIntegrationResult(message="", exit_code=exit_code)

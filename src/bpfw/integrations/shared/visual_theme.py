@@ -1,6 +1,4 @@
-"""PURPOSE shared theme and primitive render helpers for interactive tools
-DOMAIN  terminal UI
-"""
+"""Shared theme and primitive render helpers for interactive integrations."""
 
 from dataclasses import dataclass
 from typing import Iterable, List, Sequence
@@ -11,9 +9,7 @@ from bpfw.integrations.shared.visual_width import display_width, fit_text, measu
 
 @dataclass(frozen=True)
 class ThemeConfig:
-    """PURPOSE theme settings shared by inspector, editor and planner
-    DOMAIN  terminal UI
-    """
+    """Theme settings shared by inspector, editor and planner."""
 
     min_ratio: float = 0.50
     max_ratio: float = 0.95
@@ -32,9 +28,7 @@ def compute_panel_width(
     terminal_width: int,
     theme: ThemeConfig = DEFAULT_THEME,
 ) -> int:
-    """PURPOSE get adaptive panel width constrained by theme min/max ratios
-    DOMAIN  terminal UI
-    """
+    """Return adaptive panel width constrained by theme min/max ratios."""
 
     minimum_width = max(20, int(terminal_width * theme.min_ratio) - 2)
     maximum_width = max(minimum_width, int(terminal_width * theme.max_ratio) - 2)
@@ -50,9 +44,7 @@ def render_header(
     theme: ThemeConfig = DEFAULT_THEME,
     centered: bool = True,
 ) -> List[str]:
-    """PURPOSE show a standard tool header block
-    DOMAIN  terminal UI
-    """
+    """Render a standard integration header block."""
 
     if centered:
         title_line = center_text(title, width)
@@ -72,9 +64,7 @@ def render_panel(
     theme: ThemeConfig = DEFAULT_THEME,
     centered_title: bool = True,
 ) -> List[str]:
-    """PURPOSE show a boxed panel with centered title by default
-    DOMAIN  terminal UI
-    """
+    """Render a boxed panel with centered title by default."""
 
     label = f" {title} "
     if centered_title:
@@ -91,9 +81,7 @@ def render_commands_box(
     theme: ThemeConfig = DEFAULT_THEME,
     wrap_mode: str = "safe_wrap",
 ) -> List[str]:
-    """PURPOSE show commands panel with safe wrapping and dividers
-    DOMAIN  terminal UI
-    """
+    """Render commands panel with safe wrapping and optional dividers."""
 
     content_width = max(1, width - COMMAND_LEFT_PADDING)
     body_lines: List[str] = []
@@ -112,9 +100,7 @@ def render_commands_box(
 
 
 def render_stacked_sections(sections: Sequence[Sequence[str]], spacing: int = 1) -> List[str]:
-    """PURPOSE stack rendered sections with configurable spacing
-    DOMAIN  terminal UI
-    """
+    """Stack rendered sections with configurable spacing."""
 
     stacked: List[str] = []
     for index, section in enumerate(sections):
@@ -125,9 +111,7 @@ def render_stacked_sections(sections: Sequence[Sequence[str]], spacing: int = 1)
 
 
 def _safe_wrap_line(line: str, width: int) -> List[str]:
-    """PURPOSE wrap by words and truncate long tokens without breaking box width
-    DOMAIN  terminal UI
-    """
+    """Wrap by words and truncate long tokens without breaking box width."""
 
     if width <= 0:
         return [""]
@@ -154,9 +138,7 @@ def _safe_wrap_line(line: str, width: int) -> List[str]:
 
 
 def _center_fill(label: str, width: int, fill: str) -> str:
-    """PURPOSE center label with symmetric fill
-    DOMAIN  terminal UI
-    """
+    """Center label with symmetric fill."""
 
     label_width = display_width(label)
     if label_width >= width:

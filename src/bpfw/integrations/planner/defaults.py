@@ -1,6 +1,4 @@
-"""PURPOSE default builders for Planner tool
-DOMAIN  planner workflow
-"""
+"""Default builders for Planner integration."""
 
 from dataclasses import dataclass
 from typing import List, Optional
@@ -21,9 +19,7 @@ from bpfw.integrations.planner.utils import (
 
 @dataclass
 class AddBoxInput:
-    """PURPOSE input data for adding a new box
-    DOMAIN  planner workflow
-    """
+    """Input data for adding a new box."""
 
     name: str
     domain: str
@@ -33,14 +29,17 @@ class AddBoxInput:
 
 
 class PlannerDefaultsBuilder:
-    """PURPOSE generate intelligent defaults for planner elements
-    DOMAIN  planner workflow
-    """
+    """Generate intelligent defaults for planner elements."""
 
     @staticmethod
     def build_project_defaults(project_root_path) -> PlannerProjectConfig:
-        """PURPOSE build default project configuration
-        DOMAIN  planner workflow
+        """Build default project configuration.
+
+        Args:
+            project_root_path: Path to project root.
+
+        Returns:
+            PlannerProjectConfig with intelligent defaults.
         """
         from pathlib import Path
 
@@ -57,8 +56,14 @@ class PlannerDefaultsBuilder:
 
     @staticmethod
     def build_box_defaults(box_input: AddBoxInput, state: PlannerState) -> PlannerBox:
-        """PURPOSE build a box with generated default values
-        DOMAIN  planner workflow
+        """Build a box with generated default values.
+
+        Args:
+            box_input: User-provided box data.
+            state: Current planner state.
+
+        Returns:
+            PlannerBox with all derived fields populated.
         """
         # Get source root for path generation
         source_root = state.project_config.source_roots[0] if state.project_config.source_roots else "src"
@@ -84,14 +89,21 @@ class PlannerDefaultsBuilder:
 
 
 class BoxFactory:
-    """PURPOSE factory for creating and validating boxes
-    DOMAIN  planner workflow
-    """
+    """Factory for creating and validating boxes."""
 
     @staticmethod
     def create_box(input_data: AddBoxInput, state: PlannerState) -> PlannerBox:
-        """PURPOSE create a new box with check
-        DOMAIN  planner workflow
+        """Create a new box with validation.
+
+        Args:
+            input_data: User-provided box data.
+            state: Current planner state.
+
+        Returns:
+            Validated PlannerBox instance.
+
+        Raises:
+            ValueError: If validation fails.
         """
         # Validate name
         if not input_data.name or not input_data.name.strip():
@@ -135,8 +147,18 @@ class BoxFactory:
 
     @staticmethod
     def update_box(box: PlannerBox, updates: dict) -> PlannerBox:
-        """PURPOSE update an box with new values
-        DOMAIN  planner workflow
+        """Update an existing box with new values.
+
+        Args:
+            box: The box to update.
+            updates: Dictionary of fields to update.
+
+        Returns:
+            Updated PlannerBox instance.
+
+        Note:
+            This creates a new box instance since PlannerBox is a dataclass.
+            Derived fields will be recalculated automatically.
         """
         # Create a new box with updated values
         updated_box = PlannerBox(

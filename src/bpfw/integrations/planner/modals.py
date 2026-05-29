@@ -1,6 +1,4 @@
-"""PURPOSE modal dialogs for the Planner tool
-DOMAIN  planner workflow
-"""
+"""Modal dialogs for the Planner integration."""
 
 from dataclasses import dataclass
 from typing import Optional
@@ -12,9 +10,7 @@ from bpfw.integrations.planner.defaults import AddBoxInput
 
 @dataclass
 class ConnectionInput:
-    """PURPOSE input data for creating a connection
-    DOMAIN  planner workflow
-    """
+    """Input data for creating a connection."""
 
     source_box_id: str
     target_box_id: str
@@ -23,19 +19,17 @@ class ConnectionInput:
 
 
 class AddBoxModal:
-    """PURPOSE modal dialog for adding a new box
-    DOMAIN  planner workflow
-    """
+    """Modal dialog for adding a new box."""
 
     def __init__(self) -> None:
-        """PURPOSE set up the modal
-        DOMAIN  planner workflow
-        """
+        """Initialize the modal."""
         self._initialized = True
 
     def collect(self) -> Optional[AddBoxInput]:
-        """PURPOSE collect box data from user
-        DOMAIN  planner workflow
+        """Collect box data from user.
+
+        Returns:
+            AddBoxInput if user provided data, None if cancelled.
         """
         print("\n╭──────────── Add Box ────────────╮")
         print("│                                 │")
@@ -76,8 +70,13 @@ class AddBoxModal:
         )
 
     def _collect_field(self, field_name: str) -> Optional[str]:
-        """PURPOSE collect a single field from user
-        DOMAIN  planner workflow
+        """Collect a single field from user.
+
+        Args:
+            field_name: Name of the field to collect.
+
+        Returns:
+            Field value or None if cancelled.
         """
         while True:
             print(f"│ {field_name:<32}│")
@@ -92,8 +91,10 @@ class AddBoxModal:
             print(f"│ {field_name} cannot be empty.        │")
 
     def _collect_symbol_type(self) -> Optional[str]:
-        """PURPOSE collect symbol type from user
-        DOMAIN  planner workflow
+        """Collect symbol type from user.
+
+        Returns:
+            Symbol type or None if cancelled.
         """
         while True:
             print("│ Type                            │")
@@ -116,9 +117,7 @@ class AddBoxModal:
 
 
 class ConnectionModal:
-    """PURPOSE modal dialog for creating connections between boxes
-    DOMAIN  planner workflow
-    """
+    """Modal dialog for creating connections between boxes."""
 
     VALID_RELATIONSHIPS = [
         "calls",
@@ -131,15 +130,19 @@ class ConnectionModal:
     ]
 
     def __init__(self, boxes: list) -> None:
-        """PURPOSE set up the modal
-        DOMAIN  planner workflow
+        """Initialize the modal.
+
+        Args:
+            boxes: List of available boxes.
         """
         self.boxes = boxes
         self.box_names = {box.id: box.name for box in boxes}
 
     def collect(self) -> Optional[ConnectionInput]:
-        """PURPOSE collect connection data from user
-        DOMAIN  planner workflow
+        """Collect connection data from user.
+
+        Returns:
+            ConnectionInput if user provided data, None if cancelled.
         """
         print("\n╭──────────── Connect Blocks ────────────╮")
         print("│                                   │")
@@ -174,8 +177,10 @@ class ConnectionModal:
         )
 
     def _collect_source_box(self) -> Optional[str]:
-        """PURPOSE collect source box from user
-        DOMAIN  planner workflow
+        """Collect source box from user.
+
+        Returns:
+            Box ID or None if cancelled.
         """
         print("│ Source box:                      │")
         self._print_box_list()
@@ -188,8 +193,13 @@ class ConnectionModal:
         return self._find_box_id(value)
 
     def _collect_target_box(self, source_id: str) -> Optional[str]:
-        """PURPOSE collect target box from user
-        DOMAIN  planner workflow
+        """Collect target box from user.
+
+        Args:
+            source_id: ID of the source box (to exclude).
+
+        Returns:
+            Box ID or None if cancelled.
         """
         print("│ Target box:                      │")
         self._print_box_list(exclude_id=source_id)
@@ -202,8 +212,10 @@ class ConnectionModal:
         return self._find_box_id(value, exclude_id=source_id)
 
     def _collect_relationship(self) -> Optional[str]:
-        """PURPOSE collect relationship type from user
-        DOMAIN  planner workflow
+        """Collect relationship type from user.
+
+        Returns:
+            Relationship type or None if cancelled.
         """
         while True:
             print("│ Relationship:                    │")
@@ -227,8 +239,10 @@ class ConnectionModal:
             print("│ Invalid relationship.            │")
 
     def _print_box_list(self, exclude_id: Optional[str] = None) -> None:
-        """PURPOSE print list of available boxes
-        DOMAIN  planner workflow
+        """Print list of available boxes.
+
+        Args:
+            exclude_id: Box ID to exclude from list.
         """
         boxes_to_show = [b for b in self.boxes if b.id != exclude_id]
 
@@ -243,8 +257,14 @@ class ConnectionModal:
             print(f"│   ... and {len(boxes_to_show) - 10} more              │")
 
     def _find_box_id(self, value: str, exclude_id: Optional[str] = None) -> Optional[str]:
-        """PURPOSE find a box ID by index or ID/name
-        DOMAIN  planner workflow
+        """Find a box ID by index or ID/name.
+
+        Args:
+            value: User input value.
+            exclude_id: Box ID to exclude.
+
+        Returns:
+            Box ID or None if not found.
         """
         boxes_to_search = [b for b in self.boxes if b.id != exclude_id]
 

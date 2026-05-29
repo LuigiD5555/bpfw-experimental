@@ -1,6 +1,4 @@
-"""PURPOSE shared interactive runtime helpers for terminal tools
-DOMAIN  terminal UI
-"""
+"""Shared interactive runtime helpers for terminal integrations."""
 
 from collections.abc import Callable
 
@@ -18,25 +16,19 @@ QUIT_COMMAND_ALIASES = frozenset({QUIT_COMMAND, QUIT_COMMAND_KEY, "ctrl + c", "q
 
 
 def command_label(shortcut: str, description: str) -> str:
-    """PURPOSE get the standard command label for command boxes
-    DOMAIN  terminal UI
-    """
+    """Return the standard command label for command boxes."""
 
     return f"[{shortcut}] {description}"
 
 
 def quit_command_label(description: str = "quit") -> str:
-    """PURPOSE get the standard quit command label for command boxes
-    DOMAIN  terminal UI
-    """
+    """Return the standard quit command label for command boxes."""
 
     return command_label(QUIT_COMMAND_KEY, description)
 
 
 def normalize_command(raw_value: str) -> str:
-    """PURPOSE get clean command text for dispatch
-    DOMAIN  terminal UI
-    """
+    """Return normalized command text for dispatch."""
 
     command = raw_value.strip().lower()
     if command in {QUIT_COMMAND_KEY, "ctrl + c", QUIT_COMMAND, "q"}:
@@ -45,17 +37,13 @@ def normalize_command(raw_value: str) -> str:
 
 
 def is_back_command(command: str) -> bool:
-    """PURPOSE check whether command is a back navigation action
-    DOMAIN  terminal UI
-    """
+    """Return True when command is a back navigation action."""
 
     return command in {"b", "back"}
 
 
 def is_quit_command(command: str) -> bool:
-    """PURPOSE check whether command is a quit action
-    DOMAIN  terminal UI
-    """
+    """Return True when command is a quit action."""
 
     return command in QUIT_COMMAND_ALIASES
 
@@ -69,9 +57,7 @@ def run_interactive_loop(
     handlers_by_screen: dict[str, ScreenHandler],
     should_exit: ExitChecker,
 ) -> int:
-    """PURPOSE run a generic render/input/dispatch loop for terminal command tools
-    DOMAIN  terminal UI
-    """
+    """Run a generic render/input/dispatch loop for terminal tools."""
 
     try:
         while True:

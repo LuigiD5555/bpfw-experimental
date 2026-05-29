@@ -1,6 +1,4 @@
-"""PURPOSE data models for the Planner tool
-DOMAIN  planner workflow
-"""
+"""Data models for the Planner integration."""
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -27,9 +25,7 @@ VALID_RELATIONSHIPS = list(RELATIONSHIP_LABELS.keys())
 
 @dataclass
 class PlannerSecurityConfig:
-    """PURPOSE security configuration for the project
-    DOMAIN  planner workflow
-    """
+    """Security configuration for the project."""
 
     no_secrets_in_blueprint: bool = True
     public_safe_mode: bool = True
@@ -38,9 +34,7 @@ class PlannerSecurityConfig:
 
 @dataclass
 class PlannerProjectConfig:
-    """PURPOSE global project configuration
-    DOMAIN  planner workflow
-    """
+    """Global project configuration."""
 
     project_id: str
     project_name: str
@@ -64,10 +58,7 @@ class PlannerProjectConfig:
 
 @dataclass
 class PlannerInterfaceInput:
-    """PURPOSE input value for a block inputs and output
-        DOMAIN  planner workflow
-
-    """
+    """Input parameter for a block interface."""
 
     name: str
     type: Optional[str] = None
@@ -78,10 +69,7 @@ class PlannerInterfaceInput:
 
 @dataclass
 class PlannerInterfaceOutput:
-    """PURPOSE output description for a block inputs and output
-        DOMAIN  planner workflow
-
-    """
+    """Output specification for a block interface."""
 
     type: Optional[str] = None
     description: Optional[str] = None
@@ -89,10 +77,7 @@ class PlannerInterfaceOutput:
 
 @dataclass
 class PlannerInterface:
-    """PURPOSE input/output description for a block
-        DOMAIN  planner workflow
-
-    """
+    """Interface specification for a block."""
 
     inputs: List[PlannerInterfaceInput] = field(default_factory=list)
     output: Optional[PlannerInterfaceOutput] = None
@@ -100,9 +85,7 @@ class PlannerInterface:
 
 @dataclass
 class PlannerBox:
-    """PURPOSE black box representing a system block
-    DOMAIN  planner workflow
-    """
+    """Black box representing a system block."""
 
     name: str
     domain: str
@@ -121,9 +104,7 @@ class PlannerBox:
     duplicate_group: Optional[str] = field(init=False)
 
     def __post_init__(self) -> None:
-        """PURPOSE calculate derived fields after initialization
-        DOMAIN  planner workflow
-        """
+        """Compute derived fields after initialization."""
         self.name = str(self.name or "").strip()
         self.domain = str(self.domain or "").strip()
         self.purpose = str(self.purpose or "").strip()
@@ -155,9 +136,7 @@ class PlannerBox:
 
 @dataclass
 class PlannerConnection:
-    """PURPOSE connection between two blocks
-    DOMAIN  planner workflow
-    """
+    """Connection between two blocks."""
 
     source_box_id: str
     target_box_id: str
@@ -171,9 +150,7 @@ class PlannerConnection:
 
 @dataclass
 class PlannerState:
-    """PURPOSE complete state of the planner session
-    DOMAIN  planner workflow
-    """
+    """Complete state of the planner session."""
 
     project_config: PlannerProjectConfig
     boxes: List[PlannerBox] = field(default_factory=list)

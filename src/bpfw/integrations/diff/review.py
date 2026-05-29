@@ -1,6 +1,4 @@
-"""PURPOSE review service that converts verify findings into diff items
-DOMAIN  optional integrations
-"""
+"""Review service that converts verify findings into diff items."""
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,8 +22,16 @@ from bpfw.reports.finding import Finding
 
 @dataclass(frozen=True)
 class DiffReviewSnapshot:
-    """PURPOSE loaded state used by one diff session
-    DOMAIN  optional integrations
+    """Loaded state used by one diff session.
+
+    Attributes:
+        project_root: Project root directory.
+        load_result: Blueprint load result.
+        scan_result: Current source scan result.
+        verify_report: Current verify report.
+        blueprint_data: Unified blueprint dictionary.
+        authority_document: Optional sharded authority document.
+        items: Diff items produced from findings.
     """
 
     project_root: Path
@@ -38,19 +44,21 @@ class DiffReviewSnapshot:
 
 
 class DiffReviewService:
-    """PURPOSE build the read-only difference list consumed by bpfw diff
-    DOMAIN  optional integrations
-    """
+    """Build the read-only difference list consumed by ``bpfw diff``."""
 
     def __init__(self, project_root: Path) -> None:
-        """PURPOSE set up the service
-        DOMAIN  optional integrations
+        """Initialize the service.
+
+        Args:
+            project_root: Project root directory.
         """
         self.project_root = project_root.resolve()
 
     def load(self) -> DiffReviewSnapshot:
-        """PURPOSE read authority, scan code, verify, and build diff items
-        DOMAIN  optional integrations
+        """Load current authority, scan code, verify, and build diff items.
+
+        Returns:
+            Read-only review snapshot for the current project state.
         """
         loader = BlueprintLoader(project_root=self.project_root)
         load_result = loader.load()
@@ -101,8 +109,17 @@ class DiffReviewService:
         scan_result: ScanResult | None,
         verify_report: VerificationReport,
     ) -> DiffReviewSnapshot:
-        """PURPOSE build a diff snapshot from already-loaded inspector context
-        DOMAIN  optional integrations
+        """Build a diff snapshot from already-loaded inspector context.
+
+        Args:
+            load_result: Blueprint load result.
+            blueprint_data: Unified blueprint dictionary.
+            authority_document: Optional sharded authority document.
+            scan_result: Precomputed scan result.
+            verify_report: Precomputed verify report.
+
+        Returns:
+            Review snapshot without reloading, rescanning, or reverifying.
         """
         items = self._build_items(
             load_result=load_result,
@@ -129,8 +146,17 @@ class DiffReviewService:
         scan_result: ScanResult | None,
         verify_findings: list[Finding],
     ) -> list[DiffItem]:
-        """PURPOSE build diff items from verification findings
-        DOMAIN  optional integrations
+        """Build diff items from verification findings.
+
+        Args:
+            load_result: Blueprint load result.
+            blueprint_data: Unified blueprint data.
+            authority_document: Optional sharded authority document.
+            scan_result: Current scan result.
+            verify_findings: Verification findings.
+
+        Returns:
+            Diff items.
         """
         discovered_units = scan_result.discovered_units if scan_result is not None else []
         discovered_by_key = {
@@ -183,8 +209,19 @@ class DiffReviewService:
         discovered_by_key: dict[tuple[str, str, str], DiscoveredCodeUnit],
         discovered_units: list[DiscoveredCodeUnit],
     ) -> DiffItem | None:
-        """PURPOSE convert one verify finding into a diff item
-        DOMAIN  optional integrations
+        """Convert one verify finding into a diff item.
+
+        Args:
+            finding: Verification finding.
+            sequence_by_kind: Mutable per-kind sequence dictionary.
+            block_by_id: Blocks keyed by id.
+            blocks: All authority blocks.
+            authority_document: Optional sharded authority document.
+            discovered_by_key: Discovered units keyed by path, symbol, and kind.
+            discovered_units: All discovered code units.
+
+        Returns:
+            Diff item or None for findings that are not handled by diff.
         """
         item_kind = _map_finding_code(finding.code)
         if item_kind is None:
@@ -271,8 +308,14 @@ class DiffReviewService:
         finding: Finding,
         discovered_by_key: dict[tuple[str, str, str], DiscoveredCodeUnit],
     ) -> CodeTarget | None:
-        """PURPOSE find the code target for an undeclared-code finding
-        DOMAIN  optional integrations
+        """Resolve the code target for an undeclared-code finding.
+
+        Args:
+            finding: Verification finding.
+            discovered_by_key: Discovered units keyed by path, symbol, and kind.
+
+        Returns:
+            Code target, or None when the symbol cannot be resolved.
         """
         kind = str(finding.evidence.get("kind", ""))
         if finding.path is None or finding.symbol is None or not kind:
@@ -288,8 +331,15 @@ class DiffReviewService:
         blocks: list[dict[str, Any]],
         authority_document: Any | None,
     ) -> BlueprintTarget | None:
-        """PURPOSE find the authority target for a finding
-        DOMAIN  optional integrations
+        """Resolve the authority target for a finding.
+
+        Args:
+            finding: Verification finding.
+            blocks: Authority block dictionaries.
+            authority_document: Optional sharded authority document.
+
+        Returns:
+            Blueprint target, or None when no block matches.
         """
         if finding.symbol:
             for block in blocks:
@@ -307,9 +357,14 @@ class DiffReviewService:
         block: dict[str, Any],
         authority_document: Any | None,
     ) -> BlueprintTarget:
-        """PURPOSE build a blueprint target from one block dictionaryionary
-                DOMAIN  optional integrations
+        """Build a blueprint target from one block dictionary.
 
+        Args:
+            block: Authority block dictionary.
+            authority_document: Optional sharded authority document.
+
+        Returns:
+            Blueprint target.
         """
         code = block.get("code") if isinstance(block.get("code"), dict) else {}
         block_id = str(block.get("id", ""))
@@ -334,8 +389,14 @@ class DiffReviewService:
         finding: Finding,
         discovered_units: list[DiscoveredCodeUnit],
     ) -> list[CodeTarget]:
-        """PURPOSE find simple moved-code candidates for a missing declaration
-        DOMAIN  optional integrations
+        """Find simple moved-code candidates for a missing declaration.
+
+        Args:
+            finding: Missing-declared finding.
+            discovered_units: All discovered code units.
+
+        Returns:
+            Candidate code targets.
         """
         if finding.symbol is None:
             return []
@@ -352,8 +413,15 @@ class DiffReviewService:
         authority_document: Any | None,
         block_data: dict[str, Any],
     ) -> Path:
-        """PURPOSE get the shard where a block should be stored
-        DOMAIN  optional integrations
+        """Return the shard where a block should be stored.
+
+        Args:
+            blueprint_data: Unified blueprint data.
+            authority_document: Optional sharded authority document.
+            block_data: Block dictionary to place.
+
+        Returns:
+            Project-relative shard path.
         """
         authority_config = blueprint_data.get("authority")
         if not isinstance(authority_config, dict):
@@ -363,8 +431,13 @@ class DiffReviewService:
 
 
 def _map_finding_code(code: str) -> DiffItemKind | None:
-    """PURPOSE map a verification code to a diff item kind
-    DOMAIN  optional integrations
+    """Map a verification code to a diff item kind.
+
+    Args:
+        code: Verification finding code.
+
+    Returns:
+        Diff item kind, or None when diff does not handle the code.
     """
     mapping = {
         "UNDECLARED_CODE": DiffItemKind.UNDECLARED_CODE,
@@ -381,17 +454,20 @@ def _map_finding_code(code: str) -> DiffItemKind | None:
 
 
 def _action_level_for_kind(item_kind: DiffItemKind) -> DiffActionLevel:
-    """PURPOSE get the handling level for one diff item kind
-    DOMAIN  optional integrations
-    """
+    """Return the handling level for one diff item kind."""
     if item_kind == DiffItemKind.METADATA_DRIFT:
         return DiffActionLevel.READ_ONLY
     return DiffActionLevel.HUMAN_DECISION
 
 
 def _read_blocks(blueprint_data: dict[str, Any]) -> list[dict[str, Any]]:
-    """PURPOSE get authority blocks from blueprint data
-    DOMAIN  optional integrations
+    """Return authority blocks from blueprint data.
+
+    Args:
+        blueprint_data: Unified blueprint data.
+
+    Returns:
+        Block dictionaries only.
     """
     blocks = blueprint_data.get("blocks")
     if not isinstance(blocks, list):
@@ -400,8 +476,13 @@ def _read_blocks(blueprint_data: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _code_target_from_unit(unit: DiscoveredCodeUnit) -> CodeTarget:
-    """PURPOSE build a code target from one discovered unit
-    DOMAIN  optional integrations
+    """Build a code target from one discovered unit.
+
+    Args:
+        unit: Discovered code unit.
+
+    Returns:
+        Code target.
     """
     return CodeTarget(
         path=unit.path,
@@ -417,8 +498,21 @@ def _order_undeclared_items_by_scan_review_order(
     items: list[DiffItem],
     discovered_units: list[DiscoveredCodeUnit],
 ) -> list[DiffItem]:
-    """PURPOSE order undeclared-code items with the scanner review order
-    DOMAIN  optional integrations
+    """Order undeclared-code items with the scanner review order.
+
+    The verifier can emit findings in an order that is convenient for
+    validation, but the Inspector must review new code from the deepest
+    meaningful units toward their containers. This function preserves all
+    non-undeclared item slots and only reorders undeclared-code items among
+    themselves using the already-computed scan order.
+
+    Args:
+        items: Diff items produced from verification findings.
+        discovered_units: Code units already ordered by the scanner.
+
+    Returns:
+        Diff items with undeclared-code decisions ordered for hierarchical
+        review.
     """
     if not items or not discovered_units:
         return items
@@ -449,9 +543,7 @@ def _scan_rank_for_item(
     item: DiffItem,
     rank_by_key: dict[tuple[str, str, str], int],
 ) -> tuple[int, str, str, str]:
-    """PURPOSE get a stable scan-order rank for one diff item
-    DOMAIN  optional integrations
-    """
+    """Get a stable scan-order rank for one diff item."""
     target = item.code_target
     if target is None:
         return len(rank_by_key), "", "", ""
@@ -465,8 +557,13 @@ def _scan_rank_for_item(
 
 
 def _optional_string(value: Any) -> str | None:
-    """PURPOSE get a non-empty string or None
-    DOMAIN  optional integrations
+    """Return a non-empty string or None.
+
+    Args:
+        value: Value to normalize.
+
+    Returns:
+        Stripped string or None.
     """
     if value is None:
         return None

@@ -1,6 +1,4 @@
-"""PURPOSE apply-plan model for the BPFW diff decision manager
-DOMAIN  optional integrations
-"""
+"""Apply-plan model for the BPFW diff decision manager."""
 
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -11,8 +9,13 @@ from bpfw.integrations.diff.models import SourceChangeRequest
 
 @dataclass(frozen=True)
 class FileStamp:
-    """PURPOSE snapshot of one file at the moment an action was added
-    DOMAIN  optional integrations
+    """Snapshot of one file at the moment an action was added.
+
+    Attributes:
+        path: Project-relative path.
+        exists: Whether the file existed.
+        modified_ns: Last modified timestamp in nanoseconds when available.
+        size: File size in bytes when available.
     """
 
     path: Path
@@ -23,8 +26,13 @@ class FileStamp:
 
 @dataclass(frozen=True)
 class PlannedAuthorityAction:
-    """PURPOSE authority action accepted by the user but not yet applied
-    DOMAIN  optional integrations
+    """Authority action accepted by the user but not yet applied.
+
+    Attributes:
+        diff_item_id: Identifier of the diff item that produced the action.
+        label: Human-readable action label.
+        request: Blueprint Engine request to apply later.
+        file_stamps: File stamps used to detect stale plans.
     """
 
     diff_item_id: str
@@ -35,8 +43,13 @@ class PlannedAuthorityAction:
 
 @dataclass(frozen=True)
 class PlannedSourceAction:
-    """PURPOSE source action accepted by the user but not yet applied
-    DOMAIN  optional integrations
+    """Source action accepted by the user but not yet applied.
+
+    Attributes:
+        diff_item_id: Identifier of the diff item that produced the action.
+        label: Human-readable action label.
+        request: Source action request.
+        file_stamps: File stamps used to detect stale plans.
     """
 
     diff_item_id: str
@@ -47,8 +60,11 @@ class PlannedSourceAction:
 
 @dataclass(frozen=True)
 class PlanConflict:
-    """PURPOSE store information about a conflict between planned actions
-    DOMAIN  optional integrations
+    """Represent a conflict between planned actions.
+
+    Attributes:
+        message: Human-readable conflict description.
+        conflicting_item_ids: Diff item identifiers involved in the conflict.
     """
 
     message: str
@@ -57,28 +73,32 @@ class PlanConflict:
 
 @dataclass
 class DiffApplyPlan:
-    """PURPOSE store accepted diff decisions before applying them
-    DOMAIN  optional integrations
-    """
+    """Store accepted diff decisions before applying them."""
 
     authority_actions: list[PlannedAuthorityAction] = field(default_factory=list)
     source_actions: list[PlannedSourceAction] = field(default_factory=list)
 
     def is_empty(self) -> bool:
-        """PURPOSE check whether the plan has no pending actions
-        DOMAIN  optional integrations
+        """Return whether the plan has no pending actions.
+
+        Returns:
+            True when no authority or source actions are present.
         """
         return not self.authority_actions and not self.source_actions
 
     def action_count(self) -> int:
-        """PURPOSE get the total action count
-        DOMAIN  optional integrations
+        """Return the total action count.
+
+        Returns:
+            Number of planned actions.
         """
         return len(self.authority_actions) + len(self.source_actions)
 
     def planned_item_ids(self) -> set[str]:
-        """PURPOSE get diff item identifiers already represented in the plan
-        DOMAIN  optional integrations
+        """Return diff item identifiers already represented in the plan.
+
+        Returns:
+            Set of planned diff item identifiers.
         """
         return {
             action.diff_item_id
@@ -86,22 +106,34 @@ class DiffApplyPlan:
         }
 
     def add_authority_action(self, action: PlannedAuthorityAction) -> list[PlanConflict]:
-        """PURPOSE add one authority action and return conflicts
-        DOMAIN  optional integrations
+        """Add one authority action and return conflicts.
+
+        Args:
+            action: Authority action to add.
+
+        Returns:
+            List of conflicts after adding the action.
         """
         self.authority_actions.append(action)
         return self.detect_conflicts()
 
     def add_source_action(self, action: PlannedSourceAction) -> list[PlanConflict]:
-        """PURPOSE add one source action and return conflicts
-        DOMAIN  optional integrations
+        """Add one source action and return conflicts.
+
+        Args:
+            action: Source action to add.
+
+        Returns:
+            List of conflicts after adding the action.
         """
         self.source_actions.append(action)
         return self.detect_conflicts()
 
     def remove_actions_for_item(self, diff_item_id: str) -> None:
-        """PURPOSE remove all actions produced by a diff item
-        DOMAIN  optional integrations
+        """Remove all actions produced by a diff item.
+
+        Args:
+            diff_item_id: Item identifier whose actions should be removed.
         """
         self.authority_actions = [
             action for action in self.authority_actions if action.diff_item_id != diff_item_id
@@ -111,21 +143,23 @@ class DiffApplyPlan:
         ]
 
     def clear(self) -> None:
-        """PURPOSE remove every planned action
-        DOMAIN  optional integrations
-        """
+        """Remove every planned action."""
         self.authority_actions.clear()
         self.source_actions.clear()
 
     def authority_requests(self) -> list[BlueprintChangeRequest]:
-        """PURPOSE get Blueprint Engine requests in plan order
-        DOMAIN  optional integrations
+        """Return Blueprint Engine requests in plan order.
+
+        Returns:
+            Authority change requests.
         """
         return [action.request for action in self.authority_actions]
 
     def detect_conflicts(self) -> list[PlanConflict]:
-        """PURPOSE find simple intra-plan conflicts
-        DOMAIN  optional integrations
+        """Detect simple intra-plan conflicts.
+
+        Returns:
+            Conflicts found in the current plan.
         """
         conflicts: list[PlanConflict] = []
         targets: dict[str, list[str]] = {}
@@ -150,8 +184,13 @@ class DiffApplyPlan:
         return conflicts
 
     def stale_actions(self, project_root: Path) -> list[str]:
-        """PURPOSE get labels for actions whose source files changed
-        DOMAIN  optional integrations
+        """Return labels for actions whose source files changed.
+
+        Args:
+            project_root: Project root directory.
+
+        Returns:
+            Labels for stale planned actions.
         """
         stale: list[str] = []
         for action in [*self.authority_actions, *self.source_actions]:
@@ -163,16 +202,28 @@ class DiffApplyPlan:
 
 
 def collect_file_stamps(project_root: Path, paths: list[Path]) -> tuple[FileStamp, ...]:
-    """PURPOSE collect file stamps for paths relevant to one planned action
-    DOMAIN  optional integrations
+    """Collect file stamps for paths relevant to one planned action.
+
+    Args:
+        project_root: Project root directory.
+        paths: Project-relative paths to snapshot.
+
+    Returns:
+        Tuple of file stamps.
     """
     unique_paths = sorted(set(paths))
     return tuple(_collect_file_stamp(project_root, path) for path in unique_paths)
 
 
 def _collect_file_stamp(project_root: Path, path: Path) -> FileStamp:
-    """PURPOSE collect one file stamp
-    DOMAIN  optional integrations
+    """Collect one file stamp.
+
+    Args:
+        project_root: Project root directory.
+        path: Project-relative path.
+
+    Returns:
+        File stamp for the path.
     """
     absolute_path = project_root / path
     if not absolute_path.exists():
@@ -187,8 +238,13 @@ def _collect_file_stamp(project_root: Path, path: Path) -> FileStamp:
 
 
 def _authority_action_target(request: BlueprintChangeRequest) -> str | None:
-    """PURPOSE get a stable target label for one authority request
-    DOMAIN  optional integrations
+    """Return a stable target label for one authority request.
+
+    Args:
+        request: Blueprint Engine request.
+
+    Returns:
+        Target label, or None when not applicable.
     """
     payload = request.payload
     block_id = payload.get("block_id")

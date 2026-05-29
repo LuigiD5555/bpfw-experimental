@@ -1,6 +1,4 @@
-"""PURPOSE terminal screen control and input helpers for BPFW Editor
-DOMAIN  editor workflow
-"""
+"""Terminal screen control and input helpers for BPFW Editor."""
 
 import shutil
 import sys
@@ -22,9 +20,7 @@ DEFAULT_INPUT_PROMPT = "> "
 
 
 def get_terminal_width() -> int:
-    """PURPOSE get terminal width with a safe minimum
-    DOMAIN  editor workflow
-    """
+    """Return terminal width with a safe minimum."""
 
     try:
         return shutil.get_terminal_size((80, 24)).columns
@@ -33,9 +29,7 @@ def get_terminal_width() -> int:
 
 
 def get_terminal_height() -> int:
-    """PURPOSE get terminal height with a safe minimum
-    DOMAIN  editor workflow
-    """
+    """Return terminal height with a safe minimum."""
 
     try:
         return shutil.get_terminal_size((80, 24)).lines
@@ -44,17 +38,13 @@ def get_terminal_height() -> int:
 
 
 def _normalize_prompt(prompt: str) -> str:
-    """PURPOSE get the visible editor prompt for input-ready states
-    DOMAIN  editor workflow
-    """
+    """Return the visible editor prompt for input-ready states."""
 
     return prompt or DEFAULT_INPUT_PROMPT
 
 
 def read_input(prompt: str = DEFAULT_INPUT_PROMPT) -> str:
-    """PURPOSE read a line of input, returning stripped value
-    DOMAIN  editor workflow
-    """
+    """Read a line of input, returning stripped value."""
 
     try:
         value = input(_normalize_prompt(prompt))
@@ -64,9 +54,7 @@ def read_input(prompt: str = DEFAULT_INPUT_PROMPT) -> str:
 
 
 def read_line(prompt: str = DEFAULT_INPUT_PROMPT) -> str:
-    """PURPOSE read a single line of input with a prompt
-    DOMAIN  editor workflow
-    """
+    """Read a single line of input with a prompt."""
 
     try:
         value = input(_normalize_prompt(prompt))
@@ -76,9 +64,7 @@ def read_line(prompt: str = DEFAULT_INPUT_PROMPT) -> str:
 
 
 def wait_for_enter() -> None:
-    """PURPOSE wait for the user to press Enter
-    DOMAIN  editor workflow
-    """
+    """Wait for the user to press Enter."""
 
     try:
         print("Press Enter to continue.")
@@ -88,8 +74,10 @@ def wait_for_enter() -> None:
 
 
 def paginate_items(items: list, page: int, page_size: int = 20) -> tuple[list, int, int, int]:
-    """PURPOSE get a page of items and pagination metadata
-    DOMAIN  editor workflow
+    """Return a page of items and pagination metadata.
+
+    Returns:
+        (page_items, start_index, end_index, total_count)
     """
 
     total = len(items)
@@ -103,9 +91,7 @@ def paginate_items(items: list, page: int, page_size: int = 20) -> tuple[list, i
 
 
 def format_paging_footer(start: int, end: int, total: int) -> str:
-    """PURPOSE format a pagination status line
-    DOMAIN  editor workflow
-    """
+    """Format a pagination status line."""
 
     if total == 0:
         return "Showing 0 items"
@@ -113,9 +99,7 @@ def format_paging_footer(start: int, end: int, total: int) -> str:
 
 
 def truncate(text: str, max_width: int) -> str:
-    """PURPOSE truncate text to fit within max_width, adding ellipsis if needed
-    DOMAIN  editor workflow
-    """
+    """Truncate text to fit within max_width, adding ellipsis if needed."""
 
     if len(text) <= max_width:
         return text
@@ -125,8 +109,10 @@ def truncate(text: str, max_width: int) -> str:
 
 
 def read_multiline() -> list[str]:
-    """PURPOSE read multiple lines until an empty line is entered
-    DOMAIN  editor workflow
+    """Read multiple lines until an empty line is entered.
+
+    Returns:
+        List of non-empty lines.
     """
 
     lines = []
@@ -143,8 +129,16 @@ def read_multiline() -> list[str]:
 
 
 def read_key() -> str:
-    """PURPOSE read a single keystroke from stdin
-    DOMAIN  editor workflow
+    """Read a single keystroke from stdin.
+
+    Returns:
+        Single character or special key name.
+
+    Special keys:
+        - 'up', 'down', 'left', 'right' for arrow keys
+        - 'enter' for Enter/Return key
+        - 'space' for Space key
+        - 'tab' for Tab key
     """
     try:
         # Save terminal settings
@@ -220,9 +214,7 @@ BANNER_TITLE = "Blueprint Framework Editor"
 
 
 def _editor_block_width(ratio: float = 0.70) -> int:
-    """PURPOSE get a consistent width for editor blocks
-    DOMAIN  editor workflow
-    """
+    """Return a consistent width for editor blocks."""
 
     terminal_width = get_terminal_width()
     preferred_width = max(20, int(terminal_width * ratio) - 2)
@@ -232,9 +224,7 @@ def _editor_block_width(ratio: float = 0.70) -> int:
 
 
 def _results_block_ratio(results: list) -> float:
-    """PURPOSE get dynamic width ratio (50%-95%) based on required table width
-    DOMAIN  editor workflow
-    """
+    """Return dynamic width ratio (50%-95%) based on required table width."""
 
     if not results:
         return 0.50
@@ -272,8 +262,9 @@ def _results_block_ratio(results: list) -> float:
 
 
 def _compute_results_column_widths(results: list, total_content_width: int) -> tuple[int, int, int, int, int]:
-    """PURPOSE calculate IDX/LIFECYCLE/DOMAIN/NAME/PURPOSE widths with truncation priority
-    DOMAIN  editor workflow
+    """Compute IDX/LIFECYCLE/DOMAIN/NAME/PURPOSE widths with truncation priority.
+
+    When space is limited, reduce PURPOSE first, then DOMAIN, and keep NAME as complete as possible.
     """
 
     idx_width = 5
@@ -321,9 +312,7 @@ def _compute_results_column_widths(results: list, total_content_width: int) -> t
 
 
 def render_editor_banner(ratio: float = 0.70) -> None:
-    """PURPOSE print the editor banner at the top of the screen
-    DOMAIN  editor workflow
-    """
+    """Print the editor banner at the top of the screen."""
 
     banner_width = _editor_block_width(ratio=ratio)
     for line in render_header(title=BANNER_TITLE, width=banner_width, theme=DEFAULT_THEME, centered=True):
@@ -331,9 +320,7 @@ def render_editor_banner(ratio: float = 0.70) -> None:
 
 
 def render_search_screen() -> None:
-    """PURPOSE show the initial search prompt screen
-    DOMAIN  editor workflow
-    """
+    """Render the initial search prompt screen."""
 
     refresh_screen()
     render_editor_banner()
@@ -363,8 +350,10 @@ def render_results_table(
     query: str,
     filter_display_lines: list[str],
 ) -> None:
-    """PURPOSE show the search results screen with a table and command menu
-    DOMAIN  editor workflow
+    """Render the search results screen with a table and command menu.
+
+    results: list of SearchRecord
+    filter_display_lines: display lines from FilterState
     """
 
     block_ratio = _results_block_ratio(results)
@@ -395,9 +384,7 @@ def render_results_table(
 
 
 def _render_results_table_rows(results: list, ratio: float = 0.70) -> None:
-    """PURPOSE show the actual table of search results
-    DOMAIN  editor workflow
-    """
+    """Render the actual table of search results."""
 
     width = _editor_block_width(ratio=ratio)
 
@@ -457,9 +444,7 @@ def _render_results_table_rows(results: list, ratio: float = 0.70) -> None:
 
 
 def _render_filter_display(filter_display_lines: list[str]) -> None:
-    """PURPOSE show active filters section
-    DOMAIN  editor workflow
-    """
+    """Render active filters section."""
 
     print(" Active filters:")
     for line in filter_display_lines:
@@ -467,9 +452,7 @@ def _render_filter_display(filter_display_lines: list[str]) -> None:
 
 
 def _render_results_commands(ratio: float = 0.70) -> None:
-    """PURPOSE show command menu for results screen
-    DOMAIN  editor workflow
-    """
+    """Render command menu for results screen."""
 
     lines = [
         "[idx] inspect             [f] filter               [h] help",
@@ -480,9 +463,7 @@ def _render_results_commands(ratio: float = 0.70) -> None:
 
 
 def _render_empty_commands(ratio: float = 0.70) -> None:
-    """PURPOSE show command menu when no results found
-    DOMAIN  editor workflow
-    """
+    """Render command menu when no results found."""
 
     lines = [
         "[/] search again          [c] clear filters        [h] help",
@@ -492,9 +473,7 @@ def _render_empty_commands(ratio: float = 0.70) -> None:
 
 
 def _render_editor_commands_box(lines: list[str], ratio: float = 0.70) -> None:
-    """PURPOSE show editor commands using inspector-style command box
-    DOMAIN  editor workflow
-    """
+    """Render editor commands using inspector-style command box."""
 
     width = _editor_block_width(ratio=ratio)
     for line in render_commands_box(lines=lines, width=width, theme=DEFAULT_THEME, wrap_mode="safe_wrap"):
@@ -502,9 +481,7 @@ def _render_editor_commands_box(lines: list[str], ratio: float = 0.70) -> None:
 
 
 def render_filter_screen() -> None:
-    """PURPOSE show the filter input screen
-    DOMAIN  editor workflow
-    """
+    """Render the filter input screen."""
 
     refresh_screen()
     render_editor_banner()
@@ -529,9 +506,7 @@ def render_filter_screen() -> None:
 
 
 def _render_examples_box(example_lines: list[str], ratio: float = 0.70) -> None:
-    """PURPOSE show examples in a boxed multiline section
-    DOMAIN  editor workflow
-    """
+    """Render examples in a boxed multiline section."""
 
     width = compute_panel_width(
         content_lines=example_lines,
@@ -544,9 +519,7 @@ def _render_examples_box(example_lines: list[str], ratio: float = 0.70) -> None:
 
 
 def _render_search_scope_box(title: str, lines: list[str], ratio: float = 0.70) -> None:
-    """PURPOSE show search scope details in a boxed section
-    DOMAIN  editor workflow
-    """
+    """Render search scope details in a boxed section."""
 
     width = compute_panel_width(
         content_lines=lines,
@@ -559,9 +532,7 @@ def _render_search_scope_box(title: str, lines: list[str], ratio: float = 0.70) 
 
 
 def render_invalid_selection() -> None:
-    """PURPOSE show invalid IDX selection message
-    DOMAIN  editor workflow
-    """
+    """Render invalid IDX selection message."""
 
     print()
     print(" Invalid selection.")
@@ -576,18 +547,14 @@ def render_invalid_selection() -> None:
 
 
 def render_filter_error(message: str) -> None:
-    """PURPOSE show a filter error message
-    DOMAIN  editor workflow
-    """
+    """Render a filter error message."""
 
     print()
     print(message)
 
 
 def render_editor_help_screen() -> None:
-    """PURPOSE show the editor help screen
-    DOMAIN  editor workflow
-    """
+    """Render the editor help screen."""
 
     refresh_screen()
     print("╭───────────────────────────── Editor help ──────────────────────────────╮")

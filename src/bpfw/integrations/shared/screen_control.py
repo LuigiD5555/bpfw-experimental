@@ -1,14 +1,10 @@
-"""PURPOSE shared terminal screen control helpers for interactive tools
-DOMAIN  terminal UI
-"""
+"""Shared terminal screen control helpers for interactive integrations."""
 
 import sys
 
 
 def refresh_screen() -> None:
-    """PURPOSE refresh terminal screen in-place when running on an interactive TTY
-    DOMAIN  terminal UI
-    """
+    """Refresh terminal screen in-place when running on an interactive TTY."""
 
     if not sys.stdout.isatty():
         return

@@ -1,6 +1,4 @@
-"""PURPOSE search index for BPFW Editor — build records, match queries, format rows
-DOMAIN  editor workflow
-"""
+"""Search index for BPFW Editor — build records, match queries, format rows."""
 
 from dataclasses import dataclass
 from typing import Any
@@ -10,9 +8,7 @@ from bpfw.core.catalog.domain import BlueprintDocument
 
 @dataclass(slots=True)
 class SearchRecord:
-    """PURPOSE flat searchable record for one blueprint block
-    DOMAIN  editor workflow
-    """
+    """Flat searchable record for one blueprint block."""
 
     responsibility_id: str
     lifecycle: str
@@ -26,22 +22,16 @@ class SearchRecord:
 
     @property
     def block_id(self) -> str:
-        """PURPOSE get the canonical block identifier
-        DOMAIN  editor workflow
-        """
+        """Return the canonical block identifier."""
         return self.responsibility_id
 
     @property
     def status(self) -> str:
-        """PURPOSE get the canonical block status
-        DOMAIN  editor workflow
-        """
+        """Return the canonical block status."""
         return self.lifecycle
 
 def build_search_records(blueprint_data: dict[str, Any]) -> list[SearchRecord]:
-    """PURPOSE build searchable records from blueprint blocks
-    DOMAIN  editor workflow
-    """
+    """Build searchable records from blueprint blocks."""
 
     blocks = blueprint_data.get("blocks", [])
     if not isinstance(blocks, list):
@@ -59,9 +49,7 @@ def build_search_records(blueprint_data: dict[str, Any]) -> list[SearchRecord]:
 
 
 def build_search_records_from_document(document: BlueprintDocument) -> list[SearchRecord]:
-    """PURPOSE build searchable records from domain document blocks
-    DOMAIN  editor workflow
-    """
+    """Build searchable records from domain document blocks."""
 
     records: list[SearchRecord] = []
     for responsibility in document.blocks:
@@ -73,10 +61,7 @@ def build_search_records_from_document(document: BlueprintDocument) -> list[Sear
 
 
 def _build_single_record(block: dict[str, Any]) -> SearchRecord:
-    """PURPOSE build one search record from a block dictionary
-        DOMAIN  editor workflow
-
-    """
+    """Build one search record from a block dict."""
 
     block_id = _str_or_empty(block.get("id"))
     status = _str_or_empty(block.get("status"))
@@ -129,9 +114,7 @@ def search_records(
     records: list[SearchRecord],
     query: str,
 ) -> list[SearchRecord]:
-    """PURPOSE filter records by search query using case-insensitive substring match
-    DOMAIN  editor workflow
-    """
+    """Filter records by search query using case-insensitive substring match."""
 
     if not query.strip():
         return list(records)
@@ -146,9 +129,7 @@ def search_records(
 
 
 def _str_or_empty(value: Any) -> str:
-    """PURPOSE convert a value to string, returning empty string for None
-    DOMAIN  editor workflow
-    """
+    """Convert a value to string, returning empty string for None."""
 
     if value is None:
         return ""
@@ -156,9 +137,7 @@ def _str_or_empty(value: Any) -> str:
 
 
 def _short_location(raw_path: str) -> str:
-    """PURPOSE strip common prefixes for a compact code path display
-    DOMAIN  editor workflow
-    """
+    """Strip common prefixes for a compact code path display."""
 
     for prefix in ("src/bpfw/", "bpfw/"):
         if raw_path.startswith(prefix):

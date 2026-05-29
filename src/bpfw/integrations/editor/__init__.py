@@ -1,6 +1,4 @@
-"""PURPOSE editor tool for search-first block editing
-DOMAIN  editor workflow
-"""
+"""Editor integration for search-first block editing."""
 
 import sys
 from pathlib import Path
@@ -10,16 +8,19 @@ from bpfw.integrations.result import OptionalIntegrationResult
 
 
 def can_use_interactive_terminal() -> bool:
-    """PURPOSE check whether standard streams support interactive editor input
-    DOMAIN  editor workflow
-    """
+    """Return True when standard streams support interactive editor input."""
 
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
 def run_interactive_editor(project_root: Path) -> int:
-    """PURPOSE run the interactive terminal editor session
-    DOMAIN  editor workflow
+    """Run the interactive terminal editor session.
+
+    Args:
+        project_root: Root directory of the project being edited.
+
+    Returns:
+        Process exit code produced by the editor session.
     """
 
     from bpfw.integrations.editor.session import EditorSession
@@ -29,8 +30,13 @@ def run_interactive_editor(project_root: Path) -> int:
 
 
 def run_editor(project_root: Path) -> int:
-    """PURPOSE run the editor tool
-    DOMAIN  editor workflow
+    """Run the editor integration.
+
+    Args:
+        project_root: Root directory of the project being edited.
+
+    Returns:
+        Process exit code for the command.
     """
 
     if not can_use_interactive_terminal():
@@ -48,16 +54,12 @@ def run_editor(project_root: Path) -> int:
 
 
 class EditorIntegration(OptionalIntegration):
-    """PURPOSE optional tool for search-first blueprint block editing
-    DOMAIN  editor workflow
-    """
+    """Optional integration for search-first blueprint block editing."""
 
     name = "editor"
 
     def is_available(self) -> bool:
-        """PURPOSE check whether the editor tool can run
-        DOMAIN  editor workflow
-        """
+        """Return True when the editor integration can run."""
 
         return True
 
@@ -66,9 +68,7 @@ class EditorIntegration(OptionalIntegration):
         project_root: Path,
         command_arguments: dict[str, str] | None = None,
     ) -> OptionalIntegrationResult:
-        """PURPOSE run editor against the given project root
-        DOMAIN  editor workflow
-        """
+        """Run editor against the given project root."""
 
         _ = command_arguments
         exit_code = run_editor(project_root=project_root)

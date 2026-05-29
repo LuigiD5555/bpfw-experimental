@@ -1,6 +1,4 @@
-"""PURPOSE check components for the Planner tool
-DOMAIN  planner workflow
-"""
+"""Validation components for the Planner integration."""
 
 from dataclasses import dataclass, field
 from typing import List, Optional
@@ -10,9 +8,7 @@ from bpfw.integrations.planner.models import PlannerState
 
 @dataclass
 class PlanFinding:
-    """PURPOSE a finding from plan check
-    DOMAIN  planner workflow
-    """
+    """A finding from plan validation."""
 
     level: str  # "error" or "warning"
     message: str
@@ -21,9 +17,7 @@ class PlanFinding:
 
 @dataclass
 class PlanValidationResult:
-    """PURPOSE result of validating a plan
-    DOMAIN  planner workflow
-    """
+    """Result of validating a plan."""
 
     allowed: bool
     errors: List[PlanFinding] = field(default_factory=list)
@@ -31,23 +25,17 @@ class PlanValidationResult:
 
     @property
     def has_errors(self) -> bool:
-        """PURPOSE check if there are any errors
-        DOMAIN  planner workflow
-        """
+        """Check if there are any errors."""
         return len(self.errors) > 0
 
     @property
     def has_warnings(self) -> bool:
-        """PURPOSE check if there are any warnings
-        DOMAIN  planner workflow
-        """
+        """Check if there are any warnings."""
         return len(self.warnings) > 0
 
     @property
     def summary(self) -> str:
-        """PURPOSE get a summary of check results
-        DOMAIN  planner workflow
-        """
+        """Get a summary of validation results."""
         error_count = len(self.errors)
         warning_count = len(self.warnings)
 
@@ -64,14 +52,17 @@ class PlanValidationResult:
 
 
 class PlanValidator:
-    """PURPOSE check planner state for consistency
-    DOMAIN  planner workflow
-    """
+    """Validate planner state for consistency."""
 
     @staticmethod
     def validate(state: PlannerState) -> PlanValidationResult:
-        """PURPOSE check the complete planner state
-        DOMAIN  planner workflow
+        """Validate the complete planner state.
+
+        Args:
+            state: Current planner state.
+
+        Returns:
+            PlanValidationResult with any errors or warnings.
         """
         errors = []
         warnings = []
@@ -99,8 +90,13 @@ class PlanValidator:
 
     @staticmethod
     def _validate_boxes(state: PlannerState) -> tuple[List[PlanFinding], List[PlanFinding]]:
-        """PURPOSE check all boxes
-        DOMAIN  planner workflow
+        """Validate all boxes.
+
+        Args:
+            state: Current planner state.
+
+        Returns:
+            Tuple of (errors, warnings).
         """
         errors = []
         warnings = []
@@ -189,8 +185,13 @@ class PlanValidator:
 
     @staticmethod
     def _validate_connections(state: PlannerState) -> tuple[List[PlanFinding], List[PlanFinding]]:
-        """PURPOSE check all connections
-        DOMAIN  planner workflow
+        """Validate all connections.
+
+        Args:
+            state: Current planner state.
+
+        Returns:
+            Tuple of (errors, warnings).
         """
         errors = []
         warnings = []
@@ -240,8 +241,13 @@ class PlanValidator:
 
     @staticmethod
     def _validate_policy(state: PlannerState) -> tuple[List[PlanFinding], List[PlanFinding]]:
-        """PURPOSE check policy compliance
-        DOMAIN  planner workflow
+        """Validate policy compliance.
+
+        Args:
+            state: Current planner state.
+
+        Returns:
+            Tuple of (errors, warnings).
         """
         errors = []
         warnings = []
