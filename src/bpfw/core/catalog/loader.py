@@ -1,6 +1,7 @@
 """Blueprint loader for bpfw/blueprint.yaml with sharded authority."""
 
 from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -19,6 +20,7 @@ from bpfw.core.catalog.models import (
     BlueprintLoadResult,
 )
 from bpfw.core.catalog.paths import resolve_blueprint_path
+from bpfw.core.result import Result
 from bpfw.reports.finding import (
     FINDING_SEVERITY_BLOCK,
     FINDING_SEVERITY_INFO,
@@ -63,25 +65,9 @@ class BlueprintLoader:
             )
 
         # Check if this is a sharded authority or simple blueprint.yaml
-        try:
-            repository = BlueprintRepository(self.project_root)
-            repository_load_result = repository.load()
-            blueprint_data = repository_load_result.raw_data
-            domain_document = repository_load_result.document
-            authority_document = repository_load_result.authority_document
-        except (
-            InvalidAuthorityIndexError,
-            InvalidAuthorityShardError,
-            MissingShardError,
-            FileNotFoundError,
-        ) as error:
-            finding = Finding(
-                source="authority",
-                code="INVALID_SHARD",
-                severity=FINDING_SEVERITY_BLOCK,
-                message=f"Invalid authority: {error}",
-                path=str(self.blueprint_path),
-            )
+        repository_result = self._load_repository_as_result()
+        if repository_result.is_error:
+            finding = repository_result.unwrap_error()
             return BlueprintLoadResult(
                 state=AUTHORITY_STATE_INVALID,
                 path=str(self.blueprint_path),
@@ -89,21 +75,8 @@ class BlueprintLoader:
                 domain_document=None,
                 findings=[finding],
             )
-        except (OSError, yaml.YAMLError) as error:
-            finding = Finding(
-                source="bpfw",
-                code="INVALID_BLUEPRINT",
-                severity=FINDING_SEVERITY_BLOCK,
-                message=f"Failed to parse blueprint: {error}",
-                path=str(self.blueprint_path),
-            )
-            return BlueprintLoadResult(
-                state=AUTHORITY_STATE_INVALID,
-                path=str(self.blueprint_path),
-                data={},
-                domain_document=None,
-                findings=[finding],
-            )
+
+        blueprint_data, domain_document, authority_document = repository_result.unwrap()
 
         blocks = blueprint_data.get("blocks", [])
         if domain_document is not None:
@@ -169,6 +142,48 @@ class BlueprintLoader:
             authority_document=authority_document,
             findings=[],
         )
+
+
+    def _load_repository_as_result(self) -> Result[tuple[dict[str, Any], Any, Any], Finding]:
+        """Load repository data and convert expected load failures to Result.
+
+        Returns:
+            Successful result containing blueprint data and documents, or a failed
+            result containing the user-facing finding to report.
+        """
+        try:
+            repository = BlueprintRepository(self.project_root)
+            repository_load_result = repository.load()
+            return Result.ok(
+                (
+                    repository_load_result.raw_data,
+                    repository_load_result.document,
+                    repository_load_result.authority_document,
+                )
+            )
+        except (
+            InvalidAuthorityIndexError,
+            InvalidAuthorityShardError,
+            MissingShardError,
+            FileNotFoundError,
+        ) as error:
+            finding = Finding(
+                source="authority",
+                code="INVALID_SHARD",
+                severity=FINDING_SEVERITY_BLOCK,
+                message=f"Invalid authority: {error}",
+                path=str(self.blueprint_path),
+            )
+            return Result.fail(finding)
+        except (OSError, yaml.YAMLError) as error:
+            finding = Finding(
+                source="bpfw",
+                code="INVALID_BLUEPRINT",
+                severity=FINDING_SEVERITY_BLOCK,
+                message=f"Failed to parse blueprint: {error}",
+                path=str(self.blueprint_path),
+            )
+            return Result.fail(finding)
 
 
 def is_block_complete(block: dict) -> bool:

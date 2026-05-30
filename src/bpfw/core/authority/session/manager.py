@@ -19,6 +19,7 @@ from bpfw.core.catalog.security import validate_no_blueprint_secrets
 from bpfw.core.catalog.validation import validate_blueprint_structure
 from bpfw.core.catalog.verify import scan_project_from_blueprint
 from bpfw.core.errors import BlueprintLockedError
+from bpfw.core.result import Result, ResultError
 from bpfw.core.protection.authority import (
     get_authority_protection_status,
     lock_authority,
@@ -191,22 +192,9 @@ class AuthoritySessionManager:
         meta = read_session_meta(self.meta_path)
         created_at = meta.created_at if meta is not None else utc_now_iso8601()
 
-        try:
-            pending_blueprint_data = read_unified_blueprint(self.temporary_path)
-            from bpfw.integrations.inspector.base import apply_automatic_authority_fields
-
-            apply_automatic_authority_fields(pending_blueprint_data)
-            if self.tool_name == "inspector":
-                validation_error = self._validate_pending_blueprint_for_inspector(pending_blueprint_data)
-                if validation_error is not None:
-                    raise BlueprintLockedError(
-                        f"Inspector finalization blocked by verify: {validation_error}"
-                    )
-            repository = AuthorityRepository(self.project_root)
-            authority_document = repository.load()
-            authority_document.blueprint_data = pending_blueprint_data
-            repository.save(authority_document)
-        except (AuthorityError, BlueprintLockedError, OSError, ValueError, ImportError) as error:
+        finalize_result = self._finalize_pending_authority_as_result()
+        if finalize_result.is_error:
+            error = finalize_result.unwrap_error()
             write_session_meta(
                 self.meta_path,
                 AuthoritySessionMeta(
@@ -215,7 +203,7 @@ class AuthoritySessionManager:
                     created_at=created_at,
                     updated_at=utc_now_iso8601(),
                     temporary_path=str(self.temporary_path),
-                    message=str(error),
+                    message=error.message,
                 ),
             )
             print_func("Failed to apply pending authority session.")
@@ -235,6 +223,43 @@ class AuthoritySessionManager:
         )
         self.temporary_path.unlink(missing_ok=True)
         return 0
+
+    def _finalize_pending_authority_as_result(self) -> Result[None, ResultError]:
+        """Finalize pending authority and return a structured result.
+
+        Returns:
+            Successful result when the pending authority is saved, or a failed
+            result with a recoverable finalization error.
+        """
+        try:
+            pending_blueprint_data = read_unified_blueprint(self.temporary_path)
+            from bpfw.integrations.inspector.base import apply_automatic_authority_fields
+
+            apply_automatic_authority_fields(pending_blueprint_data)
+            if self.tool_name == "inspector":
+                validation_error = self._validate_pending_blueprint_for_inspector(pending_blueprint_data)
+                if validation_error is not None:
+                    return Result.fail(
+                        ResultError(
+                            code="AUTHORITY_SESSION_VERIFY_BLOCKED",
+                            message=f"Inspector finalization blocked by verify: {validation_error}",
+                            source="authority.session.finalize",
+                        )
+                    )
+            repository = AuthorityRepository(self.project_root)
+            authority_document = repository.load()
+            authority_document.blueprint_data = pending_blueprint_data
+            repository.save(authority_document)
+            return Result.ok(None)
+        except (AuthorityError, BlueprintLockedError, OSError, ValueError, ImportError) as error:
+            return Result.fail(
+                ResultError(
+                    code="AUTHORITY_SESSION_FINALIZE_FAILED",
+                    message=str(error),
+                    source="authority.session.finalize",
+                    details={"error_type": type(error).__name__},
+                )
+            )
 
     def discard(self) -> None:
         """Discard pending unified session files for this tool."""
