@@ -14,7 +14,7 @@ from bpfw.core.catalog.models import (
     DiscoveredCodeUnit,
 )
 from bpfw.core.catalog.models import ScanResult
-from bpfw.core.catalog.scan_cache import cached_scan_python_project
+from bpfw.core.catalog.scan_strategy import ProjectScanStrategyFactory, ScanMode
 from bpfw.core.catalog.verify import read_ignored_paths, read_source_roots, run_verify, scan_project_from_blueprint
 from bpfw.core.errors import BlueprintLockedError
 from bpfw.reports.finding import Finding
@@ -179,7 +179,8 @@ def load_inspect_session(
         if scan_result is None:
             source_roots = read_source_roots(blueprint_data, domain_document=load_result.domain_document)
             ignored_paths = read_ignored_paths(blueprint_data, domain_document=load_result.domain_document)
-            scan_result = cached_scan_python_project(
+            scanner = ProjectScanStrategyFactory().create(ScanMode.CACHE_ENABLED)
+            scan_result = scanner.scan(
                 project_root=resolved_root,
                 source_roots=source_roots,
                 ignored_paths=ignored_paths,

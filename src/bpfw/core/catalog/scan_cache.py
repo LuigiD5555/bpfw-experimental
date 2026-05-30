@@ -7,6 +7,7 @@ from typing import Any
 from bpfw.core.catalog.models import DiscoveredCodeUnit, ScanResult
 from bpfw.core.catalog.review_order import order_blocks_for_review
 from bpfw.core.catalog.scanner import _is_path_ignored, _scan_python_file
+from bpfw.core.catalog.source_repository import SourceFileRepository
 from bpfw.reports.finding import Finding
 
 _SCHEMA_VERSION = 1
@@ -60,7 +61,7 @@ def cached_scan_python_project(
     source_roots: list[str],
     ignored_paths: list[str],
 ) -> ScanResult:
-    """Scan Python project using per-file cached results.
+    """Scan Python project using per-file cached results and persist fresh entries.
 
     Args:
         project_root: Project root directory.
@@ -70,8 +71,57 @@ def cached_scan_python_project(
     Returns:
         Scan result built from cached and freshly scanned files.
     """
+    return _scan_python_project_with_cache(
+        project_root=project_root,
+        source_roots=source_roots,
+        ignored_paths=ignored_paths,
+        write_cache=True,
+    )
+
+
+def read_only_cached_scan_python_project(
+    project_root: Path,
+    source_roots: list[str],
+    ignored_paths: list[str],
+) -> ScanResult:
+    """Scan Python project using existing cache entries without writing cache files.
+
+    Args:
+        project_root: Project root directory.
+        source_roots: Source roots relative to project root.
+        ignored_paths: Path components to ignore.
+
+    Returns:
+        Scan result that reuses valid cache entries but leaves the filesystem unchanged.
+    """
+    return _scan_python_project_with_cache(
+        project_root=project_root,
+        source_roots=source_roots,
+        ignored_paths=ignored_paths,
+        write_cache=False,
+    )
+
+
+def _scan_python_project_with_cache(
+    project_root: Path,
+    source_roots: list[str],
+    ignored_paths: list[str],
+    write_cache: bool,
+) -> ScanResult:
+    """Scan a Python project with cache-aside behavior.
+
+    Args:
+        project_root: Project root directory.
+        source_roots: Source roots relative to project root.
+        ignored_paths: Path components to ignore.
+        write_cache: Whether fresh scan entries should be persisted.
+
+    Returns:
+        Scan result built from cache hits and fresh source scans.
+    """
     resolved_root = project_root.resolve()
     repository = ScanCacheRepository(resolved_root)
+    source_repository = SourceFileRepository(resolved_root)
     cache_data = repository.load()
     old_entries = cache_data.get("entries", {}) if isinstance(cache_data.get("entries"), dict) else {}
     new_entries: dict[str, Any] = {}
@@ -97,7 +147,12 @@ def cached_scan_python_project(
                     if isinstance(item, dict)
                 ]
             else:
-                units, file_findings = _scan_python_file(resolved_root, python_file, relative_path)
+                units, file_findings = _scan_python_file(
+                    resolved_root,
+                    python_file,
+                    relative_path,
+                    source_repository=source_repository,
+                )
             discovered_units.extend(units)
             findings.extend(file_findings)
             new_entries[relative_key] = {
@@ -107,15 +162,20 @@ def cached_scan_python_project(
             }
 
     discovered_units = order_blocks_for_review(discovered_units)
-    repository.save(
-        {
-            "schema_version": _SCHEMA_VERSION,
-            "source_roots": list(source_roots),
-            "ignored_paths": list(ignored_paths),
-            "entries": new_entries,
-        }
+    if write_cache:
+        repository.save(
+            {
+                "schema_version": _SCHEMA_VERSION,
+                "source_roots": list(source_roots),
+                "ignored_paths": list(ignored_paths),
+                "entries": new_entries,
+            }
+        )
+    return ScanResult(
+        discovered_units=discovered_units,
+        findings=findings,
+        source_repository=source_repository,
     )
-    return ScanResult(discovered_units=discovered_units, findings=findings)
 
 
 def _empty_cache() -> dict[str, Any]:

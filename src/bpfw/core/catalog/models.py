@@ -56,6 +56,7 @@ class ScanResult:
 
     discovered_units: List[DiscoveredCodeUnit]
     findings: List[Finding] = field(default_factory=list)
+    source_repository: Any | None = None
 
 
 @dataclass(frozen=True)

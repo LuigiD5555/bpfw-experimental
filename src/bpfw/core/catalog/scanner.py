@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from bpfw.core.catalog.models import DiscoveredCodeUnit, ScanResult
+from bpfw.core.catalog.source_repository import SourceFileRepository
 from bpfw.core.catalog.review_order import order_blocks_for_review
 from bpfw.reports.finding import Finding
 
@@ -14,10 +15,12 @@ def scan_python_project(
     project_root: Path,
     source_roots: List[str],
     ignored_paths: List[str],
+    source_repository: SourceFileRepository | None = None,
 ) -> ScanResult:
     """Scan Python project using Python code tree parsing."""
     discovered_units: List[DiscoveredCodeUnit] = []
     findings: List[Finding] = []
+    active_source_repository = source_repository or SourceFileRepository(project_root)
 
     for source_root in source_roots:
         source_root_path = project_root / source_root
@@ -42,6 +45,7 @@ def scan_python_project(
                 project_root,
                 py_file,
                 file_path,
+                source_repository=active_source_repository,
             )
             discovered_units.extend(file_units)
             findings.extend(file_findings)
@@ -53,6 +57,7 @@ def scan_python_project(
     return ScanResult(
         discovered_units=discovered_units,
         findings=findings,
+        source_repository=active_source_repository,
     )
 
 
@@ -80,6 +85,7 @@ def _scan_python_file(
     project_root: Path,
     file_path: Path,
     relative_path: Path,
+    source_repository: SourceFileRepository | None = None,
 ) -> tuple[List[DiscoveredCodeUnit], List[Finding]]:
     """
     Scan a single Python file for code units.
@@ -88,66 +94,30 @@ def _scan_python_file(
         project_root: Root directory of the project.
         file_path: Absolute path to the Python file.
         relative_path: Relative path from project root.
+        source_repository: Optional shared source repository for this command run.
 
     Returns:
         Tuple of (discovered units, findings).
     """
     discovered_units: List[DiscoveredCodeUnit] = []
-    findings: List[Finding] = []
-
-    # Read file with UTF-8 encoding
-    try:
-        file_content = file_path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        findings.append(
-            Finding(
-                source="bpfw",
-                code="PYTHON_READ_ERROR",
-                severity="block",
-                message="Could not read file with UTF-8 encoding",
-                path=str(relative_path),
-            )
-        )
-        return discovered_units, findings
-
-    # Parse AST
-    try:
-        tree = ast.parse(file_content, filename=str(file_path))
-    except SyntaxError as e:
-        findings.append(
-            Finding(
-                source="bpfw",
-                code="PYTHON_PARSE_ERROR",
-                severity="block",
-                message="BPFW could not parse this Python file.",
-                path=str(relative_path),
-                evidence={
-                    "line": e.lineno,
-                    "offset": e.offset,
-                },
-            )
-        )
-        return discovered_units, findings
-
-    # Extract imports from the module
-    imports = _extract_imports(tree)
-
-    # Extract module path
-    module = _derive_module_path(relative_path)
+    active_source_repository = source_repository or SourceFileRepository(project_root)
+    snapshot = active_source_repository.load_snapshot(file_path, relative_path)
+    if snapshot is None:
+        return discovered_units, active_source_repository.get_findings(relative_path)
 
     discovered_units.extend(
         _extract_code_units(
-            nodes=tree.body,
+            nodes=snapshot.syntax_tree.body,
             file_path=str(relative_path),
-            module=module,
-            imports=imports,
+            module=snapshot.module,
+            imports=list(snapshot.imports),
             parent_symbols=[],
             parent_kind=None,
-            source_text=file_content,
+            source_text=snapshot.source_text,
         )
     )
 
-    return discovered_units, findings
+    return discovered_units, []
 
 
 def _extract_code_units(

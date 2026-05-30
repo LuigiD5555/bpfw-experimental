@@ -16,7 +16,7 @@ from bpfw.core.catalog.models import (
     ScanResult,
     BlueprintLoadResult,
 )
-from bpfw.core.catalog.scanner import scan_python_project
+from bpfw.core.catalog.scan_strategy import ProjectScanStrategyFactory, ScanMode
 from bpfw.core.catalog.code_duplicates import CodeDuplicateAnalyzer
 from bpfw.core.catalog.code_outcomes import CodeOutcomeAnalyzer
 from bpfw.core.catalog.security import validate_no_blueprint_secrets
@@ -83,7 +83,8 @@ def scan_project_from_blueprint(
 
     source_roots = read_source_roots(blueprint_data, domain_document=domain_document)
     ignored_paths = read_ignored_paths(blueprint_data, domain_document=domain_document)
-    return scan_python_project(
+    scanner = ProjectScanStrategyFactory().create(ScanMode.READ_ONLY_CACHE)
+    return scanner.scan(
         project_root=project_root,
         source_roots=source_roots,
         ignored_paths=ignored_paths,
@@ -199,10 +200,13 @@ def _validate_sharded_authority(project_root: Path, load_result: Any) -> List[Fi
 
     # Check for root-level blocks in the raw authority index only.
     # load_result.data is unified and intentionally includes shard blocks.
-    try:
-        root_index_data = AuthorityIndex.load(project_root).data
-    except Exception:
-        root_index_data = load_result.data
+    if getattr(load_result, "authority_document", None) is not None:
+        root_index_data = load_result.authority_document.index.data
+    else:
+        try:
+            root_index_data = AuthorityIndex.load(project_root).data
+        except Exception:
+            root_index_data = load_result.data
     blocks = root_index_data.get("blocks")
     if isinstance(blocks, list) and blocks:
         findings.append(
@@ -215,10 +219,13 @@ def _validate_sharded_authority(project_root: Path, load_result: Any) -> List[Fi
             )
         )
 
-    # Use AuthorityRepository to validate for duplicates and drift
+    # Use the already loaded authority document when available. This avoids
+    # reloading every shard a second time during the same verify command.
     try:
         repository = AuthorityRepository(project_root)
-        document = repository.load()
+        document = load_result.authority_document
+        if document is None:
+            document = repository.load()
         validation_findings = repository.validate(document)
 
         # Convert authority validation findings to verify findings
@@ -348,11 +355,13 @@ def run_verify(
     code_duplicate_findings = CodeDuplicateAnalyzer(
         project_root=resolved_root,
         discovered_units=scan_result.discovered_units,
+        source_repository=scan_result.source_repository,
     ).analyze()
 
     code_outcome_findings = CodeOutcomeAnalyzer(
         project_root=resolved_root,
         discovered_units=scan_result.discovered_units,
+        source_repository=scan_result.source_repository,
     ).analyze()
 
     # Combine all findings

@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from bpfw.core.catalog.models import DiscoveredCodeUnit
+from bpfw.core.catalog.source_repository import SourceFileRepository
 from bpfw.reports.finding import FINDING_SEVERITY_WARNING, Finding
 
 _SOURCE = "bpfw"
@@ -178,16 +179,22 @@ class _IndexedNode:
 class CodeOutcomeAnalyzer:
     """Analyze code blocks by their observable effects rather than their declared purposes."""
 
-    def __init__(self, project_root: Path, discovered_units: list[DiscoveredCodeUnit]) -> None:
+    def __init__(
+        self,
+        project_root: Path,
+        discovered_units: list[DiscoveredCodeUnit],
+        source_repository: SourceFileRepository | None = None,
+    ) -> None:
         """Initialize the analyzer.
 
         Args:
             project_root: Project root containing the source files.
             discovered_units: Code units discovered by the catalog scanner.
+            source_repository: Optional shared source repository for parsed files.
         """
         self.project_root = project_root
         self.discovered_units = discovered_units
-        self._node_index_by_path: dict[str, dict[str, _IndexedNode]] = {}
+        self.source_repository = source_repository or SourceFileRepository(project_root)
 
     def analyze(self) -> list[Finding]:
         """Detect duplicate, similar, conflicting, and unknown observable outcomes."""
@@ -360,9 +367,7 @@ class CodeOutcomeAnalyzer:
 
     def _indexed_node_for_unit(self, unit: DiscoveredCodeUnit) -> _IndexedNode | None:
         """Return the AST node that corresponds to a discovered code unit."""
-        if unit.path not in self._node_index_by_path:
-            self._node_index_by_path[unit.path] = self._build_node_index(unit.path)
-        return self._node_index_by_path[unit.path].get(unit.symbol)
+        return self.source_repository.get_indexed_node(unit.path, unit.symbol)
 
     def _build_node_index(self, relative_path: str) -> dict[str, _IndexedNode]:
         """Build a symbol-to-node index for one Python file."""
