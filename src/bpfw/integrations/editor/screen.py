@@ -42,6 +42,21 @@ RESULT_COLUMN_MAX_WIDTHS = {
     "location": 56,
     "codelines": 14,
 }
+ANSI_KEY_REGISTRY = {
+    "A": "up",
+    "B": "down",
+    "C": "right",
+    "D": "left",
+    "Z": "shift_tab",
+}
+SINGLE_KEY_REGISTRY = {
+    "\r": "enter",
+    "\n": "enter",
+    " ": "space",
+    "\t": "tab",
+    "\x7f": "backspace",
+    "\x08": "backspace",
+}
 
 
 def get_terminal_width() -> int:
@@ -166,69 +181,43 @@ def read_key() -> str:
         - 'tab' for Tab key
     """
     try:
-        # Save terminal settings
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
 
-        # Set terminal to raw mode for single key input
         try:
             tty.setraw(fd)
-            ch = sys.stdin.read(1)
+            character = sys.stdin.read(1)
 
-            # Handle special keys (arrow keys, etc.)
-            if ch == '\x1b':  # ANSI sequence
-                ch2 = sys.stdin.read(1) if sys.stdin.read(1) else ''
-                if ch2 == '[':
-                    ch3 = sys.stdin.read(1) if sys.stdin.read(1) else ''
-                    if ch3 == 'A':
-                        return 'up'
-                    elif ch3 == 'B':
-                        return 'down'
-                    elif ch3 == 'C':
-                        return 'right'
-                    elif ch3 == 'D':
-                        return 'left'
-                    elif ch3 == 'Z':  # Shift+Tab
-                        return 'shift_tab'
-                elif ch2 == '\x1b':
-                    return ''
-                return ''
-            elif ch == '\r' or ch == '\n':
-                return 'enter'
-            elif ch == ' ':
-                return 'space'
-            elif ch == '\t':
-                return 'tab'
-            elif ch == '\x7f' or ch == '\x08':  # Backspace/Delete
-                return 'backspace'
-            elif ch == '\x03':  # Ctrl+C
+            if character == "\x1b":
+                second_character = sys.stdin.read(1)
+                if second_character == "[":
+                    third_character = sys.stdin.read(1)
+                    return ANSI_KEY_REGISTRY.get(third_character, "")
+                if second_character == "\x1b":
+                    return ""
+                return ""
+
+            mapped_key = SINGLE_KEY_REGISTRY.get(character)
+            if mapped_key is not None:
+                return mapped_key
+            if character == "\x03":
                 raise KeyboardInterrupt
-            elif ch == '\x04':  # Ctrl+D
+            if character == "\x04":
                 raise EOFError
-            else:
-                return ch.lower()  # Return lowercase version
+            return character.lower()
         finally:
-            # Restore terminal settings
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
     except (termios.error, OSError, AttributeError):
-        # Fallback for non-Unix systems or when terminal control fails
-        # Read line and return first character
         try:
             line = input()
-            if line:
-                first_char = line[0].lower()
-                if first_char == '\r' or first_char == '\n':
-                    return 'enter'
-                elif first_char == ' ':
-                    return 'space'
-                elif first_char == '\t':
-                    return 'tab'
-                return first_char
-            return 'enter'
-        except (EOFError, KeyboardInterrupt):
-            if isinstance(sys.last_type, KeyboardInterrupt):
-                raise
+        except EOFError:
             return QUIT_COMMAND
+        except KeyboardInterrupt:
+            raise
+        if not line:
+            return "enter"
+        first_character = line[0].lower()
+        return SINGLE_KEY_REGISTRY.get(first_character, first_character)
 
 
 # ---------------------------------------------------------------------------
