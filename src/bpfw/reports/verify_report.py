@@ -33,6 +33,27 @@ _SUGGESTED_ACTIONS: Dict[str, str] = {
         "Keep one block active and mark the others "
         "experimental, legacy, or deprecated."
     ),
+    "NORMALIZED_AST_CLONE": (
+        "Review whether these blocks should share one implementation or stay separate."
+    ),
+    "SAME_RETURN_EXPRESSION": (
+        "Review whether the repeated return behavior is intentional."
+    ),
+    "TRIVIAL_WRAPPER": (
+        "Remove the wrapper or justify the policy, entrypoint, or compatibility boundary."
+    ),
+    "SAME_OUTCOME": (
+        "Review whether these blocks should share one implementation or stay separate by layer."
+    ),
+    "SIMILAR_OUTCOME": (
+        "Review whether these blocks serve the same observable purpose."
+    ),
+    "CONFLICTING_EFFECT": (
+        "Review whether these blocks intentionally apply opposite actions to the same resource."
+    ),
+    "UNCLASSIFIED_EXTERNAL_EFFECT": (
+        "Classify the external call, declare the effect, or add a domain analyzer."
+    ),
     "MISSING_DECLARED_CODE": (
         "Restore the declared code unit or update the blueprint "
         "code location intentionally."
@@ -54,7 +75,20 @@ VERIFY_FINDING_FILTERS: Dict[str, set[str]] = {
     "all": set(),
     "undeclared": {"UNDECLARED_CODE"},
     "missing": {"MISSING_DECLARED_CODE"},
-    "duplicate": {"DUPLICATE_ACTIVE_PURPOSE", "DUPLICATE_BLOCK_ID"},
+    "duplicate": {
+        "DUPLICATE_ACTIVE_PURPOSE",
+        "DUPLICATE_BLOCK_ID",
+        "NORMALIZED_AST_CLONE",
+        "SAME_RETURN_EXPRESSION",
+        "TRIVIAL_WRAPPER",
+        "SAME_OUTCOME",
+        "SIMILAR_OUTCOME",
+        "CONFLICTING_EFFECT",
+    },
+    "clone": {"NORMALIZED_AST_CLONE", "SAME_RETURN_EXPRESSION"},
+    "wrapper": {"TRIVIAL_WRAPPER"},
+    "effect": {"SAME_OUTCOME", "SIMILAR_OUTCOME", "CONFLICTING_EFFECT", "UNCLASSIFIED_EXTERNAL_EFFECT"},
+    "outcome": {"SAME_OUTCOME", "SIMILAR_OUTCOME", "CONFLICTING_EFFECT"},
     "secret": {"BLUEPRINT_SECRET_LIKE_VALUE"},
     "invalid": {"INVALID_STATUS", "INCOMPLETE_BLOCK", "INVALID_BLUEPRINT"},
 }
@@ -75,15 +109,80 @@ def _compact_location(finding: Finding) -> str:
     return f"{path_value}::{symbol_value}"
 
 
+def _render_evidence(finding: Finding) -> List[str]:
+    """Render compact evidence lines for one finding."""
+    evidence = finding.evidence or {}
+    lines: List[str] = []
+    if "purpose" in evidence:
+        lines.append(f"Purpose: {evidence.get('purpose')}")
+    if "active_block_ids" in evidence:
+        lines.append("Active blocks:")
+        for block_id in evidence.get("active_block_ids", [])[:8]:
+            lines.append(f"  - {block_id}")
+    if "units" in evidence:
+        lines.append("Units:")
+        for unit_label in evidence.get("units", [])[:8]:
+            lines.append(f"  - {unit_label}")
+    if "target" in evidence:
+        lines.append(f"Target: {evidence.get('target')}")
+    if "passed_arguments" in evidence:
+        arguments = ", ".join(str(argument) for argument in evidence.get("passed_arguments", []))
+        lines.append(f"Passed arguments: {arguments}")
+    if "calls" in evidence and evidence.get("calls"):
+        calls = ", ".join(str(call) for call in evidence.get("calls", [])[:8])
+        lines.append(f"Calls: {calls}")
+    if "shared_calls" in evidence and evidence.get("shared_calls"):
+        shared_calls = ", ".join(str(call) for call in evidence.get("shared_calls", [])[:8])
+        lines.append(f"Shared calls: {shared_calls}")
+    if "action" in evidence:
+        lines.append(f"Action: {evidence.get('action')}")
+    if "resource_kind" in evidence:
+        lines.append(f"Resource: {evidence.get('resource_kind')}")
+    if "target" in evidence and evidence.get("target") is not None:
+        lines.append(f"Target: {evidence.get('target')}")
+    if "confidence" in evidence:
+        lines.append(f"Confidence: {evidence.get('confidence')}")
+    if "effects" in evidence and evidence.get("effects"):
+        lines.append("Effects:")
+        for effect in evidence.get("effects", [])[:8]:
+            lines.append(f"  - {effect}")
+    return lines
+
+
 def _render_block_group(code: str, grouped_findings: List[Finding], max_items: int = 8) -> str:
-    """Render one grouped finding code with compact locations."""
+    """Render one grouped finding code with compact evidence."""
     lines: List[str] = []
     lines.append(f"[{code}] count={len(grouped_findings)}")
 
     first_finding = grouped_findings[0]
+    lines.append(f"Severity: {first_finding.severity}")
     lines.append(f"Reason: {first_finding.message}")
     action = _SUGGESTED_ACTIONS.get(code, "Review and resolve the finding.")
     lines.append(f"Suggested action: {action}")
+
+    if max_items <= 0:
+        max_items = len(grouped_findings)
+
+    if code in {
+        "NORMALIZED_AST_CLONE",
+        "SAME_RETURN_EXPRESSION",
+        "TRIVIAL_WRAPPER",
+        "SAME_OUTCOME",
+        "SIMILAR_OUTCOME",
+        "CONFLICTING_EFFECT",
+        "UNCLASSIFIED_EXTERNAL_EFFECT",
+        "DUPLICATE_ACTIVE_PURPOSE",
+    }:
+        lines.append("Items:")
+        for index, finding in enumerate(grouped_findings[:max_items], start=1):
+            lines.append(f"  {index}. {_compact_location(finding)}")
+            evidence_lines = _render_evidence(finding)
+            for evidence_line in evidence_lines:
+                lines.append(f"     {evidence_line}")
+        remaining_items = len(grouped_findings) - max_items
+        if remaining_items > 0:
+            lines.append(f"  ... and {remaining_items} more")
+        return "\n".join(lines)
 
     unique_locations: List[str] = []
     seen_locations = set()
@@ -94,10 +193,12 @@ def _render_block_group(code: str, grouped_findings: List[Finding], max_items: i
         seen_locations.add(location)
         unique_locations.append(location)
 
-    lines.append("Locations:")
-    if max_items <= 0:
-        max_items = len(unique_locations)
+    evidence_lines = _render_evidence(first_finding)
+    if evidence_lines:
+        lines.append("Evidence:")
+        lines.extend(f"  {line}" for line in evidence_lines)
 
+    lines.append("Locations:")
     for location in unique_locations[:max_items]:
         lines.append(f"  - {location}")
 
@@ -152,14 +253,43 @@ def render_verify_report(
         if finding.severity == FINDING_SEVERITY_BLOCK
     ]
 
+    findings_for_filter = report.findings if finding_codes else block_findings
+    filtered_findings = _filter_block_findings(findings_for_filter, finding_codes)
+    grouped_findings = _group_block_findings(filtered_findings)
+
+    if finding_codes:
+        sections.append(f"Filter: {', '.join(finding_codes)}")
+        sections.append("")
+
+    if grouped_findings:
+        sections.append("Findings summary:")
+        for finding_code in sorted(grouped_findings):
+            sections.append(f"  {finding_code}: {len(grouped_findings[finding_code])}")
+        sections.append("")
+
+        sections.append("Findings detail:")
+        for finding_code in sorted(grouped_findings):
+            sections.append(
+                _render_block_group(
+                    finding_code,
+                    grouped_findings[finding_code],
+                    max_items=max_items_per_group,
+                )
+            )
+            sections.append("")
+    elif not report.allowed and finding_codes:
+        sections.append("Findings summary:")
+        sections.append("  No findings match the selected filter.")
+        sections.append("")
+        sections.append(f"Hidden findings: {len(block_findings)}")
+        sections.append("")
+
     if report.allowed:
-        # Authority summary for passed reports
         sections.append("Authority:")
         sections.append("  mode: catalog")
         sections.append(f"  state: {report.authority_state}")
         sections.append("")
 
-        # Code alignment
         sections.append("Code alignment:")
         sections.append(f"  declared blocks: {report.declared_count}")
         sections.append(f"  discovered code units: {report.discovered_count}")
@@ -167,46 +297,14 @@ def render_verify_report(
         sections.append(f"  undeclared code: {report.undeclared_count}")
         sections.append("")
 
-        # Lifecycle
         sections.append("Lifecycle:")
         sections.append(f"  invalid lifecycles: {report.invalid_lifecycle_count}")
         sections.append(f"  duplicate active purposes: {report.duplicate_active_purpose_count}")
         sections.append("")
 
-        # Execution
         sections.append("Execution:")
         sections.append("  ALLOWED")
     else:
-        filtered_findings = _filter_block_findings(block_findings, finding_codes)
-        grouped_findings = _group_block_findings(filtered_findings)
-
-        if finding_codes:
-            sections.append(f"Filter: {', '.join(finding_codes)}")
-            sections.append("")
-
-        if not grouped_findings:
-            sections.append("Findings summary:")
-            sections.append("  No findings match the selected filter.")
-            sections.append("")
-            sections.append(f"Hidden findings: {len(block_findings)}")
-            sections.append("")
-        else:
-            sections.append("Findings summary:")
-            for finding_code in sorted(grouped_findings):
-                sections.append(f"  {finding_code}: {len(grouped_findings[finding_code])}")
-            sections.append("")
-
-            sections.append("Findings detail:")
-            for finding_code in sorted(grouped_findings):
-                sections.append(
-                    _render_block_group(
-                        finding_code,
-                        grouped_findings[finding_code],
-                        max_items=max_items_per_group,
-                    )
-                )
-                sections.append("")
-
         sections.append("Execution:")
         sections.append("  BLOCKED")
 

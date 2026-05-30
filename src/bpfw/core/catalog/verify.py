@@ -17,6 +17,8 @@ from bpfw.core.catalog.models import (
     BlueprintLoadResult,
 )
 from bpfw.core.catalog.scanner import scan_python_project
+from bpfw.core.catalog.code_duplicates import CodeDuplicateAnalyzer
+from bpfw.core.catalog.code_outcomes import CodeOutcomeAnalyzer
 from bpfw.core.catalog.security import validate_no_blueprint_secrets
 from bpfw.core.catalog.validation import validate_blueprint_structure
 from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, FINDING_SEVERITY_WARNING, Finding
@@ -343,6 +345,16 @@ def run_verify(
         authority_state=load_result.state,
     )
 
+    code_duplicate_findings = CodeDuplicateAnalyzer(
+        project_root=resolved_root,
+        discovered_units=scan_result.discovered_units,
+    ).analyze()
+
+    code_outcome_findings = CodeOutcomeAnalyzer(
+        project_root=resolved_root,
+        discovered_units=scan_result.discovered_units,
+    ).analyze()
+
     # Combine all findings
     all_findings: List[Finding] = []
     all_findings.extend(load_result.findings)
@@ -351,6 +363,8 @@ def run_verify(
     all_findings.extend(validation_findings)
     all_findings.extend(security_findings)
     all_findings.extend(drift_findings)
+    all_findings.extend(code_duplicate_findings)
+    all_findings.extend(code_outcome_findings)
 
     # Count declared blocks
     if load_result.domain_document is not None:

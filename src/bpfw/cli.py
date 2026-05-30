@@ -62,7 +62,7 @@ Examples:
   bpfw status
 
 Verify filters:
-  bpfw verify [all|undeclared|missing|duplicate|secret|invalid]
+  bpfw verify [all|undeclared|missing|duplicate|clone|wrapper|effect|outcome|secret|invalid]
   bpfw verify --all
   bpfw verify --max N
 """
