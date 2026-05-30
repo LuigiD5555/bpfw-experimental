@@ -37,6 +37,13 @@ _WORD_SECRET_KEYWORDS = {
     "jwt",
 }
 
+_WORD_SECRET_PATTERN = re.compile(
+    r"\b(?:" + "|".join(re.escape(keyword) for keyword in sorted(_WORD_SECRET_KEYWORDS)) + r")\b"
+)
+_SUBSTRING_SECRET_KEYWORDS = tuple(
+    keyword for keyword in SECRET_KEYWORDS if keyword not in _WORD_SECRET_KEYWORDS
+)
+
 
 def validate_no_blueprint_secrets(blueprint_data: dict[str, Any]) -> list[Finding]:
     """Validate that blueprint data does not contain obvious secrets.
@@ -137,13 +144,9 @@ def contains_secret_keyword(value: str) -> bool:
         True when the value contains a suspicious keyword. False otherwise.
     """
 
-    for keyword in SECRET_KEYWORDS:
-        if keyword in _WORD_SECRET_KEYWORDS:
-            if re.search(rf"\b{re.escape(keyword)}\b", value):
-                return True
-        elif keyword in value:
-            return True
-    return False
+    if _WORD_SECRET_PATTERN.search(value):
+        return True
+    return any(keyword in value for keyword in _SUBSTRING_SECRET_KEYWORDS)
 
 
 def looks_like_absolute_path(value: str) -> bool:
@@ -157,10 +160,28 @@ def looks_like_absolute_path(value: str) -> bool:
     """
 
     stripped_value = value.strip()
+    if not _may_be_absolute_path(stripped_value):
+        return False
     return (
         PurePosixPath(stripped_value).is_absolute()
         or PureWindowsPath(stripped_value).is_absolute()
     )
+
+
+def _may_be_absolute_path(value: str) -> bool:
+    """Return whether a value has a prefix worth testing as an absolute path.
+
+    Args:
+        value: String value to inspect.
+
+    Returns:
+        True when the value has a POSIX or Windows absolute-path prefix.
+    """
+    if not value:
+        return False
+    if value.startswith(("/", "\\")):
+        return True
+    return len(value) >= 3 and value[1] == ":" and value[2] in {"\\", "/"}
 
 
 def is_allowed_security_policy_path(path: str) -> bool:
