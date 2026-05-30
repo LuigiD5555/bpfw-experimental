@@ -26,12 +26,17 @@ from bpfw.core.authority.patch.actions import (
 )
 from bpfw.core.authority.patch.plan import AuthorityPatchPlan, PatchOperation
 from bpfw.core.authority.patch.result import AuthorityPatchResult
-from bpfw.core.authority.patch.transaction import PatchWriteContext, TransactionBackup
+from bpfw.core.authority.patch.transaction import (
+    AuthorityShardUnitOfWork,
+    PatchWriteContext,
+    TransactionBackup,
+)
 from bpfw.core.catalog.access_control import (
     authorize_blueprint_writes_for_tool,
     authorize_temporary_blueprint_unlock_for_tool,
 )
 from bpfw.core.protection.authority import lock_authority, unlock_authority
+from bpfw.core.result import Result, ResultError, ResultStatus, ResultTraceEvent
 
 PatchProgressCallback = Callable[[int, int, str], None]
 
@@ -51,6 +56,48 @@ class AuthorityPatchEngine:
             project_root: Project root directory containing ``bpfw/``.
         """
         self.project_root = project_root
+        self._operation_handlers = self._build_operation_handler_registry()
+        self._manifest_include_handlers = self._build_manifest_include_handler_registry()
+        self._shard_unit_of_work: AuthorityShardUnitOfWork | None = None
+
+    def _build_operation_handler_registry(self) -> dict[PatchOperationKind, Callable[..., None]]:
+        """Build the operation handler registry used by the patch dispatcher.
+
+        Returns:
+            Mapping from patch operation kind to the method that applies it.
+        """
+        return {
+            PatchOperationKind.MOVE_BLOCK: self._apply_move_block,
+            PatchOperationKind.CREATE_BLOCK: self._apply_create_block,
+            PatchOperationKind.DELETE_BLOCK: self._apply_delete_block,
+            PatchOperationKind.UPDATE_BLOCK_METADATA: self._apply_update_metadata,
+            PatchOperationKind.UPDATE_BLOCK_LOCATION: self._apply_update_location,
+            PatchOperationKind.UPDATE_BLOCK_SYMBOL: self._apply_update_symbol,
+            PatchOperationKind.UPDATE_BLOCK_CODE_REFERENCE: self._apply_update_code_reference,
+            PatchOperationKind.ADD_IGNORE_RULE: self._apply_add_ignore_rule,
+            PatchOperationKind.REMOVE_IGNORE_RULE: self._apply_remove_ignore_rule,
+            PatchOperationKind.ADD_COVERED_CODE: self._apply_add_covered_code,
+            PatchOperationKind.REMOVE_COVERED_CODE: self._apply_remove_covered_code,
+            PatchOperationKind.CREATE_SHARD_FILE: self._apply_create_shard_file,
+            PatchOperationKind.DELETE_SHARD_FILE: self._apply_delete_shard_file,
+            PatchOperationKind.RENAME_SHARD_FILE: self._apply_rename_shard_file,
+            PatchOperationKind.MOVE_SHARD_FILE: self._apply_move_shard_file,
+        }
+
+    def _build_manifest_include_handler_registry(self) -> dict[PatchOperationKind, Callable[..., bool]]:
+        """Build handlers that update manifest includes by operation kind.
+
+        Returns:
+            Mapping from patch operation kind to include update function.
+        """
+        return {
+            PatchOperationKind.CREATE_SHARD_FILE: self._include_created_shard,
+            PatchOperationKind.CREATE_BLOCK: self._include_target_shard,
+            PatchOperationKind.MOVE_BLOCK: self._include_target_shard,
+            PatchOperationKind.DELETE_SHARD_FILE: self._remove_deleted_shard_include,
+            PatchOperationKind.RENAME_SHARD_FILE: self._replace_moved_shard_include,
+            PatchOperationKind.MOVE_SHARD_FILE: self._replace_moved_shard_include,
+        }
 
     def preview(self, plan: AuthorityPatchPlan) -> AuthorityPatchResult:
         """Preview affected files without writing.
@@ -112,41 +159,327 @@ class AuthorityPatchEngine:
             return result
 
         affected_files = plan.affected_files()
+        result.add_trace(
+            "patch.apply",
+            ResultStatus.INFO,
+            "Patch plan accepted for transactional apply.",
+            {"affected_files": str(len(affected_files))},
+        )
         backup = TransactionBackup(self.project_root)
-        for relative_path in affected_files:
-            backup.backup(relative_path)
+        backup_result = self._prepare_transaction_backup(affected_files, backup)
+        result.extend_trace(backup_result.trace_events)
+        if backup_result.is_error:
+            return self._fail_with_rollback(result, backup, backup_result.unwrap_error())
 
         with self._write_authorization(write_context):
-            try:
-                self._apply_sorted_operations(plan, result, progress_callback)
-            except (OSError, yaml.YAMLError, ValueError) as apply_error:
-                result.error_message = f"Apply failed: {apply_error}"
-                restored_paths = backup.rollback()
-                result.rolled_back = True
-                for restored_path in restored_paths:
-                    result.messages.append(f"Rolled back: {restored_path}")
-                return result
+            operations_result = self._apply_operations_as_result(plan, result, progress_callback)
+            result.extend_trace(operations_result.trace_events)
+            if operations_result.is_error:
+                return self._fail_with_rollback(result, backup, operations_result.unwrap_error())
 
             if result.skipped_operations:
-                result.error_message = "Apply failed: one or more operations were skipped."
-                restored_paths = backup.rollback()
-                result.rolled_back = True
-                for restored_path in restored_paths:
-                    result.messages.append(f"Rolled back: {restored_path}")
-                return result
+                skipped_error = ResultError(
+                    code="PATCH_OPERATIONS_SKIPPED",
+                    message="Apply failed: one or more operations were skipped.",
+                    source="patch.apply",
+                    details={"skipped_operations": str(len(result.skipped_operations))},
+                )
+                return self._fail_with_rollback(result, backup, skipped_error)
 
-            yaml_errors = self._validate_yaml_files(affected_files)
+            yaml_result = self._validate_yaml_files_as_result(affected_files)
+            result.extend_trace(yaml_result.trace_events)
+            if yaml_result.is_error:
+                return self._fail_with_rollback(result, backup, yaml_result.unwrap_error())
+
+            yaml_errors = yaml_result.unwrap()
             if yaml_errors:
                 result.messages.append("YAML validation warning after apply:")
                 for yaml_error in yaml_errors:
                     result.messages.append(f"  {yaml_error}")
 
             if plan.requires_manifest_update():
-                self._update_manifest_includes(plan, result)
+                manifest_result = self._update_manifest_includes_as_result(plan, result)
+                result.extend_trace(manifest_result.trace_events)
+                if manifest_result.is_error:
+                    return self._fail_with_rollback(result, backup, manifest_result.unwrap_error())
 
         backup.commit()
+        result.add_trace("patch.apply", ResultStatus.OK, "Patch transaction committed.")
         result.success = True
         return result
+
+    def _prepare_transaction_backup(
+        self,
+        affected_files: set[Path],
+        backup: TransactionBackup,
+    ) -> Result[None, ResultError]:
+        """Back up affected files and return a structured operation result.
+
+        Args:
+            affected_files: Project-relative files that may be modified.
+            backup: Transaction backup manager.
+
+        Returns:
+            Successful result when every existing file was backed up, otherwise a
+            failed result with diagnostic trace events.
+        """
+        trace_events = [
+            ResultTraceEvent(
+                source="patch.backup",
+                status=ResultStatus.INFO,
+                message="Creating transaction backups for affected files.",
+                details={"affected_files": str(len(affected_files))},
+            )
+        ]
+        try:
+            for relative_path in affected_files:
+                backup.backup(relative_path)
+        except OSError as error:
+            trace_events.append(
+                ResultTraceEvent(
+                    source="patch.backup",
+                    status=ResultStatus.BLOCK,
+                    message="Transaction backup failed.",
+                    details={"error_type": type(error).__name__, "error": str(error)},
+                )
+            )
+            return Result.fail(
+                ResultError(
+                    code="PATCH_BACKUP_FAILED",
+                    message=f"Backup failed: {error}",
+                    source="patch.backup",
+                    details={"error_type": type(error).__name__},
+                ),
+                trace_events,
+            )
+
+        trace_events.append(
+            ResultTraceEvent(
+                source="patch.backup",
+                status=ResultStatus.OK,
+                message="Transaction backups completed.",
+            )
+        )
+        return Result.ok(None, trace_events)
+
+    def _apply_operations_as_result(
+        self,
+        plan: AuthorityPatchPlan,
+        result: AuthorityPatchResult,
+        progress_callback: PatchProgressCallback | None = None,
+    ) -> Result[None, ResultError]:
+        """Apply patch operations and convert recoverable failures to Result.
+
+        Args:
+            plan: Mechanical patch plan to apply.
+            result: Patch result object that records applied operations.
+            progress_callback: Optional callback notified after operation progress.
+
+        Returns:
+            Successful result when operations complete, otherwise a failed result.
+        """
+        trace_events = [
+            ResultTraceEvent(
+                source="patch.operations",
+                status=ResultStatus.INFO,
+                message="Applying sorted patch operations.",
+                details={"operation_count": str(len(plan.operations))},
+            )
+        ]
+        previous_unit_of_work = self._shard_unit_of_work
+        unit_of_work = AuthorityShardUnitOfWork(self.project_root)
+        self._shard_unit_of_work = unit_of_work
+        try:
+            self._apply_sorted_operations(plan, result, progress_callback)
+            written_shards = unit_of_work.commit()
+        except (OSError, yaml.YAMLError, ValueError) as error:
+            trace_events.append(
+                ResultTraceEvent(
+                    source="patch.operations",
+                    status=ResultStatus.BLOCK,
+                    message="Patch operation failed before transaction commit.",
+                    details={"error_type": type(error).__name__, "error": str(error)},
+                )
+            )
+            return Result.fail(
+                ResultError(
+                    code="PATCH_OPERATION_FAILED",
+                    message=f"Apply failed: {error}",
+                    source="patch.operations",
+                    details={"error_type": type(error).__name__},
+                ),
+                trace_events,
+            )
+        finally:
+            self._shard_unit_of_work = previous_unit_of_work
+
+        trace_events.append(
+            ResultTraceEvent(
+                source="patch.operations",
+                status=ResultStatus.OK,
+                message="Patch operations completed and changed shards were committed.",
+                details={"written_shards": str(len(written_shards))},
+            )
+        )
+        return Result.ok(None, trace_events)
+
+    def _fail_with_rollback(
+        self,
+        result: AuthorityPatchResult,
+        backup: TransactionBackup,
+        error: ResultError,
+    ) -> AuthorityPatchResult:
+        """Record a failed patch result and roll back affected files.
+
+        Args:
+            result: Patch result to update.
+            backup: Transaction backup manager.
+            error: Structured recoverable failure.
+
+        Returns:
+            Failed patch result with rollback messages and trace events.
+        """
+        result.error_message = error.message
+        result.add_trace(
+            error.source,
+            ResultStatus.BLOCK,
+            error.message,
+            error.details,
+        )
+        try:
+            restored_paths = backup.rollback()
+        except OSError as rollback_error:
+            result.rolled_back = True
+            result.messages.append(f"Rollback failed: {rollback_error}")
+            result.add_trace(
+                "patch.rollback",
+                ResultStatus.CRITICAL,
+                "Rollback failed after patch error.",
+                {"error_type": type(rollback_error).__name__, "error": str(rollback_error)},
+            )
+            return result
+
+        result.rolled_back = True
+        for restored_path in restored_paths:
+            result.messages.append(f"Rolled back: {restored_path}")
+        result.add_trace(
+            "patch.rollback",
+            ResultStatus.OK,
+            "Rollback completed after patch error.",
+            {"restored_paths": str(len(restored_paths))},
+        )
+        return result
+
+    def _validate_yaml_files_as_result(self, paths: set[Path]) -> Result[list[str], ResultError]:
+        """Validate written YAML files and return a structured result.
+
+        Args:
+            paths: Project-relative paths to validate.
+
+        Returns:
+            Successful result containing YAML warnings, or a failed result when a
+            validation file cannot be read.
+        """
+        trace_events = [
+            ResultTraceEvent(
+                source="patch.yaml_validation",
+                status=ResultStatus.INFO,
+                message="Validating written YAML files.",
+                details={"candidate_files": str(len(paths))},
+            )
+        ]
+        errors: list[str] = []
+        for relative_path in paths:
+            if relative_path.suffix not in {".yaml", ".yml"}:
+                continue
+            absolute_path = self.project_root / relative_path
+            if not absolute_path.exists():
+                continue
+            try:
+                yaml.safe_load(absolute_path.read_text(encoding="utf-8"))
+            except yaml.YAMLError as yaml_error:
+                errors.append(f"Invalid YAML in {relative_path}: {yaml_error}")
+            except OSError as error:
+                trace_events.append(
+                    ResultTraceEvent(
+                        source="patch.yaml_validation",
+                        status=ResultStatus.BLOCK,
+                        message="YAML validation could not read a written file.",
+                        details={"path": str(relative_path), "error": str(error)},
+                    )
+                )
+                return Result.fail(
+                    ResultError(
+                        code="PATCH_YAML_VALIDATION_READ_FAILED",
+                        message=f"YAML validation failed while reading {relative_path}: {error}",
+                        source="patch.yaml_validation",
+                        details={"path": str(relative_path), "error_type": type(error).__name__},
+                    ),
+                    trace_events,
+                )
+
+        trace_events.append(
+            ResultTraceEvent(
+                source="patch.yaml_validation",
+                status=ResultStatus.OK if not errors else ResultStatus.WARNING,
+                message="YAML validation completed.",
+                details={"warnings": str(len(errors))},
+            )
+        )
+        return Result.ok(errors, trace_events)
+
+    def _update_manifest_includes_as_result(
+        self,
+        plan: AuthorityPatchPlan,
+        result: AuthorityPatchResult,
+    ) -> Result[None, ResultError]:
+        """Update manifest includes and return a structured result.
+
+        Args:
+            plan: Applied patch plan.
+            result: Patch result object that records modified files.
+
+        Returns:
+            Successful result when manifest update completes, otherwise a failed
+            result with diagnostics.
+        """
+        trace_events = [
+            ResultTraceEvent(
+                source="patch.manifest",
+                status=ResultStatus.INFO,
+                message="Updating manifest includes after shard lifecycle changes.",
+            )
+        ]
+        try:
+            self._update_manifest_includes(plan, result)
+        except (OSError, yaml.YAMLError, ValueError) as error:
+            trace_events.append(
+                ResultTraceEvent(
+                    source="patch.manifest",
+                    status=ResultStatus.BLOCK,
+                    message="Manifest include update failed.",
+                    details={"error_type": type(error).__name__, "error": str(error)},
+                )
+            )
+            return Result.fail(
+                ResultError(
+                    code="PATCH_MANIFEST_UPDATE_FAILED",
+                    message=f"Manifest update failed: {error}",
+                    source="patch.manifest",
+                    details={"error_type": type(error).__name__},
+                ),
+                trace_events,
+            )
+
+        trace_events.append(
+            ResultTraceEvent(
+                source="patch.manifest",
+                status=ResultStatus.OK,
+                message="Manifest include update completed.",
+                details={"manifest_updated": str(result.manifest_updated)},
+            )
+        )
+        return Result.ok(None, trace_events)
 
     def validate_plan(self, plan: AuthorityPatchPlan) -> list[str]:
         """Validate a plan without applying it.
@@ -238,15 +571,13 @@ class AuthorityPatchEngine:
         """
         from collections import defaultdict
 
-        from bpfw.core.authority.shard import AuthorityShard
-
         operations_by_shard: dict[Path, list[UpdateBlockCodeReferenceOperation]] = defaultdict(list)
         for operation in operations:
             operations_by_shard[operation.source_shard_path].append(operation)
 
         label = PatchOperationKind.UPDATE_BLOCK_CODE_REFERENCE.value
         for shard_path, shard_operations in operations_by_shard.items():
-            shard = AuthorityShard.load(self.project_root, shard_path)
+            shard = self._load_shard_for_patch(shard_path)
             blocks = shard.get_blocks()
             block_by_id = {
                 block.get("id"): block
@@ -282,8 +613,7 @@ class AuthorityPatchEngine:
 
             if shard_changed:
                 shard.set_blocks(blocks)
-                shard.sort_blocks()
-                shard.save(self.project_root)
+                self._mark_shard_changed(shard_path, shard)
                 result.add_modified(shard_path)
 
         return completed_operations
@@ -293,45 +623,54 @@ class AuthorityPatchEngine:
         operation: PatchOperation,
         result: AuthorityPatchResult,
     ) -> None:
-        """Dispatch one operation to its handler.
+        """Dispatch one operation through the operation handler registry.
 
         Args:
             operation: Operation to apply.
             result: Result object to record outcomes.
         """
-        kind = operation.kind
-        label = kind.value
+        label = operation.kind.value
+        handler = self._operation_handlers.get(operation.kind)
+        if handler is None:
+            result.add_skipped(label, f"unsupported operation kind: {operation.kind}")
+            return
+        handler(operation, result, label)
 
-        if kind == PatchOperationKind.MOVE_BLOCK:
-            self._apply_move_block(operation, result, label)  # type: ignore[arg-type]
-        elif kind == PatchOperationKind.CREATE_BLOCK:
-            self._apply_create_block(operation, result, label)  # type: ignore[arg-type]
-        elif kind == PatchOperationKind.DELETE_BLOCK:
-            self._apply_delete_block(operation, result, label)  # type: ignore[arg-type]
-        elif kind == PatchOperationKind.UPDATE_BLOCK_METADATA:
-            self._apply_update_metadata(operation, result, label)  # type: ignore[arg-type]
-        elif kind == PatchOperationKind.UPDATE_BLOCK_LOCATION:
-            self._apply_update_location(operation, result, label)  # type: ignore[arg-type]
-        elif kind == PatchOperationKind.UPDATE_BLOCK_SYMBOL:
-            self._apply_update_symbol(operation, result, label)  # type: ignore[arg-type]
-        elif kind == PatchOperationKind.UPDATE_BLOCK_CODE_REFERENCE:
-            self._apply_update_code_reference(operation, result, label)  # type: ignore[arg-type]
-        elif kind == PatchOperationKind.ADD_IGNORE_RULE:
-            self._apply_add_ignore_rule(operation, result, label)  # type: ignore[arg-type]
-        elif kind == PatchOperationKind.REMOVE_IGNORE_RULE:
-            self._apply_remove_ignore_rule(operation, result, label)  # type: ignore[arg-type]
-        elif kind == PatchOperationKind.ADD_COVERED_CODE:
-            self._apply_add_covered_code(operation, result, label)  # type: ignore[arg-type]
-        elif kind == PatchOperationKind.REMOVE_COVERED_CODE:
-            self._apply_remove_covered_code(operation, result, label)  # type: ignore[arg-type]
-        elif kind == PatchOperationKind.CREATE_SHARD_FILE:
-            self._apply_create_shard_file(operation, result, label)  # type: ignore[arg-type]
-        elif kind == PatchOperationKind.DELETE_SHARD_FILE:
-            self._apply_delete_shard_file(operation, result, label)  # type: ignore[arg-type]
-        elif kind == PatchOperationKind.RENAME_SHARD_FILE:
-            self._apply_rename_shard_file(operation, result, label)  # type: ignore[arg-type]
-        elif kind == PatchOperationKind.MOVE_SHARD_FILE:
-            self._apply_move_shard_file(operation, result, label)  # type: ignore[arg-type]
+    def _load_shard_for_patch(self, shard_path: Path, create_if_missing: bool = False):  # noqa: ANN201
+        """Load a shard through the active unit of work when available.
+
+        Args:
+            shard_path: Project-relative shard path.
+            create_if_missing: Whether to create an empty in-memory shard when missing.
+
+        Returns:
+            Authority shard instance.
+        """
+        if self._shard_unit_of_work is not None:
+            return self._shard_unit_of_work.load_shard(
+                shard_path=shard_path,
+                create_if_missing=create_if_missing,
+            )
+
+        from bpfw.core.authority.shard import AuthorityShard
+
+        absolute_path = self.project_root / shard_path
+        if create_if_missing and not absolute_path.exists():
+            return AuthorityShard(path=shard_path, blocks=[])
+        return AuthorityShard.load(self.project_root, shard_path)
+
+    def _mark_shard_changed(self, shard_path: Path, shard) -> None:  # noqa: ANN001
+        """Mark or immediately persist a changed shard.
+
+        Args:
+            shard_path: Project-relative shard path.
+            shard: Authority shard instance that has changed.
+        """
+        if self._shard_unit_of_work is not None:
+            self._shard_unit_of_work.mark_changed(shard_path)
+            return
+        shard.sort_blocks()
+        shard.save(self.project_root)
 
     def _apply_move_block(
         self,
@@ -346,26 +685,21 @@ class AuthorityPatchEngine:
             result: Result object to record outcomes.
             label: Operation label.
         """
-        from bpfw.core.authority.shard import AuthorityShard
-
-        source_shard = AuthorityShard.load(self.project_root, operation.source_shard_path)
+        source_shard = self._load_shard_for_patch(operation.source_shard_path)
         block_data = source_shard.remove_block(operation.block_id)
         if block_data is None:
             result.add_skipped(label, f"block '{operation.block_id}' not found in source")
             return
 
-        source_shard.save(self.project_root)
+        self._mark_shard_changed(operation.source_shard_path, source_shard)
         result.add_modified(operation.source_shard_path)
 
-        target_absolute = self.project_root / operation.target_shard_path
-        if not target_absolute.exists() and operation.create_target_if_missing:
-            target_absolute.parent.mkdir(parents=True, exist_ok=True)
-            target_absolute.write_text(yaml.safe_dump({"blocks": []}, sort_keys=False), encoding="utf-8")
-
-        target_shard = AuthorityShard.load(self.project_root, operation.target_shard_path)
+        target_shard = self._load_shard_for_patch(
+            operation.target_shard_path,
+            create_if_missing=operation.create_target_if_missing,
+        )
         target_shard.add_block(block_data)
-        target_shard.sort_blocks()
-        target_shard.save(self.project_root)
+        self._mark_shard_changed(operation.target_shard_path, target_shard)
         result.add_modified(operation.target_shard_path)
         result.add_applied(label)
 
@@ -382,17 +716,12 @@ class AuthorityPatchEngine:
             result: Result object to record outcomes.
             label: Operation label.
         """
-        from bpfw.core.authority.shard import AuthorityShard
-
-        target_absolute = self.project_root / operation.target_shard_path
-        if not target_absolute.exists() and operation.create_target_if_missing:
-            target_absolute.parent.mkdir(parents=True, exist_ok=True)
-            target_absolute.write_text(yaml.safe_dump({"blocks": []}, sort_keys=False), encoding="utf-8")
-
-        target_shard = AuthorityShard.load(self.project_root, operation.target_shard_path)
+        target_shard = self._load_shard_for_patch(
+            operation.target_shard_path,
+            create_if_missing=operation.create_target_if_missing,
+        )
         target_shard.add_block(operation.block_data)
-        target_shard.sort_blocks()
-        target_shard.save(self.project_root)
+        self._mark_shard_changed(operation.target_shard_path, target_shard)
         result.add_modified(operation.target_shard_path)
         result.add_applied(label)
 
@@ -409,11 +738,9 @@ class AuthorityPatchEngine:
             result: Result object to record outcomes.
             label: Operation label.
         """
-        from bpfw.core.authority.shard import AuthorityShard
-
-        source_shard = AuthorityShard.load(self.project_root, operation.source_shard_path)
+        source_shard = self._load_shard_for_patch(operation.source_shard_path)
         source_shard.remove_block(operation.block_id)
-        source_shard.save(self.project_root)
+        self._mark_shard_changed(operation.source_shard_path, source_shard)
         result.add_modified(operation.source_shard_path)
         result.add_applied(label)
 
@@ -724,9 +1051,7 @@ class AuthorityPatchEngine:
         Returns:
             Block dictionary copy, or None when not found.
         """
-        from bpfw.core.authority.shard import AuthorityShard
-
-        shard = AuthorityShard.load(self.project_root, shard_path)
+        shard = self._load_shard_for_patch(shard_path)
         for block in shard.get_blocks():
             if isinstance(block, dict) and block.get("id") == block_id:
                 return dict(block)
@@ -740,17 +1065,14 @@ class AuthorityPatchEngine:
             block_id: Block identifier to replace.
             block_data: New block data.
         """
-        from bpfw.core.authority.shard import AuthorityShard
-
-        shard = AuthorityShard.load(self.project_root, shard_path)
+        shard = self._load_shard_for_patch(shard_path)
         blocks = shard.get_blocks()
         for index, block in enumerate(blocks):
             if isinstance(block, dict) and block.get("id") == block_id:
                 blocks[index] = block_data
                 break
         shard.set_blocks(blocks)
-        shard.sort_blocks()
-        shard.save(self.project_root)
+        self._mark_shard_changed(shard_path, shard)
 
     def _load_blueprint_index(self, blueprint_path: Path) -> dict:
         """Load the root blueprint YAML as a dictionary.
@@ -804,6 +1126,72 @@ class AuthorityPatchEngine:
                 errors.append(f"Invalid YAML in {relative_path}: {yaml_error}")
         return errors
 
+    def _include_created_shard(self, operation: PatchOperation, include_set: set[str]) -> bool:
+        """Add a newly created shard file to the manifest include set.
+
+        Args:
+            operation: Patch operation that created a shard file.
+            include_set: Current manifest include set.
+
+        Returns:
+            True when the include set changed.
+        """
+        include_path = str(operation.shard_path)
+        if include_path in include_set:
+            return False
+        include_set.add(include_path)
+        return True
+
+    def _include_target_shard(self, operation: PatchOperation, include_set: set[str]) -> bool:
+        """Add an operation target shard to the manifest include set.
+
+        Args:
+            operation: Patch operation with a target shard path.
+            include_set: Current manifest include set.
+
+        Returns:
+            True when the include set changed.
+        """
+        include_path = str(operation.target_shard_path)
+        if include_path in include_set:
+            return False
+        include_set.add(include_path)
+        return True
+
+    def _remove_deleted_shard_include(self, operation: PatchOperation, include_set: set[str]) -> bool:
+        """Remove a deleted shard file from the manifest include set.
+
+        Args:
+            operation: Patch operation that deleted a shard file.
+            include_set: Current manifest include set.
+
+        Returns:
+            True when the include set changed.
+        """
+        include_path = str(operation.shard_path)
+        if include_path not in include_set:
+            return False
+        include_set.discard(include_path)
+        return True
+
+    def _replace_moved_shard_include(self, operation: PatchOperation, include_set: set[str]) -> bool:
+        """Replace an old shard include with its new location.
+
+        Args:
+            operation: Patch operation that moved or renamed a shard file.
+            include_set: Current manifest include set.
+
+        Returns:
+            True when the include set changed.
+        """
+        old_include = str(operation.source_shard_path)
+        new_include = str(operation.target_shard_path)
+        if old_include not in include_set:
+            return False
+        include_set.discard(old_include)
+        include_set.add(new_include)
+        return True
+
     def _update_manifest_includes(
         self,
         plan: AuthorityPatchPlan,
@@ -831,32 +1219,13 @@ class AuthorityPatchEngine:
 
         changed = False
         for operation in plan.sorted_operations():
-            kind = operation.kind
-            if kind == PatchOperationKind.CREATE_SHARD_FILE:
-                include_path = str(operation.shard_path)  # type: ignore[union-attr]
-                if include_path not in include_set:
-                    include_set.add(include_path)
-                    changed = True
-            elif kind in {PatchOperationKind.CREATE_BLOCK, PatchOperationKind.MOVE_BLOCK}:
-                include_path = str(operation.target_shard_path)  # type: ignore[union-attr]
-                if include_path not in include_set:
-                    include_set.add(include_path)
-                    changed = True
-            elif kind == PatchOperationKind.DELETE_SHARD_FILE:
-                include_path = str(operation.shard_path)  # type: ignore[union-attr]
-                if include_path in include_set:
-                    include_set.discard(include_path)
-                    changed = True
-            elif kind in {PatchOperationKind.RENAME_SHARD_FILE, PatchOperationKind.MOVE_SHARD_FILE}:
-                old_include = str(operation.source_shard_path)  # type: ignore[union-attr]
-                new_include = str(operation.target_shard_path)  # type: ignore[union-attr]
-                if old_include in include_set:
-                    include_set.discard(old_include)
-                    include_set.add(new_include)
-                    changed = True
+            handler = self._manifest_include_handlers.get(operation.kind)
+            if handler is not None and handler(operation, include_set):
+                changed = True
 
         if changed:
             data["includes"] = sorted(include_set)
             absolute_path.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
             result.manifest_updated = True
             result.add_modified(manifest_path)
+

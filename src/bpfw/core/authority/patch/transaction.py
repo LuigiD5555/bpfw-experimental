@@ -83,3 +83,85 @@ class TransactionBackup:
         if self._backup_dir.exists():
             shutil.rmtree(self._backup_dir, ignore_errors=True)
         self._backed_up.clear()
+
+class AuthorityShardUnitOfWork:
+    """Track shard mutations and save each changed shard once at commit time.
+
+    This unit of work is intentionally scoped to one patch application. It keeps
+    loaded shards in an identity map, lets operations mutate them in memory, and
+    writes only the shards that actually changed after all operations succeed.
+    """
+
+    def __init__(self, project_root: Path) -> None:
+        """Initialize the shard unit of work.
+
+        Args:
+            project_root: Project root directory containing authority shard files.
+        """
+        self._project_root = project_root
+        self._shards_by_path: dict[Path, object] = {}
+        self._changed_paths: set[Path] = set()
+
+    def load_shard(self, shard_path: Path, create_if_missing: bool = False):  # noqa: ANN201
+        """Return one shard from the identity map, loading it when needed.
+
+        Args:
+            shard_path: Project-relative shard path.
+            create_if_missing: Whether to create an in-memory empty shard if the
+                file does not exist yet.
+
+        Returns:
+            Loaded authority shard.
+        """
+        normalized_path = Path(shard_path)
+        cached_shard = self._shards_by_path.get(normalized_path)
+        if cached_shard is not None:
+            return cached_shard
+
+        from bpfw.core.authority.shard import AuthorityShard
+
+        absolute_path = self._project_root / normalized_path
+        if absolute_path.exists():
+            shard = AuthorityShard.load(self._project_root, normalized_path)
+        elif create_if_missing:
+            shard = AuthorityShard(path=normalized_path, blocks=[])
+            self.mark_changed(normalized_path)
+        else:
+            shard = AuthorityShard.load(self._project_root, normalized_path)
+
+        self._shards_by_path[normalized_path] = shard
+        return shard
+
+    def mark_changed(self, shard_path: Path) -> None:
+        """Mark a shard as changed for the next commit.
+
+        Args:
+            shard_path: Project-relative shard path that should be saved.
+        """
+        self._changed_paths.add(Path(shard_path))
+
+    def commit(self) -> list[Path]:
+        """Persist all changed shards once.
+
+        Returns:
+            Changed project-relative shard paths that were written.
+        """
+        written_paths: list[Path] = []
+        for shard_path in sorted(self._changed_paths):
+            shard = self._shards_by_path.get(shard_path)
+            if shard is None:
+                continue
+            shard.sort_blocks()
+            shard.save(self._project_root)
+            written_paths.append(shard_path)
+        self._changed_paths.clear()
+        return written_paths
+
+    def has_changes(self) -> bool:
+        """Return whether this unit of work has pending shard writes.
+
+        Returns:
+            True when at least one shard is marked as changed.
+        """
+        return bool(self._changed_paths)
+

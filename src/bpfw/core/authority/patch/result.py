@@ -3,6 +3,8 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from bpfw.core.result import ResultStatus, ResultTraceEvent
+
 
 @dataclass
 class AuthorityPatchResult:
@@ -18,6 +20,7 @@ class AuthorityPatchResult:
         rolled_back: Whether a rollback was attempted after a failure.
         messages: Human-readable informational messages.
         error_message: Optional error description when success is False.
+        trace_events: Ordered internal process events for debugging and audit.
     """
 
     success: bool = False
@@ -28,6 +31,7 @@ class AuthorityPatchResult:
     rolled_back: bool = False
     messages: list[str] = field(default_factory=list)
     error_message: str | None = None
+    trace_events: list[ResultTraceEvent] = field(default_factory=list)
 
     def add_applied(self, kind_label: str) -> None:
         """Record a successfully applied operation.
@@ -54,3 +58,35 @@ class AuthorityPatchResult:
             path: Project-relative path of the modified file.
         """
         self.modified_files.append(path)
+
+    def add_trace(
+        self,
+        source: str,
+        status: ResultStatus,
+        message: str,
+        details: dict[str, str] | None = None,
+    ) -> None:
+        """Record one internal process trace event.
+
+        Args:
+            source: Internal component or step that produced the trace event.
+            status: Normalized result status for the event.
+            message: Human-readable event summary.
+            details: Optional structured details for diagnostics.
+        """
+        self.trace_events.append(
+            ResultTraceEvent(
+                source=source,
+                status=status,
+                message=message,
+                details=details if details is not None else {},
+            )
+        )
+
+    def extend_trace(self, trace_events: list[ResultTraceEvent]) -> None:
+        """Append trace events produced by a nested result.
+
+        Args:
+            trace_events: Ordered trace events to append.
+        """
+        self.trace_events.extend(trace_events)
