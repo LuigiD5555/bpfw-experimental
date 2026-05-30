@@ -2,7 +2,7 @@
 
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from bpfw.core.authority.document import AuthorityDocument
 from bpfw.core.authority.errors import InvalidShardPathError
@@ -34,6 +34,71 @@ class ShardDecisionEngine:
         self.shard_strategy = self.authority_config.get("shard_strategy", "domain")
         self.default_shard = self.authority_config.get("default_shard", "bpfw/blocks/core.yaml")
         self.auto_create_shards = self.authority_config.get("auto_create_shards", True)
+        self._strategy_handlers = self._build_strategy_handler_registry()
+
+    def _build_strategy_handler_registry(
+        self,
+    ) -> dict[str, Callable[[dict[str, Any], AuthorityDocument | None], Path]]:
+        """Build the shard strategy registry.
+
+        Returns:
+            Mapping from configured strategy name to the strategy handler.
+        """
+        return {
+            "domain": self._decide_domain_strategy,
+            "path": self._decide_path_strategy,
+            "architecture_layer": self._decide_architecture_layer_strategy,
+        }
+
+    def _decide_domain_strategy(
+        self,
+        block: dict[str, Any],
+        document: AuthorityDocument | None,
+    ) -> Path:
+        """Apply the domain shard strategy.
+
+        Args:
+            block: The block dictionary.
+            document: Optional authority document, unused by this strategy.
+
+        Returns:
+            Project-relative path to the shard file.
+        """
+        return self._decide_by_domain(block)
+
+    def _decide_path_strategy(
+        self,
+        block: dict[str, Any],
+        document: AuthorityDocument | None,
+    ) -> Path:
+        """Apply the code path shard strategy.
+
+        Args:
+            block: The block dictionary.
+            document: Optional authority document, unused by this strategy.
+
+        Returns:
+            Project-relative path to the shard file.
+        """
+        return self._decide_by_path(block)
+
+    def _decide_architecture_layer_strategy(
+        self,
+        block: dict[str, Any],
+        document: AuthorityDocument | None,
+    ) -> Path:
+        """Apply the architecture layer shard strategy with a domain fallback.
+
+        Args:
+            block: The block dictionary.
+            document: Optional authority document used to locate architecture data.
+
+        Returns:
+            Project-relative path to the shard file.
+        """
+        if document is None:
+            return self._decide_by_domain(block)
+        return self._decide_by_architecture_layer(block, document)
 
     def decide_shard_for_block(
         self,
@@ -52,20 +117,10 @@ class ShardDecisionEngine:
         Raises:
             InvalidShardPathError: If the generated shard path is invalid.
         """
-        strategy = self.shard_strategy
-
-        if strategy == "domain":
-            return self._decide_by_domain(block)
-        elif strategy == "path":
-            return self._decide_by_path(block)
-        elif strategy == "architecture_layer":
-            if document is None:
-                # Fall back to domain if no document provided
-                return self._decide_by_domain(block)
-            return self._decide_by_architecture_layer(block, document)
-        else:
-            # Unknown strategy, use default
+        handler = self._strategy_handlers.get(self.shard_strategy)
+        if handler is None:
             return Path(self.default_shard)
+        return handler(block, document)
 
     def _decide_by_domain(self, block: dict[str, Any]) -> Path:
         """Decide shard based on block domain.
