@@ -25,6 +25,63 @@ from bpfw.integrations.shared.cli_runtime import is_back_command, is_quit_comman
 from bpfw.core.errors import BlueprintLockedError
 
 
+WORKSPACE_SCREEN_COMMANDS: dict[str, str] = {
+    "a": "add_block",
+    "add": "add_block",
+    "s": "review",
+    "save": "review",
+    "r": "review",
+    "review": "review",
+    "p": "project_settings",
+    "project": "project_settings",
+    "v": "graph_overview",
+    "g": "graph_overview",
+    "view": "graph_overview",
+}
+
+WORKSPACE_BOX_REQUIRED_SCREEN_COMMANDS: dict[str, str] = {
+    "e": "edit_block",
+    "edit": "edit_block",
+    "i": "edit_inputs",
+    "interface": "edit_inputs",
+    "d": "delete_block",
+    "delete": "delete_block",
+}
+
+EDIT_BLOCK_TEXT_FIELDS: dict[int, str] = {
+    1: "purpose",
+    2: "domain",
+    3: "lifecycle",
+    4: "path",
+    5: "symbol",
+    6: "symbol_type",
+}
+
+EDIT_BLOCK_MODAL_SCREENS: dict[int, str] = {
+    7: "edit_inputs",
+    8: "edit_output",
+}
+
+PROJECT_SCALAR_SETTINGS: dict[str, tuple[str, str]] = {
+    "1": ("project_id", "Project id"),
+    "2": ("project_name", "Project name"),
+    "3": ("language", "Language"),
+    "6": ("policy_mode", "Policy mode"),
+}
+
+PROJECT_LIST_SETTINGS: dict[str, tuple[str, str]] = {
+    "4": ("source_roots", "Source roots (comma separated)"),
+    "5": ("ignored_paths", "Ignored paths (comma separated)"),
+}
+
+PROJECT_BOOLEAN_SETTINGS: dict[str, str] = {
+    "7": "defined_blueprint_blocks_on_drift",
+    "8": "single_active_per_purpose",
+    "9": "undeclared_code_blocks",
+    "10": "missing_declared_code_blocks",
+}
+
+
 class PlannerController:
     """Orchestrate complete planner session using state machine pattern."""
 
@@ -157,56 +214,48 @@ class PlannerController:
             key: Key pressed by user.
         """
         command = key.lower()
-        # Actions (command-driven)
-        if command == 'a' or command == "add":
-            # Add block
-            self.state.screen = "add_block"
-        elif command == 'c' or command == "connect":
-            # Connect blocks
+        screen = WORKSPACE_SCREEN_COMMANDS.get(command)
+        if screen is not None:
+            self.state.screen = screen
+            if screen == "project_settings":
+                self.modal_data = {}
+                self.modal_cursor = 0
+            return
+
+        box_required_screen = WORKSPACE_BOX_REQUIRED_SCREEN_COMMANDS.get(command)
+        if box_required_screen is not None:
+            if not self.state.boxes:
+                return
+            self.state.screen = box_required_screen
+            if box_required_screen == "edit_block":
+                self.modal_cursor = 0
+            if box_required_screen == "edit_inputs":
+                self.state.selected_box_id = None
+                self.modal_data = {"selecting_interface_block": True}
+            else:
+                self.modal_data = {}
+            return
+
+        if command in {"c", "connect"}:
             if len(self.state.boxes) < 2:
                 self.state.screen = "no_blocks_to_connect"
             else:
                 self.state.screen = "connect_target"
-        elif command == 'e' or command == "edit":
-            # Edit block
-            if self.state.boxes:
-                self.state.screen = "edit_block"
-                self.modal_data = {}
-                self.modal_cursor = 0
-        elif command == 'i' or command == "interface":
-            if self.state.boxes:
-                self.state.selected_box_id = None
-                self.state.screen = "edit_inputs"
-                self.modal_data = {"selecting_interface_block": True}
-        elif command == 's' or command == "save":
-            # Save
-            self.state.screen = "review"
-        elif command == 'r' or command == "review":
-            self.state.screen = "review"
-        elif command == 'p' or command == "project":
-            # Project settings
-            self.state.screen = "project_settings"
-            self.modal_data = {}
-            self.modal_cursor = 0
-        elif command == 'x' or command == "disconnect":
-            # Disconnect
+            return
+
+        if command in {"x", "disconnect"}:
             if self.state.boxes:
                 self._check_disconnect_available()
-        elif command == 'd' or command == "delete":
-            # Delete block
-            if self.state.boxes:
-                self.state.screen = "delete_block"
-                self.modal_data = {}
-        elif command == 'v' or command == 'g' or command == "view":
-            # Graph overview
-            self.state.screen = "graph_overview"
-        elif is_quit_command(command):
-            # Quit with unsaved check
+            return
+
+        if is_quit_command(command):
             if self.state.dirty:
                 self.state.screen = "unsaved_changes"
             else:
                 self.should_exit = True
-        elif command.isdigit() and self.state.boxes:
+            return
+
+        if command.isdigit() and self.state.boxes:
             index = int(command) - 1
             ordered_boxes = sorted(self.state.boxes, key=lambda box: (box.domain, box.name))
             if 0 <= index < len(ordered_boxes):
@@ -484,39 +533,28 @@ class PlannerController:
         if index < 0 or index >= len(ordered_boxes):
             self.state.screen = "workspace"
             return
+
         selected_box = ordered_boxes[index]
         self.state.selected_box_id = selected_box.id
         field_choice = read_line("Field [1 purpose,2 domain,3 lifecycle,4 path,5 symbol,6 kind,7 inputs,8 output]: ").strip()
         if not field_choice.isdigit():
             self.state.screen = "workspace"
             return
+
         field_num = int(field_choice)
-        if field_num == 1:
-            self.modal_data = {'field': 'purpose', 'value': selected_box.purpose or ''}
+        text_field = EDIT_BLOCK_TEXT_FIELDS.get(field_num)
+        if text_field is not None:
+            self.modal_data = {"field": text_field, "value": getattr(selected_box, text_field) or ""}
             self._handle_edit_field_key("")
-        elif field_num == 2:
-            self.modal_data = {'field': 'domain', 'value': selected_box.domain}
-            self._handle_edit_field_key("")
-        elif field_num == 3:
-            self.modal_data = {'field': 'lifecycle', 'value': selected_box.lifecycle}
-            self._handle_edit_field_key("")
-        elif field_num == 4:
-            self.modal_data = {'field': 'path', 'value': selected_box.path or ''}
-            self._handle_edit_field_key("")
-        elif field_num == 5:
-            self.modal_data = {'field': 'symbol', 'value': selected_box.symbol or ''}
-            self._handle_edit_field_key("")
-        elif field_num == 6:
-            self.modal_data = {'field': 'symbol_type', 'value': selected_box.symbol_type}
-            self._handle_edit_field_key("")
-        elif field_num == 7:
-            self.state.screen = "edit_inputs"
+            return
+
+        modal_screen = EDIT_BLOCK_MODAL_SCREENS.get(field_num)
+        if modal_screen is not None:
+            self.state.screen = modal_screen
             self.modal_data = {}
-        elif field_num == 8:
-            self.state.screen = "edit_output"
-            self.modal_data = {}
-        else:
-            self.state.screen = "workspace"
+            return
+
+        self.state.screen = "workspace"
 
     # ---------------------------------------------------------------------------
     # Edit Field Handler (for text fields)
@@ -744,48 +782,33 @@ class PlannerController:
             self.state.screen = "workspace"
             self.modal_data = {}
             return
+
         config = self.state.project_config
-        if selection == "1":
-            value = read_line(f"Project id [{config.project_id}]: ").strip()
+        scalar_setting = PROJECT_SCALAR_SETTINGS.get(selection)
+        if scalar_setting is not None:
+            field_name, label = scalar_setting
+            current_value = getattr(config, field_name)
+            value = read_line(f"{label} [{current_value}]: ").strip()
             if value:
-                config.project_id = value
+                setattr(config, field_name, value)
                 self.state.dirty = True
-        elif selection == "2":
-            value = read_line(f"Project name [{config.project_name}]: ").strip()
+
+        list_setting = PROJECT_LIST_SETTINGS.get(selection)
+        if list_setting is not None:
+            field_name, label = list_setting
+            current_values = getattr(config, field_name)
+            current_text = ",".join(current_values) if isinstance(current_values, list) else ""
+            value = read_line(f"{label} [{current_text}]: ").strip()
             if value:
-                config.project_name = value
+                setattr(config, field_name, [segment.strip() for segment in value.split(",") if segment.strip()])
                 self.state.dirty = True
-        elif selection == "3":
-            value = read_line(f"Language [{config.language}]: ").strip()
-            if value:
-                config.language = value
-                self.state.dirty = True
-        elif selection == "4":
-            value = read_line(f"Source roots (comma separated) [{','.join(config.source_roots)}]: ").strip()
-            if value:
-                config.source_roots = [segment.strip() for segment in value.split(",") if segment.strip()]
-                self.state.dirty = True
-        elif selection == "5":
-            value = read_line("Ignored paths (comma separated): ").strip()
-            if value:
-                config.ignored_paths = [segment.strip() for segment in value.split(",") if segment.strip()]
-                self.state.dirty = True
-        elif selection == "6":
-            value = read_line(f"Policy mode [{config.policy_mode}]: ").strip()
-            if value:
-                config.policy_mode = value
-                self.state.dirty = True
-        elif selection in {"7", "8", "9", "10"}:
+
+        boolean_field = PROJECT_BOOLEAN_SETTINGS.get(selection)
+        if boolean_field is not None:
             bool_value = read_line("Set value [y/n]: ").strip().lower() in {"y", "yes", "true", "1"}
-            if selection == "7":
-                config.defined_blueprint_blocks_on_drift = bool_value
-            elif selection == "8":
-                config.single_active_per_purpose = bool_value
-            elif selection == "9":
-                config.undeclared_code_blocks = bool_value
-            elif selection == "10":
-                config.missing_declared_code_blocks = bool_value
+            setattr(config, boolean_field, bool_value)
             self.state.dirty = True
+
         self.state.screen = "workspace"
 
     # ---------------------------------------------------------------------------

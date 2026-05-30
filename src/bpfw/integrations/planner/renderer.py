@@ -1,7 +1,7 @@
 """UI renderer for Blueprint Planner with Pieces/Assembly/Details layout."""
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 import yaml
 
@@ -36,93 +36,15 @@ PLANNER_TITLE = "Blueprint Planner"
 
 
 def render_planner(state: PlannerState) -> None:
-    """Main entry point: render appropriate screen based on state.screen.
+    """Render the screen registered for the current planner state.
 
     Args:
         state: Current planner state.
     """
-    if state.screen == "welcome":
-        render_welcome(state)
-    elif state.screen == "workspace":
-        render_workspace(state)
-    elif state.screen == "add_block":
-        render_add_block_modal(state)
-    elif state.screen == "connect_target":
-        render_connect_target_modal(state)
-    elif state.screen == "connect_meaning":
-        render_connect_meaning_modal(state)
-    elif state.screen == "connect_feedback":
-        render_connect_feedback_modal(state)
-    elif state.screen == "edit_block":
-        render_edit_block_modal(state)
-    elif state.screen == "edit_inputs":
-        render_edit_inputs_modal(state)
-    elif state.screen == "edit_input":
-        render_edit_input_modal(state)
-    elif state.screen == "edit_output":
-        render_edit_output_modal(state)
-    elif state.screen == "project_settings":
-        render_project_settings_modal(state)
-    elif state.screen == "review":
-        render_review_modal(state)
-    elif state.screen == "yaml_preview":
-        render_yaml_preview_modal(state)
-    elif state.screen == "saved":
-        render_saved_modal(state)
-    elif state.screen == "graph_overview":
-        render_graph_overview(state)
-    elif state.screen == "disconnect":
-        render_disconnect_modal(state)
-    elif state.screen == "removed_connection":
-        render_removed_connection_modal(state)
-    elif state.screen == "delete_block":
-        render_delete_block_modal(state)
-    elif state.screen == "unsaved_changes":
-        render_unsaved_changes_modal(state)
-    elif state.screen == "broken_connections":
-        render_broken_connections_modal(state)
-    elif state.screen == "no_blocks_to_connect":
-        render_no_blocks_to_connect_modal(state)
-    elif state.screen == "duplicate_connection":
-        existing_connection = state.modal_data.get("existing_connection")
-        if isinstance(existing_connection, PlannerConnection):
-            render_duplicate_connection_modal(state, existing_connection)
-        else:
-            render_workspace(state)
-    elif state.screen == "self_connection":
-        render_self_connection_modal(state)
-    elif state.screen == "cannot_save_empty":
-        render_cannot_save_empty_modal(state)
-    elif state.screen == "blueprint_locked":
-        render_blueprint_locked_modal(state)
-    elif state.screen == "invalid_blueprint":
-        render_invalid_blueprint_modal(state)
-    elif state.screen == "duplicate_name":
-        render_workspace(state)
-    elif state.screen == "active_purpose_conflict":
-        render_workspace(state)
-    elif state.screen == "path_already_used":
-        path = str(state.modal_data.get("path") or "")
-        existing_box = state.modal_data.get("existing_box")
-        if path and isinstance(existing_box, PlannerBox):
-            render_path_already_used_modal(state, path, existing_box)
-        else:
-            render_workspace(state)
-    elif state.screen == "domain_changed":
-        old_domain = str(state.modal_data.get("old_domain") or "")
-        new_domain = str(state.modal_data.get("new_domain") or "")
-        current_path = str(state.modal_data.get("current_path") or "")
-        suggested_path = str(state.modal_data.get("suggested_path") or "")
-        if old_domain and new_domain and current_path and suggested_path:
-            render_domain_changed_modal(state, old_domain, new_domain, current_path, suggested_path)
-        else:
-            render_workspace(state)
-    elif state.screen == "no_connections_warning":
-        render_no_connections_warning_modal(state)
-    elif state.screen == "experimental_to_active_warning":
-        render_workspace(state)
-    else:
-        render_workspace(state)
+    renderer = PLANNER_SCREEN_RENDERERS.get(state.screen, render_workspace)
+    renderer(state)
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -1511,3 +1433,85 @@ def render_invalid_blueprint_modal(state: PlannerState) -> None:
 
     for line in render_box(title="Invalid blueprint.yaml", lines=lines, width=width):
         print(line)
+
+ScreenRenderer = Callable[[PlannerState], None]
+
+
+def _render_duplicate_connection_screen(state: PlannerState) -> None:
+    """Render duplicate connection screen when modal data is valid.
+
+    Args:
+        state: Current planner state.
+    """
+    existing_connection = state.modal_data.get("existing_connection")
+    if isinstance(existing_connection, PlannerConnection):
+        render_duplicate_connection_modal(state, existing_connection)
+        return
+    render_workspace(state)
+
+
+def _render_path_already_used_screen(state: PlannerState) -> None:
+    """Render path conflict screen when modal data is valid.
+
+    Args:
+        state: Current planner state.
+    """
+    path = str(state.modal_data.get("path") or "")
+    existing_box = state.modal_data.get("existing_box")
+    if path and isinstance(existing_box, PlannerBox):
+        render_path_already_used_modal(state, path, existing_box)
+        return
+    render_workspace(state)
+
+
+def _render_domain_changed_screen(state: PlannerState) -> None:
+    """Render domain change screen when modal data is valid.
+
+    Args:
+        state: Current planner state.
+    """
+    old_domain = str(state.modal_data.get("old_domain") or "")
+    new_domain = str(state.modal_data.get("new_domain") or "")
+    current_path = str(state.modal_data.get("current_path") or "")
+    suggested_path = str(state.modal_data.get("suggested_path") or "")
+    if old_domain and new_domain and current_path and suggested_path:
+        render_domain_changed_modal(state, old_domain, new_domain, current_path, suggested_path)
+        return
+    render_workspace(state)
+
+
+PLANNER_SCREEN_RENDERERS: dict[str, ScreenRenderer] = {
+    "welcome": render_welcome,
+    "workspace": render_workspace,
+    "add_block": render_add_block_modal,
+    "connect_target": render_connect_target_modal,
+    "connect_meaning": render_connect_meaning_modal,
+    "connect_feedback": render_connect_feedback_modal,
+    "edit_block": render_edit_block_modal,
+    "edit_inputs": render_edit_inputs_modal,
+    "edit_input": render_edit_input_modal,
+    "edit_output": render_edit_output_modal,
+    "project_settings": render_project_settings_modal,
+    "review": render_review_modal,
+    "yaml_preview": render_yaml_preview_modal,
+    "saved": render_saved_modal,
+    "graph_overview": render_graph_overview,
+    "disconnect": render_disconnect_modal,
+    "removed_connection": render_removed_connection_modal,
+    "delete_block": render_delete_block_modal,
+    "unsaved_changes": render_unsaved_changes_modal,
+    "broken_connections": render_broken_connections_modal,
+    "no_blocks_to_connect": render_no_blocks_to_connect_modal,
+    "duplicate_connection": _render_duplicate_connection_screen,
+    "self_connection": render_self_connection_modal,
+    "cannot_save_empty": render_cannot_save_empty_modal,
+    "blueprint_locked": render_blueprint_locked_modal,
+    "invalid_blueprint": render_invalid_blueprint_modal,
+    "duplicate_name": render_workspace,
+    "active_purpose_conflict": render_workspace,
+    "path_already_used": _render_path_already_used_screen,
+    "domain_changed": _render_domain_changed_screen,
+    "no_connections_warning": render_no_connections_warning_modal,
+    "experimental_to_active_warning": render_workspace,
+}
+
