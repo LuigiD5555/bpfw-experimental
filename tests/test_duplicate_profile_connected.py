@@ -23,8 +23,8 @@ def _unit(path: str, symbol: str, kind: str = "function") -> DiscoveredCodeUnit:
     )
 
 
-def test_wrapper_inherits_strong_child_profile(tmp_path: Path) -> None:
-    """Verify that a trivial wrapper can inherit a strong child profile."""
+def test_wrapper_over_generic_file_writer_is_not_strong(tmp_path: Path) -> None:
+    """Verify that wrappers over generic path writes do not block as strong duplicates."""
     source_path = tmp_path / "src" / "example.py"
     source_path.parent.mkdir(parents=True)
     source_path.write_text(
@@ -51,9 +51,7 @@ def test_wrapper_inherits_strong_child_profile(tmp_path: Path) -> None:
     profiles = DuplicateProfileBuilder(tmp_path, [save_unit, run_unit]).build()
     run_profile = profiles[code_unit_key_from_discovered_unit(run_unit)]
 
-    assert run_profile.keys.hash_strength == "strong"
-    assert run_profile.keys.duplicate_key is not None
-    assert run_profile.keys.duplicate_key.startswith("delegate|save|child:")
+    assert run_profile.keys.hash_strength != "strong"
 
 
 def test_attribute_provenance_prevents_bare_self_return_profile(tmp_path: Path) -> None:
@@ -171,3 +169,115 @@ def test_identical_active_purposes_create_blocking_duplicate_finding(tmp_path: P
     assert findings[0].code == "DUPLICATE_ACTIVE_PROFILE"
     assert findings[0].evidence["reason"] == "two identical purposes"
     assert findings[0].evidence["duplicate_key"] == "purpose|load configuration safely"
+
+
+def test_allowed_duplicate_profile_does_not_block(tmp_path: Path) -> None:
+    """Verify that a declared false positive suppresses duplicate blocking."""
+    from bpfw.core.catalog.duplicate_profile import DuplicateActiveProfileRule
+
+    source_path = tmp_path / "src" / "example.py"
+    source_path.parent.mkdir(parents=True)
+    source_path.write_text(
+        "def write_a(path, text):\n"
+        "    path.write_text(text)\n"
+        "\n"
+        "def write_b(path, text):\n"
+        "    path.write_text(text)\n",
+        encoding="utf-8",
+    )
+    first_unit = _unit("src/example.py", "write_a")
+    second_unit = _unit("src/example.py", "write_b")
+    blocks = [
+        _block("write_a", "write_a", "write first file"),
+        _block("write_b", "write_b", "write second file"),
+    ]
+
+    profiles = DuplicateProfileBuilder(tmp_path, [first_unit, second_unit], blocks=blocks).build()
+    first_profile = profiles[code_unit_key_from_discovered_unit(first_unit)]
+    blocks[0]["duplicate_policy"] = {
+        "allowed_active_duplicate_profiles": [
+            {
+                "duplicate_hash": first_profile.keys.duplicate_hash,
+                "duplicate_key": first_profile.keys.duplicate_key,
+                "reason": "separate write screens share the same technical pattern",
+            }
+        ]
+    }
+
+    findings = DuplicateActiveProfileRule().validate(blocks, profiles)
+    enriched_profiles = DuplicateProfileBuilder(tmp_path, [first_unit, second_unit], blocks=blocks).build()
+    enriched_profile = enriched_profiles[code_unit_key_from_discovered_unit(first_unit)]
+
+    assert findings == []
+    assert enriched_profile.keys.duplicated == "no"
+    assert enriched_profile.keys.reason == "allowed duplicate profile"
+
+
+def test_allowed_identical_purpose_does_not_block(tmp_path: Path) -> None:
+    """Verify that allowed purpose duplicates do not block verification."""
+    from bpfw.core.catalog.duplicate_profile import DuplicateActiveProfileRule
+
+    source_path = tmp_path / "src" / "example.py"
+    source_path.parent.mkdir(parents=True)
+    source_path.write_text(
+        "def first():\n"
+        "    return 1\n"
+        "\n"
+        "def second():\n"
+        "    return 2\n",
+        encoding="utf-8",
+    )
+    first_unit = _unit("src/example.py", "first")
+    second_unit = _unit("src/example.py", "second")
+    duplicate_key = "purpose|load configuration safely"
+    blocks = [
+        _block("first", "first", "load configuration safely"),
+        _block("second", "second", "load configuration safely"),
+    ]
+    blocks[0]["duplicate_policy"] = {
+        "allowed_active_duplicate_profiles": [
+            {
+                "duplicate_key": duplicate_key,
+                "reason": "same purpose is intentional for this test",
+            }
+        ]
+    }
+
+    profiles = DuplicateProfileBuilder(tmp_path, [first_unit, second_unit], blocks=blocks).build()
+    findings = DuplicateActiveProfileRule().validate(blocks, profiles)
+    first_profile = profiles[code_unit_key_from_discovered_unit(first_unit)]
+
+    assert findings == []
+    assert first_profile.keys.duplicated == "no"
+    assert first_profile.keys.reason == "allowed duplicate profile"
+
+
+def test_weak_duplicate_profile_creates_review_warning(tmp_path: Path) -> None:
+    """Verify that similar weak duplicate profiles warn without blocking."""
+    from bpfw.core.catalog.duplicate_profile import DuplicateActiveProfileRule
+    from bpfw.reports.finding import FINDING_SEVERITY_WARNING
+
+    source_path = tmp_path / "src" / "example.py"
+    source_path.parent.mkdir(parents=True)
+    source_path.write_text(
+        "def first(value):\n"
+        "    return value + 1\n"
+        "\n"
+        "def second(value):\n"
+        "    return value + 1\n",
+        encoding="utf-8",
+    )
+    first_unit = _unit("src/example.py", "first")
+    second_unit = _unit("src/example.py", "second")
+    blocks = [
+        _block("first", "first", "calculate first value"),
+        _block("second", "second", "calculate second value"),
+    ]
+
+    profiles = DuplicateProfileBuilder(tmp_path, [first_unit, second_unit], blocks=blocks).build()
+    findings = DuplicateActiveProfileRule().validate(blocks, profiles)
+
+    assert len(findings) == 1
+    assert findings[0].code == "DUPLICATE_PROFILE_REVIEW"
+    assert findings[0].severity == FINDING_SEVERITY_WARNING
+    assert findings[0].evidence["hash_strength"] == "weak"

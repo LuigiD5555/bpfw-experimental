@@ -204,6 +204,7 @@ def render_status_report(
     lines.append(f"  legacy: {lifecycle_counts.get('legacy', 0)}")
     lines.append(f"  deprecated: {lifecycle_counts.get('deprecated', 0)}")
     lines.append(f"  duplicate active profiles: {report.duplicate_active_profile_count}")
+    lines.append(f"  duplicate review warnings: {report.duplicate_profile_review_count}")
     lines.append("")
 
     # Execution section

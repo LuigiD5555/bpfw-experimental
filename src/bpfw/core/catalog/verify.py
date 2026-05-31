@@ -29,6 +29,7 @@ CODE_MISSING_DECLARED = "MISSING_DECLARED_CODE"
 CODE_UNDECLARED = "UNDECLARED_CODE"
 CODE_DUPLICATE_ACTIVE_PURPOSE = "DUPLICATE_ACTIVE_PURPOSE"
 CODE_DUPLICATE_ACTIVE_PROFILE = "DUPLICATE_ACTIVE_PROFILE"
+CODE_DUPLICATE_PROFILE_REVIEW = "DUPLICATE_PROFILE_REVIEW"
 CODE_INVALID_LIFECYCLE = "INVALID_STATUS"
 CODE_INCOMPLETE_RESPONSIBILITY = "INCOMPLETE_BLOCK"
 
@@ -266,6 +267,7 @@ def _build_report(
     undeclared_count = sum(1 for finding in findings if finding.code == CODE_UNDECLARED)
     duplicate_active_purpose_count = sum(1 for finding in findings if finding.code == CODE_DUPLICATE_ACTIVE_PURPOSE)
     duplicate_active_profile_count = sum(1 for finding in findings if finding.code == CODE_DUPLICATE_ACTIVE_PROFILE)
+    duplicate_profile_review_count = sum(1 for finding in findings if finding.code == CODE_DUPLICATE_PROFILE_REVIEW)
     invalid_lifecycle_count = sum(1 for finding in findings if finding.code == CODE_INVALID_LIFECYCLE)
     incomplete_responsibility_count = sum(1 for finding in findings if finding.code == CODE_INCOMPLETE_RESPONSIBILITY)
 
@@ -284,6 +286,7 @@ def _build_report(
         undeclared_count=undeclared_count,
         duplicate_active_purpose_count=duplicate_active_purpose_count,
         duplicate_active_profile_count=duplicate_active_profile_count,
+        duplicate_profile_review_count=duplicate_profile_review_count,
         invalid_lifecycle_count=invalid_lifecycle_count,
         incomplete_responsibility_count=incomplete_responsibility_count,
     )

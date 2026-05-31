@@ -72,5 +72,6 @@ class VerificationReport:
     undeclared_count: int = 0
     duplicate_active_purpose_count: int = 0
     duplicate_active_profile_count: int = 0
+    duplicate_profile_review_count: int = 0
     invalid_lifecycle_count: int = 0
     incomplete_responsibility_count: int = 0

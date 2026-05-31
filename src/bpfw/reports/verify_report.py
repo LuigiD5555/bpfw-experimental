@@ -30,9 +30,13 @@ _SUGGESTED_ACTIONS: Dict[str, str] = {
         "Give every block a unique id."
     ),
     "DUPLICATE_ACTIVE_PROFILE": (
-        "Keep one active implementation for this duplicate declaration or "
-        "calculated duplicate profile, or mark the competing blocks experimental, "
-        "legacy, or deprecated."
+        "Keep one active implementation, mark the competing blocks experimental, "
+        "legacy, or deprecated, or explicitly allow this duplicate profile when "
+        "it is a confirmed false positive."
+    ),
+    "DUPLICATE_PROFILE_REVIEW": (
+        "Review whether these similar active blocks are intentionally separate. "
+        "This is a warning only and does not block execution."
     ),
     "NORMALIZED_AST_CLONE": (
         "Review whether these blocks should share one implementation or stay separate."
@@ -78,6 +82,7 @@ VERIFY_FINDING_FILTERS: Dict[str, set[str]] = {
     "missing": {"MISSING_DECLARED_CODE"},
     "duplicate": {
         "DUPLICATE_ACTIVE_PROFILE",
+        "DUPLICATE_PROFILE_REVIEW",
         "DUPLICATE_BLOCK_ID",
         "NORMALIZED_AST_CLONE",
         "SAME_RETURN_EXPRESSION",
@@ -194,6 +199,7 @@ def _render_block_group(code: str, grouped_findings: List[Finding], max_items: i
         "CONFLICTING_EFFECT",
         "UNCLASSIFIED_EXTERNAL_EFFECT",
         "DUPLICATE_ACTIVE_PROFILE",
+        "DUPLICATE_PROFILE_REVIEW",
     }:
         lines.append("Items:")
         for index, finding in enumerate(grouped_findings[:max_items], start=1):
@@ -322,6 +328,7 @@ def render_verify_report(
         sections.append("Lifecycle:")
         sections.append(f"  invalid lifecycles: {report.invalid_lifecycle_count}")
         sections.append(f"  duplicate active profiles: {report.duplicate_active_profile_count}")
+        sections.append(f"  duplicate review warnings: {report.duplicate_profile_review_count}")
         sections.append("")
 
         sections.append("Execution:")

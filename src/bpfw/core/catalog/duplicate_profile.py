@@ -16,11 +16,13 @@ from bpfw.core.catalog.code_duplicates import CodeDuplicateAnalyzer
 from bpfw.core.catalog.code_outcomes import CodeOutcomeAnalyzer, _is_comparable_effect
 from bpfw.core.catalog.models import DiscoveredCodeUnit
 from bpfw.core.catalog.source_repository import SourceFileRepository
-from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, Finding
+from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, FINDING_SEVERITY_WARNING, Finding
 
 _SOURCE = "bpfw"
 _DUPLICATE_ACTIVE_PROFILE = "DUPLICATE_ACTIVE_PROFILE"
+_DUPLICATE_PROFILE_REVIEW = "DUPLICATE_PROFILE_REVIEW"
 _PURPOSE_DUPLICATE_REASON = "two identical purposes"
+_ALLOWED_DUPLICATE_PROFILE_REASON = "allowed duplicate profile"
 _FUNCTION_TYPES = {"function", "method", "nested_function"}
 _IGNORED_HASH_STRENGTHS = {"", "ignored", "weak", "unknown"}
 _PROFILE_VERSION = 2
@@ -28,6 +30,20 @@ _ANALYZER_VERSION = "duplicate-profile-v2"
 _MAX_CHILD_DEPTH = 3
 _GENERIC_TARGETS = {"", "*", "unknown", "value", "result", "data", "item", "items", "self", "cls"}
 _GENERIC_RETURN_HASH_PREFIXES = {"none", "true", "false"}
+_FILE_METHOD_TARGET_SUFFIXES = (
+    ".write_text",
+    ".write",
+    ".writelines",
+    ".read_text",
+    ".read",
+    ".readlines",
+    ".mkdir",
+    ".unlink",
+    ".remove",
+    ".rmtree",
+    ".rename",
+    ".replace",
+)
 _STRONG_OUTCOME_ACTIONS = {
     "authorize",
     "click",
@@ -976,6 +992,12 @@ class CompositeDuplicateKeyBuilder:
         """Return the first strong direct signal for the evidence bundle."""
         if evidence.local.kind not in _FUNCTION_TYPES:
             return None
+        for signal in evidence.domain.signals:
+            if signal.confidence != "high" or _is_generic_target(signal.target):
+                continue
+            if signal.action in {"return", "access", "parse", "serialize", "read"}:
+                continue
+            return signal
         if _is_strong_outcome(evidence.outcome):
             target = evidence.outcome.target or "*"
             action = evidence.outcome.action or "unknown"
@@ -988,12 +1010,6 @@ class CompositeDuplicateKeyBuilder:
                 confidence="high",
                 evidence="direct observable outcome",
             )
-        for signal in evidence.domain.signals:
-            if signal.confidence != "high" or _is_generic_target(signal.target):
-                continue
-            if signal.action in {"return", "access", "parse", "serialize", "read"}:
-                continue
-            return signal
         if evidence.structure.trivial_wrapper and evidence.structure.wrapper_target and not evidence.children.inherited_keys:
             return DomainSignal(
                 action="wrapper",
@@ -1069,7 +1085,7 @@ class CompositeDuplicateKeyBuilder:
         return DuplicateProfileKeys(
             duplicate_key=duplicate_key,
             duplicate_hash=_stable_hash(duplicate_key),
-            hash_strength="strong",
+            hash_strength="weak",
             reason="multiple compatible medium signals",
         )
 
@@ -1243,6 +1259,8 @@ def _is_strong_outcome(outcome: OutcomeProfile) -> bool:
         return False
     if outcome.resource == "database" and outcome.target and " " in outcome.target and not _looks_like_sql(outcome.target):
         return False
+    if outcome.resource in {"file", "directory"} and _is_variable_file_method_target(outcome.target):
+        return False
     effect_proxy = _EffectProxy(
         action=outcome.action,
         resource_kind=outcome.resource,
@@ -1284,7 +1302,7 @@ class DuplicateActiveProfileRule:
             for group in purpose_groups.values()
         }
 
-        groups: dict[str, list[tuple[dict[str, Any], DuplicateProfile]]] = {}
+        groups: dict[tuple[str, str], list[tuple[dict[str, Any], DuplicateProfile]]] = {}
         for block in raw_blocks:
             if block.get("status") != "active":
                 continue
@@ -1296,41 +1314,68 @@ class DuplicateActiveProfileRule:
                 continue
             if profile.keys.reason == _PURPOSE_DUPLICATE_REASON:
                 continue
-            if profile.keys.hash_strength in _IGNORED_HASH_STRENGTHS:
+            if profile.keys.hash_strength in {"", "ignored", "unknown"}:
                 continue
             if not profile.keys.duplicate_hash:
                 continue
-            groups.setdefault(profile.keys.duplicate_hash, []).append((block, profile))
+            group_key = (profile.keys.duplicate_hash, profile.keys.hash_strength)
+            groups.setdefault(group_key, []).append((block, profile))
 
         findings: list[Finding] = []
-        for duplicate_hash, group in groups.items():
+        for group_key, group in groups.items():
+            duplicate_hash, hash_strength = group_key
             if len(group) < 2:
                 continue
             if _all_blocks_are_parallel_strategy_methods(group):
                 continue
+            first_block, first_profile = group[0]
+            if _duplicate_profile_group_is_allowed(
+                group_blocks=[block for block, _profile in group],
+                duplicate_hash=duplicate_hash,
+                duplicate_key=first_profile.keys.duplicate_key,
+            ):
+                continue
             active_ids = frozenset(_block_id(block) for block, _profile in group if _block_id(block))
             if active_ids in purpose_group_id_sets:
                 continue
-            first_block, first_profile = group[0]
             active_blocks = [_active_block_evidence(block) for block, _profile in group]
-            findings.append(
-                _duplicate_profile_finding(
-                    first_block=first_block,
-                    duplicate_hash=duplicate_hash,
-                    duplicate_key=first_profile.keys.duplicate_key,
-                    hash_strength=first_profile.keys.hash_strength,
-                    reason=first_profile.keys.reason,
-                    active_blocks=active_blocks,
+            if hash_strength == "strong":
+                findings.append(
+                    _duplicate_profile_finding(
+                        first_block=first_block,
+                        duplicate_hash=duplicate_hash,
+                        duplicate_key=first_profile.keys.duplicate_key,
+                        hash_strength=first_profile.keys.hash_strength,
+                        reason=first_profile.keys.reason,
+                        active_blocks=active_blocks,
+                    )
                 )
-            )
+            elif hash_strength == "weak":
+                findings.append(
+                    _duplicate_profile_review_finding(
+                        first_block=first_block,
+                        duplicate_hash=duplicate_hash,
+                        duplicate_key=first_profile.keys.duplicate_key,
+                        hash_strength=first_profile.keys.hash_strength,
+                        reason=first_profile.keys.reason,
+                        active_blocks=active_blocks,
+                    )
+                )
 
         for normalized_purpose, group_blocks in purpose_groups.items():
             first_block = group_blocks[0]
             duplicate_key = _purpose_duplicate_key(normalized_purpose)
+            duplicate_hash = _stable_hash(duplicate_key)
+            if _duplicate_profile_group_is_allowed(
+                group_blocks=group_blocks,
+                duplicate_hash=duplicate_hash,
+                duplicate_key=duplicate_key,
+            ):
+                continue
             findings.append(
                 _duplicate_profile_finding(
                     first_block=first_block,
-                    duplicate_hash=_stable_hash(duplicate_key),
+                    duplicate_hash=duplicate_hash,
                     duplicate_key=duplicate_key,
                     hash_strength="strong",
                     reason=_PURPOSE_DUPLICATE_REASON,
@@ -1346,6 +1391,7 @@ def enrich_duplicate_profile_groups(
 ) -> dict[CodeUnitKey, DuplicateProfile]:
     """Return profiles enriched with duplicated yes/check/no group status."""
     group_counts: dict[tuple[str, str], int] = {}
+    group_blocks: dict[tuple[str, str], list[dict[str, Any]]] = {}
     active_keys: list[CodeUnitKey] = []
     for block in blocks:
         if block.get("status") != "active":
@@ -1361,6 +1407,7 @@ def enrich_duplicate_profile_groups(
             continue
         group_key = (profile.keys.duplicate_hash, profile.keys.hash_strength)
         group_counts[group_key] = group_counts.get(group_key, 0) + 1
+        group_blocks.setdefault(group_key, []).append(block)
 
     purpose_groups = _active_purpose_duplicate_groups(blocks)
     purpose_group_by_key: dict[CodeUnitKey, tuple[str, int]] = {}
@@ -1380,15 +1427,22 @@ def enrich_duplicate_profile_groups(
         if purpose_group is not None:
             normalized_purpose, purpose_group_size = purpose_group
             duplicate_key = _purpose_duplicate_key(normalized_purpose)
+            duplicate_hash = _stable_hash(duplicate_key)
+            purpose_group_blocks = purpose_groups.get(normalized_purpose, [])
+            allowed = _duplicate_profile_group_is_allowed(
+                group_blocks=purpose_group_blocks,
+                duplicate_hash=duplicate_hash,
+                duplicate_key=duplicate_key,
+            )
             enriched[key] = replace(
                 profile,
                 keys=replace(
                     profile.keys,
                     duplicate_key=duplicate_key,
-                    duplicate_hash=_stable_hash(duplicate_key),
+                    duplicate_hash=duplicate_hash,
                     hash_strength="strong",
-                    reason=_PURPOSE_DUPLICATE_REASON,
-                    duplicated="yes",
+                    reason=_ALLOWED_DUPLICATE_PROFILE_REASON if allowed else _PURPOSE_DUPLICATE_REASON,
+                    duplicated="no" if allowed else "yes",
                     group_size=purpose_group_size,
                 ),
             )
@@ -1396,15 +1450,24 @@ def enrich_duplicate_profile_groups(
 
         if not profile.keys.duplicate_hash:
             continue
-        group_size = group_counts.get((profile.keys.duplicate_hash, profile.keys.hash_strength), 0)
+        group_key = (profile.keys.duplicate_hash, profile.keys.hash_strength)
+        group_size = group_counts.get(group_key, 0)
         duplicated = "no"
-        if group_size > 1 and profile.keys.hash_strength == "strong":
+        reason = profile.keys.reason
+        if group_size > 1 and _duplicate_profile_group_is_allowed(
+            group_blocks=group_blocks.get(group_key, []),
+            duplicate_hash=profile.keys.duplicate_hash,
+            duplicate_key=profile.keys.duplicate_key,
+        ):
+            duplicated = "no"
+            reason = _ALLOWED_DUPLICATE_PROFILE_REASON
+        elif group_size > 1 and profile.keys.hash_strength == "strong":
             duplicated = "yes"
         elif group_size > 1 and profile.keys.hash_strength == "weak":
             duplicated = "check"
         enriched[key] = replace(
             profile,
-            keys=replace(profile.keys, duplicated=duplicated, group_size=group_size),
+            keys=replace(profile.keys, duplicated=duplicated, group_size=group_size, reason=reason),
         )
     return enriched
 
@@ -1627,6 +1690,79 @@ def _child_profile_evidence(child_profiles: list[DuplicateProfile]) -> ChildProf
     )
 
 
+
+def _duplicate_profile_group_is_allowed(
+    group_blocks: list[dict[str, Any]],
+    duplicate_hash: str | None,
+    duplicate_key: str | None,
+) -> bool:
+    """Return whether a duplicate group has an explicit false-positive allowance."""
+    if not duplicate_hash and not duplicate_key:
+        return False
+    return any(
+        _block_allows_duplicate_profile(
+            block=block,
+            duplicate_hash=duplicate_hash,
+            duplicate_key=duplicate_key,
+        )
+        for block in group_blocks
+    )
+
+
+def _block_allows_duplicate_profile(
+    block: dict[str, Any],
+    duplicate_hash: str | None,
+    duplicate_key: str | None,
+) -> bool:
+    """Return whether one block explicitly allows a duplicate profile collision."""
+    duplicate_policy = block.get("duplicate_policy")
+    if not isinstance(duplicate_policy, dict):
+        return False
+
+    entries: list[Any] = []
+    for field_name in (
+        "allowed_active_duplicate_profiles",
+        "allowed_duplicate_profiles",
+        "allowed_duplicate_hashes",
+    ):
+        raw_entries = duplicate_policy.get(field_name)
+        if isinstance(raw_entries, list):
+            entries.extend(raw_entries)
+
+    for entry in entries:
+        if _duplicate_policy_entry_matches(
+            entry=entry,
+            duplicate_hash=duplicate_hash,
+            duplicate_key=duplicate_key,
+        ):
+            return True
+    return False
+
+
+def _duplicate_policy_entry_matches(
+    entry: Any,
+    duplicate_hash: str | None,
+    duplicate_key: str | None,
+) -> bool:
+    """Return whether one duplicate-policy entry matches the current collision."""
+    if not isinstance(entry, dict):
+        return False
+
+    reason = entry.get("reason")
+    if not isinstance(reason, str) or not reason.strip():
+        return False
+
+    entry_hash = entry.get("duplicate_hash")
+    if isinstance(entry_hash, str) and duplicate_hash and entry_hash == duplicate_hash:
+        return True
+
+    entry_key = entry.get("duplicate_key")
+    if isinstance(entry_key, str) and duplicate_key and entry_key == duplicate_key:
+        return True
+
+    return False
+
+
 def _all_blocks_are_parallel_strategy_methods(
     group: list[tuple[dict[str, Any], DuplicateProfile]],
 ) -> bool:
@@ -1674,13 +1810,60 @@ def _duplicate_profile_finding(
     active_blocks: list[dict[str, Any]],
 ) -> Finding:
     """Build one duplicate active profile finding."""
-    return Finding(
-        source=_SOURCE,
+    return _duplicate_profile_collision_finding(
+        first_block=first_block,
+        duplicate_hash=duplicate_hash,
+        duplicate_key=duplicate_key,
+        hash_strength=hash_strength,
+        reason=reason,
+        active_blocks=active_blocks,
         code=_DUPLICATE_ACTIVE_PROFILE,
         severity=FINDING_SEVERITY_BLOCK,
+        message="Only one active block can own the same duplicate declaration or calculated duplicate profile.",
+    )
+
+
+def _duplicate_profile_review_finding(
+    first_block: dict[str, Any],
+    duplicate_hash: str | None,
+    duplicate_key: str | None,
+    hash_strength: str | None,
+    reason: str | None,
+    active_blocks: list[dict[str, Any]],
+) -> Finding:
+    """Build one non-blocking duplicate profile review finding."""
+    return _duplicate_profile_collision_finding(
+        first_block=first_block,
+        duplicate_hash=duplicate_hash,
+        duplicate_key=duplicate_key,
+        hash_strength=hash_strength,
+        reason=reason,
+        active_blocks=active_blocks,
+        code=_DUPLICATE_PROFILE_REVIEW,
+        severity=FINDING_SEVERITY_WARNING,
+        message="Active blocks share a similar duplicate profile and should be reviewed.",
+    )
+
+
+def _duplicate_profile_collision_finding(
+    first_block: dict[str, Any],
+    duplicate_hash: str | None,
+    duplicate_key: str | None,
+    hash_strength: str | None,
+    reason: str | None,
+    active_blocks: list[dict[str, Any]],
+    code: str,
+    severity: str,
+    message: str,
+) -> Finding:
+    """Build one duplicate profile collision finding."""
+    return Finding(
+        source=_SOURCE,
+        code=code,
+        severity=severity,
         path=_block_code_value(first_block, "path"),
         symbol=_block_code_value(first_block, "symbol"),
-        message="Only one active block can own the same duplicate declaration or calculated duplicate profile.",
+        message=message,
         evidence={
             "duplicate_hash": duplicate_hash,
             "duplicate_key": duplicate_key,
@@ -1898,6 +2081,22 @@ def _is_generic_target(target: str | None) -> bool:
         return True
     normalized_target = target.strip().lower()
     return normalized_target in _GENERIC_TARGETS
+
+
+def _is_variable_file_method_target(target: str | None) -> bool:
+    """Return whether a file target is only a variable method call.
+
+    A call such as ``path.write_text`` or ``blueprint_path.write_text`` tells us
+    that a file is written, but it does not identify the concrete authority file
+    or responsibility being written. Concrete path constants are handled by
+    domain signals and may still become strong duplicate keys.
+    """
+    if target is None:
+        return False
+    normalized_target = target.strip().lower()
+    if _looks_like_path(normalized_target):
+        return False
+    return any(normalized_target.endswith(suffix) for suffix in _FILE_METHOD_TARGET_SUFFIXES)
 
 
 def _looks_like_path(value: str) -> bool:
