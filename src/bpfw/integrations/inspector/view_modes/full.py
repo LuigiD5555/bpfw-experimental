@@ -40,8 +40,9 @@ class FullInspectorViewMode(InspectorViewMode):
             _format_command_row(f"[{'|'.join(PURPOSE_SUGGESTION_KEYS)}] purpose", f"[{CUSTOM_PURPOSE_KEY}] custom purpose"),
             _format_command_row(f"[{'|'.join(DOMAIN_SUGGESTION_KEYS)}] domain", f"[{CUSTOM_DOMAIN_KEY}] custom domain"),
             _format_command_row("[s1|s2|s3|s4] lifecycle", "[i] interface"),
-            _format_command_row("[o] notes", "[h] help", "[q] quit"),
-            _format_command_row("[Enter] save + next", "[b] back", "[a] compact view"),
+            _format_command_row("[o] notes", "[a] allow duplicate", "[h] help"),
+            _format_command_row("[q] quit"),
+            _format_command_row("[Enter] save + next", "[b] back", "[f] compact view"),
             COMMAND_SEPARATOR,
             "Note: q/Q or ctrl+c quits. Type a command key and press Enter, for example p1 + Enter.",
         ]

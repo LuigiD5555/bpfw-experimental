@@ -660,6 +660,7 @@ def run_text_inspector_session(
         domain_suggestions = suggest_domains(block, project_blocks=project_blocks)
         view_mode = resolve_inspector_view_mode(state.mode_name)
 
+        current_duplicate_profile = _duplicate_profile_for_block(block, duplicate_profiles)
         render_inspector_screen(
             project_root=session.project_root,
             issue_type=issue.issue_type,
@@ -673,7 +674,7 @@ def run_text_inspector_session(
             view_mode=view_mode,
             pre_inspection_context_lines=issue.context_lines or session.pre_inspection_context_lines,
             project_blocks=project_blocks if isinstance(project_blocks, list) else [],
-            duplicate_profile=_duplicate_profile_for_block(block, duplicate_profiles),
+            duplicate_profile=current_duplicate_profile,
         )
         try:
             raw_command = input_reader.read("> ")
@@ -683,6 +684,7 @@ def run_text_inspector_session(
                 purpose_suggestions=purpose_suggestions,
                 domain_suggestions=domain_suggestions,
                 input_func=input_reader.read,
+                duplicate_profile=current_duplicate_profile,
             )
         except EOFError:
             print_func("Interactive inspector input unavailable.")
@@ -704,6 +706,8 @@ def run_text_inspector_session(
         )
         if result.should_refresh_existing_purposes:
             existing_purposes = collect_existing_purposes(session.blueprint_data)
+        if result.should_refresh_duplicate_profiles:
+            duplicate_profiles = _build_duplicate_profiles_for_session(session)
         if result.exit_code is not None:
             return result.exit_code
 

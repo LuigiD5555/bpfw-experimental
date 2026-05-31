@@ -8,6 +8,7 @@ from bpfw.integrations.inspector.base import InspectIssue
 from bpfw.integrations.shared.cli_runtime import is_quit_command, normalize_command
 
 InputFunc = Callable[[str], str]
+ALLOW_DUPLICATE_PROFILE_KEY = "a"
 PURPOSE_SUGGESTION_KEYS = ("p1", "p2", "p3", "p4", "p5")
 CUSTOM_PURPOSE_KEY = "p"
 LEGACY_CUSTOM_PURPOSE_KEY = "p6"
@@ -31,11 +32,60 @@ def _read_optional_value(input_func: InputFunc, prompt: str) -> str | None:
         return None
 
 
+def _mark_duplicate_profile_allowed(
+    block: Dict[str, Any],
+    duplicate_profile: Any | None,
+    reason: str,
+) -> bool:
+    """Record an explicit false-positive allowance for one duplicate profile."""
+    if duplicate_profile is None:
+        return False
+    profile_keys = getattr(duplicate_profile, "keys", None)
+    if profile_keys is None:
+        return False
+    duplicate_hash = getattr(profile_keys, "duplicate_hash", None)
+    duplicate_key = getattr(profile_keys, "duplicate_key", None)
+    if not duplicate_hash and not duplicate_key:
+        return False
+
+    duplicate_policy = block.get("duplicate_policy")
+    if not isinstance(duplicate_policy, dict):
+        duplicate_policy = {}
+        block["duplicate_policy"] = duplicate_policy
+
+    entries = duplicate_policy.get("allowed_active_duplicate_profiles")
+    if not isinstance(entries, list):
+        entries = []
+        duplicate_policy["allowed_active_duplicate_profiles"] = entries
+
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        if duplicate_hash and entry.get("duplicate_hash") == duplicate_hash:
+            entry["duplicate_key"] = duplicate_key
+            entry["reason"] = reason
+            return True
+        if duplicate_key and entry.get("duplicate_key") == duplicate_key:
+            entry["duplicate_hash"] = duplicate_hash
+            entry["reason"] = reason
+            return True
+
+    entries.append(
+        {
+            "duplicate_hash": duplicate_hash,
+            "duplicate_key": duplicate_key,
+            "reason": reason,
+        }
+    )
+    return True
+
+
 class InspectorAction:
     """Define action names produced by inspector commands."""
 
     STAY = "stay"
     SAVE_NEXT = "save_next"
+    SAVE_STAY = "save_stay"
     BACK = "back"
     QUIT = "quit"
     HELP = "help"
@@ -50,6 +100,7 @@ def apply_inspector_command(
     purpose_suggestions: List[PurposeSuggestion],
     domain_suggestions: List[str],
     input_func: InputFunc,
+    duplicate_profile: Any | None = None,
 ) -> str:
     """Apply one inspector command and return the navigation action."""
 
@@ -140,6 +191,25 @@ def apply_inspector_command(
             issue.block["notes"] = value
         return InspectorAction.STAY
 
+    if stripped_command == ALLOW_DUPLICATE_PROFILE_KEY or stripped_command.startswith(f"{ALLOW_DUPLICATE_PROFILE_KEY} "):
+        value = stripped_command[len(ALLOW_DUPLICATE_PROFILE_KEY):].strip()
+        if not value:
+            prompt_value = _read_optional_value(
+                input_func=input_func,
+                prompt="false-positive reason: ",
+            )
+            if prompt_value is None:
+                return InspectorAction.STAY
+            value = prompt_value
+        reason = " ".join(value.strip().split())
+        if reason:
+            _mark_duplicate_profile_allowed(
+                block=issue.block,
+                duplicate_profile=duplicate_profile,
+                reason=reason,
+            )
+        return InspectorAction.SAVE_STAY
+
     # Interface editing (i prefix)
     if stripped_command.startswith("i"):
         return InspectorAction.INTERFACE_EDIT
@@ -153,7 +223,7 @@ def apply_inspector_command(
     if stripped_command == "h":
         return InspectorAction.HELP
 
-    if stripped_command == "a":
+    if stripped_command == "f":
         return InspectorAction.TOGGLE_FULL_VIEW
 
     return InspectorAction.UNKNOWN

@@ -31,8 +31,8 @@ class CompactInspectorViewMode(InspectorViewMode):
         """Return the compact command lines."""
 
         return [
-            _format_command_row("[h] help", "[q] quit"),
-            _format_command_row("[Enter] save + next", "[b] back", "[a] full view"),
+            _format_command_row("[h] help", "[a] allow duplicate", "[q] quit"),
+            _format_command_row("[Enter] save + next", "[b] back", "[f] full view"),
             COMMAND_SEPARATOR,
             "Note: q/Q or ctrl+c quits. Type a command key and press Enter, for example p1 + Enter.",
         ]

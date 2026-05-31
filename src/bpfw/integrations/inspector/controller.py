@@ -35,6 +35,7 @@ class InspectorControllerResult:
 
     exit_code: int | None = None
     should_refresh_existing_purposes: bool = False
+    should_refresh_duplicate_profiles: bool = False
 
 
 class InspectorController:
@@ -77,6 +78,9 @@ class InspectorController:
                 domain_suggestions=domain_suggestions,
             )
 
+        if action == InspectorAction.SAVE_STAY:
+            return self._handle_save_stay(issue=issue)
+
         if action == InspectorAction.BACK:
             state.move_back()
             return InspectorControllerResult()
@@ -107,6 +111,22 @@ class InspectorController:
             return InspectorControllerResult()
 
         return InspectorControllerResult()
+
+    def _handle_save_stay(self, issue: InspectIssue) -> InspectorControllerResult:
+        """Persist the current issue without advancing the Inspector cursor."""
+
+        try:
+            persisted = save_issue(session=self._session, issue=issue)
+        except BlueprintLockedError as error:
+            self._print_func(str(error))
+            return InspectorControllerResult(exit_code=1)
+
+        if not persisted:
+            self._print_func("Blueprint path is unavailable.")
+            return InspectorControllerResult(exit_code=1)
+
+        self._print_func("Saved.")
+        return InspectorControllerResult(should_refresh_duplicate_profiles=True)
 
     def _handle_save_next(
         self,
@@ -298,7 +318,7 @@ def render_help_block(view_mode: InspectorViewMode) -> list[str]:
     ]
     if view_mode.should_render_extended_panels():
         help_lines.extend([
-            "  [a]        Switch back to compact view",
+            "  [f]        Switch back to compact view",
             "",
             "  Interface modes",
             "  ───────────────",

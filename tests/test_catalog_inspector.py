@@ -281,7 +281,7 @@ def test_text_inspector_renders_expected_sections(tmp_path: Path) -> None:
     assert "Hierarchy" not in rendered
     assert "Interface" not in rendered
     assert "Notes" not in rendered
-    assert "[a] full view" in rendered
+    assert "[f] full view" in rendered
     assert "[s1] active" in rendered
     assert "[s2] experimental" in rendered
     assert "[s3] legacy" in rendered
@@ -337,13 +337,13 @@ def test_text_inspector_all_view_renders_extended_sections(tmp_path: Path) -> No
     assert "ExampleService.run" in rendered
     assert "Interface" in rendered
     assert "Notes" in rendered
-    assert "[a] compact view" in rendered
+    assert "[f] compact view" in rendered
     commands_section = rendered[rendered.rindex("Commands"):]
     assert "purpose" in commands_section
     assert "custom purpose" in commands_section
     assert "custom domain" in commands_section
     assert "[s1|s2|s3|s4] lifecycle" in commands_section
-    assert "[n] name" in commands_section
+    assert "[n] name" not in commands_section
     assert "[i] interface" in commands_section
     assert "[o] notes" in commands_section
     assert "p1 + Enter" in commands_section
@@ -1395,7 +1395,7 @@ def test_full_inspector_help_keeps_full_mode_details() -> None:
     assert "Why '-' appears" in rendered
     assert "'-' means that source did not have enough evidence." in rendered
     assert "Editing" in rendered
-    assert "[n]        Edit name" in rendered
+    assert "[n]        Edit name" not in rendered
     assert "Lifecycle" in rendered
     assert "experimental  Being tested or not fully accepted yet." in rendered
 
@@ -1533,3 +1533,40 @@ def test_hierarchical_preview_replaces_known_call_arguments_without_inventing_ar
 
     assert "result = [reviewed] preview affected authority files(pending_plan)" in rendered
     assert "args" not in rendered
+
+
+def test_inspector_can_mark_duplicate_profile_as_allowed() -> None:
+    """Verify that inspector command can register a duplicate false positive."""
+
+    class ProfileKeys:
+        """Small duplicate key stub for command testing."""
+
+        duplicate_hash = "abc123"
+        duplicate_key = "write|file|example|none"
+
+    class DuplicateProfileStub:
+        """Small duplicate profile stub for command testing."""
+
+        keys = ProfileKeys()
+
+    block = _responsibility("example", "write example", "active")
+    action = apply_inspector_command(
+        command="a distinct screens share layout helpers",
+        issue=InspectIssue(issue_type="draft", block=block),
+        purpose_suggestions=[],
+        domain_suggestions=[],
+        input_func=lambda _prompt: "",
+        duplicate_profile=DuplicateProfileStub(),
+    )
+
+    policy = block["duplicate_policy"]
+    entries = policy["allowed_active_duplicate_profiles"]
+
+    assert action == InspectorAction.SAVE_STAY
+    assert entries == [
+        {
+            "duplicate_hash": "abc123",
+            "duplicate_key": "write|file|example|none",
+            "reason": "distinct screens share layout helpers",
+        }
+    ]

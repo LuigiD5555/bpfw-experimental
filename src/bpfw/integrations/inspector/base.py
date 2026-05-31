@@ -435,7 +435,6 @@ def sort_inspect_issues_hierarchically(issues: list[InspectIssue]) -> list[Inspe
     indexed_issues = list(enumerate(issues))
 
     def compare(left: tuple[int, InspectIssue], right: tuple[int, InspectIssue]) -> int:
-        """Compare inspector issues so child symbols are reviewed before parents."""
         left_index, left_issue = left
         right_index, right_issue = right
         left_key = _issue_sort_data(left_issue)
