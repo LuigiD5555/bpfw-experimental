@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 _profiler = RuntimeProfiler()
 
 ALLOWED_STATUSES = ("active", "experimental", "legacy", "deprecated")
-REQUIRED_HUMAN_FIELDS = ("purpose", "name", "domain", "status")
+REQUIRED_HUMAN_FIELDS = ("domain", "status")
 ISSUE_DRAFT = "draft"
 ISSUE_NEW_DETECTED = "new_detected"
 
@@ -435,6 +435,7 @@ def sort_inspect_issues_hierarchically(issues: list[InspectIssue]) -> list[Inspe
     indexed_issues = list(enumerate(issues))
 
     def compare(left: tuple[int, InspectIssue], right: tuple[int, InspectIssue]) -> int:
+        """Compare inspector issues so child symbols are reviewed before parents."""
         left_index, left_issue = left
         right_index, right_issue = right
         left_key = _issue_sort_data(left_issue)
@@ -509,7 +510,6 @@ def build_new_detected_responsibility(unit: DiscoveredCodeUnit) -> Dict[str, Any
     block = {
         "id": to_snake_case(unit.symbol),
         "purpose": None,
-        "name": unit.symbol,
         "domain": None,
         "status": "active",
         "code": {
@@ -603,8 +603,6 @@ def get_incomplete_blocks(
         if not isinstance(block, dict):
             continue
         values = {
-            "purpose": block.get("purpose"),
-            "name": block.get("name"),
             "domain": block.get("domain"),
             "status": block.get("status"),
         }
@@ -1012,10 +1010,9 @@ def build_authority_lines(block: Dict[str, Any]) -> list[str]:
 
     return [
         f"  id              {display_value(block.get('id'))}",
-        f"  purpose         {display_value(block.get("purpose"))}",
-        f"  name            {display_value(block.get('name'))}",
+        f"  purpose         {display_value(block.get('purpose'))}",
         f"  domain          {display_value(block.get('domain'))}",
-        f"  status          {display_value(block.get("status"))}",
+        f"  status          {display_value(block.get('status'))}",
         f"  observations    {display_value(block.get('notes'))}",
     ]
 

@@ -12,7 +12,7 @@ from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, Finding
 
 _SOURCE = "bpfw"
 
-_BLOCK_REQUIRED_FIELDS = ("id", "purpose", "name", "domain", "status")
+_BLOCK_REQUIRED_FIELDS = ("id", "domain", "status")
 _CODE_REQUIRED_FIELDS = ("path", "symbol", "kind")
 
 
@@ -82,12 +82,10 @@ class BlockFieldsRule(PerBlockValidationRule):
 
         missing_fields: List[str] = []
 
-        for field_name in ("id", "name", "domain"):
+        for field_name in ("id", "domain"):
             if _is_blank(block.get(field_name)):
                 missing_fields.append(field_name)
 
-        if _is_blank(block.get("purpose")):
-            missing_fields.append("purpose")
         if _is_blank(block.get("status")):
             missing_fields.append("status")
 
@@ -216,7 +214,6 @@ class BlueprintValidator:
             BlockFieldsRule(),
             BlockStatusRule(),
             DuplicateIdsRule(),
-            DuplicateActivePurposeRule(),
         ]
 
     def validate(self, blocks: List[Any]) -> List[Finding]:

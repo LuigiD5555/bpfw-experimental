@@ -269,7 +269,7 @@ def render_help_block(view_mode: InspectorViewMode) -> list[str]:
         "  ───────────────────",
         "  [p1] Existing purpose from blueprint matches this block.",
         "  [p2] Learned purpose previously accepted by the user.",
-        "  [p3] Symbol or block name, such as class/function name.",
+        "  [p3] Symbol-based purpose from class/function name.",
         "  [p4] Docstring first sentence or supported docstring pattern.",
         "  [p5] Blended evidence from history, symbol, and docstring.",
         "  [p] write custom purpose",
@@ -310,7 +310,6 @@ def render_help_block(view_mode: InspectorViewMode) -> list[str]:
             "",
             "  Editing",
             "  ───────",
-            "  [n]        Edit name",
             "  [i]        Edit interface",
             "  [o]        Edit notes",
         ])

@@ -74,7 +74,7 @@ class PlannerProjectConfigFactory:
                 policy.get("allowed_statuses"),
                 ["active", "experimental", "legacy", "deprecated"],
             ),
-            single_active_per_purpose=bool(policy.get("one_active_block_per_purpose", True)),
+            block_active_duplicate_profiles=bool(_dict_or_empty(policy.get("duplicate_detection")).get("block_active_duplicate_profiles", True)),
             undeclared_code_blocks=bool(policy.get("undeclared_code_blocks", True)),
             missing_declared_code_blocks=bool(policy.get("missing_declared_code_blocks", True)),
             security=security,
@@ -159,10 +159,12 @@ class PlannerBoxFactory:
             Planner box created from the block data.
         """
         code_data = _dict_or_empty(block_data.get("code"))
+        purpose = str(block_data.get("purpose") or "")
+        display_label = purpose or str(code_data.get("symbol") or block_data.get("id") or "")
         box = PlannerBox(
-            name=str(block_data.get("name", "")),
+            name=display_label,
             domain=str(block_data.get("domain", "")),
-            purpose=str(block_data.get("purpose") or ""),
+            purpose=purpose,
             symbol_type=str(code_data.get("kind") or "class"),
             lifecycle=str(block_data.get("status") or "active"),
             path=code_data.get("path"),

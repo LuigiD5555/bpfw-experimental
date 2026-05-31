@@ -410,7 +410,7 @@ def render_add_block_modal(state: PlannerState) -> None:
         "[4] Kind     1=class, 2=function, 3=method",
         "             more: module, dataclass, protocol, enum, exception",
         "",
-        "> Name: _",
+        "> Purpose: _",
         "",
         "[b] Cancel",
     ]
@@ -690,7 +690,7 @@ def render_project_settings_modal(state: PlannerState) -> None:
         "Policy",
         "[6] mode                         " + config.policy_mode,
         "[7] block on drift               " + str(config.defined_blueprint_blocks_on_drift),
-        "[8] one active block per purpose " + str(config.single_active_per_purpose),
+        "[8] block duplicate profiles     " + str(config.block_active_duplicate_profiles),
         "[9] block undeclared code        " + str(config.undeclared_code_blocks),
         "[10] block missing declared code  " + str(config.missing_declared_code_blocks),
         "",
@@ -780,7 +780,7 @@ def render_yaml_preview_modal(state: PlannerState) -> None:
 
         for box in sorted(state.boxes, key=lambda b: b.id)[:3]:  # Show first 3
             lines.append(f"  - {box.id}")
-            lines.append(f"    name: {box.name}")
+            lines.append(f"    purpose: {box.purpose}")
             lines.append(f"    domain: {box.domain}")
             lines.append(f"    purpose: {box.purpose}")
             if box.path:
@@ -1193,9 +1193,9 @@ def render_duplicate_name_modal(state: PlannerState, existing_box: PlannerBox, s
     terminal_width = get_terminal_width()
 
     lines = [
-        f"A block named {existing_box.name} already exists in {existing_box.domain}.",
+        f"A block with this purpose already exists in {existing_box.domain}.",
         "",
-        "Suggested names:",
+        "Suggested purposes:",
     ]
 
     for i, name in enumerate(suggested_names[:3]):
@@ -1205,12 +1205,12 @@ def render_duplicate_name_modal(state: PlannerState, existing_box: PlannerBox, s
     lines.extend([
         "",
         "[enter] Use selected suggestion",
-        "[e] Edit name",
+        "[e] Edit purpose",
         "[b] Cancel",
     ])
-    width = resolve_uniform_width(terminal_width=terminal_width, panels=[("Duplicate Name", lines)])
+    width = resolve_uniform_width(terminal_width=terminal_width, panels=[("Duplicate Purpose", lines)])
 
-    for line in render_box(title="Duplicate Name", lines=lines, width=width):
+    for line in render_box(title="Duplicate Purpose", lines=lines, width=width):
         print(line)
 
 
@@ -1514,4 +1514,3 @@ PLANNER_SCREEN_RENDERERS: dict[str, ScreenRenderer] = {
     "no_connections_warning": render_no_connections_warning_modal,
     "experimental_to_active_warning": render_workspace,
 }
-

@@ -67,7 +67,7 @@ class BlueprintAssembler:
             "empty_blueprint_allows_execution": config.empty_blueprint_allows_execution,
             "defined_blueprint_blocks_on_drift": config.defined_blueprint_blocks_on_drift,
             "allowed_statuses": config.allowed_lifecycles,
-            "one_active_block_per_purpose": config.single_active_per_purpose,
+            "duplicate_detection": {"block_active_duplicate_profiles": config.block_active_duplicate_profiles},
             "undeclared_code_blocks": config.undeclared_code_blocks,
             "missing_declared_code_blocks": config.missing_declared_code_blocks,
             "security": {
@@ -166,7 +166,6 @@ class BlueprintAssembler:
         block = {
             "id": box.id,
             "purpose": box.purpose,
-            "name": box.name,
             "domain": box.domain,
             "status": box.lifecycle,
             "code": code,

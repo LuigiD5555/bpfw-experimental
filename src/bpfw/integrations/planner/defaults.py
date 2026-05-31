@@ -21,10 +21,10 @@ from bpfw.integrations.planner.utils import (
 class AddBoxInput:
     """Input data for adding a new box."""
 
-    name: str
-    domain: str
     purpose: str
+    domain: str
     symbol_type: str
+    name: str = ""
     lifecycle: Optional[str] = None
 
 
@@ -69,13 +69,14 @@ class PlannerDefaultsBuilder:
         source_root = state.project_config.source_roots[0] if state.project_config.source_roots else "src"
 
         # Generate derived values
-        path = generate_box_path(source_root, box_input.domain, box_input.name)
-        symbol = generate_box_symbol(box_input.name)
+        label = box_input.name or box_input.purpose
+        path = generate_box_path(source_root, box_input.domain, label)
+        symbol = generate_box_symbol(label)
         lifecycle = box_input.lifecycle or "active"
 
         # Create box
         box = PlannerBox(
-            name=box_input.name,
+            name=box_input.name or box_input.purpose,
             domain=box_input.domain,
             purpose=box_input.purpose,
             symbol_type=box_input.symbol_type,
@@ -105,17 +106,13 @@ class BoxFactory:
         Raises:
             ValueError: If validation fails.
         """
-        # Validate name
-        if not input_data.name or not input_data.name.strip():
-            raise ValueError("Box name cannot be empty")
+        # Validate purpose
+        if not input_data.purpose or not input_data.purpose.strip():
+            raise ValueError("Block purpose cannot be empty")
 
         # Validate domain
         if not input_data.domain or not input_data.domain.strip():
             raise ValueError("Box domain cannot be empty")
-
-        # Validate purpose
-        if not input_data.purpose or not input_data.purpose.strip():
-            raise ValueError("Block purpose cannot be empty")
 
         # Validate symbol_type
         if input_data.symbol_type not in VALID_SYMBOL_TYPES:

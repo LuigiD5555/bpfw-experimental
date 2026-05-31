@@ -76,7 +76,7 @@ PROJECT_LIST_SETTINGS: dict[str, tuple[str, str]] = {
 
 PROJECT_BOOLEAN_SETTINGS: dict[str, str] = {
     "7": "defined_blueprint_blocks_on_drift",
-    "8": "single_active_per_purpose",
+    "8": "block_active_duplicate_profiles",
     "9": "undeclared_code_blocks",
     "10": "missing_declared_code_blocks",
 }
@@ -176,7 +176,7 @@ class PlannerController:
         """Return contextual input prompt for current planner screen."""
         active_screen = screen or self.state.screen
         if active_screen == "add_block":
-            return "> Name (example: InvoiceParser): "
+            return "> Purpose (example: parse invoice document): "
         if active_screen == "connect_target":
             return "> From block: "
         if active_screen == "connect_meaning":
@@ -332,12 +332,11 @@ class PlannerController:
 
     def _handle_add_block_key(self, key: str) -> None:
         """Handle command-driven add block flow."""
-        name = key.strip()
-        if not name:
+        purpose = key.strip()
+        if not purpose:
             self.state.screen = "workspace"
             return
         domain = read_line("> Domain (example: ingestion): ").strip()
-        purpose = read_line("> Purpose (example: Parse OCR text into invoice data): ").strip()
         visible_symbol_types = [symbol_type for symbol_type in VALID_SYMBOL_TYPES if not symbol_type.startswith("nested_")]
         kind_options = ", ".join(f"{index + 1}={symbol_type}" for index, symbol_type in enumerate(visible_symbol_types))
         kind_choice = read_line(f"> Kind [{kind_options}] (default 1): ").strip().lower()
@@ -351,10 +350,10 @@ class PlannerController:
             kind = visible_symbol_types[0]
         try:
             input_data = AddBoxInput(
-                name=name,
-                domain=domain,
                 purpose=purpose,
+                domain=domain,
                 symbol_type=kind,
+                name=purpose,
                 lifecycle=None,
             )
             box = BoxFactory.create_box(input_data, self.state)

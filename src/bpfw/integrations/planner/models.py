@@ -50,7 +50,7 @@ class PlannerProjectConfig:
     allowed_lifecycles: List[str] = field(default_factory=lambda: [
         "active", "experimental", "legacy", "deprecated"
     ])
-    single_active_per_purpose: bool = True
+    block_active_duplicate_profiles: bool = True
     undeclared_code_blocks: bool = True
     missing_declared_code_blocks: bool = True
     security: PlannerSecurityConfig = field(default_factory=PlannerSecurityConfig)

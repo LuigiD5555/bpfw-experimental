@@ -128,17 +128,6 @@ def apply_inspector_command(
             issue.block["domain"] = " ".join(value.strip().lower().split())
         return InspectorAction.STAY
 
-    if stripped_command.startswith("n"):
-        value = stripped_command[1:].strip()
-        if not value:
-            current_name = issue.block.get("name", "")
-            prompt_value = _read_optional_value(input_func=input_func, prompt=f"name [{current_name}]: ")
-            if prompt_value is None:
-                return InspectorAction.STAY
-            value = prompt_value
-        if value:
-            issue.block["name"] = value
-        return InspectorAction.STAY
 
     if stripped_command.startswith("o"):
         value = stripped_command[1:].strip()

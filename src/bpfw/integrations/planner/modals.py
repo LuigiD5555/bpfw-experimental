@@ -34,19 +34,14 @@ class AddBoxModal:
         print("\n╭──────────── Add Box ────────────╮")
         print("│                                 │")
 
-        # Collect name
-        name = self._collect_field("Name")
-        if not name:
+        # Collect purpose
+        purpose = self._collect_field("Purpose")
+        if not purpose:
             return None
 
         # Collect domain
         domain = self._collect_field("Domain")
         if not domain:
-            return None
-
-        # Collect purpose
-        purpose = self._collect_field("Purpose")
-        if not purpose:
             return None
 
         # Collect symbol type
@@ -58,14 +53,14 @@ class AddBoxModal:
         print("│ [enter] Create  [q] Cancel    │")
         print("╰─────────────────────────────────╯")
 
-        choice = input("> ").strip().lower()
+        choice = read_input("> ").strip().lower()
         if choice == "q":
             return None
 
         return AddBoxInput(
-            name=name,
-            domain=domain,
             purpose=purpose,
+            domain=domain,
+            name=purpose,
             symbol_type=symbol_type,
         )
 
@@ -166,7 +161,7 @@ class ConnectionModal:
         print("│ [enter] Connect  [q] Cancel     │")
         print("╰───────────────────────────────────╯")
 
-        choice = input("> ").strip().lower()
+        choice = read_input("> ").strip().lower()
         if choice == "q":
             return None
 

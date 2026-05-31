@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, List
 
-REQUIRED_SAVE_FIELDS = ("purpose", "name", "domain", "status")
+REQUIRED_SAVE_FIELDS = ("domain", "status")
 
 
 def validate_required_fields(
@@ -11,8 +11,6 @@ def validate_required_fields(
     """Return list of missing required field names."""
 
     values = {
-        "purpose": block.get("purpose"),
-        "name": block.get("name"),
         "domain": block.get("domain"),
         "status": block.get("status"),
     }

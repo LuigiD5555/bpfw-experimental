@@ -64,7 +64,7 @@ def run_inspector_target(
     if isinstance(code_data, dict):
         code_path = clean_string(code_data.get("path")) or "unknown"
         code_symbol = clean_string(code_data.get("symbol")) or "unknown"
-        print_func(f"  {block.get('name', block.get('canonical_name', 'unknown'))}")
+        print_func(f"  {block.get('purpose') or block.get('canonical_name') or block.get('id', 'unknown')}")
         print_func(f"  {code_path} :: {code_symbol}")
     print_func("")
 

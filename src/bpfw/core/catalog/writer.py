@@ -37,7 +37,6 @@ class BlockFactory:
     @staticmethod
     def create(
         block_id: str,
-        name: str,
         code: Dict[str, Any],
         detected: Dict[str, Any],
         *,
@@ -55,7 +54,6 @@ class BlockFactory:
 
         Args:
             block_id: Unique block identifier.
-            name: Human-readable block name.
             code: Code metadata dict (path, module, symbol, kind, start_line, end_line).
             detected: Detection metadata dict (qualified_name, kind, methods, functions).
             purpose: Block purpose (default None).
@@ -74,7 +72,6 @@ class BlockFactory:
         block: Dict[str, Any] = {
             "id": block_id,
             "purpose": purpose,
-            "name": name,
             "domain": domain,
             "status": status,
             "code": code,
@@ -137,7 +134,7 @@ def build_initial_blueprint(
             "empty_blueprint_allows_execution": True,
             "defined_blueprint_blocks_on_drift": True,
             "allowed_statuses": list(ALLOWED_STATUSES),
-            "one_active_block_per_purpose": True,
+            "duplicate_detection": {"block_active_duplicate_profiles": True},
             "undeclared_code_blocks": True,
             "missing_declared_code_blocks": True,
             "security": {
@@ -191,7 +188,6 @@ def build_core_shard(discovered_units: List[DiscoveredCodeUnit]) -> Dict[str, An
 
         block = BlockFactory.create(
             block_id=block_id,
-            name=unit.symbol,
             code={
                 "path": unit.path,
                 "module": unit.module,

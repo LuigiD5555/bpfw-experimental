@@ -17,7 +17,6 @@ class MetadataDraft:
     """Mutable metadata draft returned by the diff inspector window.
 
     Attributes:
-        name: Authority display name.
         purpose: Authority purpose.
         domain: Authority domain.
         status: Authority status or lifecycle.
@@ -41,7 +40,6 @@ class MetadataDraft:
             Metadata draft populated from the block.
         """
         return cls(
-            name=_clean(block.get("name")),
             purpose=_clean(block.get("purpose")),
             domain=_clean(block.get("domain")),
             status=_clean(block.get("status")) or _clean(block.get("lifecycle")),
@@ -58,7 +56,6 @@ class MetadataDraft:
             Updated block copy.
         """
         updated = dict(block)
-        updated["name"] = self.name
         updated["purpose"] = self.purpose
         updated["domain"] = self.domain
         updated["status"] = self.status
@@ -73,8 +70,6 @@ class MetadataDraft:
             Non-empty dictionary of metadata fields.
         """
         changes: dict[str, Any] = {}
-        if self.name is not None:
-            changes["name"] = self.name
         if self.purpose is not None:
             changes["purpose"] = self.purpose
         if self.domain is not None:
@@ -113,9 +108,6 @@ def run_metadata_window(
             return None
         if command == "s":
             return draft
-        if command == "n":
-            draft.name = _read_optional_value("Name", draft.name, input_func, print_func)
-            continue
         if command == "p":
             draft.purpose = _read_purpose(block, draft.purpose, input_func, print_func)
             continue
@@ -158,14 +150,12 @@ def _render_metadata_window(
     print_func(f"  {code.get('path', 'unknown')}::{code.get('symbol', 'unknown')}")
     print_func("")
     print_func("Fields:")
-    print_func(f"  Name:         {_display(draft.name)}")
     print_func(f"  Purpose:      {_display(draft.purpose)}")
     print_func(f"  Domain:       {_display(draft.domain)}")
     print_func(f"  Lifecycle:    {_display(draft.status)}")
     print_func(f"  Observations: {_display(draft.observations)}")
     print_func("")
     print_func("Options:")
-    print_func("  [n] Edit name")
     print_func("  [p] Edit purpose")
     print_func("  [d] Edit domain")
     print_func("  [l] Edit lifecycle")

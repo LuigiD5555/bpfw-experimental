@@ -120,13 +120,6 @@ class PlanValidator:
                     box_id=box.id or "unknown",
                 ))
 
-            if not box.name or not box.name.strip():
-                errors.append(PlanFinding(
-                    level="error",
-                    message=f"Box has no name",
-                    box_id=box.id or "unknown",
-                ))
-
             if not box.purpose or not box.purpose.strip():
                 errors.append(PlanFinding(
                     level="error",
@@ -251,23 +244,5 @@ class PlanValidator:
         """
         errors = []
         warnings = []
-
-        # Check for duplicate active purposes
-        if state.project_config.single_active_per_purpose:
-            active_by_purpose = {}
-
-            for box in state.boxes:
-                if box.lifecycle == "active" and box.duplicate_group:
-                    if box.duplicate_group not in active_by_purpose:
-                        active_by_purpose[box.duplicate_group] = []
-                    active_by_purpose[box.duplicate_group].append(box)
-
-            for purpose, boxes in active_by_purpose.items():
-                if len(boxes) > 1:
-                    box_ids = ", ".join(b.id for b in boxes)
-                    errors.append(PlanFinding(
-                        level="error",
-                        message=f"Multiple active blocks with same purpose '{purpose}': {box_ids}",
-                    ))
 
         return errors, warnings

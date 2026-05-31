@@ -2575,7 +2575,6 @@ class DriftGateRunner:
             code["path"] = candidate.path
             code["symbol"] = candidate.symbol
             code["kind"] = candidate.kind
-        block_data["name"] = candidate.symbol
         self._authority_target_cache[target.block_id] = BlueprintTarget(
             block_id=cached_target.block_id,
             path=candidate.path,
@@ -2583,7 +2582,7 @@ class DriftGateRunner:
             kind=candidate.kind,
             source_shard_path=cached_target.source_shard_path,
             purpose=cached_target.purpose,
-            name=candidate.symbol,
+            name=cached_target.name,
             domain=cached_target.domain,
             status=cached_target.status,
             block_data=block_data,
@@ -2973,7 +2972,6 @@ def _block_from_code_target(code: CodeTarget) -> dict[str, Any]:
     return {
         "id": to_snake_case(code.symbol),
         "purpose": None,
-        "name": code.symbol,
         "domain": None,
         "status": "experimental",
         "code": {

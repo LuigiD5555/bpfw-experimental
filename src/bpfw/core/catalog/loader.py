@@ -191,8 +191,6 @@ def is_block_complete(block: dict) -> bool:
 
     Required fields:
     - id
-    - purpose
-    - name
     - domain
     - status
     - code.path
@@ -205,13 +203,11 @@ def is_block_complete(block: dict) -> bool:
     Returns:
         True if block is complete, False otherwise.
     """
-    for key in ("id", "name", "domain"):
+    for key in ("id", "domain"):
         value = block.get(key)
         if value is None or value == "":
             return False
 
-    if block.get("purpose") in (None, ""):
-        return False
     if block.get("status") in (None, ""):
         return False
 
