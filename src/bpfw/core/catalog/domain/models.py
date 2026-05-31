@@ -46,7 +46,8 @@ class Policy(BaseModel):
     allowed_statuses: list[str] = Field(
         default_factory=lambda: ["active", "experimental", "legacy", "deprecated"]
     )
-    one_active_block_per_purpose: bool = True
+    one_active_block_per_purpose: bool | None = None
+    duplicate_detection: dict[str, Any] = Field(default_factory=lambda: {"block_active_duplicate_profiles": True})
 
 
 class Responsibility(BaseModel):
@@ -58,6 +59,7 @@ class Responsibility(BaseModel):
     purpose: str | None = None
     domain: str | None = None
     name: str | None = None
+    analysis: dict[str, Any] = Field(default_factory=dict)
     lifecycle: str = Field(default="active", alias="status")
     location: ResponsibilityLocation = Field(default_factory=ResponsibilityLocation, alias="code")
     detected: DetectedMetadata | None = None

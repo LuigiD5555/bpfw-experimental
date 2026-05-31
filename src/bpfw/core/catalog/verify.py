@@ -19,6 +19,7 @@ from bpfw.core.catalog.models import (
 from bpfw.core.catalog.scan_strategy import ProjectScanStrategyFactory, ScanMode
 from bpfw.core.catalog.code_duplicates import CodeDuplicateAnalyzer
 from bpfw.core.catalog.code_outcomes import CodeOutcomeAnalyzer
+from bpfw.core.catalog.duplicate_profile import DuplicateActiveProfileRule, DuplicateProfileBuilder
 from bpfw.core.catalog.security import validate_no_blueprint_secrets
 from bpfw.core.catalog.validation import validate_blueprint_structure
 from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, FINDING_SEVERITY_WARNING, Finding
@@ -27,6 +28,7 @@ from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, FINDING_SEVERITY_WARNIN
 CODE_MISSING_DECLARED = "MISSING_DECLARED_CODE"
 CODE_UNDECLARED = "UNDECLARED_CODE"
 CODE_DUPLICATE_ACTIVE_PURPOSE = "DUPLICATE_ACTIVE_PURPOSE"
+CODE_DUPLICATE_ACTIVE_PROFILE = "DUPLICATE_ACTIVE_PROFILE"
 CODE_INVALID_LIFECYCLE = "INVALID_STATUS"
 CODE_INCOMPLETE_RESPONSIBILITY = "INCOMPLETE_BLOCK"
 
@@ -263,6 +265,7 @@ def _build_report(
     missing_declared_count = sum(1 for finding in findings if finding.code == CODE_MISSING_DECLARED)
     undeclared_count = sum(1 for finding in findings if finding.code == CODE_UNDECLARED)
     duplicate_active_purpose_count = sum(1 for finding in findings if finding.code == CODE_DUPLICATE_ACTIVE_PURPOSE)
+    duplicate_active_profile_count = sum(1 for finding in findings if finding.code == CODE_DUPLICATE_ACTIVE_PROFILE)
     invalid_lifecycle_count = sum(1 for finding in findings if finding.code == CODE_INVALID_LIFECYCLE)
     incomplete_responsibility_count = sum(1 for finding in findings if finding.code == CODE_INCOMPLETE_RESPONSIBILITY)
 
@@ -280,6 +283,7 @@ def _build_report(
         missing_declared_count=missing_declared_count,
         undeclared_count=undeclared_count,
         duplicate_active_purpose_count=duplicate_active_purpose_count,
+        duplicate_active_profile_count=duplicate_active_profile_count,
         invalid_lifecycle_count=invalid_lifecycle_count,
         incomplete_responsibility_count=incomplete_responsibility_count,
     )
@@ -352,6 +356,18 @@ def run_verify(
         authority_state=load_result.state,
     )
 
+    blocks = load_result.data.get("blocks", [])
+    duplicate_profiles = DuplicateProfileBuilder(
+        project_root=resolved_root,
+        discovered_units=scan_result.discovered_units,
+        source_repository=scan_result.source_repository,
+        blocks=blocks if isinstance(blocks, list) else [],
+    ).build()
+    duplicate_profile_findings = DuplicateActiveProfileRule().validate(
+        blocks=blocks if isinstance(blocks, list) else [],
+        profiles_by_key=duplicate_profiles,
+    )
+
     code_duplicate_findings = CodeDuplicateAnalyzer(
         project_root=resolved_root,
         discovered_units=scan_result.discovered_units,
@@ -372,6 +388,7 @@ def run_verify(
     all_findings.extend(validation_findings)
     all_findings.extend(security_findings)
     all_findings.extend(drift_findings)
+    all_findings.extend(duplicate_profile_findings)
     all_findings.extend(code_duplicate_findings)
     all_findings.extend(code_outcome_findings)
 

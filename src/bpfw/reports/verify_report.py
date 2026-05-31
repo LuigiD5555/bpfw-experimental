@@ -20,7 +20,7 @@ _SUGGESTED_ACTIONS: Dict[str, str] = {
         "Fix bpfw/blueprint.yaml so it can be parsed and loaded."
     ),
     "INCOMPLETE_BLOCK": (
-        "Sync bpfw/blueprint.yaml by completing: id, purpose, name, domain, status, "
+        "Sync bpfw/blueprint.yaml by completing: id, domain, status, "
         "code.path, code.symbol, and code.kind."
     ),
     "INVALID_STATUS": (
@@ -29,9 +29,10 @@ _SUGGESTED_ACTIONS: Dict[str, str] = {
     "DUPLICATE_BLOCK_ID": (
         "Give every block a unique id."
     ),
-    "DUPLICATE_ACTIVE_PURPOSE": (
-        "Keep one block active and mark the others "
-        "experimental, legacy, or deprecated."
+    "DUPLICATE_ACTIVE_PROFILE": (
+        "Keep one active implementation for this duplicate declaration or "
+        "calculated duplicate profile, or mark the competing blocks experimental, "
+        "legacy, or deprecated."
     ),
     "NORMALIZED_AST_CLONE": (
         "Review whether these blocks should share one implementation or stay separate."
@@ -60,8 +61,8 @@ _SUGGESTED_ACTIONS: Dict[str, str] = {
     ),
     "UNDECLARED_CODE": (
         "Add it to the blueprint with status experimental, "
-        "legacy, deprecated, or active. If it duplicates an "
-        "existing purpose, do not mark both as active."
+        "legacy, deprecated, or active. If it duplicates an existing "
+        "calculated duplicate profile, do not mark both as active."
     ),
     "PYTHON_PARSE_ERROR": (
         "Fix the Python syntax error before running verification again."
@@ -76,7 +77,7 @@ VERIFY_FINDING_FILTERS: Dict[str, set[str]] = {
     "undeclared": {"UNDECLARED_CODE"},
     "missing": {"MISSING_DECLARED_CODE"},
     "duplicate": {
-        "DUPLICATE_ACTIVE_PURPOSE",
+        "DUPLICATE_ACTIVE_PROFILE",
         "DUPLICATE_BLOCK_ID",
         "NORMALIZED_AST_CLONE",
         "SAME_RETURN_EXPRESSION",
@@ -119,6 +120,27 @@ def _render_evidence(finding: Finding) -> List[str]:
         lines.append("Active blocks:")
         for block_id in evidence.get("active_block_ids", [])[:8]:
             lines.append(f"  - {block_id}")
+    if "duplicate_key" in evidence:
+        lines.append(f"Duplicate key: {evidence.get('duplicate_key')}")
+    if "duplicate_hash" in evidence:
+        lines.append(f"Duplicate hash: {evidence.get('duplicate_hash')}")
+    if "hash_strength" in evidence:
+        lines.append(f"Hash strength: {evidence.get('hash_strength')}")
+    if "reason" in evidence:
+        lines.append(f"Reason: {evidence.get('reason')}")
+    if "active_blocks" in evidence:
+        lines.append("Active blocks:")
+        for active_block in evidence.get("active_blocks", [])[:8]:
+            if isinstance(active_block, dict):
+                block_id = active_block.get("id", "unknown")
+                path = active_block.get("path", "n/a")
+                symbol = active_block.get("symbol", "n/a")
+                purpose = active_block.get("purpose")
+                lines.append(f"  - {block_id}: {path}::{symbol}")
+                if purpose:
+                    lines.append(f"    purpose: {purpose}")
+            else:
+                lines.append(f"  - {active_block}")
     if "units" in evidence:
         lines.append("Units:")
         for unit_label in evidence.get("units", [])[:8]:
@@ -171,7 +193,7 @@ def _render_block_group(code: str, grouped_findings: List[Finding], max_items: i
         "SIMILAR_OUTCOME",
         "CONFLICTING_EFFECT",
         "UNCLASSIFIED_EXTERNAL_EFFECT",
-        "DUPLICATE_ACTIVE_PURPOSE",
+        "DUPLICATE_ACTIVE_PROFILE",
     }:
         lines.append("Items:")
         for index, finding in enumerate(grouped_findings[:max_items], start=1):
@@ -299,7 +321,7 @@ def render_verify_report(
 
         sections.append("Lifecycle:")
         sections.append(f"  invalid lifecycles: {report.invalid_lifecycle_count}")
-        sections.append(f"  duplicate active purposes: {report.duplicate_active_purpose_count}")
+        sections.append(f"  duplicate active profiles: {report.duplicate_active_profile_count}")
         sections.append("")
 
         sections.append("Execution:")
