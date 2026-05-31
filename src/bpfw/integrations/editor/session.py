@@ -6,8 +6,11 @@ inspector in target mode.
 """
 
 from pathlib import Path
+from typing import Any
 
 from bpfw.core.catalog.loader import BlueprintLoader
+from bpfw.core.catalog.duplicate_profile import DuplicateProfileBuilder
+from bpfw.core.catalog.verify import scan_project_from_blueprint
 from bpfw.integrations.editor.filters import FilterState, apply_filters, parse_filter_input
 from bpfw.integrations.editor.screen import (
     read_input,
@@ -60,10 +63,7 @@ class EditorSession:
             return 1
 
         # Build search records and start session
-        if load_result.domain_document is not None:
-            records = build_search_records_from_document(load_result.domain_document)
-        else:
-            records = build_search_records(blueprint_data)
+        records = self._build_records_from_load_result(load_result)
         if not records:
             print(
                 "Blueprint has no searchable blocks.\n\n"
@@ -244,9 +244,53 @@ class EditorSession:
         if load_result.state in {"missing", "invalid"}:
             return None
 
+        return self._build_records_from_load_result(load_result)
+
+
+    def _build_records_from_load_result(self, load_result: Any) -> list[SearchRecord]:
+        """Build editor search records with calculated duplicate profile data.
+
+        Args:
+            load_result: Blueprint loader result used by the editor.
+
+        Returns:
+            Search records enriched with duplicate hash and duplicate group size.
+        """
+
+        duplicate_profiles = self._build_duplicate_profiles(load_result)
         if load_result.domain_document is not None:
-            return build_search_records_from_document(load_result.domain_document)
-        return build_search_records(load_result.data)
+            return build_search_records_from_document(
+                load_result.domain_document,
+                duplicate_profiles=duplicate_profiles,
+            )
+        return build_search_records(
+            load_result.data,
+            duplicate_profiles=duplicate_profiles,
+        )
+
+
+    def _build_duplicate_profiles(self, load_result: Any) -> dict:
+        """Build duplicate profiles for editor filtering.
+
+        Args:
+            load_result: Blueprint loader result with parsed authority data.
+
+        Returns:
+            Duplicate profiles keyed by code unit identity.
+        """
+
+        scan_result = scan_project_from_blueprint(
+            project_root=self.project_root,
+            blueprint_data=load_result.data,
+            domain_document=load_result.domain_document,
+        )
+        blocks = load_result.data.get("blocks", [])
+        return DuplicateProfileBuilder(
+            project_root=self.project_root,
+            discovered_units=scan_result.discovered_units,
+            source_repository=scan_result.source_repository,
+            blocks=blocks if isinstance(blocks, list) else [],
+        ).build()
 
 
     def _show_help(self) -> None:

@@ -2,9 +2,18 @@
 
 from dataclasses import dataclass, field
 
-from bpfw.integrations.editor.search import SearchRecord
+from bpfw.integrations.editor.search import SearchRecord, sort_duplicate_records
 
-ALLOWED_FILTER_COLUMNS = ("status", "domain", "name", "path", "symbol", "id", "purpose")
+ALLOWED_FILTER_COLUMNS = (
+    "status",
+    "domain",
+    "path",
+    "symbol",
+    "id",
+    "purpose",
+    "duplicate",
+    "duplicate_hash",
+)
 
 
 @dataclass
@@ -117,9 +126,14 @@ def apply_filters(
     """Apply all active filters to a list of search records."""
 
     result = records
+    duplicate_filter_requested = False
     for active_filter in filter_state.filters:
+        if active_filter.column == "duplicate" and active_filter.value.lower() in {"yes", "true", "1"}:
+            duplicate_filter_requested = True
         result = _apply_single_filter(result, active_filter)
 
+    if duplicate_filter_requested:
+        return sort_duplicate_records(result)
     return result
 
 
@@ -145,6 +159,9 @@ def _record_matches_filter(
 ) -> bool:
     """Check if a record matches a filter value for the given column."""
 
+    if column == "duplicate":
+        return _record_matches_duplicate_filter(record, value_lower)
+
     column_value = _get_record_column_value(record, column)
     return value_lower in column_value.lower()
 
@@ -156,9 +173,31 @@ def _get_record_column_value(record: SearchRecord, column: str) -> str:
         "status": record.lifecycle,
         "purpose": record.purpose,
         "domain": record.domain,
-        "name": record.name,
         "path": record.path,
         "symbol": record.symbol,
         "id": record.responsibility_id,
+        "duplicate": record.duplicate_status,
+        "duplicate_hash": record.duplicate_hash,
     }
     return column_map.get(column, "")
+
+def _record_matches_duplicate_filter(record: SearchRecord, value_lower: str) -> bool:
+    """Return whether a record matches duplicate=yes or duplicate=no.
+
+    Args:
+        record: Search record being filtered.
+        value_lower: Lowercase requested filter value.
+
+    Returns:
+        True when the record matches the requested duplicate state.
+    """
+
+    if value_lower in {"yes", "true", "1"}:
+        return record.duplicate_status == "yes"
+    if value_lower == "check":
+        return record.duplicate_status == "check"
+    if value_lower == "all":
+        return record.duplicate_status in {"yes", "check"}
+    if value_lower in {"no", "false", "0"}:
+        return record.duplicate_status == "no"
+    return value_lower in record.duplicate_status

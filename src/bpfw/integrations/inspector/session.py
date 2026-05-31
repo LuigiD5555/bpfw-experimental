@@ -6,6 +6,11 @@ from pathlib import Path
 
 from bpfw.integrations.inspector.suggestions.domain.engine import suggest_domains
 from bpfw.core.catalog.models import AUTHORITY_STATE_EMPTY
+from bpfw.core.catalog.duplicate_profile import (
+    DuplicateProfile,
+    DuplicateProfileBuilder,
+    code_unit_key_from_block,
+)
 from bpfw.integrations.inspector.base import (
     ISSUE_DRAFT,
     ISSUE_NEW_DETECTED,
@@ -249,6 +254,53 @@ def run_text_inspector(
             show_all=show_all,
         )
 
+
+
+def _build_duplicate_profiles_for_session(
+    session: InspectLoadResult,
+) -> dict:
+    """Build duplicate profiles for the current inspector session.
+
+    Args:
+        session: Loaded inspector session, optionally carrying a scan result.
+
+    Returns:
+        Duplicate profiles keyed by code unit identity. An empty dictionary is
+        returned when the session was loaded from a metadata-only cache.
+    """
+
+    if session.scan_result is None:
+        return {}
+    blocks = session.blueprint_data.get("blocks", [])
+    return DuplicateProfileBuilder(
+        project_root=session.project_root,
+        discovered_units=session.scan_result.discovered_units,
+        source_repository=session.scan_result.source_repository,
+        blocks=blocks if isinstance(blocks, list) else [],
+    ).build()
+
+
+def _duplicate_profile_for_block(
+    block: dict,
+    duplicate_profiles: dict,
+) -> DuplicateProfile | None:
+    """Return the calculated duplicate profile for one inspector block.
+
+    Args:
+        block: Blueprint block currently displayed by Inspector.
+        duplicate_profiles: Profiles calculated for the current scan.
+
+    Returns:
+        The matching duplicate profile, or None when unavailable.
+    """
+
+    key = code_unit_key_from_block(block)
+    if key is None:
+        return None
+    profile = duplicate_profiles.get(key)
+    if isinstance(profile, DuplicateProfile):
+        return profile
+    return None
 
 
 def _should_block_on_stale_metadata_queue(drift_gate_result: DriftGateResult) -> bool:
@@ -587,6 +639,7 @@ def run_text_inspector_session(
     )
     state = InspectorViewState.from_show_all(show_all=show_all)
     existing_purposes = collect_existing_purposes(session.blueprint_data)
+    duplicate_profiles = _build_duplicate_profiles_for_session(session)
 
     while state.is_running and state.current_index < total:
         issue = session.issues[state.current_index]
@@ -620,6 +673,7 @@ def run_text_inspector_session(
             view_mode=view_mode,
             pre_inspection_context_lines=issue.context_lines or session.pre_inspection_context_lines,
             project_blocks=project_blocks if isinstance(project_blocks, list) else [],
+            duplicate_profile=_duplicate_profile_for_block(block, duplicate_profiles),
         )
         try:
             raw_command = input_reader.read("> ")

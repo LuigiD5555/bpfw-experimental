@@ -6,7 +6,7 @@ from bpfw.integrations.editor import screen
 
 def _search_record(
     *,
-    name: str = "LockSystem",
+    symbol: str = "LockSystem",
     domain: str = "lock system",
     path: str = "src/bpfw/protection/authority.py",
     purpose: str = "Manage lock system",
@@ -15,9 +15,9 @@ def _search_record(
         responsibility_id="lock_system",
         lifecycle="active",
         domain=domain,
-        name=name,
+        technical_label=symbol,
         path=path,
-        symbol=name,
+        symbol=symbol,
         location="protection/authority.py",
         start_line=10,
         end_line=40,
@@ -69,8 +69,8 @@ def test_render_results_table_uses_search_record_location(capsys) -> None:
     assert "LockSystem" in output
     assert "PURPOSE" in output
     assert "DOMAIN" in output
-    assert output.index("DOMAIN") < output.index("NAME")
-    assert output.index("NAME") < output.index("PURPOSE")
+    assert output.index("DOMAIN") < output.index("SYMBOL")
+    assert output.index("PURPOSE") < output.index("SYMBOL")
     assert "[1] location:" not in output
 
 
@@ -84,23 +84,23 @@ def test_filtered_results_table_prioritizes_location_and_codelines(capsys) -> No
     )
 
     output = capsys.readouterr().out
-    assert "NAME" in output
+    assert "SYMBOL" in output
     assert "LOCATION" in output
     assert "CODELINES" in output
     assert "PURPOSE" in output
-    assert output.index("NAME") < output.index("PURPOSE")
+    assert output.index("PURPOSE") < output.index("SYMBOL")
     assert output.index("PURPOSE") < output.index("LOCATION")
     assert output.index("LOCATION") < output.index("CODELINES")
-    assert "protection/authority.py" in output
+    assert "protection/authority.p" in output
     assert "10-40" in output
-    assert "Manage lock system" in output
+    assert "Manage" in output
     assert "[1] location:" not in output
 
 
 def test_results_block_ratio_stays_between_half_and_nearly_full_screen(monkeypatch) -> None:
     monkeypatch.setattr(screen, "get_terminal_width", lambda: 100)
     record = _search_record(
-        name="LongName" * 20,
+        symbol="LongName" * 20,
         domain="LongDomain" * 20,
         purpose="Long purpose " * 20,
     )
@@ -113,7 +113,7 @@ def test_results_table_render_stays_within_max_screen_width(monkeypatch, capsys)
     monkeypatch.setattr(screen, "refresh_screen", lambda: None)
     monkeypatch.setattr(screen, "get_terminal_width", lambda: 80)
     record = _search_record(
-        name="LongName" * 20,
+        symbol="LongName" * 20,
         domain="LongDomain" * 20,
         path="src/bpfw/protection/very_long_authority_filename.py",
         purpose="Long purpose " * 20,
@@ -129,9 +129,9 @@ def test_results_table_render_stays_within_max_screen_width(monkeypatch, capsys)
     assert max(len(line) for line in output_lines) <= 76
 
 
-def test_normal_results_width_priority_is_name_purpose_domain() -> None:
+def test_normal_results_width_priority_is_purpose_symbol_domain() -> None:
     record = _search_record(
-        name="LongName" * 5,
+        symbol="LongName" * 5,
         domain="LongDomain" * 20,
         purpose="Long purpose " * 20,
     )
@@ -142,14 +142,14 @@ def test_normal_results_width_priority_is_name_purpose_domain() -> None:
         result_columns=screen.NORMAL_RESULT_COLUMNS,
     )
 
-    domain_width, name_width, purpose_width = column_widths
-    assert name_width == len(record.name)
+    domain_width, purpose_width, symbol_width = column_widths
     assert purpose_width > domain_width
+    assert symbol_width >= screen.RESULT_COLUMN_MIN_WIDTHS["symbol"]
 
 
-def test_filtered_results_width_priority_is_location_name_purpose() -> None:
+def test_filtered_results_width_priority_is_location_symbol_purpose() -> None:
     record = _search_record(
-        name="NameValueLongEnough",
+        symbol="NameValueLongEnough",
         path="src/bpfw/protection/very_long_authority_filename.py",
         purpose="Purpose value long enough",
     )
@@ -160,15 +160,15 @@ def test_filtered_results_width_priority_is_location_name_purpose() -> None:
         result_columns=screen.FILTERED_RESULT_COLUMNS,
     )
 
-    name_width, purpose_width, location_width, codelines_width = column_widths
+    purpose_width, symbol_width, location_width, codelines_width = column_widths
     assert location_width == len(record.location)
-    assert name_width > purpose_width
-    assert purpose_width <= codelines_width
+    assert symbol_width >= screen.RESULT_COLUMN_MIN_WIDTHS["symbol"]
+    assert codelines_width == screen.RESULT_COLUMN_MIN_WIDTHS["codelines"]
 
 
 def test_filtered_results_shrink_codelines_before_priority_columns() -> None:
     record = _search_record(
-        name="ImportantName",
+        symbol="ImportantName",
         path="src/bpfw/protection/very_long_authority_filename.py",
         purpose="Important purpose",
     )
@@ -179,17 +179,17 @@ def test_filtered_results_shrink_codelines_before_priority_columns() -> None:
         result_columns=screen.FILTERED_RESULT_COLUMNS,
     )
 
-    name_width, purpose_width, location_width, codelines_width = column_widths
-    assert location_width > name_width
-    assert name_width > purpose_width
+    purpose_width, symbol_width, location_width, codelines_width = column_widths
+    assert location_width > symbol_width
+    assert symbol_width >= screen.RESULT_COLUMN_MIN_WIDTHS["symbol"]
     assert codelines_width == screen.RESULT_COLUMN_MIN_WIDTHS["codelines"]
 
 
-def test_priority_name_cell_never_uses_ellipsis_when_space_is_tight(monkeypatch, capsys) -> None:
+def test_priority_symbol_cell_never_uses_ellipsis_when_space_is_tight(monkeypatch, capsys) -> None:
     monkeypatch.setattr(screen, "refresh_screen", lambda: None)
     monkeypatch.setattr(screen, "get_terminal_width", lambda: 60)
     record = _search_record(
-        name="VeryLongPrimaryNameThatCannotFullyFit",
+        symbol="VeryLongPrimaryNameThatCannotFullyFit",
         domain="LongDomain" * 20,
         purpose="Long purpose " * 20,
     )

@@ -7,6 +7,7 @@ import tty
 
 from bpfw.integrations.shared.cli_runtime import QUIT_COMMAND, QUIT_COMMAND_KEY, quit_command_label
 from bpfw.integrations.shared.visual_boxes import render_box
+from bpfw.integrations.shared.input_adapter import read_editable_input
 from bpfw.integrations.shared.screen_control import refresh_screen
 from bpfw.integrations.shared.visual_theme import (
     DEFAULT_THEME,
@@ -17,30 +18,35 @@ from bpfw.integrations.shared.visual_theme import (
 
 
 DEFAULT_INPUT_PROMPT = "> "
-NORMAL_RESULT_COLUMNS = ("domain", "name", "purpose")
-FILTERED_RESULT_COLUMNS = ("name", "purpose", "location", "codelines")
-NORMAL_RESULT_WIDTH_PRIORITY = ("name", "purpose", "domain")
-FILTERED_RESULT_WIDTH_PRIORITY = ("location", "name", "purpose", "codelines")
+NORMAL_RESULT_COLUMNS = ("domain", "purpose", "symbol")
+FILTERED_RESULT_COLUMNS = ("purpose", "symbol", "location", "codelines")
+DUPLICATE_RESULT_COLUMNS = ("duplicate_hash", "purpose", "symbol", "location")
+NORMAL_RESULT_WIDTH_PRIORITY = ("purpose", "symbol", "domain")
+FILTERED_RESULT_WIDTH_PRIORITY = ("location", "purpose", "symbol", "codelines")
+DUPLICATE_RESULT_WIDTH_PRIORITY = ("duplicate_hash", "location", "purpose", "symbol")
 RESULT_COLUMN_LABELS = {
     "domain": "DOMAIN",
-    "name": "NAME",
+    "symbol": "SYMBOL",
     "purpose": "PURPOSE",
     "location": "LOCATION",
     "codelines": "CODELINES",
+    "duplicate_hash": "DUP HASH",
 }
 RESULT_COLUMN_MIN_WIDTHS = {
     "domain": 8,
-    "name": 14,
+    "symbol": 14,
     "purpose": 7,
     "location": 12,
     "codelines": 9,
+    "duplicate_hash": 12,
 }
 RESULT_COLUMN_MAX_WIDTHS = {
     "domain": 40,
-    "name": 72,
+    "symbol": 72,
     "purpose": 52,
     "location": 56,
     "codelines": 14,
+    "duplicate_hash": 18,
 }
 ANSI_KEY_REGISTRY = {
     "A": "up",
@@ -87,7 +93,7 @@ def read_input(prompt: str = DEFAULT_INPUT_PROMPT) -> str:
     """Read a line of input, returning stripped value."""
 
     try:
-        value = input(_normalize_prompt(prompt))
+        value = read_editable_input(_normalize_prompt(prompt))
         return value.strip()
     except (EOFError, KeyboardInterrupt):
         return QUIT_COMMAND
@@ -97,7 +103,7 @@ def read_line(prompt: str = DEFAULT_INPUT_PROMPT) -> str:
     """Read a single line of input with a prompt."""
 
     try:
-        value = input(_normalize_prompt(prompt))
+        value = read_editable_input(_normalize_prompt(prompt))
         return value.rstrip("\n")
     except (EOFError, KeyboardInterrupt):
         return ""
@@ -108,7 +114,7 @@ def wait_for_enter() -> None:
 
     try:
         print("Press Enter to continue.")
-        input(DEFAULT_INPUT_PROMPT)
+        read_editable_input(DEFAULT_INPUT_PROMPT)
     except (EOFError, KeyboardInterrupt):
         pass
 
@@ -158,7 +164,7 @@ def read_multiline() -> list[str]:
     lines = []
     try:
         while True:
-            line = input(DEFAULT_INPUT_PROMPT)
+            line = read_editable_input(DEFAULT_INPUT_PROMPT)
             if line.strip() == "":
                 break
             lines.append(line.rstrip("\n"))
@@ -346,6 +352,8 @@ def _desired_result_column_widths(
 def _result_width_priority_for_columns(result_columns: tuple[str, ...]) -> tuple[str, ...]:
     """Return width priority for the current result table profile."""
 
+    if result_columns == DUPLICATE_RESULT_COLUMNS:
+        return DUPLICATE_RESULT_WIDTH_PRIORITY
     if result_columns == FILTERED_RESULT_COLUMNS:
         return FILTERED_RESULT_WIDTH_PRIORITY
     return NORMAL_RESULT_WIDTH_PRIORITY
@@ -393,6 +401,8 @@ def _shrink_order(result_columns: tuple[str, ...], width_priority: tuple[str, ..
 def _result_columns_for_filters(filter_display_lines: list[str]) -> tuple[str, ...]:
     """Return result table columns for normal or filtered search state."""
 
+    if any(line.lower().startswith("duplicate=") for line in filter_display_lines):
+        return DUPLICATE_RESULT_COLUMNS
     has_active_filters = any(line != "none" for line in filter_display_lines)
     if has_active_filters:
         return FILTERED_RESULT_COLUMNS
@@ -441,7 +451,7 @@ def render_search_screen() -> None:
         title="Search block to inspect",
         lines=[
             " Search by:",
-            "   id, name, domain, purpose, lifecycle, path or symbol",
+            "   id, domain, purpose, lifecycle, path or symbol",
         ],
     )
     print()
@@ -608,15 +618,19 @@ def render_filter_screen() -> None:
     print(" Available columns:")
     print("   status")
     print("   domain")
-    print("   name")
+    print("   symbol")
     print("   path")
+    print("   duplicate")
+    print("   duplicate_hash")
     print()
     _render_examples_box(
         [
             " status=active",
             " domain=catalog",
-            " name=loader",
+            " symbol=loader",
             " path=editor",
+            " duplicate=yes",
+            " duplicate_hash=9d2f4a7e21",
         ],
     )
     print()
@@ -681,12 +695,13 @@ def render_editor_help_screen() -> None:
     print("│  Search across blueprint blocks using words related to:                 │")
     print("│                                                                         │")
     print("│    id            Unique block identifier.                      │")
-    print("│    name          Simple block name.                            │")
     print("│    domain        Where this block belongs in the system.           │")
     print("│    purpose        What this block is supposed to do.            │")
     print("│    lifecycle  Current block lifecycle.                      │")
     print("│    path          Code path associated with this block.     │")
     print("│    symbol        Related code symbol or block symbol.                   │")
+    print("│    duplicate     yes when the block shares a strong duplicate hash.      │")
+    print("│    duplicate_hash Calculated hash used to group duplicate blocks.        │")
     print("│                                                                         │")
     print("│  Results                                                                │")
     print("│  ───────                                                                │")
@@ -695,8 +710,9 @@ def render_editor_help_screen() -> None:
     print("│    IDX           Row identifier used to inspect a result.               │")
     print("│    LIFECYCLE  Current block lifecycle.                             │")
     print("│    DOMAIN        Block domain.                                  │")
-    print("│    NAME          Block name.                                   │")
+    print("│    SYMBOL        Related code symbol.                          │")
     print("│    PURPOSE       Why the block exists.                                 │")
+    print("│    DUP HASH      Calculated duplicate hash when duplicate filter is on. │")
     print("│                                                                         │")
     print("│  Filters                                                                │")
     print("│  ───────                                                                │")
@@ -704,15 +720,19 @@ def render_editor_help_screen() -> None:
     print("│                                                                         │")
     print("│    lifecycle  Filter by block lifecycle (status key).              │")
     print("│    domain        Filter by project area.                                │")
-    print("│    name          Filter by block name.                         │")
+    print("│    symbol        Filter by code symbol.                        │")
     print("│    path          Filter by file path.                                   │")
+    print("│    duplicate     Use duplicate=yes to show active duplicate groups.     │")
+    print("│    duplicate_hash Filter by one calculated duplicate hash.              │")
     print("│                                                                         │")
     print("│  Examples                                                               │")
     print("│  ────────                                                               │")
     print("│    status=active                                                     │")
     print("│    domain=catalog                                                       │")
-    print("│    name=loader                                                          │")
+    print("│    symbol=loader                                                        │")
     print("│    path=editor                                                          │")
+    print("│    duplicate=yes                                                       │")
+    print("│    duplicate_hash=9d2f4a7e21                                           │")
     print("│                                                                         │")
     print("│  Commands                                                               │")
     print("│  ────────                                                               │")

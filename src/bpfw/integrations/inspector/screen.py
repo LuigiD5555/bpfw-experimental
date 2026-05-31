@@ -43,6 +43,50 @@ HORIZONTAL_PADDING = 1
 DEFAULT_INSPECTOR_HEADER_TITLE = "Blueprint Framework Inspector"
 
 
+def _build_block_status_lines(
+    block: Dict[str, Any],
+    duplicate_profile: Any | None,
+) -> list[str]:
+    """Build the compact Block Status panel lines.
+
+    Args:
+        block: Blueprint block currently displayed by Inspector.
+        duplicate_profile: Calculated duplicate profile for this block, when
+            available from the current scan.
+
+    Returns:
+        Display lines for the Block Status panel.
+    """
+
+    duplicate_hash = "-"
+    duplicated = "no"
+    duplicate_reason = "-"
+    group_size = "-"
+    if duplicate_profile is not None:
+        profile_keys = getattr(duplicate_profile, "keys", None)
+        if profile_keys is not None:
+            duplicate_hash = display_value(getattr(profile_keys, "duplicate_hash", None))
+            duplicated = display_value(getattr(profile_keys, "duplicated", None))
+            duplicate_reason = display_value(getattr(profile_keys, "reason", None))
+            raw_group_size = getattr(profile_keys, "group_size", 0)
+            group_size = display_value(raw_group_size if raw_group_size else None)
+
+    lines = [
+        "",
+        f"  PURPOSE      {display_value(block.get('purpose'))}",
+        f"  DOMAIN       {display_value(block.get('domain'))}",
+        f"  STATUS       {display_value(block.get('status'))}",
+        f"  DUPLICATED   {duplicated}",
+    ]
+    if duplicated != "no":
+        lines.append(f"  DUP GROUP    {duplicate_hash}")
+        lines.append(f"  GROUP SIZE   {group_size}")
+    if duplicate_reason != "-":
+        lines.append(f"  REASON       {duplicate_reason}")
+    lines.append("")
+    return lines
+
+
 def render_inspector_screen(
     project_root: Path,
     issue_type: str,
@@ -57,6 +101,7 @@ def render_inspector_screen(
     view_mode: InspectorViewMode | None = None,
     pre_inspection_context_lines: list[str] | None = None,
     project_blocks: list[dict[str, Any]] | None = None,
+    duplicate_profile: Any | None = None,
 ) -> None:
     """Show the direct inspector screen."""
 
@@ -69,14 +114,10 @@ def render_inspector_screen(
     hierarchy_lines = build_hierarchy_lines(block)
     code_lines: List[str] = list(snippet_lines)
 
-    authority_lines = [
-        "",
-        f"  PURPOSE    {display_value(block.get('purpose'))}",
-        f"  DOMAIN     {display_value(block.get('domain'))}",
-        f"  NAME       {display_value(block.get('name'))}",
-        f"  STATUS     {display_value(block.get('status'))}",
-        "",
-    ]
+    authority_lines = _build_block_status_lines(
+        block=block,
+        duplicate_profile=duplicate_profile,
+    )
 
     current_lifecycle = clean_string(block.get("status")) or ""
     lifecycle_lines = []
