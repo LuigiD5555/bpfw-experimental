@@ -15,6 +15,7 @@ pip install "blueprint-framework[multilang] @ git+ssh://git@github.com/LuigiD555
 Or build a wheel from a checkout and install it with the bundled installer:
 
 ```sh
+scripts/fetch_pipecraft.sh                      # PipeCraft runtime from the release, checksum verified
 python -m build                              # writes dist/
 scripts/install.sh                           # or: BPFW_WHEEL=/path/to/wheel scripts/install.sh
 ```
