@@ -568,6 +568,14 @@ def main() -> int:
         from bpfw.core.history.ledger import HistoryLedger
         project_root = Path(parsed_arguments.project_root).resolve()
         target = parsed_arguments.subcommand
+        if normalized_command == "history" and target == "compact":
+            import json
+            from bpfw.core.history.compaction import apply_history_compaction, plan_history_compaction
+            result = {"plan": plan_history_compaction(project_root), "applied": False}
+            if "--apply" in remaining_arguments or "--apply" in sys.argv[2:]:
+                result.update(apply_history_compaction(project_root))
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            return 0
         history_search = False
         if normalized_command == "history" and target == "search":
             target = " ".join(remaining_arguments).strip() or None

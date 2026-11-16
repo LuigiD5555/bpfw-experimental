@@ -110,13 +110,16 @@ def scan_project(
     project_root: Path,
     source_roots: List[str],
     ignored_paths: List[str],
+    markup_granularity: str = "full",
 ) -> ScanResult:
     """Scan Python plus every available registered language adapter."""
 
     from bpfw.core.catalog.multilang_scanner import scan_non_python_project
 
     python_result = scan_python_project(project_root, source_roots, ignored_paths)
-    other_result = scan_non_python_project(project_root, source_roots, ignored_paths)
+    other_result = scan_non_python_project(
+        project_root, source_roots, ignored_paths, markup_granularity=markup_granularity
+    )
     return ScanResult(
         discovered_units=python_result.discovered_units + other_result.discovered_units,
         findings=python_result.findings + other_result.findings,

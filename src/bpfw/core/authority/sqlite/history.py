@@ -10,7 +10,21 @@ import json
 from pathlib import Path
 
 from .migration import active_backend
-from .store import SqliteAuthorityStore, now
+from .store import PARTIAL_MARKER, SqliteAuthorityStore, decode_delta_payload, now
+
+
+def _code_path(conn, entity: dict, entity_uid: str) -> str | None:
+    """Return the entity's code path; partial change records look it up in the current block."""
+    code = entity.get('code')
+    if isinstance(code, dict) and code.get('path'):
+        return code.get('path')
+    if entity.get(PARTIAL_MARKER):
+        row = conn.execute('SELECT raw_json FROM blocks WHERE uid=?', (entity_uid,)).fetchone()
+        if row is not None:
+            current_code = json.loads(row['raw_json']).get('code')
+            if isinstance(current_code, dict):
+                return current_code.get('path')
+    return None
 
 
 def project_outbox(project_root: Path, *, limit: int = 100) -> dict[str, int]:
@@ -29,13 +43,16 @@ def project_outbox(project_root: Path, *, limit: int = 100) -> dict[str, int]:
         with store.connect() as conn:
             op = conn.execute('SELECT * FROM operation_log WHERE operation_id=?', (row['operation_id'],)).fetchone()
             deltas = conn.execute('SELECT * FROM operation_deltas WHERE operation_id=? ORDER BY seq', (row['operation_id'],)).fetchall()
+            decoded = []
+            for delta in deltas:
+                old = decode_delta_payload(delta['before_json'])
+                new = decode_delta_payload(delta['after_json'])
+                entity = new if isinstance(new, dict) else old if isinstance(old, dict) else {}
+                decoded.append((delta, old, new, entity, _code_path(conn, entity, delta['entity_uid'])))
         if op is None:
             raise RuntimeError('Orphaned authority outbox operation')
         with ledger.batch():
-            for delta in deltas:
-                old = json.loads(delta['before_json']) if delta['before_json'] is not None else None
-                new = json.loads(delta['after_json']) if delta['after_json'] is not None else None
-                entity = new if isinstance(new, dict) else old if isinstance(old, dict) else {}
+            for delta, old, new, entity, code_path in decoded:
                 is_block = delta['kind'].startswith('block.')
                 if not is_block:
                     event_type = 'SQLITE_AUTHORITY_CHANGED'
@@ -57,7 +74,8 @@ def project_outbox(project_root: Path, *, limit: int = 100) -> dict[str, int]:
                     event_type = 'BLOCK_METADATA_MODIFIED'
                 changed = sorted(set(old or {}) ^ set(new or {})) if isinstance(old, dict) and isinstance(new, dict) else []
                 if isinstance(old, dict) and isinstance(new, dict):
-                    changed = sorted(k for k in set(old) | set(new) if old.get(k) != new.get(k))
+                    changed = sorted(k for k in set(old) | set(new)
+                                     if not str(k).startswith('$') and old.get(k) != new.get(k))
                 payload = {
                     'git': git_context,
                     'event_id': f"{row['event_id']}-{delta['seq']}",
@@ -72,7 +90,7 @@ def project_outbox(project_root: Path, *, limit: int = 100) -> dict[str, int]:
                                'after': ledger.store_object(new) if new is not None else None},
                     'reason': {'summary': op['reason']},
                     'provenance': {'trigger': 'sqlite.outbox', 'actor': op['actor']},
-                    'location': {'path': entity.get('code', {}).get('path') if isinstance(entity.get('code'), dict) else '.bpfw/authority.sqlite'},
+                    'location': {'path': code_path or '.bpfw/authority.sqlite'},
                     'decision': {'status': 'accepted'},
                 }
                 ledger.append(payload)

@@ -9,6 +9,7 @@ import hashlib
 import json
 import sqlite3
 import uuid
+import zlib
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -52,6 +53,56 @@ def _validate_json(value: Any) -> str:
         return result
     except (ValueError, TypeError) as exc:
         raise AuthorityIntegrityError(f"Authority contains non-JSON value: {exc}") from exc
+
+
+# Change-record payloads at or above this size are stored zlib-compressed (a BLOB); smaller ones stay JSON text.
+DELTA_COMPRESSION_THRESHOLD = 256
+# Marker of a field-level change record: only identity keys plus the keys that changed are stored.
+PARTIAL_MARKER = "$partial"
+ABSENT_MARKER = "$absent"
+_IDENTITY_KEYS = ("id", "uid")
+
+
+def encode_delta_payload(value: Any) -> str | bytes | None:
+    """Encode one change-record side: JSON text when small, zlib-compressed JSON bytes otherwise."""
+    if value is None:
+        return None
+    text = _validate_json(value)
+    raw = text.encode("utf-8")
+    return text if len(raw) < DELTA_COMPRESSION_THRESHOLD else zlib.compress(raw, 9)
+
+
+def decode_delta_payload(value: Any) -> Any:
+    """Decode a change-record side written by any BPFW version (JSON text or compressed bytes)."""
+    if value is None:
+        return None
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return json.loads(zlib.decompress(bytes(value)).decode("utf-8"))
+    return json.loads(value)
+
+
+def field_level_change(old: Mapping[str, Any], new: Mapping[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Return the before/after sides of a change holding only identity keys and changed keys."""
+    changed = sorted(key for key in set(old) | set(new) if old.get(key) != new.get(key) or (key in old) != (key in new))
+    before: dict[str, Any] = {PARTIAL_MARKER: True}
+    after: dict[str, Any] = {PARTIAL_MARKER: True}
+    for key in _IDENTITY_KEYS:
+        if key in old:
+            before[key] = old[key]
+        if key in new:
+            after[key] = new[key]
+    for key in changed:
+        if key in old:
+            before[key] = old[key]
+        if key in new:
+            after[key] = new[key]
+    absent_before = [key for key in changed if key not in old]
+    absent_after = [key for key in changed if key not in new]
+    if absent_before:
+        before[ABSENT_MARKER] = absent_before
+    if absent_after:
+        after[ABSENT_MARKER] = absent_after
+    return before, after
 
 
 _SCHEMA = """
@@ -373,9 +424,10 @@ class SqliteAuthorityStore:
         conn.execute("INSERT INTO operation_log VALUES(?,?,?,?,?,?,?,?)",
                      (op, actor, reason, before, before + 1, before_digest, after_digest, timestamp))
         for seq, (uid, kind, old, new) in enumerate(deltas):
+            if kind == "block.upsert" and isinstance(old, Mapping) and isinstance(new, Mapping):
+                old, new = field_level_change(old, new)
             conn.execute("INSERT INTO operation_deltas VALUES(?,?,?,?,?,?)",
-                         (op, seq, uid, kind, _validate_json(old) if old is not None else None,
-                          _validate_json(new) if new is not None else None))
+                         (op, seq, uid, kind, encode_delta_payload(old), encode_delta_payload(new)))
         conn.execute("INSERT INTO outbox_events VALUES(?,?,?,?,?,NULL)",
                      (f"evt_{uuid.uuid4().hex}", op, "authority.changed",
                       _validate_json({"operation_id": op, "actor": actor, "revision": before + 1,
@@ -534,12 +586,19 @@ class SqliteAuthorityStore:
             for uid in old_by_uid.keys() - new_by_uid.keys():
                 conn.execute("DELETE FROM blocks WHERE uid=?", (uid,))
                 deltas.append((uid,"block.delete",old_by_uid[uid][1],None))
+            reordered = 0
             for uid, (ordinal, block) in new_by_uid.items():
                 previous = old_by_uid.get(uid)
-                if previous and previous[1] == block and previous[0]["display_order"] == ordinal:
+                if previous and previous[1] == block:
+                    # A position shift is not a content change: update the order only.
+                    if previous[0]["display_order"] != ordinal:
+                        conn.execute("UPDATE blocks SET display_order=? WHERE uid=?", (ordinal, uid))
+                        reordered += 1
                     continue
                 self._save_block(conn, uid, block, ordinal, previous[0]["entity_revision"] + 1 if previous else 1)
                 deltas.append((uid,"block.upsert",previous[1] if previous else None,block))
+            if reordered:
+                deltas.append(("blocks","blocks.reorder",None,{"moved": reordered}))
             if origins is not None:
                 for uid, (_, block) in new_by_uid.items():
                     logical_source = origins.get(block.get("id"))

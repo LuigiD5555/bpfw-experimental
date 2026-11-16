@@ -15,7 +15,13 @@ from bpfw.core.catalog.models import (
 )
 from bpfw.core.catalog.models import ScanResult
 from bpfw.core.catalog.scan_strategy import ProjectScanStrategyFactory, ScanMode
-from bpfw.core.catalog.verify import read_ignored_paths, read_source_roots, run_verify, scan_project_from_blueprint
+from bpfw.core.catalog.verify import (
+    read_ignored_paths,
+    read_markup_granularity,
+    read_source_roots,
+    run_verify,
+    scan_project_from_blueprint,
+)
 from bpfw.core.errors import BlueprintLockedError
 from bpfw.reports.finding import Finding
 from bpfw.shared.text import to_snake_case
@@ -185,6 +191,9 @@ def load_inspect_session(
                 project_root=resolved_root,
                 source_roots=source_roots,
                 ignored_paths=ignored_paths,
+                markup_granularity=read_markup_granularity(
+                    blueprint_data, domain_document=load_result.domain_document
+                ),
             )
 
     with _profiler.measure("inspector.run_verify"):

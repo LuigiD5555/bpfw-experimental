@@ -7,7 +7,12 @@ from unittest.mock import patch
 import pytest
 from pytest_readable import readable
 
-from bpfw.core.history.ledger import HistoryLedger, capture_artifact_state
+from bpfw.core.history.ledger import (
+    HistoryLedger,
+    _history_files,
+    _read_history_file,
+    capture_artifact_state,
+)
 
 
 @readable(
@@ -24,10 +29,10 @@ def test_batch_and_legacy_history_rebuild_together(tmp_path):
         reference = ledger.store_object({"password": "example-test-value", "kind": "batch"})
         ledger.append({"event_id": "first", "event_type": "FIRST", "git": {}, "change": {"after": reference}})
         ledger.append({"event_id": "second", "event_type": "SECOND", "git": {}})
-    archives = list(ledger.events_root.rglob("*.json"))
+    archives = _history_files(ledger.events_root)
     assert "example-legacy-test-value" not in json.dumps(ledger.query(limit=10))
     assert len(archives) == 2
-    batch = next(json.loads(path.read_text()) for path in archives if path.name.startswith("batch_"))
+    batch = next(_read_history_file(path) for path in archives if path.name.startswith("batch_"))
     assert len(batch["events"]) == 2 and len(batch["objects"]) == 1
     ledger.rebuild_index()
     assert {event["event_id"] for event in ledger.query(limit=10)} == {"legacy", "first", "second"}
@@ -66,7 +71,7 @@ def test_durable_batch_survives_index_failure(tmp_path):
                 reference = ledger.store_object({"kind": "recoverable"})
                 ledger.append({"event_id": "recoverable", "event_type": "RECOVERABLE", "git": {},
                                "change": {"after": reference}})
-    assert len(list(ledger.events_root.rglob("*.json"))) == 1
+    assert len(_history_files(ledger.events_root)) == 1
     ledger.rebuild_index()
     assert [event["event_id"] for event in ledger.query()] == ["recoverable"]
     assert ledger.read_object(reference) == {"kind": "recoverable"}
@@ -89,6 +94,6 @@ def test_artifact_capture_uses_one_durable_batch(tmp_path):
         events = capture_artifact_state(tmp_path, blueprint)
     ledger = HistoryLedger(tmp_path)
     assert len(events) == 100
-    assert len(list(ledger.events_root.rglob("*.json"))) == 2
+    assert len(_history_files(ledger.events_root)) == 2
     assert len(ledger.query(event_type="ARTIFACT_BASELINE", limit=200)) == 100
     assert all(ledger.read_object(event["change"]["after"])["resolution"] == "EXACT" for event in events)

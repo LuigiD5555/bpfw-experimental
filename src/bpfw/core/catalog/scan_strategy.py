@@ -29,6 +29,7 @@ class ProjectScanStrategy(Protocol):
         project_root: Path,
         source_roots: list[str],
         ignored_paths: list[str],
+        markup_granularity: str = "full",
     ) -> ScanResult:
         """Scan a project and return discovered code units.
 
@@ -50,6 +51,7 @@ class FullProjectScanStrategy:
         project_root: Path,
         source_roots: list[str],
         ignored_paths: list[str],
+        markup_granularity: str = "full",
     ) -> ScanResult:
         """Run a full scan without writing cache files.
 
@@ -65,6 +67,7 @@ class FullProjectScanStrategy:
             project_root=project_root,
             source_roots=source_roots,
             ignored_paths=ignored_paths,
+            markup_granularity=markup_granularity,
         )
 
 
@@ -76,6 +79,7 @@ class ReadOnlyCachedProjectScanStrategy:
         project_root: Path,
         source_roots: list[str],
         ignored_paths: list[str],
+        markup_granularity: str = "full",
     ) -> ScanResult:
         """Run a read-only scan that may reuse existing cache entries.
 
@@ -92,7 +96,9 @@ class ReadOnlyCachedProjectScanStrategy:
             source_roots=source_roots,
             ignored_paths=ignored_paths,
         )
-        other_result = scan_non_python_project(project_root, source_roots, ignored_paths)
+        other_result = scan_non_python_project(
+            project_root, source_roots, ignored_paths, markup_granularity=markup_granularity
+        )
         return ScanResult(
             discovered_units=python_result.discovered_units + other_result.discovered_units,
             findings=python_result.findings + other_result.findings,
@@ -108,6 +114,7 @@ class CachedProjectScanStrategy:
         project_root: Path,
         source_roots: list[str],
         ignored_paths: list[str],
+        markup_granularity: str = "full",
     ) -> ScanResult:
         """Run a cache-enabled project scan.
 
@@ -124,7 +131,9 @@ class CachedProjectScanStrategy:
             source_roots=source_roots,
             ignored_paths=ignored_paths,
         )
-        other_result = scan_non_python_project(project_root, source_roots, ignored_paths)
+        other_result = scan_non_python_project(
+            project_root, source_roots, ignored_paths, markup_granularity=markup_granularity
+        )
         return ScanResult(
             discovered_units=python_result.discovered_units + other_result.discovered_units,
             findings=python_result.findings + other_result.findings,
