@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-19",
+  "distribution": "0.2.0a14.post3 local correction",
+  "source_tests": {
+    "passed": 80,
+    "subtests_passed": 51
+  },
+  "production_sqlite_ready": false,
+  "limitations_document": "SQLITE_INTEGRACION_ENTREGA_03.md",
+  "extracta_trial_verification": {
+    "exit_code": 0,
+    "seconds": 15.552,
+    "declared": 8229,
+    "discovered": 8229,
+    "counts": {
+      "DUPLICATE_PROFILE_REVIEW": 23,
+      "NORMALIZED_AST_CLONE": 12,
+      "SAME_RETURN_EXPRESSION": 1,
+      "TRIVIAL_WRAPPER": 3,
+      "SAME_OUTCOME": 12
+    }
+  },
+  "wheel_sha256": "bb00782110c1f38ec1c0c41325c57e766dcfcd40b44351e5bdcec86ff426924d",
+  "wheel_record_entries_verified": 229,
+  "extracta_project_verification": {
+    "allowed": true,
+    "declared": 8229,
+    "discovered": 8229,
+    "missing": 0,
+    "undeclared": 0,
+    "blocking_duplicate_profiles": 0,
+    "finding_counts": {
+      "DUPLICATE_PROFILE_REVIEW": 23,
+      "NORMALIZED_AST_CLONE": 12,
+      "SAME_RETURN_EXPRESSION": 1,
+      "TRIVIAL_WRAPPER": 3,
+      "SAME_OUTCOME": 11
+    },
+    "command": {
+      "exit_code": 0,
+      "seconds": 4.125
+    }
+  },
+  "extracta_project_focused_tests": {
+    "passed": 8,
+    "failed": 0
+  },
+  "history_cli_verified": true
+}

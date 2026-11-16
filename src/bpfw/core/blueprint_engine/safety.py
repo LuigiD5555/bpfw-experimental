@@ -1,0 +1,46 @@
+"""Safety policy for Blueprint Engine change requests."""
+
+from bpfw.core.blueprint_engine.models import (
+    BlueprintChangeKind,
+    BlueprintChangeRequest,
+    BlueprintChangeSource,
+)
+
+
+class BlueprintEngineSafetyPolicy:
+    """Validate that a change request is authorized to be applied."""
+
+    _SAFE_MECHANICAL_KINDS: frozenset[BlueprintChangeKind] = frozenset(
+        {
+            BlueprintChangeKind.UPDATE_LOCATION,
+            BlueprintChangeKind.UPDATE_SYMBOL,
+            BlueprintChangeKind.UPDATE_CODE_REFERENCE,
+        }
+    )
+
+    def validate_request(self, request: BlueprintChangeRequest) -> str | None:
+        """Return a blocking reason when a request is not authorized.
+
+        Args:
+            request: Blueprint change request to validate.
+
+        Returns:
+            None when allowed, otherwise a human-readable blocked reason.
+        """
+        if request.human_confirmed:
+            return None
+
+        if (
+            request.source
+            in {
+                BlueprintChangeSource.SAFE_MECHANICAL_UPDATE,
+                BlueprintChangeSource.CONTROLLED_REFACTOR,
+            }
+            and request.kind in self._SAFE_MECHANICAL_KINDS
+        ):
+            evidence = request.mechanical_evidence
+            if evidence is not None and evidence.is_safe_mechanical_match():
+                return None
+            return "Safe mechanical update requires exact one-to-one evidence."
+
+        return "Blueprint Engine requires human confirmation for this change."

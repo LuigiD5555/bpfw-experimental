@@ -1,0 +1,13 @@
+.PHONY: bp-audit bp-unbound bp-uids bp-normalize bp-compact bp-verify
+bp-audit:
+	bpfw batch audit --json
+bp-unbound:
+	bpfw batch discover-artifacts --unbound --json
+bp-uids:
+	bpfw batch generate-uids --json
+bp-normalize:
+	bpfw normalize --json
+bp-compact:
+	bpfw compact --json
+bp-verify:
+	bpfw verify

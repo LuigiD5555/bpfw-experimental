@@ -1,0 +1,40 @@
+"""Canonical symbol type vocabulary shared by init and planner."""
+
+from typing import Final
+
+
+VALID_SYMBOL_TYPES: Final[tuple[str, ...]] = (
+    "class",
+    "function",
+    "method",
+    "module",
+    "dataclass",
+    "protocol",
+    "enum",
+    "exception",
+    "nested_class",
+    "nested_function",
+    "struct",
+    "interface",
+    "trait",
+    "impl",
+    "html_element",
+    "css_rule",
+    "css_at_rule",
+    "css_keyframe",
+)
+
+
+SYMBOL_TYPE_ALIASES: Final[dict[str, str]] = {
+    "nested_method": "method",
+}
+
+
+def normalize_symbol_type(raw_symbol_type: str) -> str:
+    """Return canonical symbol type with safe fallback."""
+
+    normalized = (raw_symbol_type or "").strip().lower()
+    normalized = SYMBOL_TYPE_ALIASES.get(normalized, normalized)
+    if normalized in VALID_SYMBOL_TYPES:
+        return normalized
+    return "function"

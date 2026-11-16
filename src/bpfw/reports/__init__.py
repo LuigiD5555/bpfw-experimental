@@ -1,4 +1,4 @@
-"""BPFW reports module for MVP Catalog Mode."""
+"""BPFW reports module for catalog mode."""
 
 from bpfw.reports.finding import (
     FINDING_SEVERITY_BLOCK,

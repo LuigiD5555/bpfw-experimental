@@ -1,4 +1,4 @@
-"""Optional integrations for BPFW MVP Catalog Mode."""
+"""Optional integrations for BPFW catalog mode."""
 
 from bpfw.integrations.base import OptionalIntegration
 from bpfw.integrations.registry import IntegrationRegistry

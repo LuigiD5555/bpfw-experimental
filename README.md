@@ -1,85 +1,27 @@
-# Blueprint Framework (BPFW)
+# BPFW — Explorador CLI portátil (post5)
 
-Blueprint Framework (BPFW) is an MVP catalog control tool for Python projects.
+La CLI interactiva está desacoplada de SQLite y del modelo de Blueprint mediante un contrato de adaptador. Los repositorios BPFW se abren por `--project-root` y comparten el mismo navegador sin compartir sus estados. El único Editor SQLite utiliza `BpfwExplorerAdapter` y Blueprint Engine para escribir. También hay un adaptador de catálogo independiente (`MemoryExplorerAdapter`) para demostrar reutilización.
 
-This repository contains only the framework code (no application/domain code from the original project).
+**Arquitectura y pruebas:** [CLI_PORTABLE_ENTREGA_05.md](CLI_PORTABLE_ENTREGA_05.md). **Antecedentes de navegación:** [CLI_EXPLORATORIA_ENTREGA_04.md](CLI_EXPLORATORIA_ENTREGA_04.md).
 
-## What it provides
-
-- `bpfw/blueprint.yaml` catalog generation
-- Catalog validation against discovered Python code
-- Drift detection for declared responsibilities
-- Protected initialization with OS-level authority lock
-- Repair flow for incomplete local protection
-- Human-readable `verify` and `status` reports
-
-## Install (editable)
-
-```bash
-python -m pip install -e .
+```sh
+pip install ./blueprint_framework-0.2.0a14.post5-py3-none-any.whl
+bpfw editor --project-root /ruta/proyecto-a
+bpfw editor --project-root /ruta/proyecto-b --search validator --json
 ```
 
-Verify the installed command resolves from the same environment:
+Editor exige SQLite como autoridad y conserva migración explícita desde YAML. Los cambios interactivos pasan por `review` y `apply` con confirmación `APPLY`. Las versiones YAML anteriores no tienen otro Editor en paralelo.
 
-```bash
-which -a bpfw
-python -m bpfw --help
-```
+**Estado:** refactor funcional probado con catálogos SQLite y datos no BPFW. No se certifica todavía la suite opcional completa ni la ejecución sobre los repositorios más grandes. La protección SQLite sigue siendo lógica, no una protección inmutable del sistema de archivos.
 
-If `bpfw` points to an older environment, clear the shell command cache and
-check again:
+---
 
-```bash
-hash -r
-which -a bpfw
-```
+# Blueprint Framework — SQLite integration post4 (historical base) (CLI exploratoria)
 
-`python -m bpfw ...` is the environment-safe invocation because it uses the
-same Python interpreter that installed the package.
+The previous `0.2.0a14.post4` build adds the shared terminal explorer to the working post3 SQLite base. See [CLI implementation details](CLI_EXPLORATORIA_ENTREGA_04.md) and [prior post3 fixes](SQLITE_INTEGRACION_ENTREGA_03.md).
 
-## CLI
+BPFW 0.2.0-alpha.14, con almacenamiento de autoridad SQLite, migración desde YAML, Blueprint Engine semántico, Editor masivo, CSV, sesiones, verificación e historial integrados en rutas principales, con limitaciones documentadas.
 
-```bash
-bpfw init
-bpfw inspect
-bpfw editor
-bpfw verify
-bpfw status
-bpfw lock
-bpfw unlock
-bpfw repair
-```
+**Antes de instalar o migrar un proyecto importante**, lee [`SQLITE_INTEGRACION_ENTREGA_02.md`](SQLITE_INTEGRACION_ENTREGA_02.md). La integración incluye más comandos que post1, pero no está certificada para producción y la seguridad SQLite es lógica, no una protección OS inmutable.
 
-## Project root resolution
-
-When running BPFW against another project, point it to that project root:
-
-```bash
-bpfw verify --project-root /path/to/target-project
-```
-
-The target project may contain `bpfw/blueprint.yaml`. If it does not, run `bpfw init`.
-
-## Authority Lock
-
-`bpfw init` creates the blueprint and enables OS-level authority protection.
-`bpfw lock` protects exactly:
-
-```text
-bpfw/blueprint.yaml
-BPFW internal guard files
-```
-
-If an existing project has a broken lock state, run:
-
-```bash
-bpfw repair
-```
-
-`bpfw unlock` reverses the same protection for intentional authority edit
-windows. There is no separate public protection setup flow.
-
-## Notes
-
-- Internal Python package path is `bpfw`.
-- Distribution/package name is `blueprint-framework` and CLI command is `bpfw`.
+Instalación en un entorno virtual: `pip install ./blueprint_framework-0.2.0a14.post5-py3-none-any.whl`. Para instalación de usuario, `./install.sh --without-multilang` (requiere dependencias de Python disponibles).

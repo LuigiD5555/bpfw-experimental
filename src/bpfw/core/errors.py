@@ -1,4 +1,4 @@
-"""Framework-specific errors for BPFW MVP Catalog Mode."""
+"""Framework-specific errors for BPFW catalog mode."""
 
 
 class BpfwError(RuntimeError):

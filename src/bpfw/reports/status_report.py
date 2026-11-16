@@ -1,59 +1,19 @@
-"""Status report rendering for BPFW MVP Catalog Mode."""
+"""Status report rendering for BPFW catalog mode."""
 
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
-from bpfw.catalog.lifecycle import count_lifecycles
-from bpfw.catalog.loader import BlueprintLoader
-from bpfw.catalog.models import (
-    AUTHORITY_STATE_DEFINED,
-    AUTHORITY_STATE_DRAFT,
+from bpfw.core.catalog.status import count_statuses
+from bpfw.core.catalog.loader import BlueprintLoader
+from bpfw.core.catalog.models import (
     AUTHORITY_STATE_EMPTY,
     AUTHORITY_STATE_INVALID,
     AUTHORITY_STATE_MISSING,
     VerificationReport,
 )
-from bpfw.catalog.verify import run_verify
-from bpfw.protection.authority import get_authority_lock_state
+from bpfw.core.protection.authority import get_authority_protection_status
 
-_BLUEPRINT_DISPLAY_PATH = "bpfw/blueprint.yaml"
-
-
-def _suggest_next_command(report: VerificationReport, lock_state: str) -> tuple[str, str]:
-    """Return the passive next command suggestion for the current status."""
-
-    if report.authority_state == AUTHORITY_STATE_MISSING:
-        return "bpfw init", "No blueprint authority exists yet."
-
-    if report.authority_state == AUTHORITY_STATE_INVALID:
-        return "bpfw editor", "The blueprint authority is invalid and needs direct correction."
-
-    has_structural_problem = (
-        report.duplicate_active_intent_count
-        or report.invalid_lifecycle_count
-        or report.missing_declared_count
-    )
-    if has_structural_problem:
-        return "bpfw editor", "The existing blueprint authority has structural problems."
-
-    if report.undeclared_count or report.incomplete_responsibility_count:
-        return "bpfw inspect", "Some detected code units are not declared or are incomplete."
-
-    if (
-        report.authority_state == AUTHORITY_STATE_EMPTY
-        and report.declared_count == 0
-        and report.discovered_count == 0
-    ):
-        return "bpfw inspect", "No responsibilities are declared yet."
-
-    if (
-        report.authority_state in {AUTHORITY_STATE_DRAFT, AUTHORITY_STATE_DEFINED}
-        and report.allowed
-        and lock_state == "unlocked"
-    ):
-        return "bpfw lock", "The blueprint authority is valid but unlocked."
-
-    return "bpfw verify", "Verify code and blueprint alignment."
+_BLUEPRINT_DISPLAY_PATH = ".bpfw/blueprint.yaml"
 
 
 def _determine_lock_state(project_root: Path, authority_state: str) -> str:
@@ -64,10 +24,14 @@ def _determine_lock_state(project_root: Path, authority_state: str) -> str:
     if authority_state == AUTHORITY_STATE_MISSING:
         return "unknown"
 
-    return get_authority_lock_state(project_root=project_root)
+    return get_authority_protection_status(project_root=project_root).status
 
 
-def run_status(project_root: Path) -> Tuple[str, int]:
+def run_status(
+    project_root: Path,
+    precomputed_load_result: Any | None = None,
+    precomputed_verify_report: VerificationReport | None = None,
+) -> Tuple[str, int]:
     """Run the status pipeline and return formatted output with exit code.
 
     Pipeline:
@@ -92,9 +56,12 @@ def run_status(project_root: Path) -> Tuple[str, int]:
     """
     resolved_root = project_root.resolve()
 
-    # Step 2: Load blueprint
-    loader = BlueprintLoader(project_root=resolved_root)
-    load_result = loader.load()
+    # Step 2: Load blueprint once, or reuse an already loaded authority.
+    if precomputed_load_result is None:
+        loader = BlueprintLoader(project_root=resolved_root)
+        load_result = loader.load()
+    else:
+        load_result = precomputed_load_result
 
     # Step 3: Authority state from load result
     authority_state = load_result.state
@@ -105,8 +72,11 @@ def run_status(project_root: Path) -> Tuple[str, int]:
         authority_state=authority_state,
     )
 
-    # Lifecycle counts from loaded responsibilities
-    lifecycle_counts = count_lifecycles(load_result.data)
+    # Extract authority config from blueprint data
+    authority_config = load_result.data.get("authority", {})
+
+    # Status counts from loaded blocks
+    lifecycle_counts = count_statuses(load_result.data)
 
     # Step 5: Missing — no scan, execution allowed
     if authority_state == AUTHORITY_STATE_MISSING:
@@ -120,6 +90,8 @@ def run_status(project_root: Path) -> Tuple[str, int]:
             blueprint_path=_BLUEPRINT_DISPLAY_PATH,
             lock_state=lock_state,
             lifecycle_counts=lifecycle_counts,
+            authority_config=authority_config,
+            included_shards_count=len(load_result.data.get("includes", [])),
         )
         return output, 0
 
@@ -135,6 +107,8 @@ def run_status(project_root: Path) -> Tuple[str, int]:
             blueprint_path=_BLUEPRINT_DISPLAY_PATH,
             lock_state=lock_state,
             lifecycle_counts=lifecycle_counts,
+            authority_config=authority_config,
+            included_shards_count=len(load_result.data.get("includes", [])),
         )
         return output, 0
 
@@ -150,16 +124,29 @@ def run_status(project_root: Path) -> Tuple[str, int]:
             blueprint_path=_BLUEPRINT_DISPLAY_PATH,
             lock_state=lock_state,
             lifecycle_counts=lifecycle_counts,
+            authority_config=authority_config,
+            included_shards_count=len(load_result.data.get("includes", [])),
         )
         return output, 1
 
-    # Step 8: Draft or defined — run full verify pipeline
-    report, verify_exit_code = run_verify(project_root=resolved_root)
+    # Step 8: Draft or defined - run or reuse one verify pipeline.
+    if precomputed_verify_report is None:
+        from bpfw.core.catalog.verify import run_verify
+
+        report, verify_exit_code = run_verify(
+            project_root=resolved_root,
+            precomputed_load_result=load_result,
+        )
+    else:
+        report = precomputed_verify_report
+        verify_exit_code = 0 if report.allowed else 1
     output = render_status_report(
         report=report,
         blueprint_path=_BLUEPRINT_DISPLAY_PATH,
         lock_state=lock_state,
         lifecycle_counts=lifecycle_counts,
+        authority_config=authority_config,
+        included_shards_count=len(load_result.data.get("includes", [])),
     )
     return output, verify_exit_code
 
@@ -169,6 +156,8 @@ def render_status_report(
     blueprint_path: str,
     lock_state: str,
     lifecycle_counts: Dict[str, int],
+    authority_config: Dict[str, Any] | None = None,
+    included_shards_count: int | None = None,
 ) -> str:
     """Render a VerificationReport and status context into a human-readable string.
 
@@ -177,12 +166,12 @@ def render_status_report(
     report:
         The verification report with blueprint state, counts, and allowed flag.
     blueprint_path:
-        Display path for the blueprint file (e.g. ``bpfw/blueprint.yaml``).
+        Display path for the blueprint file (e.g. ``.bpfw/blueprint.yaml``).
     lock_state:
         Lock status string: locked, degraded, unlocked, unsupported, or unknown.
     lifecycle_counts:
         Dict with keys ``active``, ``experimental``, ``legacy``, ``deprecated``
-        mapping to their respective counts from loaded responsibilities.
+        mapping to their respective counts from loaded blocks.
 
     Returns
     -------
@@ -194,6 +183,15 @@ def render_status_report(
     lines.append("BPFW STATUS")
     lines.append("")
 
+    # Authority section
+    if authority_config and authority_config.get("layout") == "sharded":
+        lines.append("Authority:")
+        lines.append(f"  layout: {authority_config.get('layout', 'unknown')}")
+        lines.append(f"  shard strategy: {authority_config.get('shard_strategy', 'unknown')}")
+        lines.append(f"  default shard: {authority_config.get('default_shard', 'unknown')}")
+        lines.append(f"  included shards: {included_shards_count or 0}")
+        lines.append("")
+
     # Blueprint section
     lines.append("Blueprint:")
     lines.append(f"  path: {blueprint_path}")
@@ -201,14 +199,21 @@ def render_status_report(
     lines.append(f"  lock: {lock_state}")
     lines.append("")
 
-    # Responsibilities section
-    lines.append("Responsibilities:")
+    # Blocks section
+    lines.append("Blocks:")
     lines.append(f"  declared: {report.declared_count}")
+    lines.append(f"  logical: {report.logical_component_count}")
+    lines.append(f"  code-bound: {report.code_component_count}")
     lines.append(f"  incomplete: {report.incomplete_responsibility_count}")
     lines.append("")
 
     # Code section
     lines.append("Code:")
+    lines.append(f"  source roots: {', '.join(report.source_roots) or '-'}")
+    file_counts = ", ".join(f"{name}={count}" for name, count in sorted(report.source_file_counts.items()))
+    language_counts = ", ".join(f"{name}={count}" for name, count in sorted(report.discovered_by_language.items()))
+    lines.append(f"  supported files: {file_counts or 'none'}")
+    lines.append(f"  by language: {language_counts or 'none'}")
     lines.append(f"  discovered: {report.discovered_count}")
     lines.append(f"  undeclared: {report.undeclared_count}")
     lines.append(f"  missing declared: {report.missing_declared_count}")
@@ -220,7 +225,8 @@ def render_status_report(
     lines.append(f"  experimental: {lifecycle_counts.get('experimental', 0)}")
     lines.append(f"  legacy: {lifecycle_counts.get('legacy', 0)}")
     lines.append(f"  deprecated: {lifecycle_counts.get('deprecated', 0)}")
-    lines.append(f"  duplicate active intents: {report.duplicate_active_intent_count}")
+    lines.append(f"  duplicate active profiles: {report.duplicate_active_profile_count}")
+    lines.append(f"  duplicate review warnings: {report.duplicate_profile_review_count}")
     lines.append("")
 
     # Execution section
@@ -231,12 +237,24 @@ def render_status_report(
         lines.append("Execution:")
         lines.append("  blocked")
 
-    suggested_command, reason = _suggest_next_command(report=report, lock_state=lock_state)
-    lines.append("")
-    lines.append("Suggested next command:")
-    lines.append(f"  {suggested_command}")
-    lines.append("")
-    lines.append("Reason:")
-    lines.append(f"  {reason}")
+    # Reason block for missing authority
+    if report.authority_state == AUTHORITY_STATE_MISSING:
+        lines.append("Reason:")
+        lines.append("  No blueprint authority exists yet.")
+        lines.append("")
+        lines.append("Suggested next command:")
+        lines.append("  bpfw init")
+    elif not report.allowed and report.undeclared_count:
+        lines.append("Reason:")
+        lines.append("  Some detected code units are not declared or are incomplete.")
+        lines.append("")
+        lines.append("Suggested next command:")
+        lines.append("  bpfw inspector")
+    elif report.allowed and lock_state == "unlocked" and report.authority_state == "defined":
+        lines.append("Reason:")
+        lines.append("  The blueprint authority is valid but unlocked.")
+        lines.append("")
+        lines.append("Suggested next command:")
+        lines.append("  bpfw lock")
 
     return "\n".join(lines)

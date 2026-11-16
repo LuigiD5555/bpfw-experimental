@@ -3,12 +3,12 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from bpfw.catalog.paths import CANONICAL_BLUEPRINT_FILE
+from bpfw.core.catalog.paths import CANONICAL_BLUEPRINT_FILE
 
 
 @dataclass(slots=True)
 class EngineCommand:
-    """User command normalized for deterministic engine execution."""
+    """User command clean for stable engine execution."""
 
     command_name: str
     project_root: Path
@@ -22,6 +22,7 @@ class ProjectContext:
     project_root: Path
     blueprint_file: Path
     command_arguments: dict[str, str] = field(default_factory=dict)
+    runtime_cache: dict[str, object] = field(default_factory=dict)
 
 
 def build_project_context(project_root: Path, command_arguments: dict[str, str] | None = None) -> ProjectContext:

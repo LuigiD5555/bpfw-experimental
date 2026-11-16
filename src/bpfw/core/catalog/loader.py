@@ -1,0 +1,245 @@
+"""Blueprint loader for .bpfw/blueprint.yaml with sharded authority."""
+
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+from bpfw.core.authority import (
+    InvalidAuthorityIndexError,
+    InvalidAuthorityShardError,
+    MissingShardError,
+)
+from bpfw.core.catalog.domain import BlueprintRepository
+from bpfw.core.catalog.models import (
+    AUTHORITY_STATE_DEFINED,
+    AUTHORITY_STATE_DRAFT,
+    AUTHORITY_STATE_EMPTY,
+    AUTHORITY_STATE_INVALID,
+    AUTHORITY_STATE_MISSING,
+    BlueprintLoadResult,
+)
+from bpfw.core.catalog.paths import resolve_blueprint_path
+from bpfw.core.result import Result
+from bpfw.reports.finding import (
+    FINDING_SEVERITY_BLOCK,
+    FINDING_SEVERITY_INFO,
+    FINDING_SEVERITY_WARNING,
+    Finding,
+)
+
+
+class BlueprintLoader:
+    """Load and parse .bpfw/blueprint.yaml with sharded authority."""
+
+    def __init__(self, project_root: Path):
+        """Initialize the blueprint loader.
+
+        Args:
+            project_root: The project root directory.
+        """
+        self.project_root = project_root
+        self.blueprint_path = resolve_blueprint_path(project_root)
+
+    def load(self) -> BlueprintLoadResult:
+        """Load and parse the blueprint.yaml file using sharded authority.
+
+        Returns:
+            BlueprintLoadResult with state, data, and findings.
+        """
+        domain_document = None
+        authority_document = None
+        from bpfw.core.authority.sqlite.migration import active_backend
+        sqlite_active = active_backend(self.project_root) == "sqlite"
+        if not sqlite_active and not self.blueprint_path.exists():
+            finding = Finding(
+                source="bpfw",
+                code="NO_AUTHORITY",
+                severity=FINDING_SEVERITY_INFO,
+                message="No BPFW blueprint file was found.",
+            )
+            return BlueprintLoadResult(
+                state=AUTHORITY_STATE_MISSING,
+                path=str(self.blueprint_path),
+                data={},
+                domain_document=None,
+                findings=[finding],
+            )
+
+        # Check if this is a sharded authority or simple blueprint.yaml
+        repository_result = self._load_repository_as_result()
+        if repository_result.is_error:
+            finding = repository_result.unwrap_error()
+            return BlueprintLoadResult(
+                state=AUTHORITY_STATE_INVALID,
+                path=str(self.blueprint_path),
+                data={},
+                domain_document=None,
+                findings=[finding],
+            )
+
+        blueprint_data, domain_document, authority_document = repository_result.unwrap()
+
+        # Alpha.14 keeps authority compact: defaults/profiles are materialized only
+        # for runtime/typed consumers, while raw YAML remains explicit.
+        if isinstance(blueprint_data, dict) and int(blueprint_data.get("version", 1) or 1) >= 2:
+            try:
+                from bpfw.core.automation.profiles import attach_runtime_artifacts, materialize_blueprint
+                from bpfw.core.catalog.domain.mapper import BlueprintMapper
+                effective_data = materialize_blueprint(blueprint_data)
+                domain_document = BlueprintMapper().from_raw(effective_data)
+                attach_runtime_artifacts(blueprint_data)
+            except Exception:
+                pass
+
+        blocks = blueprint_data.get("blocks", [])
+        if domain_document is not None:
+            blocks = [
+                block.model_dump(by_alias=True, exclude_none=True)
+                for block in domain_document.blocks
+            ]
+
+        if not blocks:
+            finding = Finding(
+                source="bpfw",
+                code="EMPTY_AUTHORITY",
+                severity=FINDING_SEVERITY_WARNING,
+                message="Blueprint exists but contains no blocks.",
+            )
+            return BlueprintLoadResult(
+                state=AUTHORITY_STATE_EMPTY,
+                path=str(self.blueprint_path),
+                data=blueprint_data,
+                domain_document=domain_document,
+                authority_document=authority_document,
+                findings=[finding],
+            )
+
+        if not isinstance(blocks, list):
+            finding = Finding(
+                source="bpfw",
+                code="INVALID_BLUEPRINT",
+                severity=FINDING_SEVERITY_BLOCK,
+                message="Blocks must be a list.",
+            )
+            return BlueprintLoadResult(
+                state=AUTHORITY_STATE_INVALID,
+                path=str(self.blueprint_path),
+                data=blueprint_data,
+                domain_document=domain_document,
+                authority_document=authority_document,
+                findings=[finding],
+            )
+
+        # Check for incomplete blocks
+        has_incomplete = False
+        for block in blocks:
+            if not is_block_complete(block):
+                has_incomplete = True
+                break
+
+        if has_incomplete:
+            return BlueprintLoadResult(
+                state=AUTHORITY_STATE_DRAFT,
+                path=str(self.blueprint_path),
+                data=blueprint_data,
+                domain_document=domain_document,
+                authority_document=authority_document,
+                findings=[],
+            )
+
+        return BlueprintLoadResult(
+            state=AUTHORITY_STATE_DEFINED,
+            path=str(self.blueprint_path),
+            data=blueprint_data,
+            domain_document=domain_document,
+            authority_document=authority_document,
+            findings=[],
+        )
+
+
+    def _load_repository_as_result(self) -> Result[tuple[dict[str, Any], Any, Any], Finding]:
+        """Load repository data and convert expected load failures to Result.
+
+        Returns:
+            Successful result containing blueprint data and documents, or a failed
+            result containing the user-facing finding to report.
+        """
+        try:
+            repository = BlueprintRepository(self.project_root)
+            repository_load_result = repository.load()
+            return Result.ok(
+                (
+                    repository_load_result.raw_data,
+                    repository_load_result.document,
+                    repository_load_result.authority_document,
+                )
+            )
+        except (
+            InvalidAuthorityIndexError,
+            InvalidAuthorityShardError,
+            MissingShardError,
+            FileNotFoundError,
+        ) as error:
+            finding = Finding(
+                source="authority",
+                code="INVALID_SHARD",
+                severity=FINDING_SEVERITY_BLOCK,
+                message=f"Invalid authority: {error}",
+                path=str(self.blueprint_path),
+            )
+            return Result.fail(finding)
+        except (OSError, yaml.YAMLError) as error:
+            finding = Finding(
+                source="bpfw",
+                code="INVALID_BLUEPRINT",
+                severity=FINDING_SEVERITY_BLOCK,
+                message=f"Failed to parse blueprint: {error}",
+                path=str(self.blueprint_path),
+            )
+            return Result.fail(finding)
+
+
+def is_block_complete(block: dict) -> bool:
+    """Check if a block has all required authority fields.
+
+    Required fields:
+    - id
+    - domain
+    - status
+    - code.path
+    - code.symbol
+    - code.kind
+
+    Args:
+        block: The block dictionary to check.
+
+    Returns:
+        True if block is complete, False otherwise.
+    """
+    component_kind = str(block.get("kind") or "code").strip().lower()
+    if block.get("id") in (None, ""):
+        return False
+    if component_kind == "code":
+        if block.get("domain") in (None, ""):
+            return False
+        if block.get("status") in (None, ""):
+            return False
+
+    code = block.get("code", {})
+
+    # Blueprint v1 and v2 code components retain the historical code-location
+    # completeness rules. Logical/system components may instead be represented
+    # by artifacts and typed connections without pretending to be Python units.
+    if component_kind == "code":
+        if not isinstance(code, dict):
+            return False
+        for key in ("path", "symbol"):
+            value = code.get(key)
+            if value is None or value == "":
+                return False
+        symbol_kind = code.get("kind")
+        if symbol_kind is None or symbol_kind == "":
+            return False
+
+    return True
