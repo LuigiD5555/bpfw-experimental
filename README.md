@@ -1,27 +1,69 @@
-# BPFW — Explorador CLI portátil (post5)
+# BPFW — Blueprint Framework
 
-La CLI interactiva está desacoplada de SQLite y del modelo de Blueprint mediante un contrato de adaptador. Los repositorios BPFW se abren por `--project-root` y comparten el mismo navegador sin compartir sus estados. El único Editor SQLite utiliza `BpfwExplorerAdapter` y Blueprint Engine para escribir. También hay un adaptador de catálogo independiente (`MemoryExplorerAdapter`) para demostrar reutilización.
+BPFW verifies that a codebase still matches its declared blueprint: it catalogs code units, tracks their declared purpose and status, and blocks changes that drift from the authority. This repository holds the framework source and a portable terminal editor.
 
-**Arquitectura y pruebas:** [CLI_PORTABLE_ENTREGA_05.md](CLI_PORTABLE_ENTREGA_05.md). **Antecedentes de navegación:** [CLI_EXPLORATORIA_ENTREGA_04.md](CLI_EXPLORATORIA_ENTREGA_04.md).
+Versión en español: [README.es.md](README.es.md).
+
+## Install
+
+Install a tagged release straight from GitHub:
 
 ```sh
-pip install ./blueprint_framework-0.2.0a14.post5-py3-none-any.whl
-bpfw editor --project-root /ruta/proyecto-a
-bpfw editor --project-root /ruta/proyecto-b --search validator --json
+pip install "blueprint-framework[multilang] @ git+ssh://git@github.com/LuigiD5555/bpfw-experimental.git@v0.3.0"
 ```
 
-Editor exige SQLite como autoridad y conserva migración explícita desde YAML. Los cambios interactivos pasan por `review` y `apply` con confirmación `APPLY`. Las versiones YAML anteriores no tienen otro Editor en paralelo.
+Or build a wheel from a checkout and install it with the bundled installer:
 
-**Estado:** refactor funcional probado con catálogos SQLite y datos no BPFW. No se certifica todavía la suite opcional completa ni la ejecución sobre los repositorios más grandes. La protección SQLite sigue siendo lógica, no una protección inmutable del sistema de archivos.
+```sh
+python -m build                              # writes dist/
+scripts/install.sh                           # or: BPFW_WHEEL=/path/to/wheel scripts/install.sh
+```
 
----
+`[multilang]` adds the tree-sitter parsers for HTML, CSS, Go and Rust.
 
-# Blueprint Framework — SQLite integration post4 (historical base) (CLI exploratoria)
+## Quick start
 
-The previous `0.2.0a14.post4` build adds the shared terminal explorer to the working post3 SQLite base. See [CLI implementation details](CLI_EXPLORATORIA_ENTREGA_04.md) and [prior post3 fixes](SQLITE_INTEGRACION_ENTREGA_03.md).
+```sh
+bpfw editor --project-root /path/to/project
+bpfw verify --project-root /path/to/project
+bpfw authority doctor --project-root /path/to/project
+```
 
-BPFW 0.2.0-alpha.14, con almacenamiento de autoridad SQLite, migración desde YAML, Blueprint Engine semántico, Editor masivo, CSV, sesiones, verificación e historial integrados en rutas principales, con limitaciones documentadas.
+Lighter storage and markup granularity (0.3.0):
 
-**Antes de instalar o migrar un proyecto importante**, lee [`SQLITE_INTEGRACION_ENTREGA_02.md`](SQLITE_INTEGRACION_ENTREGA_02.md). La integración incluye más comandos que post1, pero no está certificada para producción y la seguridad SQLite es lógica, no una protección OS inmutable.
+```sh
+bpfw authority regranulate --project-root . --profile meaningful          # preview
+bpfw authority regranulate --project-root . --profile meaningful --apply  # apply
+bpfw authority compact --project-root .                                   # preview; add --apply to write
+bpfw history compact --project-root .                                     # preview; add --apply to write
+python scripts/measure_metadata.py --project-root /path/to/project        # read-only sizes
+```
 
-Instalación en un entorno virtual: `pip install ./blueprint_framework-0.2.0a14.post5-py3-none-any.whl`. Para instalación de usuario, `./install.sh --without-multilang` (requiere dependencias de Python disponibles).
+Set `markup_granularity` in the project blueprint to:
+- `full` (default): every HTML element and CSS rule becomes a unit.
+- `meaningful`: wrapper elements are skipped. Forms, controls, sections, elements with an id and top-level CSS statements remain.
+
+## Storage and protection
+
+- The SQLite authority is the source of truth. The YAML snapshot is generated from it.
+- Protection is a logical guard (`bpfw lock` / `bpfw unlock`), not operating-system immutability. Unlocking asks for `sudo` authentication.
+- Maintenance commands preview by default. The audit trail (`operation_log`) is always kept.
+
+## Documentation
+
+- [CHANGELOG](docs/CHANGELOG.md): release notes.
+- [docs/history/](docs/history/): delivery notes and the earlier validation record, kept for reference.
+
+## Development
+
+```sh
+python3.13 -m venv .venv-dev
+.venv-dev/bin/pip install -e '.[multilang]' 'pytest>=9,<10' 'pytest-readable>=0.2,<0.3'
+.venv-dev/bin/python -m pytest -q tests/test_lightweight_metadata.py
+```
+
+Catalog hashes come from Python 3.13's `ast.dump`, so use Python 3.13 for catalog checks.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

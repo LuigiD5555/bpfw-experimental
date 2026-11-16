@@ -3,3 +3,7 @@ __pycache__/
 build/
 *.egg-info/
 .pytest_cache/
+
+# Built artifacts: wheels and checksums are release outputs, not versioned.
+dist/
+*.whl
