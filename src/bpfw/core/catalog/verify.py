@@ -30,6 +30,7 @@ from bpfw.core.catalog.duplicate_profile import DuplicateActiveProfileRule, Dupl
 from bpfw.core.catalog.security import validate_no_blueprint_secrets
 from bpfw.core.catalog.validation import validate_blueprint_structure
 from bpfw.core.source.registry import iter_source_files
+from bpfw.core.source.tree_sitter_adapter import normalize_markup_granularity
 from bpfw.reports.finding import FINDING_SEVERITY_BLOCK, FINDING_SEVERITY_WARNING, Finding
 
 # Finding codes used for counting.
@@ -90,6 +91,21 @@ def read_ignored_paths(
     return list(DEFAULT_IGNORED_PATHS)
 
 
+def read_markup_granularity(
+    blueprint_data: dict,
+    domain_document: BlueprintDocument | None = None,
+) -> str:
+    """Read project.markup_granularity ("full" or "meaningful"); "full" when absent."""
+    value = None
+    if domain_document is not None:
+        value = domain_document.project.get("markup_granularity")
+    if value is None:
+        project = blueprint_data.get("project") if isinstance(blueprint_data, dict) else None
+        if isinstance(project, dict):
+            value = project.get("markup_granularity")
+    return normalize_markup_granularity(value)
+
+
 def scan_project_from_blueprint(
     project_root: Path,
     blueprint_data: dict,
@@ -104,6 +120,7 @@ def scan_project_from_blueprint(
         project_root=project_root,
         source_roots=source_roots,
         ignored_paths=ignored_paths,
+        markup_granularity=read_markup_granularity(blueprint_data, domain_document=domain_document),
     )
     return include_declared_python_units(result, blueprint_data, project_root, source_roots, ignored_paths)
 

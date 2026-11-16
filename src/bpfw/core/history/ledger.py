@@ -3,19 +3,21 @@ from __future__ import annotations
 
 from contextlib import closing, contextmanager
 
+import gzip
 import hashlib
 import json
 import os
 import sqlite3
 import subprocess
 import uuid
+import zlib
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import yaml
 
-from bpfw.core.atomic_io import atomic_write_text
+from bpfw.core.atomic_io import atomic_write_bytes, atomic_write_text
 from bpfw.core.history.identity import ensure_authority_uids
 from bpfw.core.artifacts.resolver import ArtifactResolver, block_artifacts
 
@@ -44,6 +46,46 @@ def _redact(value: Any, key: str | None = None) -> Any:
 
 def _canonical(value: Any) -> bytes:
     return json.dumps(_redact(value), sort_keys=True, ensure_ascii=False, separators=(",", ":"), default=str).encode("utf-8")
+
+
+_BATCH_SCHEMA = "bpfw.history.batch/v1"
+_GZIP_SUFFIX = ".json.gz"
+_DIGEST_QUERY_CHUNK = 500
+
+
+def _compact_json(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
+
+
+def _encode_object_blob(value: Any) -> bytes:
+    """Store an indexed history object as zlib-compressed JSON."""
+    return zlib.compress(json.dumps(value, ensure_ascii=False, default=str).encode("utf-8"), 9)
+
+
+def _decode_object_blob(raw: Any) -> Any:
+    """Read an indexed history object written by any BPFW version (JSON text or compressed bytes)."""
+    if isinstance(raw, (bytes, bytearray, memoryview)):
+        return json.loads(zlib.decompress(bytes(raw)).decode("utf-8"))
+    return json.loads(raw)
+
+
+def _gzip_json(value: Any) -> bytes:
+    return gzip.compress((_compact_json(value) + "\n").encode("utf-8"), compresslevel=9, mtime=0)
+
+
+def _read_history_file(path: Path) -> Any:
+    """Read one event or batch file, plain or gzip-compressed."""
+    if path.name.endswith(_GZIP_SUFFIX):
+        with gzip.open(path, "rt", encoding="utf-8") as handle:
+            return json.load(handle)
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _history_files(root: Path) -> list[Path]:
+    """Every event or batch file under *root*, plain and compressed, in stable order."""
+    if not root.exists():
+        return []
+    return sorted({*root.rglob("*.json"), *root.rglob(f"*{_GZIP_SUFFIX}")}, key=lambda path: path.as_posix())
 
 
 def read_authority_snapshot(project_root: Path) -> dict[str, Any]:
@@ -97,12 +139,13 @@ class HistoryLedger:
             if self._pending_events or self._pending_objects:
                 timestamp = self._pending_events[0]["timestamp"] if self._pending_events else _now()
                 moment = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-                path = self.events_root / f"{moment.year:04d}" / f"{moment.month:02d}" / (_id("batch") + ".json")
-                payload = {"schema": "bpfw.history.batch/v1", "events": self._pending_events,
-                           "objects": self._pending_objects}
-                path.parent.mkdir(parents=True, exist_ok=True)
-                atomic_write_text(path, json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str) + "\n")
-                self._index_events(self._pending_events, self._pending_objects)
+                path = self.events_root / f"{moment.year:04d}" / f"{moment.month:02d}" / (_id("batch") + _GZIP_SUFFIX)
+                # Objects already archived by an earlier batch are referenced, not copied again.
+                known = self._known_object_digests(set(self._pending_objects))
+                objects = {checksum: value for checksum, value in self._pending_objects.items() if checksum not in known}
+                payload = {"schema": _BATCH_SCHEMA, "events": self._pending_events, "objects": objects}
+                atomic_write_bytes(path, _gzip_json(payload))
+                self._index_events(self._pending_events, objects)
         finally:
             self._pending_events = None
             self._pending_objects = {}
@@ -138,8 +181,22 @@ class HistoryLedger:
         path = self.objects_root / digest[:2] / f"{digest}.json"
         if not path.exists():
             path.parent.mkdir(parents=True, exist_ok=True)
-            atomic_write_text(path, json.dumps(_redact(value), ensure_ascii=False, sort_keys=True, indent=2, default=str) + "\n")
+            atomic_write_text(path, _compact_json(_redact(value)) + "\n")
         return f"sha256:{digest}"
+
+    def _known_object_digests(self, digests: set[str]) -> set[str]:
+        """Return which of *digests* the index already holds."""
+        if not digests or not self.index_path.exists():
+            return set()
+        ordered = sorted(digests)
+        known: set[str] = set()
+        with closing(self._connect()) as connection:
+            for start in range(0, len(ordered), _DIGEST_QUERY_CHUNK):
+                chunk = ordered[start:start + _DIGEST_QUERY_CHUNK]
+                marks = ",".join("?" * len(chunk))
+                known.update(row[0] for row in connection.execute(
+                    f"SELECT digest FROM object_blobs WHERE digest IN ({marks})", chunk))
+        return known
 
     def read_object(self, reference: str) -> Any:
         """Read a content reference from either historical files or indexed batches."""
@@ -155,7 +212,7 @@ class HistoryLedger:
             row = connection.execute("SELECT payload FROM object_blobs WHERE digest=?", (checksum,)).fetchone()
         if row is None:
             raise KeyError(reference)
-        return json.loads(row[0])
+        return _decode_object_blob(row[0])
 
     def git_context(self) -> dict[str, Any]:
         def run(*args: str) -> str | None:
@@ -182,7 +239,7 @@ class HistoryLedger:
         dt = datetime.fromisoformat(event["timestamp"].replace("Z", "+00:00"))
         path = self.events_root / f"{dt.year:04d}" / f"{dt.month:02d}" / f"{event['event_id']}.json"
         path.parent.mkdir(parents=True, exist_ok=True)
-        atomic_write_text(path, json.dumps(_redact(event), ensure_ascii=False, sort_keys=True, indent=2, default=str) + "\n")
+        atomic_write_text(path, _compact_json(_redact(event)) + "\n")
         self._index_event(_redact(event))
         return event
 
@@ -224,17 +281,17 @@ class HistoryLedger:
             connection.executemany("INSERT OR REPLACE INTO events VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
                                    (self._event_row(event) for event in events))
             connection.executemany("INSERT OR IGNORE INTO object_blobs VALUES(?,?)",
-                                   ((checksum, json.dumps(value, ensure_ascii=False, default=str)) for checksum, value in objects.items()))
+                                   ((checksum, _encode_object_blob(value)) for checksum, value in objects.items()))
 
     def rebuild_index(self) -> None:
         events: list[dict[str, Any]] = []
         objects: dict[str, Any] = {}
-        for path in sorted(self.events_root.rglob("*.json")) if self.events_root.exists() else []:
-            try: event = json.loads(path.read_text(encoding="utf-8"))
+        for path in _history_files(self.events_root):
+            try: event = _read_history_file(path)
             except Exception: continue
             if not isinstance(event, dict):
                 continue
-            if event.get("schema") == "bpfw.history.batch/v1":
+            if event.get("schema") == _BATCH_SCHEMA:
                 events.extend(item for item in event.get("events", []) if isinstance(item, dict) and item.get("event_id"))
                 objects.update(event.get("objects", {}))
             elif event.get("event_id"):
@@ -319,6 +376,33 @@ def _impact(snapshot: dict[str, Any], block_id: str, *, graph: tuple[dict[str, s
     return {"direct": direct, "closure": closure}
 
 
+# Closures longer than this are stored once per connected component instead of inline in every event.
+_INLINE_CLOSURE_LIMIT = 16
+
+
+def _event_impact(ledger: "HistoryLedger", snapshot: dict[str, Any], block_id: str, *,
+                  graph: tuple[dict[str, set[str]], dict[str, set[str]]] | None = None) -> dict[str, Any]:
+    """Impact for an event: small closures inline, large ones as a shared component reference."""
+    impact = _impact(snapshot, block_id, graph=graph)
+    closure = impact["closure"]
+    if len(closure) <= _INLINE_CLOSURE_LIMIT:
+        return impact
+    component = sorted({block_id, *closure})
+    return {"direct": impact["direct"], "closure_size": len(closure),
+            "component": ledger.store_object(component)}
+
+
+def read_impact_closure(ledger: "HistoryLedger", event: dict[str, Any]) -> list[str]:
+    """Return an event's impact closure (sorted when it was stored as a component reference)."""
+    impact = event.get("impact_at_event") if isinstance(event.get("impact_at_event"), dict) else {}
+    if "closure" in impact:
+        return list(impact["closure"])
+    if "component" not in impact:
+        return []
+    owner = (event.get("entity") or {}).get("owner_id") or (event.get("entity") or {}).get("id_at_event")
+    return [member for member in ledger.read_object(impact["component"]) if member != owner]
+
+
 def _natural_child_key(item: dict[str, Any], child_type: str) -> str:
     if isinstance(item.get("uid"), str) and item.get("uid"):
         return "uid:" + item["uid"]
@@ -391,7 +475,7 @@ def _append_child_events(
                            "after": ledger.store_object(child_new) if child_new is not None else None},
                 "reason": {"summary": reason} if reason else None,
                 "provenance": {"trigger": trigger}, "location": location,
-                "impact_at_event": _impact(snapshot, owner_id) if owner_id else {},
+                "impact_at_event": _event_impact(ledger, snapshot, owner_id) if owner_id else {},
                 "decision": {"status": "accepted" if reason else "observed"},
             }))
 
@@ -455,7 +539,7 @@ def capture_authority_change(project_root: Path, before: dict[str, Any], after: 
             "reason": {"summary": reason} if reason else None,
             "provenance": {"trigger": trigger},
             "location": {"path": ".bpfw/blueprint.yaml"},
-            "impact_at_event": _impact(after or before, bid) if bid else {},
+            "impact_at_event": _event_impact(ledger, after or before, bid) if bid else {},
             "decision": {"status": "accepted" if reason else "observed"},
         }
         events.append(ledger.append(event))
@@ -501,7 +585,7 @@ def capture_artifact_state(project_root: Path, blueprint_data: dict[str, Any], *
                 elif state.get("type") in {"config", "configuration"}: etype = "CONFIG_VALUE_DRIFT"
                 else: etype = "ARTIFACT_CONTENT_DRIFT"
                 if block_id and str(block_id) not in impact_by_block:
-                    impact_by_block[str(block_id)] = _impact(blueprint_data, str(block_id), graph=impact_graph)
+                    impact_by_block[str(block_id)] = _event_impact(ledger, blueprint_data, str(block_id), graph=impact_graph)
                 events.append(ledger.append({
                     "git": git_context,
                     "change_set_id": change_set, "event_type": etype,
@@ -513,5 +597,5 @@ def capture_artifact_state(project_root: Path, blueprint_data: dict[str, Any], *
                     "decision": {"status": "observed"},
                 }))
     path.parent.mkdir(parents=True, exist_ok=True)
-    atomic_write_text(path, json.dumps(current, sort_keys=True, indent=2) + "\n")
+    atomic_write_text(path, _compact_json(current) + "\n")
     return events

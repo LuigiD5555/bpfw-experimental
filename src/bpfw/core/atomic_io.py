@@ -43,6 +43,11 @@ def atomic_write_text(
     the temporary file is removed.  Existing permission bits are preserved
     when the target already exists.
     """
+    atomic_write_bytes(path, text.encode(encoding))
+
+
+def atomic_write_bytes(path: Path, data: bytes) -> None:
+    """Atomically replace *path* with *data*, with the same guarantees as atomic_write_text."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     previous_mode: int | None = None
@@ -54,8 +59,8 @@ def atomic_write_text(
     fd, raw_temp = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
     temp_path = Path(raw_temp)
     try:
-        with os.fdopen(fd, "w", encoding=encoding, newline="") as handle:
-            handle.write(text)
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(data)
             handle.flush()
             os.fsync(handle.fileno())
         if previous_mode is not None:

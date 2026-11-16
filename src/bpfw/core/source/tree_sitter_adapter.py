@@ -40,17 +40,56 @@ def parser_for(language: str) -> Any:
     return tree_sitter.Parser(tree_sitter.Language(grammar.language()))
 
 
-def extract_units(language: str, path: Path, relative_path: Path) -> tuple[list[DiscoveredCodeUnit], bool]:
+MARKUP_GRANULARITY_FULL = "full"
+MARKUP_GRANULARITY_MEANINGFUL = "meaningful"
+MARKUP_GRANULARITIES = frozenset({MARKUP_GRANULARITY_FULL, MARKUP_GRANULARITY_MEANINGFUL})
+
+# Under the "meaningful" profile only these HTML elements (or any element with an id) become units.
+# Wrapper elements are still walked, and their content stays covered by the nearest emitted ancestor's hash.
+MEANINGFUL_HTML_TAGS = frozenset({
+    "form", "input", "select", "textarea", "button", "a", "table",
+    "section", "main", "nav", "article", "aside", "header", "footer",
+    "dialog", "details", "script", "style",
+})
+
+# Under the "meaningful" profile only top-level CSS statements become units; nested rules and
+# keyframe steps are covered by the enclosing statement's hash.
+MEANINGFUL_CSS_NODE_TYPES = frozenset({
+    "rule_set", "at_rule", "media_statement", "supports_statement", "keyframes_statement",
+})
+
+
+def normalize_markup_granularity(value: Any) -> str:
+    """Return a validated markup granularity, defaulting to the historical full profile."""
+
+    if value is None or value == "":
+        return MARKUP_GRANULARITY_FULL
+    granularity = str(value).strip().lower()
+    if granularity not in MARKUP_GRANULARITIES:
+        raise ValueError(
+            f"Unsupported markup_granularity {value!r}; expected one of {sorted(MARKUP_GRANULARITIES)}"
+        )
+    return granularity
+
+
+def extract_units(
+    language: str,
+    path: Path,
+    relative_path: Path,
+    *,
+    markup_granularity: str = MARKUP_GRANULARITY_FULL,
+) -> tuple[list[DiscoveredCodeUnit], bool]:
     """Parse one file and return units plus the root syntax-error flag."""
 
+    meaningful = normalize_markup_granularity(markup_granularity) == MARKUP_GRANULARITY_MEANINGFUL
     source = path.read_bytes()
     parse_source = _mask_html_template_tokens(source) if language == "html" else source
     tree = parser_for(language).parse(parse_source)
     extractors: dict[str, Callable[[Any, bytes, Path], list[DiscoveredCodeUnit]]] = {
         "go": _extract_go,
         "rust": _extract_rust,
-        "html": _extract_html,
-        "css": _extract_css,
+        "html": lambda root, raw, relative: _extract_html(root, raw, relative, meaningful=meaningful),
+        "css": lambda root, raw, relative: _extract_css(root, raw, relative, meaningful=meaningful),
     }
     return extractors[language](tree.root_node, source, relative_path), bool(tree.root_node.has_error)
 
@@ -391,7 +430,7 @@ def _html_tag(node: Any, source: bytes) -> tuple[str, str | None]:
     return (tag_match.group(1).lower() if tag_match else "element", id_match.group(2) if id_match else None)
 
 
-def _extract_html(root: Any, source: bytes, relative_path: Path) -> list[DiscoveredCodeUnit]:
+def _extract_html(root: Any, source: bytes, relative_path: Path, *, meaningful: bool = False) -> list[DiscoveredCodeUnit]:
     units: list[DiscoveredCodeUnit] = []
 
     def visit(node: Any, parent_symbol: str | None, parent_id: str | None) -> None:
@@ -409,14 +448,18 @@ def _extract_html(root: Any, source: bytes, relative_path: Path) -> list[Discove
             if len(same_identifier) > 1:
                 segment += f"[{same_identifier.index(node) + 1}]"
         symbol = f"{parent_symbol}/{segment}" if parent_symbol else segment
-        unit = _make_unit(
-            language="html", relative_path=relative_path, symbol=symbol, kind="html_element",
-            node=node, source=source, parent_unit_id=parent_id, visibility="document",
-            signature=_text(next(iter(node.named_children), node), source).strip(),
-        )
-        units.append(unit)
+        child_parent_id = parent_id
+        if not meaningful or html_id or tag in MEANINGFUL_HTML_TAGS:
+            unit = _make_unit(
+                language="html", relative_path=relative_path, symbol=symbol, kind="html_element",
+                node=node, source=source, parent_unit_id=parent_id, visibility="document",
+                signature=_text(next(iter(node.named_children), node), source).strip(),
+            )
+            units.append(unit)
+            child_parent_id = unit.unit_id
+        # Symbols keep the full element path in every profile, so kept units never change identity.
         for child in node.named_children:
-            visit(child, symbol, unit.unit_id)
+            visit(child, symbol, child_parent_id)
 
     visit(root, None, None)
     return units
@@ -436,7 +479,7 @@ def _css_label(node: Any, source: bytes) -> tuple[str, str]:
     return "css_at_rule", header or node.type
 
 
-def _extract_css(root: Any, source: bytes, relative_path: Path) -> list[DiscoveredCodeUnit]:
+def _extract_css(root: Any, source: bytes, relative_path: Path, *, meaningful: bool = False) -> list[DiscoveredCodeUnit]:
     unit_types = {
         "rule_set", "at_rule", "media_statement", "supports_statement",
         "keyframes_statement", "keyframe_block",
@@ -447,6 +490,8 @@ def _extract_css(root: Any, source: bytes, relative_path: Path) -> list[Discover
     def visit(node: Any, parent_symbol: str | None, parent_id: str | None) -> None:
         current_symbol, current_parent = parent_symbol, parent_id
         if node.type in unit_types:
+            if meaningful and (parent_symbol is not None or node.type not in MEANINGFUL_CSS_NODE_TYPES):
+                return
             kind, label = _css_label(node, source)
             counter_key = (parent_symbol, label)
             counters[counter_key] = counters.get(counter_key, 0) + 1
@@ -459,6 +504,9 @@ def _extract_css(root: Any, source: bytes, relative_path: Path) -> list[Discover
             )
             units.append(unit)
             current_symbol, current_parent = symbol, unit.unit_id
+            if meaningful:
+                # Nested rules and keyframe steps are covered by this statement's hash.
+                return
         for child in node.named_children:
             visit(child, current_symbol, current_parent)
 

@@ -44,12 +44,36 @@ def run_sqlite_cli(command: str, subcommand: str | None, tokens: list[str],
         return 0
     if command == "authority":
         p = argparse.ArgumentParser(prog="bpfw authority")
-        p.add_argument("action", choices=["info", "doctor", "backup", "export", "restore"])
+        p.add_argument("action", choices=["info", "doctor", "backup", "export", "restore", "regranulate", "compact"])
+        p.add_argument("--keep-operations", type=int, default=20,
+                       help="compact: newest operations whose change records are kept intact")
         p.add_argument("--out", type=Path)
         p.add_argument("--input", type=Path)
         p.add_argument("--apply", action="store_true")
         p.add_argument("--expected-revision", type=int)
+        p.add_argument("--profile", choices=["full", "meaningful"],
+                       help="regranulate: target HTML/CSS discovery profile")
+        p.add_argument("--drop-custom-purposes", action="store_true",
+                       help="regranulate: accept removing blocks whose purpose was written by hand")
         opts = p.parse_args(([subcommand] if subcommand else []) + tokens)
+        if opts.action == "compact":
+            from .compaction import apply_compaction, plan_compaction
+            result = {"plan": plan_compaction(store, keep_operations=opts.keep_operations), "applied": False}
+            if opts.apply:
+                result.update(apply_compaction(project_root, store, keep_operations=opts.keep_operations))
+            _print_result(result, as_json=as_json)
+            return 0
+        if opts.action == "regranulate":
+            if not opts.profile:
+                p.error("regranulate requires --profile full|meaningful")
+            from .regranulate import apply_regranulation, plan_regranulation, public_plan
+            plan = plan_regranulation(project_root, store, opts.profile)
+            result: dict = {"plan": public_plan(plan), "applied": False}
+            if opts.apply and plan["removable_blocks"] + (plan["current_profile"] != plan["target_profile"]):
+                result.update(apply_regranulation(project_root, store, plan,
+                                                  drop_custom_purposes=opts.drop_custom_purposes))
+            _print_result(result, as_json=as_json)
+            return 0
         if opts.action == "doctor":
             result = store.doctor()
             _print_result(result, as_json=as_json)
