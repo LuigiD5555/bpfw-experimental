@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "blueprint-framework"
-version = "0.2.0a14.post6"
+version = "0.2.0a15"
 description = "Intent-preserving system verification and change gate"
 readme = "README.md"
 requires-python = ">=3.11"
