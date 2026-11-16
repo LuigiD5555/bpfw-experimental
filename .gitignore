@@ -4,6 +4,9 @@ build/
 *.egg-info/
 .pytest_cache/
 
+# PipeCraft runtime binary: not versioned in git; kept locally and distributed as a release asset.
+src/bpfw/_runtime/pipecraft/1.6.0-alpha.1/linux-x86_64/pipecraft
+src/bpfw/_runtime/pipecraft/1.6.0-alpha.1/linux-x86_64/pipecraft.sha256
 # Built artifacts: wheels and checksums are release outputs, not versioned.
 dist/
 *.whl
