@@ -4,7 +4,7 @@ set -euo pipefail
 APP_ROOT="${BPFW_HOME:-$HOME/.local/share/bpfw}"
 BIN_DIR="${BPFW_BIN_DIR:-$HOME/.local/bin}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WHEEL="$(find "$HERE" -maxdepth 1 -name 'blueprint_framework-*.whl' -print -quit)"
+WHEEL="${BPFW_WHEEL:-$(find "$HERE/../dist" -maxdepth 1 -name 'blueprint_framework-*.whl' -print -quit 2>/dev/null)}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 UNINSTALL_EXISTING=0
 INSTALL_MULTILANG=1
@@ -32,7 +32,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$WHEEL" ]]; then
-  echo "BPFW installer: wheel not found next to install.sh" >&2
+  echo "BPFW installer: no wheel found. Build one with python -m build (writes dist/) or set BPFW_WHEEL=/path/to/wheel." >&2
   exit 1
 fi
 
