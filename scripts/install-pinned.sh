@@ -26,7 +26,7 @@ TREE_SITTER_PIN="${TREE_SITTER_PIN:-tree-sitter<0.26}"
 
 # install.sh resolves the version from wheel metadata; read it back the same way
 # so this wrapper never hard-codes a release number.
-WHEEL="$(find "$HERE" -maxdepth 1 -name 'blueprint_framework-*.whl' -print -quit)"
+WHEEL="${BPFW_WHEEL:-$(find "$HERE/../dist" -maxdepth 1 -name 'blueprint_framework-*.whl' -print -quit 2>/dev/null)}"
 VERSION="$("$PYTHON_BIN" - "$WHEEL" <<'PY'
 import sys
 import zipfile
