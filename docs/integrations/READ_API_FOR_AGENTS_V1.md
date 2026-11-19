@@ -257,30 +257,30 @@ ID común: BPFW-READ-API-20261119 (conservado para referencias cruzadas; el alca
 
 ## 11. Diseño de contratos para implementación — refinamiento V1.1 (PROPOSED; no aprobado)
 
-Este refinamiento pertenece al mismo plan \`BPFW-READ-API-20261119\` y a la PR #7. No es otra hoja de ruta. Está construido sobre inspección estática de \`main\` en \`a4a0b374\`: **CODE_INSPECTED, NOT_TESTED, NOT_APPROVED**. No autoriza cambios de código, migraciones, escrituras, permisos ni merge. Las decisiones marcadas como recomendadas son candidatas para aprobación del propietario tras Q0+W0.
+Este refinamiento pertenece al mismo plan `BPFW-READ-API-20261119` y a la PR #7. No es otra hoja de ruta. Está construido sobre inspección estática de `main` en `a4a0b374`: **CODE_INSPECTED, NOT_TESTED, NOT_APPROVED**. No autoriza cambios de código, migraciones, escrituras, permisos ni merge. Las decisiones marcadas como recomendadas son candidatas para aprobación del propietario tras Q0+W0.
 
 ### 11.1. Frontera y vocabulario
 
 **Decisión recomendada D1:** un único servicio de aplicación local por backend activo, con dos fachadas versionadas y permisos distintos:
-- \`bpfw.query/v1\`: lectura pura; nunca genera planes en disco, compone authority, invoca scanner, muta WAL deliberadamente, sincroniza shards, ejecuta verify/status ni aplica parches.
-- \`bpfw.change/v1\`: planifica/valida cambios, previsualiza y, con autorización independiente del host, aplica. Un cambio individual es un lote con un único destino, no otro motor.
-- **DTOs compartidos**: \`AuthoritySnapshot\`, \`BlockRef\`, \`BlockRevision\`, \`SelectionSnapshot\`, \`ChangeOperation\`, \`ChangePlan\`, \`ChangeReceipt\`, \`TypedError\`.
-- **Adaptadores**: SQLite y YAML implementan capacidades declaradas, sin acceso SQL/YAML directo por consumidores. Capacidad ausente ⇒ \`UNSUPPORTED_CAPABILITY\`, sin fallback que cambie semántica.
-- **Transportes**: biblioteca Python y CLI JSON sin daemon; MCP/HTTP fuera del primer corte. El host decide \`project_ref\` y ruta autorizada, nunca el texto de un LLM.
+- `bpfw.query/v1`: lectura pura; nunca genera planes en disco, compone authority, invoca scanner, muta WAL deliberadamente, sincroniza shards, ejecuta verify/status ni aplica parches.
+- `bpfw.change/v1`: planifica/valida cambios, previsualiza y, con autorización independiente del host, aplica. Un cambio individual es un lote con un único destino, no otro motor.
+- **DTOs compartidos**: `AuthoritySnapshot`, `BlockRef`, `BlockRevision`, `SelectionSnapshot`, `ChangeOperation`, `ChangePlan`, `ChangeReceipt`, `TypedError`.
+- **Adaptadores**: SQLite y YAML implementan capacidades declaradas, sin acceso SQL/YAML directo por consumidores. Capacidad ausente ⇒ `UNSUPPORTED_CAPABILITY`, sin fallback que cambie semántica.
+- **Transportes**: biblioteca Python y CLI JSON sin daemon; MCP/HTTP fuera del primer corte. El host decide `project_ref` y ruta autorizada, nunca el texto de un LLM.
 
-**Vocabulario:** UID = identidad interna de bloque; \`id\`/external_id = nombre visible; \`entity_revision\` = versión de bloque; \`authority_revision\` = versión global; \`digest\` = huella de contenido. \`DECLARED\` indica afirmación de authority, no comportamiento comprobado. \`UNKNOWN\` no es conjunto vacío. \`preview\` no es permiso.
+**Vocabulario:** UID = identidad interna de bloque; `id`/external_id = nombre visible; `entity_revision` = versión de bloque; `authority_revision` = versión global; `digest` = huella de contenido. `DECLARED` indica afirmación de authority, no comportamiento comprobado. `UNKNOWN` no es conjunto vacío. `preview` no es permiso.
 
 ### 11.2. Consultas: exactitud antes que búsqueda amplia
 
 **Decisión D2:** definir cinco clases de consulta, reutilizando el mismo envelope:
-1. **PRECISE:** \`blocks.get\` por UID; \`blocks.resolve\` por \`id\` exacto o \`code.path + code.symbol + code.kind\`; exigir **exactamente un resultado**. Cero ⇒ \`NOT_FOUND\`; varios ⇒ \`AMBIGUOUS_BLOCK\` con candidatos acotados, nunca escoger uno automáticamente.
-2. **BROWSE:** \`blocks.list\` con filtros estructurados \`path\`, \`domain\`, \`status\`, \`kind\`, \`id\`, búsqueda textual y keyset pagination. Orden determinista con desempate UID. Preferir \`eq\`/prefijo explícito, no cadenas SQL.
-3. **CONTEXT:** \`relations.list\`, \`intent.why\` y \`blocks.trace\` con límites de profundidad, dirección, tamaño, eventos e información ya materializada; desconocido/incompleto explícito.
-4. **DIAGNOSTICS:** \`diagnostics.list\` lee únicamente resultados previamente materializados con \`observed_at\`, revisión y \`stale\`; no dispara verificación.
+1. **PRECISE:** `blocks.get` por UID; `blocks.resolve` por `id` exacto o `code.path + code.symbol + code.kind`; exigir **exactamente un resultado**. Cero ⇒ `NOT_FOUND`; varios ⇒ `AMBIGUOUS_BLOCK` con candidatos acotados, nunca escoger uno automáticamente.
+2. **BROWSE:** `blocks.list` con filtros estructurados `path`, `domain`, `status`, `kind`, `id`, búsqueda textual y keyset pagination. Orden determinista con desempate UID. Preferir `eq`/prefijo explícito, no cadenas SQL.
+3. **CONTEXT:** `relations.list`, `intent.why` y `blocks.trace` con límites de profundidad, dirección, tamaño, eventos e información ya materializada; desconocido/incompleto explícito.
+4. **DIAGNOSTICS:** `diagnostics.list` lee únicamente resultados previamente materializados con `observed_at`, revisión y `stale`; no dispara verificación.
 5. **SELECTION:** consulta preparatoria de selección para batch. Devuelve conteo, identidades/revisiones o huella verificable de la selección; no aplica nada.
 
 **Request base candidato** (objeto conceptual; schema JSON formal pendiente de Q1):
-\`\`\`json
+```json
 {
   "schema": "bpfw.query/v1",
   "request_id": "r-001",
@@ -295,10 +295,10 @@ Este refinamiento pertenece al mismo plan \`BPFW-READ-API-20261119\` y a la PR #
   "include": ["identity", "purpose"],
   "budget": {"max_bytes": 65536, "max_depth": 1}
 }
-\`\`\`
+```
 
 **Response base candidato:**
-\`\`\`json
+```json
 {
   "schema": "bpfw.query/v1",
   "request_id": "r-001",
@@ -321,13 +321,13 @@ Este refinamiento pertenece al mismo plan \`BPFW-READ-API-20261119\` y a la PR #
   "warnings": [],
   "next_cursor": null
 }
-\`\`\`
+```
 
-El JSON es de diseño, no una respuesta que hoy produzca el CLI. Todo campo opcional ausente se distingue de \`null\`; un \`purpose\` desconocido no se inventa.
+El JSON es de diseño, no una respuesta que hoy produzca el CLI. Todo campo opcional ausente se distingue de `null`; un `purpose` desconocido no se inventa.
 
-**Consistencia de lectura:** abrir una transacción/snapshot coherente por respuesta; devolver \`authority_revision + digest\`; cursor opaco ligado a backend, proyecto, revisión, filtros, orden, límite y vencimiento. En páginas posteriores, si cambió la revisión ⇒ \`STALE_SNAPSHOT\` y reiniciar la consulta (no mezclar páginas). El cursor **no constituye autorización**. En SQLite leer digest existente de \`authority_state\` bajo la misma transacción; verificar compatibilidad con WAL, escrituras concurrentes y ausencia de creación de ficheros. En YAML obtener una instantánea consistente sin mutar shards. No efectuar full scans ocultos para resolver una consulta focal.
+**Consistencia de lectura:** abrir una transacción/snapshot coherente por respuesta; devolver `authority_revision + digest`; cursor opaco ligado a backend, proyecto, revisión, filtros, orden, límite y vencimiento. En páginas posteriores, si cambió la revisión ⇒ `STALE_SNAPSHOT` y reiniciar la consulta (no mezclar páginas). El cursor **no constituye autorización**. En SQLite leer digest existente de `authority_state` bajo la misma transacción; verificar compatibilidad con WAL, escrituras concurrentes y ausencia de creación de ficheros. En YAML obtener una instantánea consistente sin mutar shards. No efectuar full scans ocultos para resolver una consulta focal.
 
-**Filtros e índices:** el \`AuthorityQueries.Query\` actual no incluye un filtro estructurado de \`code.path\`; el nuevo adaptador debe enlazar la ubicación \`code\` y/o \`artifacts\` sin hacer \`load_document()\` para cada página. Rechazar cualquier selector ambiguo y consultas sin límites. Propuesta inicial: página por defecto 50, máximo 100; profundidad de relaciones por defecto 1 y máximo 2; selección máxima de 10 000 bloques, sujeta a medición. El \`purpose\` listado puede estar resumido, pero \`blocks.get\` devuelve el campo completo dentro del presupuesto y sin truncado silencioso.
+**Filtros e índices:** el `AuthorityQueries.Query` actual no incluye un filtro estructurado de `code.path`; el nuevo adaptador debe enlazar la ubicación `code` y/o `artifacts` sin hacer `load_document()` para cada página. Rechazar cualquier selector ambiguo y consultas sin límites. Propuesta inicial: página por defecto 50, máximo 100; profundidad de relaciones por defecto 1 y máximo 2; selección máxima de 10 000 bloques, sujeta a medición. El `purpose` listado puede estar resumido, pero `blocks.get` devuelve el campo completo dentro del presupuesto y sin truncado silencioso.
 
 ### 11.3. Selección individual frente a batch
 
@@ -335,25 +335,25 @@ El JSON es de diseño, no una respuesta que hoy produzca el CLI. Todo campo opci
 
 | Caso | Selección | Comportamiento |
 | --- | --- | --- |
-| Un bloque conocido | \`EXACT_UID\` | Plan de un destino; error si no existe o la revisión está obsoleta |
-| Nombre o ubicación conocida | \`EXACT_RESOLVE\` | Si hay más de un candidato, bloquear y requerir UID |
-| Lista determinada de bloques | \`EXPLICIT_UIDS\` | Validar identidad y revisión por cada UID; rechazar repetidos |
-| Regla de alcance, p. ej. todos los bloques de un dominio | \`FROZEN_FILTER\` | Evaluar filtro una sola vez al preparar; fijar conteo, selección y revisiones |
-| Conjunto por relaciones | \`DERIVED_SET\` | Resolver relaciones explícitas con límite, mostrar evidencia y congelar; nunca inferir dependencias para escribir |
+| Un bloque conocido | `EXACT_UID` | Plan de un destino; error si no existe o la revisión está obsoleta |
+| Nombre o ubicación conocida | `EXACT_RESOLVE` | Si hay más de un candidato, bloquear y requerir UID |
+| Lista determinada de bloques | `EXPLICIT_UIDS` | Validar identidad y revisión por cada UID; rechazar repetidos |
+| Regla de alcance, p. ej. todos los bloques de un dominio | `FROZEN_FILTER` | Evaluar filtro una sola vez al preparar; fijar conteo, selección y revisiones |
+| Conjunto por relaciones | `DERIVED_SET` | Resolver relaciones explícitas con límite, mostrar evidencia y congelar; nunca inferir dependencias para escribir |
 
-\`FROZEN_FILTER\` produce \`SelectionSnapshot\`: \`project_ref\`, backend, \`authority_revision\`, digest, canonical query fingerprint, \`target_count\`, \`target_set_digest\`, y referencias UID/revisión recuperables de forma verificable. En \`apply\` **no se reinterpreta la intención ni se amplía automáticamente la selección**. Se revalida exactamente el mismo conjunto y cada CAS; si cambió, \`REVISION_CONFLICT\`/re-preview. La lista de UID puede viajar en el plan o guardarse en un almacén de planes con consentimiento explícito; los planes grandes no se fingen atómicos ni se truncan.
+`FROZEN_FILTER` produce `SelectionSnapshot`: `project_ref`, backend, `authority_revision`, digest, canonical query fingerprint, `target_count`, `target_set_digest`, y referencias UID/revisión recuperables de forma verificable. En `apply` **no se reinterpreta la intención ni se amplía automáticamente la selección**. Se revalida exactamente el mismo conjunto y cada CAS; si cambió, `REVISION_CONFLICT`/re-preview. La lista de UID puede viajar en el plan o guardarse en un almacén de planes con consentimiento explícito; los planes grandes no se fingen atómicos ni se truncan.
 
 ### 11.4. Contrato único de cambio
 
 **Decisión D4:** cada escritura consta de tres actos separados:
-1. \`change.preview\`: valida y calcula resultado/diff en memoria, **sin modificar authority, history, locks ni generar un plan en disco automáticamente**.
-2. \`batch.prepare\` (opcional para selecciones grandes): guarda una selección/plan congelado en un almacén de planes bajo el control del host, con caducidad, checksum y permiso; se declara claramente como operación local con efectos sobre ficheros auxiliares, nunca como consulta pura.
-3. \`change.apply\`: exige plan y digest íntegros, \`expected_authority_revision\`, CAS de entidades, actor/reason y un **grant del host** ligado a proyecto, operaciones, alcance, hash del plan y expiración. \`change.status\` permite reconciliar un intento de apply si la respuesta se perdió.
+1. `change.preview`: valida y calcula resultado/diff en memoria, **sin modificar authority, history, locks ni generar un plan en disco automáticamente**.
+2. `batch.prepare` (opcional para selecciones grandes): guarda una selección/plan congelado en un almacén de planes bajo el control del host, con caducidad, checksum y permiso; se declara claramente como operación local con efectos sobre ficheros auxiliares, nunca como consulta pura.
+3. `change.apply`: exige plan y digest íntegros, `expected_authority_revision`, CAS de entidades, actor/reason y un **grant del host** ligado a proyecto, operaciones, alcance, hash del plan y expiración. `change.status` permite reconciliar un intento de apply si la respuesta se perdió.
 
-**Operaciones v1 candidatas:** \`blocks.create\`, \`blocks.patch\`, \`connections.create/patch\`, \`artifacts.create/patch\`, \`invariants.create/patch\`; las operaciones estructurales entran gradualmente cuando Q0+W0 acredite soporte real. En \`blocks.patch\`, las acciones de campo son \`set\`, \`clear\` (eliminar presencia), \`set_if_absent\` y \`replace_if_equals\`. Un \`null\` asignado con \`set\` es distinto de \`clear\`. \`uid\` no se edita; eliminación, migración de backend y unlock quedan fuera de la API v1 normal.
+**Operaciones v1 candidatas:** `blocks.create`, `blocks.patch`, `connections.create/patch`, `artifacts.create/patch`, `invariants.create/patch`; las operaciones estructurales entran gradualmente cuando Q0+W0 acredite soporte real. En `blocks.patch`, las acciones de campo son `set`, `clear` (eliminar presencia), `set_if_absent` y `replace_if_equals`. Un `null` asignado con `set` es distinto de `clear`. `uid` no se edita; eliminación, migración de backend y unlock quedan fuera de la API v1 normal.
 
 **Ejemplo individual propuesto:**
-\`\`\`json
+```json
 {
   "schema": "bpfw.change/v1",
   "mode": "PREVIEW",
@@ -367,56 +367,56 @@ El JSON es de diseño, no una respuesta que hoy produzca el CLI. Todo campo opci
   "reason": "Precisar la intención declarada",
   "idempotency_key": "host-unique-001"
 }
-\`\`\`
+```
 
-**Ejemplo batch propuesto:** reemplazar \`selection\` por \`{"mode":"FROZEN_FILTER","filters":{"domain":{"eq":"scheduler"}}}\` y mantener la misma operación de cambio sobre \`target:"selection"\`. El preview debe devolver \`matched\`, \`changed\`, \`unchanged\`, \`blocked\`, destinos, riesgos, revisiones, diff paginado, \`plan_digest\`, \`expires_at\`, cobertura por backend y motivos de rechazo. Ningún filtro se vuelve a expandir silenciosamente en \`apply\`.
+**Ejemplo batch propuesto:** reemplazar `selection` por `{"mode":"FROZEN_FILTER","filters":{"domain":{"eq":"scheduler"}}}` y mantener la misma operación de cambio sobre `target:"selection"`. El preview debe devolver `matched`, `changed`, `unchanged`, `blocked`, destinos, riesgos, revisiones, diff paginado, `plan_digest`, `expires_at`, cobertura por backend y motivos de rechazo. Ningún filtro se vuelve a expandir silenciosamente en `apply`.
 
 ### 11.5. Atomicidad, idempotencia y fallos
 
-**Decisión D5:** el primer batch público de escritura será **ALL_OR_NOTHING**, sin modo \`best_effort\` implícito. Si una operación falla, todo el batch falla y no existe un estado «200 de 300 aplicado» vendido como transacción. SQLite debe demostrar atomicidad dentro de una transacción que abarque cambios, revisionado, bitácora y recibo de idempotencia. YAML multishard NO anuncia batch transaccional hasta demostrar rollback tras crash real/simulado y recuperación.
+**Decisión D5:** el primer batch público de escritura será **ALL_OR_NOTHING**, sin modo `best_effort` implícito. Si una operación falla, todo el batch falla y no existe un estado «200 de 300 aplicado» vendido como transacción. SQLite debe demostrar atomicidad dentro de una transacción que abarque cambios, revisionado, bitácora y recibo de idempotencia. YAML multishard NO anuncia batch transaccional hasta demostrar rollback tras crash real/simulado y recuperación.
 
-Para volúmenes que excedan el máximo certificado, \`batch.prepare\` devuelve \`BATCH_LIMIT\` y una **propuesta explícita de particionado**. El host podrá aprobar una secuencia de transacciones independientes, con recibo por segmento y sin prometer atomicidad global.
+Para volúmenes que excedan el máximo certificado, `batch.prepare` devuelve `BATCH_LIMIT` y una **propuesta explícita de particionado**. El host podrá aprobar una secuencia de transacciones independientes, con recibo por segmento y sin prometer atomicidad global.
 
-**Idempotencia obligatoria** para APPLY: clave por \`actor + project_ref + idempotency_key\` asociada a \`plan_digest\`. Repetición idéntica ⇒ mismo recibo, sin duplicar bloque/evento. Clave existente con plan distinto ⇒ \`IDEMPOTENCY_CONFLICT\`. Si hubo timeout o posible commit ⇒ \`WRITE_STATE_UNKNOWN\`; llamar \`change.status\`/readback antes de retry. La actual bitácora SQLite \`operation_log\` tiene ID propio pero no demuestra, por sí misma, un índice único de idempotency_key: proponer extensión transaccional mínima, sin un segundo journal paralelo. Estado \`APPLIED_READBACK_VERIFIED\` significa **authority leída de vuelta**, no código probado.
+**Idempotencia obligatoria** para APPLY: clave por `actor + project_ref + idempotency_key` asociada a `plan_digest`. Repetición idéntica ⇒ mismo recibo, sin duplicar bloque/evento. Clave existente con plan distinto ⇒ `IDEMPOTENCY_CONFLICT`. Si hubo timeout o posible commit ⇒ `WRITE_STATE_UNKNOWN`; llamar `change.status`/readback antes de retry. La actual bitácora SQLite `operation_log` tiene ID propio pero no demuestra, por sí misma, un índice único de idempotency_key: proponer extensión transaccional mínima, sin un segundo journal paralelo. Estado `APPLIED_READBACK_VERIFIED` significa **authority leída de vuelta**, no código probado.
 
-**Aprobaciones:** el \`PatchWriteContext.is_valid()\` existente acepta un \`tool_name\` no vacío y NO es por sí solo una credencial confiable de host. Un \`human_confirmed\` proveniente del JSON tampoco otorga permiso. Exigir una autorización externa, no forjable por el consumidor, y comprobar estado locked y scope justo antes de commit. Ningún consumidor puede ejecutar \`authorize_temporary_blueprint_unlock_for_tool\` en nombre de un LLM. Las alteraciones de propósito, relaciones, invariantes y cualquier regla de protección deben mostrar su riesgo y evidencia antes de aprobarse.
+**Aprobaciones:** el `PatchWriteContext.is_valid()` existente acepta un `tool_name` no vacío y NO es por sí solo una credencial confiable de host. Un `human_confirmed` proveniente del JSON tampoco otorga permiso. Exigir una autorización externa, no forjable por el consumidor, y comprobar estado locked y scope justo antes de commit. Ningún consumidor puede ejecutar `authorize_temporary_blueprint_unlock_for_tool` en nombre de un LLM. Las alteraciones de propósito, relaciones, invariantes y cualquier regla de protección deben mostrar su riesgo y evidencia antes de aprobarse.
 
-**Estados de apply:** \`NO_OP\`, \`APPLIED_READBACK_VERIFIED\`, \`CONFLICT\`, \`BLOCKED\`, \`REJECTED\`, \`FAILED\`, \`UNCERTAIN_RECONCILE\`. Un rechazo no equivale a éxito parcial. Retornar siempre \`operation_id\`, plan hash, actor, reason, revisiones before/after, digests before/after, recuentos, conjunto de UID afectados y advertencias, redactados conforme al permiso. Nunca loguear secretos o payload RAW indiscriminadamente.
+**Estados de apply:** `NO_OP`, `APPLIED_READBACK_VERIFIED`, `CONFLICT`, `BLOCKED`, `REJECTED`, `FAILED`, `UNCERTAIN_RECONCILE`. Un rechazo no equivale a éxito parcial. Retornar siempre `operation_id`, plan hash, actor, reason, revisiones before/after, digests before/after, recuentos, conjunto de UID afectados y advertencias, redactados conforme al permiso. Nunca loguear secretos o payload RAW indiscriminadamente.
 
 ### 11.6. Matriz de reutilización inspeccionada (código, no suite ejecutada)
 
 | Pieza existente | Evidencia estática | Adaptación requerida |
 | --- | --- | --- |
-| \`AuthorityQueries\` (\`sqlite/queries.py\`) | \`page/get/relations/resolve/matching\` parametrizados, cursor por revisión, page size máximo 100, selección máxima 10 000 | Normalizar DTOs/errores, path+symbol+kind, desambiguación, procedencia, snapshot y límites por respuesta |
-| \`SqliteAuthorityStore.connect(write=False)\` | Abre SQLite \`mode=ro\`; \`BEGIN\` en \`AuthorityQueries.page\` | Certificar no-mutación con WAL concurrente y snapshot |
-| \`SqliteAuthorityStore.apply_patches(...,dry_run=True)\` | Abre \`BEGIN IMMEDIATE\`, modifica y revierte con excepción privada | NO llamarlo una consulta pura; separar previsualización sin escritura o demostrar equivalencia exigida |
-| \`SqliteAuthorityStore.apply_patches\` | CAS global/opcional, CAS por entidad/opcional, transacción, \`operation_log\` y outbox | CAS obligatorio en API externa; idempotency_key persistente; autorización real; tipos de campo cerrados |
-| \`BlueprintEngine\` / \`AuthorityPatchEngine\` | Preview/apply con motores existentes y rutas distintas SQLite/YAML | No extender garantías por analogía; bind de grant host y plan hash |
-| \`AutomationEngine.create_plan\` | Escribe \`.bpfw/plans/*.json\` y aplica por digest | Mantener almacenamiento en \`batch.prepare\` explícito; \`change.preview\` no hereda ese efecto oculto |
-| \`sqlite/compat.py\` | CREATE_BLOCK y varias operaciones estructurales interpretadas sobre documento en memoria | Medir coste en lotes grandes, revisiones de hijos, invariantes y colisiones |
-| \`PatchWriteContext\` / \`access_control.py\` | Contextos internos por nombre; autorización temporal puede permitir escribir bajo lock | No exponer como grant externo; host debe decidir operaciones y permisos por plan |
-| \`sqlite/batch.py\` | CSV con baseline, \`uid\`, revisión y cambios \`set/clear\` | Reusar parser/conversiones tras normalizar campos; CSV no es ruta alternativa de autorización |
+| `AuthorityQueries` (`sqlite/queries.py`) | `page/get/relations/resolve/matching` parametrizados, cursor por revisión, page size máximo 100, selección máxima 10 000 | Normalizar DTOs/errores, path+symbol+kind, desambiguación, procedencia, snapshot y límites por respuesta |
+| `SqliteAuthorityStore.connect(write=False)` | Abre SQLite `mode=ro`; `BEGIN` en `AuthorityQueries.page` | Certificar no-mutación con WAL concurrente y snapshot |
+| `SqliteAuthorityStore.apply_patches(...,dry_run=True)` | Abre `BEGIN IMMEDIATE`, modifica y revierte con excepción privada | NO llamarlo una consulta pura; separar previsualización sin escritura o demostrar equivalencia exigida |
+| `SqliteAuthorityStore.apply_patches` | CAS global/opcional, CAS por entidad/opcional, transacción, `operation_log` y outbox | CAS obligatorio en API externa; idempotency_key persistente; autorización real; tipos de campo cerrados |
+| `BlueprintEngine` / `AuthorityPatchEngine` | Preview/apply con motores existentes y rutas distintas SQLite/YAML | No extender garantías por analogía; bind de grant host y plan hash |
+| `AutomationEngine.create_plan` | Escribe `.bpfw/plans/*.json` y aplica por digest | Mantener almacenamiento en `batch.prepare` explícito; `change.preview` no hereda ese efecto oculto |
+| `sqlite/compat.py` | CREATE_BLOCK y varias operaciones estructurales interpretadas sobre documento en memoria | Medir coste en lotes grandes, revisiones de hijos, invariantes y colisiones |
+| `PatchWriteContext` / `access_control.py` | Contextos internos por nombre; autorización temporal puede permitir escribir bajo lock | No exponer como grant externo; host debe decidir operaciones y permisos por plan |
+| `sqlite/batch.py` | CSV con baseline, `uid`, revisión y cambios `set/clear` | Reusar parser/conversiones tras normalizar campos; CSV no es ruta alternativa de autorización |
 
 Las afirmaciones de este cuadro proceden de lectura de código fuente. No prueban por sí solas ausencia de efectos, resistencia a crash ni compatibilidad total.
 
 ### 11.7. Límites iniciales y requisitos de seguridad
 
-**Parámetros iniciales propuestos, pendientes de benchmark:** \`query.page\` 50 por defecto, máximo 100; \`relations.depth\` máximo 2; \`matching\` máximo 10 000 UID para previsualización; primer \`apply\` atómico máximo 1 000 mutaciones expandidas y plan de máximo 2 MiB; vigencia de plan 15 minutos. El servidor local/host impone además timeouts, bytes y límites de memoria reales. Si el coste o backend requiere menos, comunicar \`BUDGET_EXCEEDED\`/\`BATCH_LIMIT\`, nunca cortar y aplicar un subconjunto. No usar estos números como promesa de rendimiento antes del piloto.
+**Parámetros iniciales propuestos, pendientes de benchmark:** `query.page` 50 por defecto, máximo 100; `relations.depth` máximo 2; `matching` máximo 10 000 UID para previsualización; primer `apply` atómico máximo 1 000 mutaciones expandidas y plan de máximo 2 MiB; vigencia de plan 15 minutos. El servidor local/host impone además timeouts, bytes y límites de memoria reales. Si el coste o backend requiere menos, comunicar `BUDGET_EXCEEDED`/`BATCH_LIMIT`, nunca cortar y aplicar un subconjunto. No usar estos números como promesa de rendimiento antes del piloto.
 
-**Modelo de amenazas:** prompt-injection en campos de authority o razones; path traversal; symlink escape; SQL injection; operaciones sobre raíces no autorizadas; filtros que cambian entre preview/apply; ediciones concurrentes; pérdida de respuesta después de commit; desbloqueos implícitos; planes manipulados, obsoletos o repetidos; acceso a RAW sensible. Tratar contenido de propósito/historial como datos, no instrucciones. \`project_ref\` se resuelve mediante allowlist del host y canonical path; los límites y permisos se revalidan en apply.
+**Modelo de amenazas:** prompt-injection en campos de authority o razones; path traversal; symlink escape; SQL injection; operaciones sobre raíces no autorizadas; filtros que cambian entre preview/apply; ediciones concurrentes; pérdida de respuesta después de commit; desbloqueos implícitos; planes manipulados, obsoletos o repetidos; acceso a RAW sensible. Tratar contenido de propósito/historial como datos, no instrucciones. `project_ref` se resuelve mediante allowlist del host y canonical path; los límites y permisos se revalidan en apply.
 
 ### 11.8. Gates verificables, pruebas y decisiones del propietario
 
 **Q0+W0 obligatorio antes de programar una fachada:**
-- Registrar \`operación → función/motor → backend → lecturas/escrituras/side effects → garantía observada\` con archivos y test reproducible.
+- Registrar `operación → función/motor → backend → lecturas/escrituras/side effects → garantía observada` con archivos y test reproducible.
 - Medir SQLite con WAL, dos escritores, un lector paginado, cierres entre commit/response y fallos a mitad de lote; probar YAML con fallo entre shards y recuperación.
 - Verificar que cada ruta de preview y cada herramienta existente respete lock, grant host y CAS; revisar rutas que invocan unlock temporal.
 - Probar consultas de path/symbol/kind y colisiones UID/id, índices y memoria en proyectos grandes.
 
 **Q1+W1 (contrato congelable sólo después de Q0+W0):**
 - Publicar JSON Schema de request/response por versión, catálogo de errores, DTOs, campos modificables por operación/backend y matriz de capabilities.
-- Oráculos adicionales dentro de T01–T26: filtro con 2 candidatos ⇒ AMBIGUOUS; precisión con UID ⇒ 1; selección congelada de 100 ⇒ no toca el bloque 101 añadido; \`clear\` frente a \`set:null\`; 1 fallo de N ⇒ 0 cambios; retry mismo idempotency_key ⇒ 1 operación y 1 outbox; bloqueo/host grant ausente ⇒ 0 cambios; reboot/crash ⇒ \`change.status\` consistente.
+- Oráculos adicionales dentro de T01–T26: filtro con 2 candidatos ⇒ AMBIGUOUS; precisión con UID ⇒ 1; selección congelada de 100 ⇒ no toca el bloque 101 añadido; `clear` frente a `set:null`; 1 fallo de N ⇒ 0 cambios; retry mismo idempotency_key ⇒ 1 operación y 1 outbox; bloqueo/host grant ausente ⇒ 0 cambios; reboot/crash ⇒ `change.status` consistente.
 - Contratos de casos límite: backend missing, READ_ONLY_UNVERIFIED, datos históricos stale, páginas con escritura concurrente, ciclo de relaciones, 10 001 destinos, campos no permitidos, UID duplicado y salida excedida.
-- Versionado semántico del esquema \`bpfw.query/v1\` y \`bpfw.change/v1\`; cambios incompatibles crean \`v2\`, nunca se activan silenciosamente.
+- Versionado semántico del esquema `bpfw.query/v1` y `bpfw.change/v1`; cambios incompatibles crean `v2`, nunca se activan silenciosamente.
 
-**Decisiones recomendadas para aprobación expresa del propietario:** D1 API local unificada; D2 clases de consulta y lectura sin efectos; D3 selección congelada; D4 preview separado de apply con grant host; D5 lotes all-or-nothing certificados; límites iniciales; política de permisos y fields por riesgo; adopción SQLite primero, YAML sólo cuando demuestre paridad. Mantener \`PROPOSED / NOT_IMPLEMENTED / NOT_APPROVED\` mientras no sean aceptadas y no existan pruebas. La siguiente acción sigue siendo **Q0+W0**, no implementación a ciegas.
+**Decisiones recomendadas para aprobación expresa del propietario:** D1 API local unificada; D2 clases de consulta y lectura sin efectos; D3 selección congelada; D4 preview separado de apply con grant host; D5 lotes all-or-nothing certificados; límites iniciales; política de permisos y fields por riesgo; adopción SQLite primero, YAML sólo cuando demuestre paridad. Mantener `PROPOSED / NOT_IMPLEMENTED / NOT_APPROVED` mientras no sean aceptadas y no existan pruebas. La siguiente acción sigue siendo **Q0+W0**, no implementación a ciegas.
