@@ -1,4 +1,4 @@
-# BPFW — Contratos de consultas y cambios controlados para agentes (propuesta V1)
+# BPFW — Contratos de consultas y cambios controlados para agentes (propuesta V1.1)
 
 **ID:** BPFW-READ-API-20261119
 **Estado:** PROPOSED / NOT_IMPLEMENTED / NOT_APPROVED
@@ -6,6 +6,7 @@
 **Propietario del contrato:** Blueprint Framework; esta especificación NO autoriza implementar, migrar SQLite, cambiar authority, publicar endpoints, CI de pago o hacer merge.
 **Alcance:** dos superficies separadas: bpfw.query/1 para lectura pura y bpfw.change/1 para preview y apply autorizados. Biblioteca Python y CLI JSON primero; MCP/HTTP, sólo si se comprueba necesidad y seguridad. Ambas son PROPUESTAS, no endpoints existentes.
 **Base inspeccionada:** bpfw-experimental main a4a0b374f71a2e9398e7f78c0569e0633108718f. Revalidar HEAD antes de implementar.
+**Historia de la decisión:** [ADR-BPFW-QUERY-CHANGE-20261119](ADR_BPFW_QUERY_CHANGE_BATCH_20261119.md), con cronología Git, opciones descartadas, razones, costes de reversión y continuidad estilo Dendryte (sin ejecución de Dendryte).
 
 ## 1. Problema, objetivo y valor
 
@@ -420,3 +421,24 @@ Las afirmaciones de este cuadro proceden de lectura de código fuente. No prueba
 - Versionado semántico del esquema `bpfw.query/v1` y `bpfw.change/v1`; cambios incompatibles crean `v2`, nunca se activan silenciosamente.
 
 **Decisiones recomendadas para aprobación expresa del propietario:** D1 API local unificada; D2 clases de consulta y lectura sin efectos; D3 selección congelada; D4 preview separado de apply con grant host; D5 lotes all-or-nothing certificados; límites iniciales; política de permisos y fields por riesgo; adopción SQLite primero, YAML sólo cuando demuestre paridad. Mantener `PROPOSED / NOT_IMPLEMENTED / NOT_APPROVED` mientras no sean aceptadas y no existan pruebas. La siguiente acción sigue siendo **Q0+W0**, no implementación a ciegas.
+
+## 12. Registro de decisiones, historia y continuidad
+
+**Fuente de razonamiento y trazabilidad:** [ADR-BPFW-QUERY-CHANGE-20261119](ADR_BPFW_QUERY_CHANGE_BATCH_20261119.md). Este ADR documenta cómo se llegó a la separación entre consultas y cambios, la reutilización de motores, la selección individual y masiva, las alternativas rechazadas, los hallazgos de código y los gates pendientes. No hay un segundo plan ni otra autoridad de ejecución.
+
+**Decisiones incorporadas como diseño candidato** (solicitud del propietario de dejarlo definido, sin autorización para código):
+- **D1:** una fachada de aplicación con rutas independientes para query y change, adaptada a backend y transportada primero por biblioteca Python y CLI JSON; evitar SQL directo, un segundo writer o servidor obligatorio.
+- **D2:** resolver un bloque con exactitud (UID o path+symbol+kind cardinalidad 1); búsqueda flexible sólo para descubrir opciones; respuestas `NOT_FOUND` y `AMBIGUOUS_BLOCK` explícitas.
+- **D3:** una operación individual es batch de un solo UID; filtros, listas y conjuntos relacionales se **congelan** con revisiones antes de escribir, sin re-evaluar ni ampliar targets automáticamente.
+- **D4:** separar `query` (sin efectos), `change.preview` (sin mutación de authority), `batch.prepare` (persistencia auxiliar explícita) y `change.apply` (grant externo ligado a plan+actor+alcance, CAS, lock, readback e idempotencia).
+- **D5:** batch certificado `ALL_OR_NOTHING`; si el backend no puede probar atomicidad, capability bloqueada. Particiones grandes son transacciones independientes, no una falsa transacción global.
+
+**Normalización de nombres:** `bpfw.query/1` y `bpfw.change/1` son los nombres lógicos conservados en el plan inicial. Los envelopes JSON candidatos de §11 usan `bpfw.query/v1` y `bpfw.change/v1`. **No son cuatro servicios**; JSON Schema/compatibilidad queda pendiente del gate Q1+W1.
+
+**Historial mínimo verificable:** la [PR #7](https://github.com/LuigiD5555/bpfw-experimental/pull/7) contiene el primer contrato de lectura (`c278c26f`), su ampliación a create/patch/batch (`8838e488`), el detalle de precisión, selección congelada y atomicidad (`e3eba375`), una corrección de formato (`c118ac78`) y el ADR. Las fechas, enlaces, nombres completos y fuentes de inspección están en el ADR.
+
+**Continuidad Dendryte:** se reutilizó como **método documental** la skill portátil publicada en `LuigiD5555/dendryte`, no el ejecutable ni un MCP. No hay `.dendryte/project.json` verificado en `bpfw-experimental:main`; instalación/adopción, si alguna vez se desea, exige una decisión separada. Conservar este plan y PR como autoridad, no generar backlog, rama o índice duplicado.
+
+**Estado del diseño:** `DOCUMENTED / CODE_INSPECTED / PROPOSED`. **Estado de las garantías:** `NOT_TESTED / NOT_APPROVED_FOR_EXECUTION / NOT_IMPLEMENTED`. La solicitud de registrar decisiones no equivale a aprobar la escritura por agentes, una migración de backend o un merge. Los números de límites siguen siendo hipótesis hasta benchmark.
+
+**NEXT_ACTION única:** ejecutar Q0+W0 con evidencia focal en ambiente aislado (efectos de lectura, preview, locks, CAS, revisiones, concurrencia y recuperación SQLite/YAML), y usar los resultados para congelar los JSON Schemas Q1+W1 antes de iniciar la implementación.
